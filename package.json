@@ -1,0 +1,7 @@
+{
+  "name": "sdelka-portfolio",
+  "private": true,
+  "scripts": {
+    "ralph": "bash scripts/ralph.sh --"
+  }
+}
