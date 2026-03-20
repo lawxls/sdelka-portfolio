@@ -1,17 +1,43 @@
+import { useCallback, useState } from "react";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Toolbar } from "@/components/toolbar";
+import type { FilterState, SortField, SortState } from "@/data/types";
 import { useProcurementData } from "@/data/use-procurement-data";
 
 function App() {
+	const [search, setSearch] = useState("");
+	const [filters, setFilters] = useState<FilterState>({ deviation: "all", status: "all" });
+	const [sort, setSort] = useState<SortState | null>(null);
+	const [page, setPage] = useState(1);
+
 	const { items, totals } = useProcurementData({
-		search: "",
-		filters: { deviation: "all", status: "all" },
-		sort: null,
-		page: 1,
+		search,
+		filters,
+		sort,
+		page,
 		pageSize: 50,
 	});
+
+	const handleSearchChange = useCallback((query: string) => {
+		setSearch(query);
+		setPage(1);
+	}, []);
+
+	const handleFiltersChange = useCallback((newFilters: FilterState) => {
+		setFilters(newFilters);
+		setPage(1);
+	}, []);
+
+	function handleSort(field: SortField) {
+		setSort((prev) => {
+			if (prev?.field === field) {
+				return prev.direction === "asc" ? { field, direction: "desc" } : null;
+			}
+			return { field, direction: "asc" };
+		});
+	}
 
 	return (
 		<div className="flex min-h-svh flex-col bg-background text-foreground">
@@ -21,8 +47,8 @@ function App() {
 			</header>
 
 			<main className="flex-1 px-4">
-				<Toolbar />
-				<ProcurementTable items={items} startIndex={0} onRowClick={() => {}} />
+				<Toolbar onSearchChange={handleSearchChange} filters={filters} onFiltersChange={handleFiltersChange} />
+				<ProcurementTable items={items} startIndex={0} sort={sort} onSort={handleSort} onRowClick={() => {}} />
 			</main>
 
 			<footer className="sticky bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">

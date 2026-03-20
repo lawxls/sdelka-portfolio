@@ -34,55 +34,63 @@ const mockItems: ProcurementItem[] = [
 	},
 ];
 
+const defaultProps = {
+	items: mockItems,
+	startIndex: 0,
+	sort: null,
+	onSort: () => {},
+	onRowClick: () => {},
+};
+
 describe("ProcurementTable", () => {
 	test("renders 9 column headers", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByRole("columnheader")).toHaveLength(9);
 	});
 
 	test("renders correct number of data rows", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		// 1 header row + 3 data rows
 		expect(screen.getAllByRole("row")).toHaveLength(4);
 	});
 
 	test("renders row numbers with startIndex offset", () => {
-		render(<ProcurementTable items={mockItems} startIndex={10} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} startIndex={10} />);
 		expect(screen.getByText("11")).toBeInTheDocument();
 		expect(screen.getByText("12")).toBeInTheDocument();
 		expect(screen.getByText("13")).toBeInTheDocument();
 	});
 
 	test("renders item names", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
 		expect(screen.getByText("Труба стальная")).toBeInTheDocument();
 		expect(screen.getByText("Цемент М500")).toBeInTheDocument();
 	});
 
 	test("renders status badges with correct labels", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(screen.getByText("Переговоры завершены")).toBeInTheDocument();
 	});
 
 	test("renders status badges with correct color classes", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByText("Ищем поставщиков").className).toContain("bg-yellow-100");
 		expect(screen.getByText("Ведём переговоры").className).toContain("bg-blue-100");
 		expect(screen.getByText("Переговоры завершены").className).toContain("bg-green-100");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
-		render(<ProcurementTable items={[mockItems[2]]} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} items={[mockItems[2]]} />);
 		// Цемент М500 has null bestPrice, averagePrice, deviation, overpayment → 4 dashes
 		const dashes = screen.getAllByText("—");
 		expect(dashes).toHaveLength(4);
 	});
 
 	test("applies red color class for positive deviation (overpaying)", () => {
-		render(<ProcurementTable items={[mockItems[0]]} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} items={[mockItems[0]]} />);
 		// Арматура: deviation = (55000-50000)/50000*100 = +10%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const redCells = [...cells].filter((cell) => cell.className.includes("text-red-600"));
@@ -91,7 +99,7 @@ describe("ProcurementTable", () => {
 	});
 
 	test("applies green color class for negative deviation (savings)", () => {
-		render(<ProcurementTable items={[mockItems[1]]} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} items={[mockItems[1]]} />);
 		// Труба: deviation = (30000-35000)/35000*100 = -14.3%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const greenCells = [...cells].filter((cell) => cell.className.includes("text-green-600"));
@@ -100,7 +108,7 @@ describe("ProcurementTable", () => {
 	});
 
 	test("rows have cursor-pointer class", () => {
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={() => {}} />);
+		render(<ProcurementTable {...defaultProps} />);
 		const dataRows = screen.getAllByRole("row").slice(1);
 		for (const row of dataRows) {
 			expect(row.className).toContain("cursor-pointer");
@@ -110,9 +118,36 @@ describe("ProcurementTable", () => {
 	test("calls onRowClick with correct item when row is clicked", async () => {
 		const user = userEvent.setup();
 		const handleRowClick = vi.fn();
-		render(<ProcurementTable items={mockItems} startIndex={0} onRowClick={handleRowClick} />);
+		render(<ProcurementTable {...defaultProps} onRowClick={handleRowClick} />);
 
 		await user.click(screen.getByText("Арматура А500"));
 		expect(handleRowClick).toHaveBeenCalledWith(mockItems[0]);
+	});
+
+	test("sortable column headers have sort buttons", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.getByRole("button", { name: /Сортировать по Текущая цена/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по Лучшая цена/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по Откл/ })).toBeInTheDocument();
+	});
+
+	test("clicking sort button calls onSort with correct field", async () => {
+		const user = userEvent.setup();
+		const onSort = vi.fn();
+		render(<ProcurementTable {...defaultProps} onSort={onSort} />);
+
+		await user.click(screen.getByRole("button", { name: /Сортировать по Текущая цена/ }));
+		expect(onSort).toHaveBeenCalledWith("currentPrice");
+	});
+
+	test("shows sort direction indicator on active column", () => {
+		render(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
+		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
+		// Instead it should have ArrowUp (asc)
+		const sortBtn = screen.getByRole("button", { name: /Сортировать по Текущая цена/ });
+		const svgs = sortBtn.querySelectorAll("svg");
+		expect(svgs).toHaveLength(1);
+		// lucide ArrowUp has a specific path — just check the icon renders
+		expect(svgs[0].classList.contains("size-3.5")).toBe(true);
 	});
 });

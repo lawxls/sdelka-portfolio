@@ -1,6 +1,7 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ProcurementItem, ProcurementStatus } from "@/data/types";
+import type { ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getDeviation, getOverpayment } from "@/data/types";
 import { formatCurrency, formatDeviation, formatNumber } from "@/lib/format";
 
@@ -26,13 +27,38 @@ function getOverpaymentClassName(value: number | null): string {
 	return "";
 }
 
+interface SortableColumn {
+	label: string;
+	field: SortField;
+}
+
+const SORTABLE_COLUMNS: SortableColumn[] = [
+	{ label: "Кол-во в\u00A0год", field: "annualQuantity" },
+	{ label: "Текущая цена", field: "currentPrice" },
+	{ label: "Лучшая цена", field: "bestPrice" },
+	{ label: "Средняя цена", field: "averagePrice" },
+	{ label: "Откл.\u00A0(%)", field: "deviation" },
+	{ label: "Переплата\u00A0(₽)", field: "overpayment" },
+];
+
+function SortIcon({ field, sort }: { field: SortField; sort: SortState | null }) {
+	if (sort?.field !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" aria-hidden="true" />;
+	return sort.direction === "asc" ? (
+		<ArrowUp className="size-3.5" aria-hidden="true" />
+	) : (
+		<ArrowDown className="size-3.5" aria-hidden="true" />
+	);
+}
+
 interface ProcurementTableProps {
 	items: ProcurementItem[];
 	startIndex: number;
+	sort: SortState | null;
+	onSort: (field: SortField) => void;
 	onRowClick: (item: ProcurementItem) => void;
 }
 
-export function ProcurementTable({ items, startIndex, onRowClick }: ProcurementTableProps) {
+export function ProcurementTable({ items, startIndex, sort, onSort, onRowClick }: ProcurementTableProps) {
 	return (
 		<Table>
 			<TableHeader>
@@ -40,12 +66,19 @@ export function ProcurementTable({ items, startIndex, onRowClick }: ProcurementT
 					<TableHead className="w-12 text-right">№</TableHead>
 					<TableHead>Наименование</TableHead>
 					<TableHead>Статус</TableHead>
-					<TableHead className="text-right">Кол-во в{"\u00A0"}год</TableHead>
-					<TableHead className="text-right">Текущая цена</TableHead>
-					<TableHead className="text-right">Лучшая цена</TableHead>
-					<TableHead className="text-right">Средняя цена</TableHead>
-					<TableHead className="text-right">Откл.{"\u00A0"}(%)</TableHead>
-					<TableHead className="text-right">Переплата{"\u00A0"}(₽)</TableHead>
+					{SORTABLE_COLUMNS.map((col) => (
+						<TableHead key={col.field} className="text-right">
+							<button
+								type="button"
+								className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+								onClick={() => onSort(col.field)}
+								aria-label={`Сортировать по ${col.label}`}
+							>
+								{col.label}
+								<SortIcon field={col.field} sort={sort} />
+							</button>
+						</TableHead>
+					))}
 				</TableRow>
 			</TableHeader>
 			<TableBody>
