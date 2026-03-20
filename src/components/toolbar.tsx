@@ -8,6 +8,7 @@ import { STATUS_LABELS } from "@/data/types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
 interface ToolbarProps {
+	defaultSearch?: string;
 	onSearchChange: (query: string) => void;
 	filters: FilterState;
 	onFiltersChange: (filters: FilterState) => void;
@@ -28,7 +29,10 @@ function hasActiveFilter(filters: FilterState): boolean {
 	return filters.deviation !== "all" || filters.status !== "all";
 }
 
-export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarProps) {
+const FILTER_BTN =
+	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChange }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
 
@@ -67,6 +71,7 @@ export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarPro
 					<Input
 						type="search"
 						placeholder="Поиск по названию…"
+						defaultValue={defaultSearch}
 						onChange={handleSearchInput}
 						className="pl-8 w-64"
 						spellCheck={false}
@@ -87,7 +92,7 @@ export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarPro
 						<div className="flex flex-col gap-1">
 							<button
 								type="button"
-								className={`rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted ${!hasActiveFilter(filters) ? "font-medium text-primary" : ""}`}
+								className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? "font-medium text-primary" : ""}`}
 								onClick={handleResetFilters}
 							>
 								Все
@@ -97,7 +102,7 @@ export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarPro
 								<button
 									key={preset.value}
 									type="button"
-									className={`rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted ${filters.deviation === preset.value ? "font-medium text-primary" : ""}`}
+									className={`${FILTER_BTN} ${filters.deviation === preset.value ? "font-medium text-primary" : ""}`}
 									onClick={() => handleDeviationClick(preset.value)}
 								>
 									{preset.label}
@@ -108,7 +113,7 @@ export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarPro
 								<button
 									key={preset.value}
 									type="button"
-									className={`rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted ${filters.status === preset.value ? "font-medium text-primary" : ""}`}
+									className={`${FILTER_BTN} ${filters.status === preset.value ? "font-medium text-primary" : ""}`}
 									onClick={() => handleStatusClick(preset.value)}
 								>
 									{preset.label}

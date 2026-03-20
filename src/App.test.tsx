@@ -1,10 +1,19 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 import App from "./App";
 
+function renderApp(initialEntries?: string[]) {
+	return render(
+		<MemoryRouter initialEntries={initialEntries}>
+			<App />
+		</MemoryRouter>,
+	);
+}
+
 describe("App", () => {
 	test("renders page layout with header, main, and footer", () => {
-		render(<App />);
+		renderApp();
 		expect(screen.getByText("Портфель закупок")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Toggle theme" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
@@ -13,28 +22,28 @@ describe("App", () => {
 	});
 
 	test("renders procurement table with data", () => {
-		render(<App />);
+		renderApp();
 		expect(screen.getByRole("table")).toBeInTheDocument();
 		expect(screen.getByText("Наименование")).toBeInTheDocument();
 		expect(screen.getByText("Статус")).toBeInTheDocument();
 	});
 
 	test("renders toolbar with search, filters, and create button", () => {
-		render(<App />);
+		renderApp();
 		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Создать закупки/ })).toBeInTheDocument();
 	});
 
 	test("renders summary panel with metrics and export button", () => {
-		render(<App />);
+		renderApp();
 		expect(screen.getByText(/Позиций/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
 	});
 
 	test("search filters table rows and updates totals", () => {
 		vi.useFakeTimers();
-		render(<App />);
+		renderApp();
 
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
@@ -53,7 +62,7 @@ describe("App", () => {
 	});
 
 	test("filter updates table and summary totals", () => {
-		render(<App />);
+		renderApp();
 
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
@@ -66,7 +75,7 @@ describe("App", () => {
 	});
 
 	test("sort reorders table rows", () => {
-		render(<App />);
+		renderApp();
 
 		const table = screen.getByRole("table");
 		const getFirstDataRowCells = () => {
@@ -87,5 +96,19 @@ describe("App", () => {
 		// At least one sort direction should change the first row
 		const changed = nameBefore !== nameAfterAsc || nameAfterAsc !== nameAfterDesc;
 		expect(changed).toBe(true);
+	});
+
+	test("restores state from URL search params", () => {
+		renderApp(["/?deviation=overpaying"]);
+
+		const table = screen.getByRole("table");
+		const rowCount = within(table).getAllByRole("row").length;
+		// With overpaying filter active, we should have fewer rows than full dataset
+		expect(rowCount).toBeLessThan(51); // 50 data rows + 1 header
+	});
+
+	test("pagination renders with 75 items at pageSize 50", () => {
+		renderApp();
+		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
 	});
 });

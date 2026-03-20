@@ -18,8 +18,8 @@ function renderData(overrides: Partial<ProcurementDataParams> = {}) {
 }
 
 describe("mock data", () => {
-	it("generates 50 items", () => {
-		expect(mockProcurementItems).toHaveLength(50);
+	it("generates 75 items", () => {
+		expect(mockProcurementItems).toHaveLength(75);
 	});
 
 	it("is deterministic", () => {
@@ -27,9 +27,9 @@ describe("mock data", () => {
 		expect(mockProcurementItems[0].id).toBe("item-1");
 	});
 
-	it("has 6 items with null prices", () => {
+	it("has 8 items with null prices", () => {
 		const nullCount = mockProcurementItems.filter((i) => i.bestPrice == null).length;
-		expect(nullCount).toBe(6);
+		expect(nullCount).toBe(8);
 	});
 
 	it("null-price items also have null averagePrice", () => {
@@ -58,15 +58,15 @@ describe("mock data", () => {
 
 describe("useProcurementData", () => {
 	describe("no filters", () => {
-		it("returns all 50 items", () => {
+		it("returns first page of items", () => {
 			const result = renderData();
-			expect(result.totalItems).toBe(50);
+			expect(result.totalItems).toBe(75);
 			expect(result.items).toHaveLength(50);
 		});
 
 		it("returns correct page info", () => {
 			const result = renderData();
-			expect(result.pageInfo).toEqual({ currentPage: 1, totalPages: 1, pageSize: 50 });
+			expect(result.pageInfo).toEqual({ currentPage: 1, totalPages: 2, pageSize: 50 });
 		});
 	});
 
@@ -194,7 +194,7 @@ describe("useProcurementData", () => {
 		it("returns correct number of items per page", () => {
 			const result = renderData({ pageSize: 10 });
 			expect(result.items).toHaveLength(10);
-			expect(result.pageInfo.totalPages).toBe(5);
+			expect(result.pageInfo.totalPages).toBe(8);
 		});
 
 		it("page 2 has different items than page 1", () => {
@@ -205,13 +205,13 @@ describe("useProcurementData", () => {
 
 		it("clamps out-of-range page to last page", () => {
 			const result = renderData({ pageSize: 10, page: 100 });
-			expect(result.pageInfo.currentPage).toBe(5);
+			expect(result.pageInfo.currentPage).toBe(8);
 			expect(result.items.length).toBeGreaterThan(0);
 		});
 
 		it("last page has correct partial count", () => {
-			const result = renderData({ pageSize: 15, page: 4 });
-			expect(result.items).toHaveLength(5); // 50 % 15 = 5
+			const result = renderData({ pageSize: 20, page: 4 });
+			expect(result.items).toHaveLength(15); // 75 % 20 = 15
 			expect(result.pageInfo.totalPages).toBe(4);
 		});
 	});
@@ -236,7 +236,7 @@ describe("useProcurementData", () => {
 		});
 
 		it("computes correct totals from items with prices", () => {
-			const result = renderData();
+			const result = renderData({ pageSize: 75 });
 			const itemsWithPrices = mockProcurementItems.filter((i) => i.bestPrice != null);
 			let expectedOverpayment = 0;
 			let expectedSavings = 0;
