@@ -124,7 +124,7 @@ function App() {
 	}
 
 	// Drag-and-drop
-	const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	const [reducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 	const [activeItem, setActiveItem] = useState<ProcurementItem | null>(null);
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

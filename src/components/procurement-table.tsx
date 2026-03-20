@@ -10,7 +10,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -36,7 +36,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Folder, PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
-import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 
 const STATUS_BG = "bg-[#ebebed] dark:bg-[#35353a]";
@@ -110,10 +110,13 @@ export function ProcurementTable({
 	draggable,
 }: ProcurementTableProps) {
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
-	const folderMap: Record<string, Folder> = {};
-	if (folders) {
-		for (const f of folders) folderMap[f.id] = f;
-	}
+	const folderMap = useMemo(() => {
+		const map: Record<string, Folder> = {};
+		if (folders) {
+			for (const f of folders) map[f.id] = f;
+		}
+		return map;
+	}, [folders]);
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
@@ -385,37 +388,12 @@ function InlineRenameInput({
 	onSave: (name: string) => void;
 	onCancel: () => void;
 }) {
-	const inputRef = useRef<HTMLInputElement>(null);
-	const savedRef = useRef(false);
-
-	useMountEffect(() => {
-		// Defer focus so that a closing context menu's focus restoration
-		// does not immediately blur this input and trigger a premature save
-		const id = setTimeout(() => {
-			inputRef.current?.focus();
-			inputRef.current?.select();
-		}, 0);
-		return () => clearTimeout(id);
+	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
+		onSave,
+		onCancel,
+		selectOnMount: true,
+		deferFocus: true,
 	});
-
-	function save() {
-		if (savedRef.current) return;
-		savedRef.current = true;
-		const value = inputRef.current?.value.trim() ?? "";
-		if (value) onSave(value);
-		else onCancel();
-	}
-
-	function handleKeyDown(e: React.KeyboardEvent) {
-		if (e.key === "Enter") {
-			e.preventDefault();
-			save();
-		} else if (e.key === "Escape") {
-			e.preventDefault();
-			savedRef.current = true;
-			onCancel();
-		}
-	}
 
 	return (
 		<input
@@ -427,7 +405,7 @@ function InlineRenameInput({
 			autoComplete="off"
 			aria-label="Название закупки"
 			onKeyDown={handleKeyDown}
-			onBlur={save}
+			onBlur={handleBlur}
 		/>
 	);
 }

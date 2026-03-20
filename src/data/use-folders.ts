@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { mockProcurementItems, SEED_FOLDER_ASSIGNMENTS, SEED_FOLDERS } from "./mock-data";
+import { SEED_FOLDER_ASSIGNMENTS, SEED_FOLDERS } from "./mock-data";
 import type { Folder, ProcurementItem } from "./types";
 import { FOLDER_COLORS } from "./types";
 
@@ -24,7 +24,7 @@ function persistAssignments(assignments: Record<string, string>) {
 	localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify(assignments));
 }
 
-function nextUnusedColor(folders: Folder[]): string {
+export function nextUnusedColor(folders: Folder[]): string {
 	const used = new Set(folders.map((f) => f.color));
 	for (const color of FOLDER_COLORS) {
 		if (!used.has(color)) return color;
@@ -44,10 +44,9 @@ export interface UseFoldersResult {
 	applyFolders: (items: ProcurementItem[]) => ProcurementItem[];
 }
 
-export function useFolders(allItems?: ProcurementItem[]): UseFoldersResult {
+export function useFolders(allItems: ProcurementItem[]): UseFoldersResult {
 	const [folders, setFolders] = useState<Folder[]>(readFolders);
 	const [assignments, setAssignments] = useState<Record<string, string>>(readAssignments);
-	const itemsForCounts = allItems ?? mockProcurementItems;
 
 	const createFolder = useCallback((name: string): Folder | null => {
 		let created: Folder | null = null;
@@ -116,18 +115,18 @@ export function useFolders(allItems?: ProcurementItem[]): UseFoldersResult {
 
 	const applyFolders = useCallback(
 		(items: ProcurementItem[]): ProcurementItem[] => {
-			return items.map((item) => ({
-				...item,
-				folderId: assignments[item.id] ?? null,
-			}));
+			return items.map((item) => {
+				const folderId = assignments[item.id] ?? null;
+				return folderId === item.folderId ? item : { ...item, folderId };
+			});
 		},
 		[assignments],
 	);
 
 	const counts = useMemo(() => {
-		const result: Record<string, number> = { all: itemsForCounts.length };
+		const result: Record<string, number> = { all: allItems.length };
 		let unassigned = 0;
-		for (const item of itemsForCounts) {
+		for (const item of allItems) {
 			const folderId = assignments[item.id];
 			if (folderId) {
 				result[folderId] = (result[folderId] ?? 0) + 1;
@@ -137,7 +136,7 @@ export function useFolders(allItems?: ProcurementItem[]): UseFoldersResult {
 		}
 		result.none = unassigned;
 		return result;
-	}, [itemsForCounts, assignments]);
+	}, [allItems, assignments]);
 
 	return {
 		folders,

@@ -10,7 +10,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -31,11 +31,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Folder } from "@/data/types";
 import { FOLDER_COLORS } from "@/data/types";
+import { nextUnusedColor } from "@/data/use-folders";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
 const LS_SIDEBAR_KEY = "sidebar-open";
 const DESKTOP_QUERY = "(min-width: 1024px)";
+
+function navItemClassName(active: boolean, isOver = false, extra?: string) {
+	return cn(
+		"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+		extra,
+		isOver
+			? "bg-sidebar-accent ring-2 ring-sidebar-accent-foreground/20"
+			: active
+				? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+				: "text-sidebar-foreground hover:bg-sidebar-accent/50",
+	);
+}
 
 function useIsDesktop(): boolean {
 	const [isDesktop, setIsDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
@@ -96,16 +110,9 @@ export function FolderSidebar({
 	}
 
 	function handleCreate(name: string) {
-		const trimmed = name.trim();
-		if (!trimmed) {
-			setIsCreating(false);
-			return;
-		}
-		const created = onCreateFolder(trimmed);
+		const created = onCreateFolder(name);
 		setIsCreating(false);
-		if (created) {
-			onFolderSelect(created.id);
-		}
+		if (created) onFolderSelect(created.id);
 	}
 
 	function handleDelete(id: string) {
@@ -160,12 +167,12 @@ export function FolderSidebar({
 				<div className="space-y-0.5">
 					{folders.map((folder) =>
 						editingId === folder.id ? (
-							<InlineRenameRow
+							<InlineFolderRow
 								key={folder.id}
-								folder={folder}
+								color={folder.color}
+								defaultValue={folder.name}
 								onSave={(name) => {
-									const trimmed = name.trim();
-									if (trimmed) onRenameFolder(folder.id, trimmed);
+									onRenameFolder(folder.id, name);
 									setEditingId(null);
 								}}
 								onCancel={() => setEditingId(null)}
@@ -184,7 +191,12 @@ export function FolderSidebar({
 						),
 					)}
 					{isCreating && (
-						<InlineCreateRow folders={folders} onSave={handleCreate} onCancel={() => setIsCreating(false)} />
+						<InlineFolderRow
+							color={nextUnusedColor(folders)}
+							dotTestId="creating-folder-dot"
+							onSave={handleCreate}
+							onCancel={() => setIsCreating(false)}
+						/>
 					)}
 				</div>
 			</nav>
@@ -231,16 +243,7 @@ function NavItem({
 	onClick: () => void;
 }) {
 	return (
-		<button
-			type="button"
-			className={cn(
-				"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-				active
-					? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-					: "text-sidebar-foreground hover:bg-sidebar-accent/50",
-			)}
-			onClick={onClick}
-		>
+		<button type="button" className={navItemClassName(active)} onClick={onClick}>
 			<span className="shrink-0" aria-hidden="true">
 				{icon}
 			</span>
@@ -268,18 +271,7 @@ function DroppableNavItem({
 	const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 	return (
 		<div ref={setNodeRef} data-testid={`droppable-${droppableId}`}>
-			<button
-				type="button"
-				className={cn(
-					"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-					isOver
-						? "bg-sidebar-accent ring-2 ring-sidebar-accent-foreground/20"
-						: active
-							? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-							: "text-sidebar-foreground hover:bg-sidebar-accent/50",
-				)}
-				onClick={onClick}
-			>
+			<button type="button" className={navItemClassName(active, isOver)} onClick={onClick}>
 				<span className="shrink-0" aria-hidden="true">
 					{icon}
 				</span>
@@ -312,18 +304,7 @@ function FolderNavItem({
 
 	return (
 		<div className="group relative" ref={setNodeRef} data-testid={`droppable-${folder.id}`}>
-			<button
-				type="button"
-				className={cn(
-					"flex w-full items-center gap-2 rounded-md px-2 py-1.5 pr-7 text-sm transition-colors",
-					isOver
-						? "bg-sidebar-accent ring-2 ring-sidebar-accent-foreground/20"
-						: active
-							? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-							: "text-sidebar-foreground hover:bg-sidebar-accent/50",
-				)}
-				onClick={onClick}
-			>
+			<button type="button" className={navItemClassName(active, isOver, "pr-7")} onClick={onClick}>
 				<span
 					className="size-2.5 shrink-0 rounded-full"
 					style={{ backgroundColor: `var(--folder-${folder.color})` }}
@@ -406,117 +387,43 @@ function FolderNavItem({
 	);
 }
 
-function InlineCreateRow({
-	folders,
+function InlineFolderRow({
+	color,
+	defaultValue,
+	dotTestId,
 	onSave,
 	onCancel,
 }: {
-	folders: Folder[];
-	onSave: (name: string) => void;
+	color: string;
+	defaultValue?: string;
+	dotTestId?: string;
+	onSave: (value: string) => void;
 	onCancel: () => void;
 }) {
-	const inputRef = useRef<HTMLInputElement>(null);
-	const savedRef = useRef(false);
-
-	// Auto-assign color for preview
-	const usedColors = new Set(folders.map((f) => f.color));
-	const nextColor = FOLDER_COLORS.find((c) => !usedColors.has(c)) ?? FOLDER_COLORS[0];
-
-	useMountEffect(() => {
-		inputRef.current?.focus();
-		return undefined;
+	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
+		onSave,
+		onCancel,
+		selectOnMount: !!defaultValue,
 	});
-
-	function save() {
-		if (savedRef.current) return;
-		savedRef.current = true;
-		onSave(inputRef.current?.value ?? "");
-	}
-
-	function handleKeyDown(e: React.KeyboardEvent) {
-		if (e.key === "Enter") {
-			e.preventDefault();
-			save();
-		} else if (e.key === "Escape") {
-			e.preventDefault();
-			savedRef.current = true;
-			onCancel();
-		}
-	}
 
 	return (
 		<div className="flex items-center gap-2 rounded-md px-2 py-1.5">
 			<span
 				className="size-2.5 shrink-0 rounded-full"
-				style={{ backgroundColor: `var(--folder-${nextColor})` }}
+				style={{ backgroundColor: `var(--folder-${color})` }}
 				aria-hidden="true"
-				data-testid="creating-folder-dot"
+				data-testid={dotTestId}
 			/>
 			<input
 				ref={inputRef}
 				type="text"
 				className="h-5 flex-1 bg-transparent text-sm outline-none"
+				defaultValue={defaultValue}
 				aria-label="Название папки"
 				spellCheck={false}
 				autoComplete="off"
 				onKeyDown={handleKeyDown}
-				onBlur={save}
-			/>
-		</div>
-	);
-}
-
-function InlineRenameRow({
-	folder,
-	onSave,
-	onCancel,
-}: {
-	folder: Folder;
-	onSave: (name: string) => void;
-	onCancel: () => void;
-}) {
-	const inputRef = useRef<HTMLInputElement>(null);
-	const savedRef = useRef(false);
-
-	useMountEffect(() => {
-		inputRef.current?.focus();
-		inputRef.current?.select();
-		return undefined;
-	});
-
-	function save() {
-		if (savedRef.current) return;
-		savedRef.current = true;
-		onSave(inputRef.current?.value ?? "");
-	}
-
-	function handleKeyDown(e: React.KeyboardEvent) {
-		if (e.key === "Enter") {
-			e.preventDefault();
-			save();
-		} else if (e.key === "Escape") {
-			e.preventDefault();
-			savedRef.current = true;
-			onCancel();
-		}
-	}
-
-	return (
-		<div className="flex items-center gap-2 rounded-md px-2 py-1.5">
-			<span
-				className="size-2.5 shrink-0 rounded-full"
-				style={{ backgroundColor: `var(--folder-${folder.color})` }}
-				aria-hidden="true"
-			/>
-			<input
-				ref={inputRef}
-				type="text"
-				className="h-5 flex-1 bg-transparent text-sm outline-none"
-				defaultValue={folder.name}
-				spellCheck={false}
-				autoComplete="off"
-				onKeyDown={handleKeyDown}
-				onBlur={save}
+				onBlur={handleBlur}
 			/>
 		</div>
 	);

@@ -22,12 +22,12 @@ afterEach(() => {
 describe("useFolders", () => {
 	describe("seed fallback", () => {
 		it("returns seed folders when localStorage is empty", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			expect(result.current.folders).toEqual(SEED_FOLDERS);
 		});
 
 		it("returns seed assignments when localStorage is empty", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const items = result.current.applyFolders(mockProcurementItems);
 			const assigned = items.filter((i) => i.folderId != null);
 			expect(assigned.length).toBe(Object.keys(SEED_FOLDER_ASSIGNMENTS).length);
@@ -38,20 +38,20 @@ describe("useFolders", () => {
 		it("reads folders from localStorage", () => {
 			const custom = [{ id: "f1", name: "Custom", color: "red" }];
 			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify(custom));
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			expect(result.current.folders).toEqual(custom);
 		});
 
 		it("reads assignments from localStorage", () => {
 			localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify({ "item-1": "f1" }));
 			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify([{ id: "f1", name: "X", color: "red" }]));
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const items = result.current.applyFolders(mockProcurementItems);
 			expect(items.find((i) => i.id === "item-1")?.folderId).toBe("f1");
 		});
 
 		it("persists folders to localStorage on create", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.createFolder("Новая");
 			});
@@ -61,7 +61,7 @@ describe("useFolders", () => {
 		});
 
 		it("persists assignments to localStorage on assign", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.assignItem("item-70", "folder-1");
 			});
@@ -72,7 +72,7 @@ describe("useFolders", () => {
 
 	describe("createFolder", () => {
 		it("adds a folder with auto-assigned color", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.createFolder("Тест");
 			});
@@ -82,7 +82,7 @@ describe("useFolders", () => {
 		});
 
 		it("auto-assigns next unused color from palette", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			// Seed uses blue, green, orange, purple. Next unused should be red, yellow, pink, or teal.
 			const seedColors = new Set(SEED_FOLDERS.map((f) => f.color));
 			act(() => {
@@ -94,7 +94,7 @@ describe("useFolders", () => {
 		});
 
 		it("cycles colors when all are used", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			// Create enough folders to exhaust palette
 			const toCreate = FOLDER_COLORS.length - SEED_FOLDERS.length + 1;
 			act(() => {
@@ -107,7 +107,7 @@ describe("useFolders", () => {
 		});
 
 		it("returns null for duplicate name", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const countBefore = result.current.folders.length;
 			act(() => {
 				result.current.createFolder(SEED_FOLDERS[0].name);
@@ -117,7 +117,7 @@ describe("useFolders", () => {
 		});
 
 		it("duplicate check is case-insensitive", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const countBefore = result.current.folders.length;
 			act(() => {
 				result.current.createFolder(SEED_FOLDERS[0].name.toUpperCase());
@@ -126,7 +126,7 @@ describe("useFolders", () => {
 		});
 
 		it("generates unique id via crypto.randomUUID", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.createFolder("А");
 			});
@@ -143,7 +143,7 @@ describe("useFolders", () => {
 
 	describe("renameFolder", () => {
 		it("renames a folder", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.renameFolder(SEED_FOLDERS[0].id, "Новое имя");
 			});
@@ -151,7 +151,7 @@ describe("useFolders", () => {
 		});
 
 		it("returns false for duplicate name", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.renameFolder(SEED_FOLDERS[0].id, SEED_FOLDERS[1].name);
 			});
@@ -160,7 +160,7 @@ describe("useFolders", () => {
 		});
 
 		it("allows renaming to same name (own name)", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.renameFolder(SEED_FOLDERS[0].id, SEED_FOLDERS[0].name);
 			});
@@ -168,7 +168,7 @@ describe("useFolders", () => {
 		});
 
 		it("persists rename to localStorage", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.renameFolder(SEED_FOLDERS[0].id, "Renamed");
 			});
@@ -179,7 +179,7 @@ describe("useFolders", () => {
 
 	describe("recolorFolder", () => {
 		it("changes folder color", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.recolorFolder(SEED_FOLDERS[0].id, "pink");
 			});
@@ -187,7 +187,7 @@ describe("useFolders", () => {
 		});
 
 		it("persists recolor to localStorage", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.recolorFolder(SEED_FOLDERS[0].id, "teal");
 			});
@@ -198,7 +198,7 @@ describe("useFolders", () => {
 
 	describe("deleteFolder", () => {
 		it("removes the folder", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.deleteFolder(SEED_FOLDERS[0].id);
 			});
@@ -206,7 +206,7 @@ describe("useFolders", () => {
 		});
 
 		it("unassigns items from deleted folder", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.deleteFolder(SEED_FOLDERS[0].id);
 			});
@@ -216,7 +216,7 @@ describe("useFolders", () => {
 		});
 
 		it("persists deletion to localStorage", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.deleteFolder(SEED_FOLDERS[0].id);
 			});
@@ -227,7 +227,7 @@ describe("useFolders", () => {
 
 	describe("assignItem", () => {
 		it("assigns item to folder", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.assignItem("item-70", "folder-2");
 			});
@@ -236,7 +236,7 @@ describe("useFolders", () => {
 		});
 
 		it("unassigns item when folderId is null", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			// item-1 starts assigned to folder-1 via seed
 			act(() => {
 				result.current.assignItem("item-1", null);
@@ -248,14 +248,14 @@ describe("useFolders", () => {
 
 	describe("applyFolders", () => {
 		it("sets folderId on items based on assignments", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const items = result.current.applyFolders(mockProcurementItems);
 			expect(items.find((i) => i.id === "item-1")?.folderId).toBe("folder-1");
 			expect(items.find((i) => i.id === "item-8")?.folderId).toBe("folder-2");
 		});
 
 		it("leaves unassigned items with folderId null", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const items = result.current.applyFolders(mockProcurementItems);
 			const unassignedIds = mockProcurementItems.filter((i) => !(i.id in SEED_FOLDER_ASSIGNMENTS)).map((i) => i.id);
 			for (const id of unassignedIds) {
@@ -264,7 +264,7 @@ describe("useFolders", () => {
 		});
 
 		it("does not mutate original items", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const original = mockProcurementItems[0].folderId;
 			result.current.applyFolders(mockProcurementItems);
 			expect(mockProcurementItems[0].folderId).toBe(original);
@@ -273,25 +273,25 @@ describe("useFolders", () => {
 
 	describe("counts", () => {
 		it("computes counts per folder from all items", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const counts = result.current.counts;
 			// folder-1 has 9 items in seed
 			expect(counts["folder-1"]).toBe(9);
 		});
 
 		it("includes total count", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			expect(result.current.counts.all).toBe(mockProcurementItems.length);
 		});
 
 		it("includes unassigned count", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const assignedCount = Object.keys(SEED_FOLDER_ASSIGNMENTS).length;
 			expect(result.current.counts.none).toBe(mockProcurementItems.length - assignedCount);
 		});
 
 		it("updates counts after assignment", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const before = result.current.counts["folder-1"];
 			act(() => {
 				result.current.assignItem("item-70", "folder-1");
@@ -300,7 +300,7 @@ describe("useFolders", () => {
 		});
 
 		it("updates counts after folder deletion", () => {
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			const folder1Count = result.current.counts["folder-1"];
 			const noneBefore = result.current.counts.none;
 			act(() => {
@@ -317,7 +317,7 @@ describe("useFolders", () => {
 			// Start fresh with no folders
 			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify([]));
 			localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify({}));
-			const { result } = renderHook(() => useFolders());
+			const { result } = renderHook(() => useFolders(mockProcurementItems));
 			act(() => {
 				result.current.createFolder("Первая");
 			});
