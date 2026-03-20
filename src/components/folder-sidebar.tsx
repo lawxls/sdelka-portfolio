@@ -1,7 +1,35 @@
-import { ChevronLeft, EllipsisVertical, FolderPlus, Inbox, Layers, PanelLeft } from "lucide-react";
-import { useState } from "react";
+import {
+	Check,
+	ChevronLeft,
+	EllipsisVertical,
+	FolderPlus,
+	Inbox,
+	Layers,
+	PanelLeft,
+	Pencil,
+	Trash2,
+} from "lucide-react";
+import { useRef, useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Folder } from "@/data/types";
+import { FOLDER_COLORS } from "@/data/types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
@@ -26,10 +54,25 @@ export interface FolderSidebarProps {
 	counts: Record<string, number>;
 	activeFolder: string | undefined;
 	onFolderSelect: (folder: string | undefined) => void;
+	onCreateFolder: (name: string) => Folder | null;
+	onRenameFolder: (id: string, name: string) => boolean;
+	onRecolorFolder: (id: string, color: string) => void;
+	onDeleteFolder: (id: string) => void;
 }
 
-export function FolderSidebar({ folders, counts, activeFolder, onFolderSelect }: FolderSidebarProps) {
+export function FolderSidebar({
+	folders,
+	counts,
+	activeFolder,
+	onFolderSelect,
+	onCreateFolder,
+	onRenameFolder,
+	onRecolorFolder,
+	onDeleteFolder,
+}: FolderSidebarProps) {
 	const isDesktop = useIsDesktop();
+	const [isCreating, setIsCreating] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
 
 	const [open, setOpen] = useState(() => {
 		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
@@ -49,6 +92,26 @@ export function FolderSidebar({ folders, counts, activeFolder, onFolderSelect }:
 	function selectFolder(folder: string | undefined) {
 		onFolderSelect(folder);
 		if (!isDesktop) setOpen(false);
+	}
+
+	function handleCreate(name: string) {
+		const trimmed = name.trim();
+		if (!trimmed) {
+			setIsCreating(false);
+			return;
+		}
+		const created = onCreateFolder(trimmed);
+		setIsCreating(false);
+		if (created) {
+			onFolderSelect(created.id);
+		}
+	}
+
+	function handleDelete(id: string) {
+		if (activeFolder === id) {
+			onFolderSelect(undefined);
+		}
+		onDeleteFolder(id);
 	}
 
 	if (!open) {
@@ -90,24 +153,48 @@ export function FolderSidebar({ folders, counts, activeFolder, onFolderSelect }:
 					/>
 				</div>
 
-				{folders.length > 0 && <div className="my-2 border-t border-sidebar-border" />}
+				{(folders.length > 0 || isCreating) && <div className="my-2 border-t border-sidebar-border" />}
 
 				<div className="space-y-0.5">
-					{folders.map((folder) => (
-						<FolderNavItem
-							key={folder.id}
-							folder={folder}
-							count={counts[folder.id] ?? 0}
-							active={activeFolder === folder.id}
-							onClick={() => selectFolder(folder.id)}
-						/>
-					))}
+					{folders.map((folder) =>
+						editingId === folder.id ? (
+							<InlineRenameRow
+								key={folder.id}
+								folder={folder}
+								onSave={(name) => {
+									const trimmed = name.trim();
+									if (trimmed) onRenameFolder(folder.id, trimmed);
+									setEditingId(null);
+								}}
+								onCancel={() => setEditingId(null)}
+							/>
+						) : (
+							<FolderNavItem
+								key={folder.id}
+								folder={folder}
+								count={counts[folder.id] ?? 0}
+								active={activeFolder === folder.id}
+								onClick={() => selectFolder(folder.id)}
+								onRename={() => setEditingId(folder.id)}
+								onRecolor={(color) => onRecolorFolder(folder.id, color)}
+								onDelete={() => handleDelete(folder.id)}
+							/>
+						),
+					)}
+					{isCreating && (
+						<InlineCreateRow folders={folders} onSave={handleCreate} onCancel={() => setIsCreating(false)} />
+					)}
 				</div>
 			</nav>
 
 			{/* Footer */}
 			<div className="shrink-0 border-t border-sidebar-border p-2">
-				<Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" disabled>
+				<Button
+					variant="ghost"
+					size="sm"
+					className="w-full justify-start gap-2 text-muted-foreground"
+					onClick={() => setIsCreating(true)}
+				>
 					<FolderPlus className="size-4" />
 					Новая папка
 				</Button>
@@ -166,12 +253,20 @@ function FolderNavItem({
 	count,
 	active,
 	onClick,
+	onRename,
+	onRecolor,
+	onDelete,
 }: {
 	folder: Folder;
 	count: number;
 	active: boolean;
 	onClick: () => void;
+	onRename: () => void;
+	onRecolor: (color: string) => void;
+	onDelete: () => void;
 }) {
+	const [deleteOpen, setDeleteOpen] = useState(false);
+
 	return (
 		<div className="group relative">
 			<button
@@ -193,18 +288,191 @@ function FolderNavItem({
 				<span className="flex-1 truncate text-left">{folder.name}</span>
 				<span className="tabular-nums text-xs text-muted-foreground">{count}</span>
 			</button>
-			<button
-				type="button"
-				className={cn(
-					"absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5",
-					"text-muted-foreground hover:text-foreground",
-					"lg:invisible lg:group-hover:visible lg:group-focus-within:visible",
-				)}
-				onClick={(e) => e.stopPropagation()}
-				aria-label={`Меню папки ${folder.name}`}
-			>
-				<EllipsisVertical className="size-3.5" />
-			</button>
+
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<button
+						type="button"
+						className={cn(
+							"absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5",
+							"text-muted-foreground hover:text-foreground",
+							"lg:invisible lg:group-hover:visible lg:group-focus-within:visible",
+						)}
+						onClick={(e) => e.stopPropagation()}
+						aria-label={`Меню папки ${folder.name}`}
+					>
+						<EllipsisVertical className="size-3.5" />
+					</button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" side="right">
+					<DropdownMenuItem onClick={onRename}>
+						<Pencil className="size-3.5" />
+						Переименовать
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<div className="px-1.5 py-1" data-testid="color-picker">
+						<div className="flex gap-1">
+							{FOLDER_COLORS.map((color) => (
+								<button
+									key={color}
+									type="button"
+									className="flex size-5 items-center justify-center rounded-full transition-transform hover:scale-110"
+									style={{ backgroundColor: `var(--folder-${color})` }}
+									onClick={() => onRecolor(color)}
+									data-testid={`color-dot-${color}`}
+									aria-label={`Цвет ${color}`}
+								>
+									{folder.color === color && <Check className="size-3 text-white" data-testid="color-check" />}
+								</button>
+							))}
+						</div>
+					</div>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+						<Trash2 className="size-3.5" />
+						Удалить
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+
+			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Удалить папку?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Папка «{folder.name}» будет удалена. Закупки из этой папки не будут удалены.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							onClick={() => {
+								onDelete();
+								setDeleteOpen(false);
+							}}
+						>
+							Удалить
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	);
+}
+
+function InlineCreateRow({
+	folders,
+	onSave,
+	onCancel,
+}: {
+	folders: Folder[];
+	onSave: (name: string) => void;
+	onCancel: () => void;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const savedRef = useRef(false);
+
+	// Auto-assign color for preview
+	const usedColors = new Set(folders.map((f) => f.color));
+	const nextColor = FOLDER_COLORS.find((c) => !usedColors.has(c)) ?? FOLDER_COLORS[0];
+
+	useMountEffect(() => {
+		inputRef.current?.focus();
+		return undefined;
+	});
+
+	function save() {
+		if (savedRef.current) return;
+		savedRef.current = true;
+		onSave(inputRef.current?.value ?? "");
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			save();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			savedRef.current = true;
+			onCancel();
+		}
+	}
+
+	return (
+		<div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+			<span
+				className="size-2.5 shrink-0 rounded-full"
+				style={{ backgroundColor: `var(--folder-${nextColor})` }}
+				aria-hidden="true"
+				data-testid="creating-folder-dot"
+			/>
+			<input
+				ref={inputRef}
+				type="text"
+				className="h-5 flex-1 bg-transparent text-sm outline-none"
+				aria-label="Название папки"
+				spellCheck={false}
+				autoComplete="off"
+				onKeyDown={handleKeyDown}
+				onBlur={save}
+			/>
+		</div>
+	);
+}
+
+function InlineRenameRow({
+	folder,
+	onSave,
+	onCancel,
+}: {
+	folder: Folder;
+	onSave: (name: string) => void;
+	onCancel: () => void;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const savedRef = useRef(false);
+
+	useMountEffect(() => {
+		inputRef.current?.focus();
+		inputRef.current?.select();
+		return undefined;
+	});
+
+	function save() {
+		if (savedRef.current) return;
+		savedRef.current = true;
+		onSave(inputRef.current?.value ?? "");
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			save();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			savedRef.current = true;
+			onCancel();
+		}
+	}
+
+	return (
+		<div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+			<span
+				className="size-2.5 shrink-0 rounded-full"
+				style={{ backgroundColor: `var(--folder-${folder.color})` }}
+				aria-hidden="true"
+			/>
+			<input
+				ref={inputRef}
+				type="text"
+				className="h-5 flex-1 bg-transparent text-sm outline-none"
+				defaultValue={folder.name}
+				spellCheck={false}
+				autoComplete="off"
+				onKeyDown={handleKeyDown}
+				onBlur={save}
+			/>
 		</div>
 	);
 }

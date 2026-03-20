@@ -182,4 +182,66 @@ describe("App", () => {
 		// Арматура А500С is in folder-1 (Металлопрокат)
 		expect(screen.getByTestId("folder-badge-item-1")).toBeInTheDocument();
 	});
+
+	test("creating a folder adds it to sidebar and activates it", async () => {
+		renderApp();
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+
+		// Click "Новая папка"
+		await user.click(within(sidebar).getByRole("button", { name: /Новая папка/ }));
+
+		// Type name and save
+		const input = within(sidebar).getByRole("textbox", { name: "Название папки" });
+		await user.type(input, "Тестовая папка{Enter}");
+
+		// New folder appears in sidebar
+		expect(within(sidebar).getByText("Тестовая папка")).toBeInTheDocument();
+	});
+
+	test("deleting active folder shows all items", async () => {
+		renderApp(["/?folder=folder-1"]);
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+		const table = screen.getByRole("table");
+
+		// folder-1 has 9 items + 1 header
+		expect(within(table).getAllByRole("row")).toHaveLength(10);
+
+		// Open folder menu and delete
+		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await screen.findByText("Удалить");
+		fireEvent.click(screen.getByText("Удалить"));
+
+		await screen.findByText("Удалить папку?");
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Should switch to all items — more rows than folder-1's 9
+		const rowsAfter = within(table).getAllByRole("row").length;
+		expect(rowsAfter).toBeGreaterThan(10);
+
+		// Folder should be gone from sidebar
+		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+	});
+
+	test("renaming a folder updates sidebar", async () => {
+		renderApp();
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+
+		// Open folder menu and rename
+		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await screen.findByText("Переименовать");
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = within(sidebar).getByDisplayValue("Металлопрокат");
+		await user.clear(input);
+		await user.type(input, "Сталь{Enter}");
+
+		expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
+		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+	});
 });

@@ -48,7 +48,7 @@ function App() {
 	const page = Math.max(1, Number(searchParams.get("page")) || 1);
 	const folder = searchParams.get("folder") ?? undefined;
 
-	const { folders, counts, applyFolders } = useFolders();
+	const { folders, counts, applyFolders, createFolder, renameFolder, recolorFolder, deleteFolder } = useFolders();
 	const itemsWithFolders = useMemo(() => applyFolders(mockProcurementItems), [applyFolders]);
 
 	const pageSize = 50;
@@ -142,7 +142,16 @@ function App() {
 			</header>
 
 			<div className="flex min-h-0 flex-1">
-				<FolderSidebar folders={folders} counts={counts} activeFolder={folder} onFolderSelect={handleFolderSelect} />
+				<FolderSidebar
+					folders={folders}
+					counts={counts}
+					activeFolder={folder}
+					onFolderSelect={handleFolderSelect}
+					onCreateFolder={createFolder}
+					onRenameFolder={renameFolder}
+					onRecolorFolder={recolorFolder}
+					onDeleteFolder={deleteFolder}
+				/>
 				<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
 					<ProcurementTable
 						items={items}
