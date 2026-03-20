@@ -5,7 +5,25 @@
 		"lineWidth": 120
 	},
 	"linter": {
-		"enabled": true
+		"enabled": true,
+		"rules": {
+			"a11y": {
+				"recommended": true
+			},
+			"style": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"paths": {
+							"react": {
+								"importNames": ["useEffect", "forwardRef"],
+								"message": "useEffect is banned (derive state inline, use event handlers, or useMountEffect). forwardRef is banned (React 19 passes ref as prop)."
+							}
+						}
+					}
+				}
+			}
+		}
 	},
 	"files": {
 		"includes": ["**", "!**/dist", "!**/node_modules", "!**/pnpm-lock.yaml"]

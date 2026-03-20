@@ -1,10 +1,25 @@
 {
 	"version": 1,
 	"skills": {
+		"agent-browser": {
+			"source": "vercel-labs/agent-browser",
+			"sourceType": "github",
+			"computedHash": "9dcf7342a0a051445137a279855f6ed9b1fb342e46291b799c344ac20e34d409"
+		},
+		"dogfood": {
+			"source": "vercel-labs/agent-browser",
+			"sourceType": "github",
+			"computedHash": "055e73cddeec68e7eb75eab0c3f8490415384f72e98ac05405821427ed0e74b1"
+		},
 		"grill-me": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",
 			"computedHash": "f343ef02aa0ada0f8b13a77b6db7fb6a11f88d8067128215585500ef4fd3b5e0"
+		},
+		"improve-claude-md": {
+			"source": "dexhorthy/slopfiles",
+			"sourceType": "github",
+			"computedHash": "a93226f53ffa6a2599c89fb983f3aed00c843c04071a7aa59ee3365141619d25"
 		},
 		"prd-to-issues": {
 			"source": "mattpocock/skills",

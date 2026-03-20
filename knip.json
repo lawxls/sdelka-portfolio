@@ -1,0 +1,4 @@
+{
+	"ignoreDependencies": ["lucide-react"],
+	"ignore": ["src/hooks/use-mount-effect.ts"]
+}
