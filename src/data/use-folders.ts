@@ -48,82 +48,70 @@ export function useFolders(): UseFoldersResult {
 	const [folders, setFolders] = useState<Folder[]>(readFolders);
 	const [assignments, setAssignments] = useState<Record<string, string>>(readAssignments);
 
-	const isDuplicateName = useCallback(
-		(name: string, excludeId?: string) => {
+	const createFolder = useCallback((name: string): Folder | null => {
+		let created: Folder | null = null;
+		setFolders((prev) => {
 			const lower = name.toLowerCase();
-			return folders.some((f) => f.id !== excludeId && f.name.toLowerCase() === lower);
-		},
-		[folders],
-	);
-
-	const createFolder = useCallback(
-		(name: string): Folder | null => {
-			if (isDuplicateName(name)) return null;
+			if (prev.some((f) => f.name.toLowerCase() === lower)) return prev;
 			const folder: Folder = {
 				id: crypto.randomUUID(),
 				name,
-				color: nextUnusedColor(folders),
+				color: nextUnusedColor(prev),
 			};
-			const next = [...folders, folder];
-			setFolders(next);
+			const next = [...prev, folder];
 			persistFolders(next);
-			return folder;
-		},
-		[folders, isDuplicateName],
-	);
+			created = folder;
+			return next;
+		});
+		return created;
+	}, []);
 
-	const renameFolder = useCallback(
-		(id: string, name: string): boolean => {
-			if (isDuplicateName(name, id)) return false;
-			const next = folders.map((f) => (f.id === id ? { ...f, name } : f));
-			setFolders(next);
+	const renameFolder = useCallback((id: string, name: string): boolean => {
+		let success = false;
+		setFolders((prev) => {
+			const lower = name.toLowerCase();
+			if (prev.some((f) => f.id !== id && f.name.toLowerCase() === lower)) return prev;
+			const next = prev.map((f) => (f.id === id ? { ...f, name } : f));
 			persistFolders(next);
-			return true;
-		},
-		[folders, isDuplicateName],
-	);
+			success = true;
+			return next;
+		});
+		return success;
+	}, []);
 
-	const recolorFolder = useCallback(
-		(id: string, color: string) => {
-			const next = folders.map((f) => (f.id === id ? { ...f, color } : f));
-			setFolders(next);
+	const recolorFolder = useCallback((id: string, color: string) => {
+		setFolders((prev) => {
+			const next = prev.map((f) => (f.id === id ? { ...f, color } : f));
 			persistFolders(next);
-		},
-		[folders],
-	);
+			return next;
+		});
+	}, []);
 
-	const deleteFolder = useCallback(
-		(id: string) => {
-			const nextFolders = folders.filter((f) => f.id !== id);
-			setFolders(nextFolders);
-			persistFolders(nextFolders);
+	const deleteFolder = useCallback((id: string) => {
+		setFolders((prev) => {
+			const next = prev.filter((f) => f.id !== id);
+			persistFolders(next);
+			return next;
+		});
+		setAssignments((prev) => {
+			const next = Object.fromEntries(Object.entries(prev).filter(([, fid]) => fid !== id));
+			persistAssignments(next);
+			return next;
+		});
+	}, []);
 
-			// Unassign items from deleted folder
-			const nextAssignments = { ...assignments };
-			for (const [itemId, folderId] of Object.entries(nextAssignments)) {
-				if (folderId === id) {
-					delete nextAssignments[itemId];
-				}
-			}
-			setAssignments(nextAssignments);
-			persistAssignments(nextAssignments);
-		},
-		[folders, assignments],
-	);
-
-	const assignItem = useCallback(
-		(itemId: string, folderId: string | null) => {
-			const next = { ...assignments };
+	const assignItem = useCallback((itemId: string, folderId: string | null) => {
+		setAssignments((prev) => {
+			const next = { ...prev };
 			if (folderId == null) {
 				delete next[itemId];
 			} else {
 				next[itemId] = folderId;
 			}
-			setAssignments(next);
 			persistAssignments(next);
-		},
-		[assignments],
-	);
+			return next;
+		});
+	}, []);
 
 	const applyFolders = useCallback(
 		(items: ProcurementItem[]): ProcurementItem[] => {
