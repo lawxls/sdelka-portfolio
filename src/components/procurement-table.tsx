@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
+import type { Folder, PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 
@@ -50,6 +50,7 @@ function SortIcon({ field, sort }: { field: SortField; sort: SortState | null })
 
 interface ProcurementTableProps {
 	items: ProcurementItem[];
+	folders?: Folder[];
 	sort: SortState | null;
 	pageInfo: PageInfo;
 	onSort: (field: SortField) => void;
@@ -57,8 +58,20 @@ interface ProcurementTableProps {
 	onPageChange: (page: number) => void;
 }
 
-export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, onPageChange }: ProcurementTableProps) {
+export function ProcurementTable({
+	items,
+	folders,
+	sort,
+	pageInfo,
+	onSort,
+	onRowClick,
+	onPageChange,
+}: ProcurementTableProps) {
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
+	const folderMap: Record<string, Folder> = {};
+	if (folders) {
+		for (const f of folders) folderMap[f.id] = f;
+	}
 	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
 	const stickyNameCell =
@@ -120,7 +133,21 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 									<TableCell className="text-right tabular-nums text-muted-foreground">
 										{startIndex + index + 1}
 									</TableCell>
-									<TableCell className={`font-medium ${stickyNameCell}`}>{item.name}</TableCell>
+									<TableCell className={`font-medium ${stickyNameCell}`}>
+										<div>
+											{item.name}
+											{item.folderId && folderMap[item.folderId] && (
+												<div className="mt-0.5 flex items-center gap-1" data-testid={`folder-badge-${item.id}`}>
+													<span
+														className="size-2 shrink-0 rounded-full"
+														style={{ backgroundColor: `var(--folder-${folderMap[item.folderId].color})` }}
+														aria-hidden="true"
+													/>
+													<span className="text-xs text-muted-foreground">{folderMap[item.folderId].name}</span>
+												</div>
+											)}
+										</div>
+									</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>

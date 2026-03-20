@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { useSearchParams } from "react-router";
+import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Toolbar } from "@/components/toolbar";
+import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, SortField, SortState, StatusFilter } from "@/data/types";
+import { useFolders } from "@/data/use-folders";
 import { useProcurementData } from "@/data/use-procurement-data";
 
 const SORT_FIELDS = new Set<string>([
@@ -42,14 +46,20 @@ function App() {
 	};
 	const sort = parseSort(searchParams);
 	const page = Math.max(1, Number(searchParams.get("page")) || 1);
+	const folder = searchParams.get("folder") ?? undefined;
+
+	const { folders, counts, applyFolders } = useFolders();
+	const itemsWithFolders = useMemo(() => applyFolders(mockProcurementItems), [applyFolders]);
 
 	const pageSize = 50;
 	const { items, totals, pageInfo } = useProcurementData({
+		items: itemsWithFolders,
 		search,
 		filters,
 		sort,
 		page,
 		pageSize,
+		folder,
 	});
 
 	function handleSearchChange(query: string) {
@@ -106,6 +116,16 @@ function App() {
 		});
 	}
 
+	function handleFolderSelect(folderId: string | undefined) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (folderId != null) next.set("folder", folderId);
+			else next.delete("folder");
+			next.delete("page");
+			return next;
+		});
+	}
+
 	return (
 		<div className="flex h-svh flex-col bg-background text-foreground">
 			<header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 py-2">
@@ -121,15 +141,19 @@ function App() {
 				</div>
 			</header>
 
-			<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
-				<ProcurementTable
-					items={items}
-					sort={sort}
-					pageInfo={pageInfo}
-					onSort={handleSort}
-					onPageChange={handlePageChange}
-				/>
-			</main>
+			<div className="flex min-h-0 flex-1">
+				<FolderSidebar folders={folders} counts={counts} activeFolder={folder} onFolderSelect={handleFolderSelect} />
+				<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
+					<ProcurementTable
+						items={items}
+						folders={folders}
+						sort={sort}
+						pageInfo={pageInfo}
+						onSort={handleSort}
+						onPageChange={handlePageChange}
+					/>
+				</main>
+			</div>
 
 			<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
 				<SummaryPanel totals={totals} />

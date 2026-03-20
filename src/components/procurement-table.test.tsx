@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import type { ProcurementItem } from "@/data/types";
+import type { Folder, ProcurementItem } from "@/data/types";
 import { ProcurementTable } from "./procurement-table";
 
 const mockItems: ProcurementItem[] = [
@@ -232,5 +232,42 @@ describe("ProcurementTable", () => {
 		expect(nameCell?.className).toContain("sticky");
 		expect(nameCell?.className).toContain("left-0");
 		expect(nameCell?.className).toContain("bg-background");
+	});
+});
+
+const testFolders: Folder[] = [
+	{ id: "f-1", name: "Металлопрокат", color: "blue" },
+	{ id: "f-2", name: "Стройматериалы", color: "green" },
+];
+
+const itemsWithFolders: ProcurementItem[] = [
+	{ ...mockItems[0], folderId: "f-1" },
+	{ ...mockItems[1], folderId: null },
+	{ ...mockItems[2], folderId: "f-2" },
+];
+
+describe("ProcurementTable folder badges", () => {
+	test("renders folder badge for items with folderId", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		const badge = screen.getByTestId("folder-badge-1");
+		expect(badge).toBeInTheDocument();
+		expect(badge.textContent).toContain("Металлопрокат");
+	});
+
+	test("does not render badge for items without folderId", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		expect(screen.queryByTestId("folder-badge-2")).not.toBeInTheDocument();
+	});
+
+	test("badge shows correct folder color", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		const badge = screen.getByTestId("folder-badge-1");
+		const dot = badge.querySelector("span[aria-hidden]") as HTMLElement;
+		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
+	});
+
+	test("does not render badges when folders prop is omitted", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
+		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
 	});
 });

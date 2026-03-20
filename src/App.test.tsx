@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import App from "./App";
 
 function renderApp(initialEntries?: string[]) {
@@ -10,6 +11,10 @@ function renderApp(initialEntries?: string[]) {
 		</MemoryRouter>,
 	);
 }
+
+beforeEach(() => {
+	localStorage.clear();
+});
 
 describe("App", () => {
 	test("renders page layout with header, main, and footer", () => {
@@ -110,5 +115,71 @@ describe("App", () => {
 	test("pagination renders with 75 items at pageSize 50", () => {
 		renderApp();
 		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
+	});
+
+	test("renders sidebar with folders and counts", () => {
+		renderApp();
+		expect(screen.getByText("Папки")).toBeInTheDocument();
+		expect(screen.getByText("Все закупки")).toBeInTheDocument();
+		expect(screen.getByText("Без папки")).toBeInTheDocument();
+		const sidebar = screen.getByTestId("sidebar");
+		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
+	});
+
+	test("deep-link with folder param filters table to folder items", () => {
+		renderApp(["/?folder=folder-1"]);
+
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		// folder-1 has 9 items + 1 header
+		expect(rows).toHaveLength(10);
+	});
+
+	test("deep-link with folder=none shows only unassigned items", () => {
+		renderApp(["/?folder=none"]);
+
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		// 47 unassigned items + 1 header
+		expect(rows).toHaveLength(48);
+	});
+
+	test("folder selection filters table via sidebar click", async () => {
+		renderApp();
+
+		const table = screen.getByRole("table");
+		const initialRowCount = within(table).getAllByRole("row").length;
+
+		const sidebar = screen.getByTestId("sidebar");
+		await userEvent.setup().click(within(sidebar).getByText("Металлопрокат"));
+
+		const filteredRowCount = within(table).getAllByRole("row").length;
+		expect(filteredRowCount).toBeLessThan(initialRowCount);
+	});
+
+	test("folder filter stacks with search filter", () => {
+		vi.useFakeTimers();
+		renderApp(["/?folder=folder-1"]);
+
+		const table = screen.getByRole("table");
+		const folderRowCount = within(table).getAllByRole("row").length;
+
+		// Search within folder
+		const input = screen.getByPlaceholderText("Поиск по названию…");
+		fireEvent.change(input, { target: { value: "арматура" } });
+		act(() => {
+			vi.advanceTimersByTime(300);
+		});
+
+		const filteredRowCount = within(table).getAllByRole("row").length;
+		expect(filteredRowCount).toBeLessThanOrEqual(folderRowCount);
+
+		vi.useRealTimers();
+	});
+
+	test("folder badges appear on items with folder assignments", () => {
+		renderApp();
+		// Арматура А500С is in folder-1 (Металлопрокат)
+		expect(screen.getByTestId("folder-badge-item-1")).toBeInTheDocument();
 	});
 });
