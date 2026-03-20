@@ -89,18 +89,17 @@ const NAMES = [
 	"Розетка двойная Legrand",
 ];
 
-const STATUSES: ProcurementStatus[] = ["searching", "negotiating", "completed"];
 const NULL_PRICE_INDICES = new Set([4, 12, 23, 31, 38, 45, 53, 67]);
 
 function generateItems(): ProcurementItem[] {
 	const rng = mulberry32(42);
 
 	return NAMES.map((name, i) => {
-		const status = STATUSES[Math.floor(rng() * 3)];
 		const annualQuantity = Math.floor(rng() * 9990) + 10;
 		const currentPrice = Math.round((rng() * 499500 + 500) * 100) / 100;
 
 		const hasMarketData = !NULL_PRICE_INDICES.has(i);
+		const status: ProcurementStatus = hasMarketData ? (rng() < 0.5 ? "searching" : "completed") : "negotiating";
 
 		let bestPrice: number | null = null;
 		let averagePrice: number | null = null;

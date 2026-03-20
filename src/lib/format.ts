@@ -9,16 +9,9 @@ const percentFormatter = new Intl.NumberFormat("ru-RU", {
 	maximumFractionDigits: 1,
 });
 
-const plainFormatter = new Intl.NumberFormat("ru-RU");
-
 export function formatCurrency(value: number | null | undefined): string {
 	if (value == null) return "\u2014";
 	return currencyFormatter.format(value);
-}
-
-export function formatNumber(value: number | null | undefined): string {
-	if (value == null) return "\u2014";
-	return plainFormatter.format(value);
 }
 
 export function formatPercent(value: number | null | undefined): string {
@@ -34,5 +27,6 @@ export function signClassName(value: number | null | undefined): string {
 
 export function formatDeviation(value: number | null | undefined): { text: string; className: string } {
 	if (value == null) return { text: "\u2014", className: "" };
-	return { text: formatPercent(value), className: signClassName(value) };
+	const triangle = value > 0 ? "\u25B2\u2009" : value < 0 ? "\u25BC\u2009" : "";
+	return { text: `${triangle}${formatPercent(value)}`, className: signClassName(value) };
 }

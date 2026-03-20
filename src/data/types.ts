@@ -1,8 +1,8 @@
 export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<ProcurementStatus, string> = {
-	searching: "Ищем поставщиков",
-	negotiating: "Ведём переговоры",
+	searching: "Ведём переговоры",
+	negotiating: "Ищем поставщиков",
 	completed: "Переговоры завершены",
 };
 
@@ -24,7 +24,7 @@ export interface FilterState {
 	status: StatusFilter;
 }
 
-export type SortField = "annualQuantity" | "currentPrice" | "bestPrice" | "averagePrice" | "deviation" | "overpayment";
+export type SortField = "annualCost" | "currentPrice" | "bestPrice" | "averagePrice" | "deviation" | "overpayment";
 export type SortDirection = "asc" | "desc";
 
 export interface SortState {
@@ -58,6 +58,11 @@ export interface ProcurementDataResult {
 	totalItems: number;
 	totals: Totals;
 	pageInfo: PageInfo;
+}
+
+/** Annual cost in ₽ = annualQuantity × currentPrice. */
+export function getAnnualCost(item: ProcurementItem): number {
+	return item.annualQuantity * item.currentPrice;
 }
 
 /** Deviation % = (currentPrice - bestPrice) / bestPrice * 100. Null if no market data. */

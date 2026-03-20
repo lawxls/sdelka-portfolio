@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { mockProcurementItems } from "./mock-data";
 import type { ProcurementDataParams } from "./types";
-import { getDeviation, getOverpayment } from "./types";
+import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 import { useProcurementData } from "./use-procurement-data";
 
 const defaultParams: ProcurementDataParams = {
@@ -162,10 +162,10 @@ describe("useProcurementData", () => {
 			}
 		});
 
-		it("sorts by annualQuantity", () => {
-			const result = renderData({ sort: { field: "annualQuantity", direction: "asc" } });
+		it("sorts by annualCost", () => {
+			const result = renderData({ sort: { field: "annualCost", direction: "asc" } });
 			for (let i = 1; i < result.items.length; i++) {
-				expect(result.items[i].annualQuantity).toBeGreaterThanOrEqual(result.items[i - 1].annualQuantity);
+				expect(getAnnualCost(result.items[i])).toBeGreaterThanOrEqual(getAnnualCost(result.items[i - 1]));
 			}
 		});
 

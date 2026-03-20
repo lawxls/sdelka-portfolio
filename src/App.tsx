@@ -7,7 +7,7 @@ import type { DeviationFilter, FilterState, SortField, SortState, StatusFilter }
 import { useProcurementData } from "@/data/use-procurement-data";
 
 const SORT_FIELDS = new Set<string>([
-	"annualQuantity",
+	"annualCost",
 	"currentPrice",
 	"bestPrice",
 	"averagePrice",
@@ -108,18 +108,20 @@ function App() {
 
 	return (
 		<div className="flex h-svh flex-col bg-background text-foreground">
-			<header className="z-30 flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3">
-				<h1 className="text-lg font-semibold tracking-tight">Портфель закупок</h1>
-				<ThemeToggle />
+			<header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 py-2">
+				<h1 className="text-lg font-semibold tracking-tight whitespace-nowrap">Ваши закупки</h1>
+				<div className="flex items-center gap-2">
+					<Toolbar
+						defaultSearch={search}
+						onSearchChange={handleSearchChange}
+						filters={filters}
+						onFiltersChange={handleFiltersChange}
+					/>
+					<ThemeToggle />
+				</div>
 			</header>
 
-			<main className="flex min-h-0 flex-1 flex-col px-4">
-				<Toolbar
-					defaultSearch={search}
-					onSearchChange={handleSearchChange}
-					filters={filters}
-					onFiltersChange={handleFiltersChange}
-				/>
+			<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
 				<ProcurementTable
 					items={items}
 					sort={sort}

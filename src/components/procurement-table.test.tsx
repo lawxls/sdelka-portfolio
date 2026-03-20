@@ -17,7 +17,7 @@ const mockItems: ProcurementItem[] = [
 	{
 		id: "2",
 		name: "Труба стальная",
-		status: "negotiating",
+		status: "searching",
 		annualQuantity: 500,
 		currentPrice: 30000,
 		bestPrice: 35000,
@@ -26,7 +26,7 @@ const mockItems: ProcurementItem[] = [
 	{
 		id: "3",
 		name: "Цемент М500",
-		status: "completed",
+		status: "negotiating",
 		annualQuantity: 2000,
 		currentPrice: 8000,
 		bestPrice: null,
@@ -70,16 +70,14 @@ describe("ProcurementTable", () => {
 
 	test("renders status badges with correct labels", () => {
 		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.getAllByText("Ведём переговоры")).toHaveLength(2);
 		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
-		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
-		expect(screen.getByText("Переговоры завершены")).toBeInTheDocument();
 	});
 
-	test("renders status badges with correct color classes", () => {
+	test("renders status labels with correct color classes", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getByText("Ищем поставщиков").className).toContain("bg-yellow-100");
-		expect(screen.getByText("Ведём переговоры").className).toContain("bg-blue-100");
-		expect(screen.getByText("Переговоры завершены").className).toContain("bg-green-100");
+		expect(screen.getAllByText("Ведём переговоры")[0].className).toContain("text-blue-700");
+		expect(screen.getByText("Ищем поставщиков").className).toContain("text-status-highlight");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
@@ -207,7 +205,7 @@ describe("ProcurementTable", () => {
 		expect(scrollContainer.className).toContain("touch-manipulation");
 	});
 
-	test("header cells have sticky top-0 classes", () => {
+	test("header cells have sticky top-0 classes with opaque background", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		const headers = screen.getAllByRole("columnheader");
 		for (const header of headers) {

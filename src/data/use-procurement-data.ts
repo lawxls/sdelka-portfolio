@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { mockProcurementItems } from "./mock-data";
 import type { ProcurementDataParams, ProcurementDataResult, ProcurementItem, SortField, Totals } from "./types";
-import { getDeviation, getOverpayment } from "./types";
+import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 
 export function useProcurementData(params: ProcurementDataParams): ProcurementDataResult {
 	const { search, filters, sort, page, pageSize } = params;
@@ -66,8 +66,8 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 
 function getSortValue(item: ProcurementItem, field: SortField): number | null {
 	switch (field) {
-		case "annualQuantity":
-			return item.annualQuantity;
+		case "annualCost":
+			return getAnnualCost(item);
 		case "currentPrice":
 			return item.currentPrice;
 		case "bestPrice":

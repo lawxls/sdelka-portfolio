@@ -61,71 +61,67 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 	}
 
 	return (
-		<div className="flex items-center justify-between gap-3 pb-3">
-			<div className="flex items-center gap-2">
-				<div className="relative">
-					<Search
-						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-						aria-hidden="true"
-					/>
-					<Input
-						type="search"
-						placeholder="Поиск по названию…"
-						defaultValue={defaultSearch}
-						onChange={handleSearchInput}
-						className="pl-8 w-64"
-						spellCheck={false}
-						autoComplete="off"
-					/>
-				</div>
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button type="button" variant="outline" aria-label="Фильтры" className="relative">
-							<Filter data-icon="inline-start" aria-hidden="true" />
-							Фильтры
-							{hasActiveFilter(filters) && (
-								<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />
-							)}
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent align="start" className="w-56">
-						<div className="flex flex-col gap-1">
-							<button
-								type="button"
-								className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? "font-medium text-primary" : ""}`}
-								onClick={handleResetFilters}
-							>
-								Все
-							</button>
-							<div className="my-1 h-px bg-border" />
-							{DEVIATION_PRESETS.map((preset) => (
-								<button
-									key={preset.value}
-									type="button"
-									className={`${FILTER_BTN} ${filters.deviation === preset.value ? "font-medium text-primary" : ""}`}
-									onClick={() => handleDeviationClick(preset.value)}
-								>
-									{preset.label}
-								</button>
-							))}
-							<div className="my-1 h-px bg-border" />
-							{STATUS_PRESETS.map((preset) => (
-								<button
-									key={preset.value}
-									type="button"
-									className={`${FILTER_BTN} ${filters.status === preset.value ? "font-medium text-primary" : ""}`}
-									onClick={() => handleStatusClick(preset.value)}
-								>
-									{preset.label}
-								</button>
-							))}
-						</div>
-					</PopoverContent>
-				</Popover>
+		<div className="flex items-center gap-2">
+			<div className="relative">
+				<Search
+					className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+					aria-hidden="true"
+				/>
+				<Input
+					type="search"
+					placeholder="Поиск по названию…"
+					defaultValue={defaultSearch}
+					onChange={handleSearchInput}
+					className="pl-8 w-48 lg:w-64"
+					spellCheck={false}
+					autoComplete="off"
+				/>
 			</div>
-			<Button type="button" onClick={() => {}}>
+			<Popover>
+				<PopoverTrigger asChild>
+					<Button type="button" variant="outline" size="sm" aria-label="Фильтры" className="relative">
+						<Filter data-icon="inline-start" aria-hidden="true" />
+						Фильтры
+						{hasActiveFilter(filters) && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent align="end" className="w-56">
+					<div className="flex flex-col gap-1">
+						<button
+							type="button"
+							className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? "font-medium text-primary" : ""}`}
+							onClick={handleResetFilters}
+						>
+							Все
+						</button>
+						<div className="my-1 h-px bg-border" />
+						{DEVIATION_PRESETS.map((preset) => (
+							<button
+								key={preset.value}
+								type="button"
+								className={`${FILTER_BTN} ${filters.deviation === preset.value ? "font-medium text-primary" : ""}`}
+								onClick={() => handleDeviationClick(preset.value)}
+							>
+								{preset.label}
+							</button>
+						))}
+						<div className="my-1 h-px bg-border" />
+						{STATUS_PRESETS.map((preset) => (
+							<button
+								key={preset.value}
+								type="button"
+								className={`${FILTER_BTN} ${filters.status === preset.value ? "font-medium text-primary" : ""}`}
+								onClick={() => handleStatusClick(preset.value)}
+							>
+								{preset.label}
+							</button>
+						))}
+					</div>
+				</PopoverContent>
+			</Popover>
+			<Button type="button" size="sm" onClick={() => {}} className="bg-status-highlight hover:bg-status-highlight/80">
 				<Plus data-icon="inline-start" aria-hidden="true" />
-				Создать закупки
+				Добавить позиции
 			</Button>
 		</div>
 	);

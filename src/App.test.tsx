@@ -14,7 +14,7 @@ function renderApp(initialEntries?: string[]) {
 describe("App", () => {
 	test("renders page layout with header, main, and footer", () => {
 		renderApp();
-		expect(screen.getByText("Портфель закупок")).toBeInTheDocument();
+		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Toggle theme" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
@@ -32,12 +32,12 @@ describe("App", () => {
 		renderApp();
 		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Создать закупки/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
 	test("renders summary panel with metrics and export button", () => {
 		renderApp();
-		expect(screen.getByText(/Позиций/)).toBeInTheDocument();
+		expect(screen.getByText(/SKU/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
 	});
 

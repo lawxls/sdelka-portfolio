@@ -73,7 +73,7 @@ describe("Toolbar", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		fireEvent.click(screen.getByText("Ищем поставщиков"));
 
-		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "searching" });
+		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "negotiating" });
 	});
 
 	test("clicking active deviation filter resets it to all", () => {
@@ -112,6 +112,6 @@ describe("Toolbar", () => {
 
 	test("renders create procurement button", () => {
 		renderToolbar();
-		expect(screen.getByRole("button", { name: /Создать закупки/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 });

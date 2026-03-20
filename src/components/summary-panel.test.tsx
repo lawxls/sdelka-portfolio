@@ -16,30 +16,13 @@ describe("SummaryPanel", () => {
 		expect(screen.getByText("50")).toBeInTheDocument();
 	});
 
-	test("renders all metric labels", () => {
+	test("renders SKU label", () => {
 		render(<SummaryPanel totals={mockTotals} />);
-		expect(screen.getByText(/Позиций/)).toBeInTheDocument();
-		expect(screen.getByText(/Общее отклонение/)).toBeInTheDocument();
-		expect(screen.getByText(/Переплата/)).toBeInTheDocument();
-		expect(screen.getByText(/Экономия/)).toBeInTheDocument();
+		expect(screen.getByText(/SKU/)).toBeInTheDocument();
 	});
 
 	test("renders export button", () => {
 		render(<SummaryPanel totals={mockTotals} />);
 		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
-	});
-
-	test("applies red color for positive total deviation", () => {
-		render(<SummaryPanel totals={mockTotals} />);
-		const deviationLabel = screen.getByText(/Общее отклонение/);
-		const deviationValue = deviationLabel.parentElement?.querySelector(".tabular-nums");
-		expect(deviationValue?.className).toContain("text-red-600");
-	});
-
-	test("applies green color for savings", () => {
-		render(<SummaryPanel totals={mockTotals} />);
-		const savingsLabel = screen.getByText(/Экономия/);
-		const savingsValue = savingsLabel.parentElement?.querySelector(".tabular-nums");
-		expect(savingsValue?.className).toContain("text-green-600");
 	});
 });

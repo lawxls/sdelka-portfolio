@@ -1,23 +1,24 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
-import { getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
-import { formatCurrency, formatDeviation, formatNumber, signClassName } from "@/lib/format";
+import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
+import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
+
+const STATUS_BG = "bg-[#ebebed] dark:bg-[#35353a]";
 
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: {
 		label: STATUS_LABELS.searching,
-		className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+		className: `${STATUS_BG} text-blue-700 dark:text-blue-400`,
 	},
 	negotiating: {
 		label: STATUS_LABELS.negotiating,
-		className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+		className: `${STATUS_BG} text-status-highlight`,
 	},
 	completed: {
 		label: STATUS_LABELS.completed,
-		className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+		className: `${STATUS_BG} text-emerald-700 dark:text-emerald-400`,
 	},
 };
 
@@ -26,9 +27,12 @@ interface SortableColumn {
 	field: SortField;
 }
 
-const SORTABLE_COLUMNS: SortableColumn[] = [
-	{ label: "Кол-во в\u00A0год", field: "annualQuantity" },
+const INPUT_COLUMNS: SortableColumn[] = [
+	{ label: "Стоимость в\u00A0год", field: "annualCost" },
 	{ label: "Текущая цена", field: "currentPrice" },
+];
+
+const ANALYSIS_COLUMNS: SortableColumn[] = [
 	{ label: "Лучшая цена", field: "bestPrice" },
 	{ label: "Средняя цена", field: "averagePrice" },
 	{ label: "Откл.\u00A0(%)", field: "deviation" },
@@ -57,7 +61,9 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
 	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
-	const stickyNameCell = "sticky left-0 z-10 bg-background transition-colors group-hover:bg-muted/50";
+	const stickyNameCell =
+		"sticky left-0 z-10 bg-background transition-colors group-even:bg-muted/40 group-hover:bg-muted/60";
+	const analysisHead = "sticky top-0 z-20 bg-background border-b border-border text-status-highlight";
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -67,8 +73,7 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 						<TableRow>
 							<TableHead className={`w-12 text-right ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>Наименование</TableHead>
-							<TableHead className={stickyHead}>Статус</TableHead>
-							{SORTABLE_COLUMNS.map((col) => (
+							{INPUT_COLUMNS.map((col) => (
 								<TableHead key={col.field} className={`text-right ${stickyHead}`}>
 									<button
 										type="button"
@@ -81,6 +86,20 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 									</button>
 								</TableHead>
 							))}
+							{ANALYSIS_COLUMNS.map((col) => (
+								<TableHead key={col.field} className={`text-right ${analysisHead}`}>
+									<button
+										type="button"
+										className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+										onClick={() => onSort(col.field)}
+										aria-label={`Сортировать по ${col.label}`}
+									>
+										{col.label}
+										<SortIcon field={col.field} sort={sort} />
+									</button>
+								</TableHead>
+							))}
+							<TableHead className={analysisHead}>Статус</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -89,23 +108,20 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 							const overpayment = getOverpayment(item);
 							const dev = formatDeviation(deviation);
 							const status = STATUS_CONFIG[item.status];
+							const isInProgress = item.status !== "completed";
+							const rowCls = onRowClick ? "cursor-pointer group" : "group";
 
 							return (
 								<TableRow
 									key={item.id}
-									className={onRowClick ? "cursor-pointer group" : "group"}
+									className={item.status === "negotiating" ? `${rowCls} negotiating-stripe` : rowCls}
 									onClick={onRowClick ? () => onRowClick(item) : undefined}
 								>
 									<TableCell className="text-right tabular-nums text-muted-foreground">
 										{startIndex + index + 1}
 									</TableCell>
 									<TableCell className={`font-medium ${stickyNameCell}`}>{item.name}</TableCell>
-									<TableCell>
-										<Badge variant="outline" className={status.className}>
-											{status.label}
-										</Badge>
-									</TableCell>
-									<TableCell className="text-right tabular-nums">{formatNumber(item.annualQuantity)}</TableCell>
+									<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
@@ -113,39 +129,47 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 									<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
 										{formatCurrency(overpayment)}
 									</TableCell>
+									<TableCell>
+										<span
+											className={`relative z-10 inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${status.className}${isInProgress ? " status-pulse" : ""}`}
+										>
+											<span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+											{status.label}
+										</span>
+									</TableCell>
 								</TableRow>
 							);
 						})}
 					</TableBody>
 				</Table>
+				{pageInfo.totalPages > 1 && (
+					<div className="flex items-center justify-end gap-4 px-4 py-3">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => onPageChange(pageInfo.currentPage - 1)}
+							disabled={pageInfo.currentPage <= 1}
+							aria-label="Предыдущая страница"
+						>
+							<ChevronLeft aria-hidden="true" />
+							Назад
+						</Button>
+						<span className="text-sm tabular-nums text-muted-foreground">
+							Страница {pageInfo.currentPage} из&nbsp;{pageInfo.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => onPageChange(pageInfo.currentPage + 1)}
+							disabled={pageInfo.currentPage >= pageInfo.totalPages}
+							aria-label="Следующая страница"
+						>
+							Вперёд
+							<ChevronRight aria-hidden="true" />
+						</Button>
+					</div>
+				)}
 			</div>
-			{pageInfo.totalPages > 1 && (
-				<div className="flex shrink-0 items-center justify-center gap-4 py-4">
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => onPageChange(pageInfo.currentPage - 1)}
-						disabled={pageInfo.currentPage <= 1}
-						aria-label="Предыдущая страница"
-					>
-						<ChevronLeft aria-hidden="true" />
-						Назад
-					</Button>
-					<span className="text-sm tabular-nums text-muted-foreground">
-						Страница {pageInfo.currentPage} из&nbsp;{pageInfo.totalPages}
-					</span>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => onPageChange(pageInfo.currentPage + 1)}
-						disabled={pageInfo.currentPage >= pageInfo.totalPages}
-						aria-label="Следующая страница"
-					>
-						Вперёд
-						<ChevronRight aria-hidden="true" />
-					</Button>
-				</div>
-			)}
 		</div>
 	);
 }
