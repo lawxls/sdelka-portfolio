@@ -13,6 +13,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 55000,
 		bestPrice: 50000,
 		averagePrice: 52000,
+		folderId: null,
 	},
 	{
 		id: "2",
@@ -22,6 +23,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 30000,
 		bestPrice: 35000,
 		averagePrice: 32000,
+		folderId: null,
 	},
 	{
 		id: "3",
@@ -31,6 +33,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 8000,
 		bestPrice: null,
 		averagePrice: null,
+		folderId: null,
 	},
 ];
 

@@ -41,6 +41,14 @@
 	--sidebar-accent-foreground: oklch(0.35 0.1 48);
 	--sidebar-border: oklch(0.922 0 0);
 	--sidebar-ring: oklch(0.62 0.16 48);
+	--folder-red: oklch(0.63 0.2 25);
+	--folder-orange: oklch(0.7 0.17 55);
+	--folder-yellow: oklch(0.8 0.16 85);
+	--folder-green: oklch(0.65 0.17 145);
+	--folder-blue: oklch(0.6 0.16 250);
+	--folder-purple: oklch(0.58 0.18 300);
+	--folder-pink: oklch(0.68 0.17 350);
+	--folder-teal: oklch(0.65 0.12 195);
 }
 
 .dark {
@@ -78,6 +86,14 @@
 	--sidebar-accent-foreground: oklch(0.9 0.08 48);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.78 0.12 48);
+	--folder-red: oklch(0.72 0.17 25);
+	--folder-orange: oklch(0.76 0.14 55);
+	--folder-yellow: oklch(0.84 0.14 85);
+	--folder-green: oklch(0.72 0.15 145);
+	--folder-blue: oklch(0.7 0.14 250);
+	--folder-purple: oklch(0.68 0.15 300);
+	--folder-pink: oklch(0.74 0.14 350);
+	--folder-teal: oklch(0.72 0.1 195);
 }
 
 @theme inline {
@@ -115,6 +131,14 @@
 	--color-foreground: var(--foreground);
 	--color-status-highlight: var(--status-highlight);
 	--color-background: var(--background);
+	--color-folder-red: var(--folder-red);
+	--color-folder-orange: var(--folder-orange);
+	--color-folder-yellow: var(--folder-yellow);
+	--color-folder-green: var(--folder-green);
+	--color-folder-blue: var(--folder-blue);
+	--color-folder-purple: var(--folder-purple);
+	--color-folder-pink: var(--folder-pink);
+	--color-folder-teal: var(--folder-teal);
 	--radius-sm: calc(var(--radius) * 0.6);
 	--radius-md: calc(var(--radius) * 0.8);
 	--radius-lg: var(--radius);

@@ -14,7 +14,16 @@ export interface ProcurementItem {
 	currentPrice: number;
 	bestPrice: number | null;
 	averagePrice: number | null;
+	folderId: string | null;
 }
+
+export interface Folder {
+	id: string;
+	name: string;
+	color: string;
+}
+
+export const FOLDER_COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "teal"] as const;
 
 export type DeviationFilter = "all" | "overpaying" | "saving";
 export type StatusFilter = ProcurementStatus | "all";
@@ -46,11 +55,13 @@ export interface Totals {
 }
 
 export interface ProcurementDataParams {
+	items?: ProcurementItem[];
 	search: string;
 	filters: FilterState;
 	sort: SortState | null;
 	page: number;
 	pageSize: number;
+	folder?: string;
 }
 
 export interface ProcurementDataResult {

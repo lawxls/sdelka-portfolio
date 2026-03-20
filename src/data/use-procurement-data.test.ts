@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { mockProcurementItems } from "./mock-data";
-import type { ProcurementDataParams } from "./types";
+import { mockProcurementItems, SEED_FOLDER_ASSIGNMENTS } from "./mock-data";
+import type { ProcurementDataParams, ProcurementItem } from "./types";
 import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 import { useProcurementData } from "./use-procurement-data";
 
@@ -258,6 +258,86 @@ describe("useProcurementData", () => {
 		it("totalDeviation is overpayment minus savings", () => {
 			const result = renderData();
 			expect(result.totals.totalDeviation).toBeCloseTo(result.totals.totalOverpayment - result.totals.totalSavings, 2);
+		});
+	});
+
+	describe("folder filter", () => {
+		function itemsWithFolders(): ProcurementItem[] {
+			return mockProcurementItems.map((item) => ({
+				...item,
+				folderId: SEED_FOLDER_ASSIGNMENTS[item.id] ?? null,
+			}));
+		}
+
+		function renderWithFolders(overrides: Partial<ProcurementDataParams> = {}) {
+			return renderHook(() =>
+				useProcurementData({
+					...defaultParams,
+					items: itemsWithFolders(),
+					pageSize: 75,
+					...overrides,
+				}),
+			).result.current;
+		}
+
+		it("returns all items when folder is undefined", () => {
+			const result = renderWithFolders();
+			expect(result.totalItems).toBe(75);
+		});
+
+		it("filters by specific folder id", () => {
+			const result = renderWithFolders({ folder: "folder-1" });
+			const expectedCount = Object.values(SEED_FOLDER_ASSIGNMENTS).filter((f) => f === "folder-1").length;
+			expect(result.totalItems).toBe(expectedCount);
+			for (const item of result.items) {
+				expect(item.folderId).toBe("folder-1");
+			}
+		});
+
+		it("folder=none returns unassigned items", () => {
+			const result = renderWithFolders({ folder: "none" });
+			const assignedCount = Object.keys(SEED_FOLDER_ASSIGNMENTS).length;
+			expect(result.totalItems).toBe(75 - assignedCount);
+			for (const item of result.items) {
+				expect(item.folderId).toBeNull();
+			}
+		});
+
+		it("stacks with search filter", () => {
+			const result = renderWithFolders({ folder: "folder-1", search: "арматура" });
+			expect(result.totalItems).toBeGreaterThan(0);
+			for (const item of result.items) {
+				expect(item.folderId).toBe("folder-1");
+				expect(item.name.toLowerCase()).toContain("арматура");
+			}
+		});
+
+		it("stacks with deviation filter", () => {
+			const result = renderWithFolders({
+				folder: "folder-1",
+				filters: { deviation: "overpaying", status: "all" },
+			});
+			for (const item of result.items) {
+				expect(item.folderId).toBe("folder-1");
+				expect(getDeviation(item)).toBeGreaterThan(0);
+			}
+		});
+
+		it("stacks with status filter", () => {
+			const result = renderWithFolders({
+				folder: "folder-2",
+				filters: { deviation: "all", status: "searching" },
+			});
+			for (const item of result.items) {
+				expect(item.folderId).toBe("folder-2");
+				expect(item.status).toBe("searching");
+			}
+		});
+
+		it("returns empty when folder has no items", () => {
+			const result = renderWithFolders({ folder: "nonexistent-folder" });
+			expect(result.totalItems).toBe(0);
+			expect(result.items).toHaveLength(0);
 		});
 	});
 });
