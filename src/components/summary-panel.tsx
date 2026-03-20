@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Totals } from "@/data/types";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, signClassName } from "@/lib/format";
 
 interface SummaryPanelProps {
 	totals: Totals;
@@ -17,25 +17,19 @@ export function SummaryPanel({ totals }: SummaryPanelProps) {
 				</div>
 				<div>
 					<span className="text-muted-foreground">Общее отклонение:{"\u00A0"}</span>
-					<span
-						className={`font-medium tabular-nums ${totals.totalDeviation > 0 ? "text-red-600 dark:text-red-400" : totals.totalDeviation < 0 ? "text-green-600 dark:text-green-400" : ""}`}
-					>
+					<span className={`font-medium tabular-nums ${signClassName(totals.totalDeviation)}`}>
 						{formatCurrency(totals.totalDeviation)}
 					</span>
 				</div>
 				<div>
 					<span className="text-muted-foreground">Переплата:{"\u00A0"}</span>
-					<span
-						className={`font-medium tabular-nums ${totals.totalOverpayment > 0 ? "text-red-600 dark:text-red-400" : ""}`}
-					>
+					<span className={`font-medium tabular-nums ${signClassName(totals.totalOverpayment)}`}>
 						{formatCurrency(totals.totalOverpayment)}
 					</span>
 				</div>
 				<div>
 					<span className="text-muted-foreground">Экономия:{"\u00A0"}</span>
-					<span
-						className={`font-medium tabular-nums ${totals.totalSavings > 0 ? "text-green-600 dark:text-green-400" : ""}`}
-					>
+					<span className={`font-medium tabular-nums ${signClassName(-totals.totalSavings)}`}>
 						{formatCurrency(totals.totalSavings)}
 					</span>
 				</div>

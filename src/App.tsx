@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -21,15 +21,15 @@ function App() {
 		pageSize,
 	});
 
-	const handleSearchChange = useCallback((query: string) => {
+	function handleSearchChange(query: string) {
 		setSearch(query);
 		setPage(1);
-	}, []);
+	}
 
-	const handleFiltersChange = useCallback((newFilters: FilterState) => {
+	function handleFiltersChange(newFilters: FilterState) {
 		setFilters(newFilters);
 		setPage(1);
-	}, []);
+	}
 
 	function handleSort(field: SortField) {
 		setSort((prev) => {
@@ -49,15 +49,7 @@ function App() {
 
 			<main className="flex min-h-0 flex-1 flex-col px-4">
 				<Toolbar onSearchChange={handleSearchChange} filters={filters} onFiltersChange={handleFiltersChange} />
-				<ProcurementTable
-					items={items}
-					startIndex={(pageInfo.currentPage - 1) * pageSize}
-					sort={sort}
-					pageInfo={pageInfo}
-					onSort={handleSort}
-					onRowClick={() => {}}
-					onPageChange={setPage}
-				/>
+				<ProcurementTable items={items} sort={sort} pageInfo={pageInfo} onSort={handleSort} onPageChange={setPage} />
 			</main>
 
 			<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">

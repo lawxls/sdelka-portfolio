@@ -1,5 +1,11 @@
 export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
+export const STATUS_LABELS: Record<ProcurementStatus, string> = {
+	searching: "Ищем поставщиков",
+	negotiating: "Ведём переговоры",
+	completed: "Переговоры завершены",
+};
+
 export interface ProcurementItem {
 	id: string;
 	name: string;

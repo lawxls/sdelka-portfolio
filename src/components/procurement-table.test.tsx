@@ -36,11 +36,9 @@ const mockItems: ProcurementItem[] = [
 
 const defaultProps = {
 	items: mockItems,
-	startIndex: 0,
 	sort: null,
 	pageInfo: { currentPage: 1, totalPages: 1, pageSize: 50 },
 	onSort: () => {},
-	onRowClick: () => {},
 	onPageChange: () => {},
 };
 
@@ -56,11 +54,11 @@ describe("ProcurementTable", () => {
 		expect(screen.getAllByRole("row")).toHaveLength(4);
 	});
 
-	test("renders row numbers with startIndex offset", () => {
-		render(<ProcurementTable {...defaultProps} startIndex={10} />);
-		expect(screen.getByText("11")).toBeInTheDocument();
-		expect(screen.getByText("12")).toBeInTheDocument();
-		expect(screen.getByText("13")).toBeInTheDocument();
+	test("renders row numbers with page offset", () => {
+		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 2, totalPages: 3, pageSize: 5 }} />);
+		expect(screen.getByText("6")).toBeInTheDocument();
+		expect(screen.getByText("7")).toBeInTheDocument();
+		expect(screen.getByText("8")).toBeInTheDocument();
 	});
 
 	test("renders item names", () => {
@@ -109,11 +107,19 @@ describe("ProcurementTable", () => {
 		expect(greenCells).toHaveLength(2);
 	});
 
-	test("rows have cursor-pointer class", () => {
-		render(<ProcurementTable {...defaultProps} />);
+	test("rows have cursor-pointer class when onRowClick provided", () => {
+		render(<ProcurementTable {...defaultProps} onRowClick={() => {}} />);
 		const dataRows = screen.getAllByRole("row").slice(1);
 		for (const row of dataRows) {
 			expect(row.className).toContain("cursor-pointer");
+		}
+	});
+
+	test("rows do not have cursor-pointer class when onRowClick omitted", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		const dataRows = screen.getAllByRole("row").slice(1);
+		for (const row of dataRows) {
+			expect(row.className).not.toContain("cursor-pointer");
 		}
 	});
 

@@ -3,30 +3,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
-import { getDeviation, getOverpayment } from "@/data/types";
-import { formatCurrency, formatDeviation, formatNumber } from "@/lib/format";
+import { getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
+import { formatCurrency, formatDeviation, formatNumber, signClassName } from "@/lib/format";
 
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: {
-		label: "Ищем поставщиков",
+		label: STATUS_LABELS.searching,
 		className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
 	},
 	negotiating: {
-		label: "Ведём переговоры",
+		label: STATUS_LABELS.negotiating,
 		className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
 	},
 	completed: {
-		label: "Переговоры завершены",
+		label: STATUS_LABELS.completed,
 		className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
 	},
 };
-
-function getOverpaymentClassName(value: number | null): string {
-	if (value == null) return "";
-	if (value > 0) return "text-red-600 dark:text-red-400";
-	if (value < 0) return "text-green-600 dark:text-green-400";
-	return "";
-}
 
 interface SortableColumn {
 	label: string;
@@ -53,23 +46,15 @@ function SortIcon({ field, sort }: { field: SortField; sort: SortState | null })
 
 interface ProcurementTableProps {
 	items: ProcurementItem[];
-	startIndex: number;
 	sort: SortState | null;
 	pageInfo: PageInfo;
 	onSort: (field: SortField) => void;
-	onRowClick: (item: ProcurementItem) => void;
+	onRowClick?: (item: ProcurementItem) => void;
 	onPageChange: (page: number) => void;
 }
 
-export function ProcurementTable({
-	items,
-	startIndex,
-	sort,
-	pageInfo,
-	onSort,
-	onRowClick,
-	onPageChange,
-}: ProcurementTableProps) {
+export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, onPageChange }: ProcurementTableProps) {
+	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
 	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
 	const stickyNameCell = "sticky left-0 z-10 bg-background transition-colors group-hover:bg-muted/50";
@@ -106,7 +91,11 @@ export function ProcurementTable({
 							const status = STATUS_CONFIG[item.status];
 
 							return (
-								<TableRow key={item.id} className="cursor-pointer group" onClick={() => onRowClick(item)}>
+								<TableRow
+									key={item.id}
+									className={onRowClick ? "cursor-pointer group" : "group"}
+									onClick={onRowClick ? () => onRowClick(item) : undefined}
+								>
 									<TableCell className="text-right tabular-nums text-muted-foreground">
 										{startIndex + index + 1}
 									</TableCell>
@@ -121,7 +110,7 @@ export function ProcurementTable({
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
 									<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
-									<TableCell className={`text-right tabular-nums ${getOverpaymentClassName(overpayment)}`}>
+									<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
 										{formatCurrency(overpayment)}
 									</TableCell>
 								</TableRow>

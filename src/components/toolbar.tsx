@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DeviationFilter, FilterState, StatusFilter } from "@/data/types";
+import { STATUS_LABELS } from "@/data/types";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 
 interface ToolbarProps {
 	onSearchChange: (query: string) => void;
@@ -17,9 +19,9 @@ const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
 ];
 
 const STATUS_PRESETS: { label: string; value: StatusFilter }[] = [
-	{ label: "Ищем поставщиков", value: "searching" },
-	{ label: "Ведём переговоры", value: "negotiating" },
-	{ label: "Переговоры завершены", value: "completed" },
+	{ label: STATUS_LABELS.searching, value: "searching" },
+	{ label: STATUS_LABELS.negotiating, value: "negotiating" },
+	{ label: STATUS_LABELS.completed, value: "completed" },
 ];
 
 function hasActiveFilter(filters: FilterState): boolean {
@@ -28,6 +30,7 @@ function hasActiveFilter(filters: FilterState): boolean {
 
 export function Toolbar({ onSearchChange, filters, onFiltersChange }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+	useMountEffect(() => () => clearTimeout(debounceRef.current));
 
 	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
 		const value = e.target.value;

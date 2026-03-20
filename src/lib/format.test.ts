@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDeviation, formatNumber, formatPercent } from "./format";
+import { formatCurrency, formatDeviation, formatNumber, formatPercent, signClassName } from "./format";
 
 describe("formatCurrency", () => {
 	it("includes ₽ symbol", () => {
@@ -78,6 +78,28 @@ describe("formatPercent", () => {
 
 	it("returns dash for undefined", () => {
 		expect(formatPercent(undefined)).toBe("\u2014");
+	});
+});
+
+describe("signClassName", () => {
+	it("returns red class for positive values", () => {
+		expect(signClassName(100)).toContain("text-red");
+	});
+
+	it("returns green class for negative values", () => {
+		expect(signClassName(-50)).toContain("text-green");
+	});
+
+	it("returns empty string for zero", () => {
+		expect(signClassName(0)).toBe("");
+	});
+
+	it("returns empty string for null", () => {
+		expect(signClassName(null)).toBe("");
+	});
+
+	it("returns empty string for undefined", () => {
+		expect(signClassName(undefined)).toBe("");
 	});
 });
 
