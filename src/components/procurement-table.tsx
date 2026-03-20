@@ -70,62 +70,68 @@ export function ProcurementTable({
 	onRowClick,
 	onPageChange,
 }: ProcurementTableProps) {
-	return (
-		<div>
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="w-12 text-right">№</TableHead>
-						<TableHead>Наименование</TableHead>
-						<TableHead>Статус</TableHead>
-						{SORTABLE_COLUMNS.map((col) => (
-							<TableHead key={col.field} className="text-right">
-								<button
-									type="button"
-									className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-									onClick={() => onSort(col.field)}
-									aria-label={`Сортировать по ${col.label}`}
-								>
-									{col.label}
-									<SortIcon field={col.field} sort={sort} />
-								</button>
-							</TableHead>
-						))}
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{items.map((item, index) => {
-						const deviation = getDeviation(item);
-						const overpayment = getOverpayment(item);
-						const dev = formatDeviation(deviation);
-						const status = STATUS_CONFIG[item.status];
+	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
+	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
+	const stickyNameCell = "sticky left-0 z-10 bg-background transition-colors group-hover:bg-muted/50";
 
-						return (
-							<TableRow key={item.id} className="cursor-pointer" onClick={() => onRowClick(item)}>
-								<TableCell className="text-right tabular-nums text-muted-foreground">
-									{startIndex + index + 1}
-								</TableCell>
-								<TableCell className="font-medium">{item.name}</TableCell>
-								<TableCell>
-									<Badge variant="outline" className={status.className}>
-										{status.label}
-									</Badge>
-								</TableCell>
-								<TableCell className="text-right tabular-nums">{formatNumber(item.annualQuantity)}</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
-								<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
-								<TableCell className={`text-right tabular-nums ${getOverpaymentClassName(overpayment)}`}>
-									{formatCurrency(overpayment)}
-								</TableCell>
-							</TableRow>
-						);
-					})}
-				</TableBody>
-			</Table>
+	return (
+		<div className="flex min-h-0 flex-1 flex-col">
+			<div className="flex-1 overflow-auto touch-manipulation" data-testid="table-scroll-container">
+				<Table>
+					<TableHeader className="[&_tr]:border-b-0">
+						<TableRow>
+							<TableHead className={`w-12 text-right ${stickyHead}`}>№</TableHead>
+							<TableHead className={stickyNameHead}>Наименование</TableHead>
+							<TableHead className={stickyHead}>Статус</TableHead>
+							{SORTABLE_COLUMNS.map((col) => (
+								<TableHead key={col.field} className={`text-right ${stickyHead}`}>
+									<button
+										type="button"
+										className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+										onClick={() => onSort(col.field)}
+										aria-label={`Сортировать по ${col.label}`}
+									>
+										{col.label}
+										<SortIcon field={col.field} sort={sort} />
+									</button>
+								</TableHead>
+							))}
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{items.map((item, index) => {
+							const deviation = getDeviation(item);
+							const overpayment = getOverpayment(item);
+							const dev = formatDeviation(deviation);
+							const status = STATUS_CONFIG[item.status];
+
+							return (
+								<TableRow key={item.id} className="cursor-pointer group" onClick={() => onRowClick(item)}>
+									<TableCell className="text-right tabular-nums text-muted-foreground">
+										{startIndex + index + 1}
+									</TableCell>
+									<TableCell className={`font-medium ${stickyNameCell}`}>{item.name}</TableCell>
+									<TableCell>
+										<Badge variant="outline" className={status.className}>
+											{status.label}
+										</Badge>
+									</TableCell>
+									<TableCell className="text-right tabular-nums">{formatNumber(item.annualQuantity)}</TableCell>
+									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
+									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
+									<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
+									<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
+									<TableCell className={`text-right tabular-nums ${getOverpaymentClassName(overpayment)}`}>
+										{formatCurrency(overpayment)}
+									</TableCell>
+								</TableRow>
+							);
+						})}
+					</TableBody>
+				</Table>
+			</div>
 			{pageInfo.totalPages > 1 && (
-				<div className="flex items-center justify-center gap-4 py-4">
+				<div className="flex shrink-0 items-center justify-center gap-4 py-4">
 					<Button
 						variant="outline"
 						size="sm"

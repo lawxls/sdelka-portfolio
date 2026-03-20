@@ -41,13 +41,13 @@ function App() {
 	}
 
 	return (
-		<div className="flex min-h-svh flex-col bg-background text-foreground">
-			<header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+		<div className="flex h-svh flex-col bg-background text-foreground">
+			<header className="z-30 flex shrink-0 items-center justify-between border-b border-border bg-background px-4 py-3">
 				<h1 className="text-lg font-semibold tracking-tight">Портфель закупок</h1>
 				<ThemeToggle />
 			</header>
 
-			<main className="flex-1 px-4">
+			<main className="flex min-h-0 flex-1 flex-col px-4">
 				<Toolbar onSearchChange={handleSearchChange} filters={filters} onFiltersChange={handleFiltersChange} />
 				<ProcurementTable
 					items={items}
@@ -60,7 +60,7 @@ function App() {
 				/>
 			</main>
 
-			<footer className="sticky bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+			<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
 				<SummaryPanel totals={totals} />
 			</footer>
 		</div>

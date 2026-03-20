@@ -193,4 +193,37 @@ describe("ProcurementTable", () => {
 		await user.click(screen.getByRole("button", { name: "Следующая страница" }));
 		expect(onPageChange).toHaveBeenCalledWith(3);
 	});
+
+	test("renders scroll container with overflow-auto for horizontal and vertical scrolling", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		const scrollContainer = screen.getByTestId("table-scroll-container");
+		expect(scrollContainer.className).toContain("overflow-auto");
+		expect(scrollContainer.className).toContain("touch-manipulation");
+	});
+
+	test("header cells have sticky top-0 classes", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		const headers = screen.getAllByRole("columnheader");
+		for (const header of headers) {
+			expect(header.className).toContain("sticky");
+			expect(header.className).toContain("top-0");
+			expect(header.className).toContain("bg-background");
+		}
+	});
+
+	test("name column header has sticky left-0 class for horizontal pinning", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		const nameHeader = screen.getByText("Наименование").closest("[data-slot='table-head']");
+		expect(nameHeader?.className).toContain("sticky");
+		expect(nameHeader?.className).toContain("left-0");
+		expect(nameHeader?.className).toContain("z-30");
+	});
+
+	test("name column body cells have sticky left-0 class", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		const nameCell = screen.getByText("Арматура А500").closest("[data-slot='table-cell']");
+		expect(nameCell?.className).toContain("sticky");
+		expect(nameCell?.className).toContain("left-0");
+		expect(nameCell?.className).toContain("bg-background");
+	});
 });
