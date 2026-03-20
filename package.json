@@ -12,7 +12,8 @@
 		"format": "biome check --write .",
 		"test": "vitest run",
 		"knip": "knip",
-		"ralph": "bash scripts/ralph.sh --"
+		"ralph": "bash scripts/ralph.sh --",
+		"prepare": "husky"
 	},
 	"dependencies": {
 		"react": "^19.2.4",
@@ -28,6 +29,7 @@
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.1",
+		"husky": "^9.1.7",
 		"jsdom": "^29.0.1",
 		"knip": "^6.0.0",
 		"tailwindcss": "^4.2.2",
