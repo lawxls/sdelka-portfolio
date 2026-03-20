@@ -44,9 +44,10 @@ export interface UseFoldersResult {
 	applyFolders: (items: ProcurementItem[]) => ProcurementItem[];
 }
 
-export function useFolders(): UseFoldersResult {
+export function useFolders(allItems?: ProcurementItem[]): UseFoldersResult {
 	const [folders, setFolders] = useState<Folder[]>(readFolders);
 	const [assignments, setAssignments] = useState<Record<string, string>>(readAssignments);
+	const itemsForCounts = allItems ?? mockProcurementItems;
 
 	const createFolder = useCallback((name: string): Folder | null => {
 		let created: Folder | null = null;
@@ -124,9 +125,9 @@ export function useFolders(): UseFoldersResult {
 	);
 
 	const counts = useMemo(() => {
-		const result: Record<string, number> = { all: mockProcurementItems.length };
+		const result: Record<string, number> = { all: itemsForCounts.length };
 		let unassigned = 0;
-		for (const item of mockProcurementItems) {
+		for (const item of itemsForCounts) {
 			const folderId = assignments[item.id];
 			if (folderId) {
 				result[folderId] = (result[folderId] ?? 0) + 1;
@@ -136,7 +137,7 @@ export function useFolders(): UseFoldersResult {
 		}
 		result.none = unassigned;
 		return result;
-	}, [assignments]);
+	}, [itemsForCounts, assignments]);
 
 	return {
 		folders,

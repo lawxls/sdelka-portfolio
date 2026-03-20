@@ -1,8 +1,41 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	ChevronLeft,
+	ChevronRight,
+	FolderInput,
+	Inbox,
+	Pencil,
+	Trash2,
+} from "lucide-react";
+import { useRef, useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	ContextMenu,
+	ContextMenuCheckboxItem,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubContent,
+	ContextMenuSubTrigger,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Folder, PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 
 const STATUS_BG = "bg-[#ebebed] dark:bg-[#35353a]";
@@ -56,6 +89,9 @@ interface ProcurementTableProps {
 	onSort: (field: SortField) => void;
 	onRowClick?: (item: ProcurementItem) => void;
 	onPageChange: (page: number) => void;
+	onDeleteItem?: (id: string) => void;
+	onRenameItem?: (id: string, name: string) => void;
+	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 }
 
 export function ProcurementTable({
@@ -66,12 +102,19 @@ export function ProcurementTable({
 	onSort,
 	onRowClick,
 	onPageChange,
+	onDeleteItem,
+	onRenameItem,
+	onAssignFolder,
 }: ProcurementTableProps) {
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
 	const folderMap: Record<string, Folder> = {};
 	if (folders) {
 		for (const f of folders) folderMap[f.id] = f;
 	}
+	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
+	const [editingItemId, setEditingItemId] = useState<string | null>(null);
+	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
+
 	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
 	const stickyNameCell =
@@ -123,31 +166,50 @@ export function ProcurementTable({
 							const status = STATUS_CONFIG[item.status];
 							const isInProgress = item.status !== "completed";
 							const rowCls = onRowClick ? "cursor-pointer group" : "group";
+							const isEditing = editingItemId === item.id;
 
-							return (
+							const nameCell = isEditing ? (
+								<TableCell className={`font-medium ${stickyNameCell}`}>
+									<InlineRenameInput
+										defaultValue={item.name}
+										onSave={(name) => {
+											onRenameItem?.(item.id, name);
+											setEditingItemId(null);
+										}}
+										onCancel={() => setEditingItemId(null)}
+									/>
+								</TableCell>
+							) : (
+								<TableCell className={`font-medium ${stickyNameCell}`}>
+									<div>
+										{item.name}
+										{item.folderId && folderMap[item.folderId] && (
+											<div className="mt-0.5 flex items-center gap-1" data-testid={`folder-badge-${item.id}`}>
+												<span
+													className="size-2 shrink-0 rounded-full"
+													style={{
+														backgroundColor: `var(--folder-${folderMap[item.folderId].color})`,
+													}}
+													aria-hidden="true"
+												/>
+												<span className="text-xs text-muted-foreground">{folderMap[item.folderId].name}</span>
+											</div>
+										)}
+									</div>
+								</TableCell>
+							);
+
+							const row = (
 								<TableRow
 									key={item.id}
 									className={item.status === "negotiating" ? `${rowCls} negotiating-stripe` : rowCls}
 									onClick={onRowClick ? () => onRowClick(item) : undefined}
+									data-testid={hasContextMenu ? `row-${item.id}` : undefined}
 								>
 									<TableCell className="text-right tabular-nums text-muted-foreground">
 										{startIndex + index + 1}
 									</TableCell>
-									<TableCell className={`font-medium ${stickyNameCell}`}>
-										<div>
-											{item.name}
-											{item.folderId && folderMap[item.folderId] && (
-												<div className="mt-0.5 flex items-center gap-1" data-testid={`folder-badge-${item.id}`}>
-													<span
-														className="size-2 shrink-0 rounded-full"
-														style={{ backgroundColor: `var(--folder-${folderMap[item.folderId].color})` }}
-														aria-hidden="true"
-													/>
-													<span className="text-xs text-muted-foreground">{folderMap[item.folderId].name}</span>
-												</div>
-											)}
-										</div>
-									</TableCell>
+									{nameCell}
 									<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
@@ -165,6 +227,65 @@ export function ProcurementTable({
 										</span>
 									</TableCell>
 								</TableRow>
+							);
+
+							if (!hasContextMenu) return row;
+
+							return (
+								<ContextMenu key={item.id}>
+									<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+									<ContextMenuContent>
+										{onAssignFolder && folders && (
+											<ContextMenuSub>
+												<ContextMenuSubTrigger>
+													<FolderInput className="size-3.5" />
+													Переместить в папку
+												</ContextMenuSubTrigger>
+												<ContextMenuSubContent>
+													{folders.map((f) => (
+														<ContextMenuCheckboxItem
+															key={f.id}
+															checked={item.folderId === f.id}
+															onCheckedChange={() => onAssignFolder(item.id, f.id)}
+														>
+															<span
+																className="size-2 shrink-0 rounded-full"
+																style={{
+																	backgroundColor: `var(--folder-${f.color})`,
+																}}
+																aria-hidden="true"
+															/>
+															{f.name}
+														</ContextMenuCheckboxItem>
+													))}
+													<ContextMenuSeparator />
+													<ContextMenuCheckboxItem
+														checked={item.folderId == null}
+														onCheckedChange={() => onAssignFolder(item.id, null)}
+													>
+														<Inbox className="size-3.5" />
+														Без папки
+													</ContextMenuCheckboxItem>
+												</ContextMenuSubContent>
+											</ContextMenuSub>
+										)}
+										{onRenameItem && (
+											<ContextMenuItem onSelect={() => setEditingItemId(item.id)}>
+												<Pencil className="size-3.5" />
+												Переименовать
+											</ContextMenuItem>
+										)}
+										{onDeleteItem && (
+											<>
+												<ContextMenuSeparator />
+												<ContextMenuItem variant="destructive" onSelect={() => setDeletingItem(item)}>
+													<Trash2 className="size-3.5" />
+													Удалить
+												</ContextMenuItem>
+											</>
+										)}
+									</ContextMenuContent>
+								</ContextMenu>
 							);
 						})}
 					</TableBody>
@@ -197,6 +318,85 @@ export function ProcurementTable({
 					</div>
 				)}
 			</div>
+
+			{deletingItem && (
+				<AlertDialog open onOpenChange={(open) => !open && setDeletingItem(null)}>
+					<AlertDialogContent size="sm">
+						<AlertDialogHeader>
+							<AlertDialogTitle>Удалить закупку?</AlertDialogTitle>
+							<AlertDialogDescription>«{deletingItem.name}» будет удалена из таблицы.</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel onClick={() => setDeletingItem(null)}>Отмена</AlertDialogCancel>
+							<AlertDialogAction
+								variant="destructive"
+								onClick={() => {
+									onDeleteItem?.(deletingItem.id);
+									setDeletingItem(null);
+								}}
+							>
+								Удалить
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			)}
 		</div>
+	);
+}
+
+function InlineRenameInput({
+	defaultValue,
+	onSave,
+	onCancel,
+}: {
+	defaultValue: string;
+	onSave: (name: string) => void;
+	onCancel: () => void;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const savedRef = useRef(false);
+
+	useMountEffect(() => {
+		// Defer focus so that a closing context menu's focus restoration
+		// does not immediately blur this input and trigger a premature save
+		const id = setTimeout(() => {
+			inputRef.current?.focus();
+			inputRef.current?.select();
+		}, 0);
+		return () => clearTimeout(id);
+	});
+
+	function save() {
+		if (savedRef.current) return;
+		savedRef.current = true;
+		const value = inputRef.current?.value.trim() ?? "";
+		if (value) onSave(value);
+		else onCancel();
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			save();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			savedRef.current = true;
+			onCancel();
+		}
+	}
+
+	return (
+		<input
+			ref={inputRef}
+			type="text"
+			className="w-full bg-transparent text-sm font-medium outline-none"
+			defaultValue={defaultValue}
+			spellCheck={false}
+			autoComplete="off"
+			aria-label="Название закупки"
+			onKeyDown={handleKeyDown}
+			onBlur={save}
+		/>
 	);
 }

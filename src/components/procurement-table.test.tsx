@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import type { Folder, ProcurementItem } from "@/data/types";
@@ -269,5 +269,144 @@ describe("ProcurementTable folder badges", () => {
 	test("does not render badges when folders prop is omitted", () => {
 		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
 		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
+	});
+});
+
+const contextMenuProps = {
+	...defaultProps,
+	items: itemsWithFolders,
+	folders: testFolders,
+	onDeleteItem: vi.fn(),
+	onRenameItem: vi.fn(),
+	onAssignFolder: vi.fn(),
+};
+
+describe("ProcurementTable context menu", () => {
+	test("rows have data-testid when context menu props are provided", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		expect(screen.getByTestId("row-1")).toBeInTheDocument();
+		expect(screen.getByTestId("row-2")).toBeInTheDocument();
+	});
+
+	test("rows do not have data-testid when no context menu props", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.queryByTestId("row-1")).not.toBeInTheDocument();
+	});
+
+	test("context menu opens on right-click with correct items", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		const row = screen.getByTestId("row-1");
+		fireEvent.contextMenu(row);
+		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		expect(screen.getByText("Удалить")).toBeInTheDocument();
+	});
+
+	test("folder assignment submenu shows folders", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+
+		// Hover over submenu trigger to open it
+		fireEvent.click(screen.getByText("Переместить в папку"));
+
+		expect(screen.getByText("Без папки")).toBeInTheDocument();
+	});
+
+	test("clicking delete opens AlertDialog", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		expect(screen.getByText("Удалить закупку?")).toBeInTheDocument();
+		// Dialog description contains item name
+		const dialog = screen.getByRole("alertdialog");
+		expect(within(dialog).getByText(/Арматура А500/)).toBeInTheDocument();
+	});
+
+	test("confirming delete calls onDeleteItem", () => {
+		const onDeleteItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+		expect(onDeleteItem).toHaveBeenCalledWith("1");
+	});
+
+	test("cancelling delete does not call onDeleteItem", () => {
+		const onDeleteItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+		expect(onDeleteItem).not.toHaveBeenCalled();
+	});
+
+	test("clicking Переименовать shows inline input", async () => {
+		// Render without onAssignFolder to isolate rename from submenu
+		render(
+			<ProcurementTable
+				{...defaultProps}
+				items={itemsWithFolders}
+				folders={testFolders}
+				onRenameItem={vi.fn()}
+				onDeleteItem={vi.fn()}
+			/>,
+		);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		expect(input).toBeInTheDocument();
+		expect(input).toHaveAttribute("spellcheck", "false");
+		expect(input).toHaveAttribute("autocomplete", "off");
+	});
+
+	test("inline rename Enter saves and calls onRenameItem", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		await user.clear(input);
+		await user.type(input, "Новое имя{Enter}");
+
+		expect(onRenameItem).toHaveBeenCalledWith("1", "Новое имя");
+	});
+
+	test("inline rename Esc cancels without calling onRenameItem", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		fireEvent.keyDown(input, { key: "Escape" });
+
+		expect(onRenameItem).not.toHaveBeenCalled();
+		expect(screen.queryByRole("textbox", { name: "Название закупки" })).not.toBeInTheDocument();
+	});
+
+	test("inline rename rejects empty name on blur", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		await user.clear(input);
+		fireEvent.blur(input);
+
+		expect(onRenameItem).not.toHaveBeenCalled();
 	});
 });

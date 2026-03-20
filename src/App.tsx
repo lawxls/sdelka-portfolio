@@ -8,6 +8,7 @@ import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, SortField, SortState, StatusFilter } from "@/data/types";
 import { useFolders } from "@/data/use-folders";
+import { useItemOverrides } from "@/data/use-item-overrides";
 import { useProcurementData } from "@/data/use-procurement-data";
 
 const SORT_FIELDS = new Set<string>([
@@ -48,8 +49,12 @@ function App() {
 	const page = Math.max(1, Number(searchParams.get("page")) || 1);
 	const folder = searchParams.get("folder") ?? undefined;
 
-	const { folders, counts, applyFolders, createFolder, renameFolder, recolorFolder, deleteFolder } = useFolders();
-	const itemsWithFolders = useMemo(() => applyFolders(mockProcurementItems), [applyFolders]);
+	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
+	const effectiveItems = useMemo(() => applyOverrides(mockProcurementItems), [applyOverrides]);
+
+	const { folders, counts, applyFolders, assignItem, createFolder, renameFolder, recolorFolder, deleteFolder } =
+		useFolders(effectiveItems);
+	const itemsWithFolders = useMemo(() => applyFolders(effectiveItems), [applyFolders, effectiveItems]);
 
 	const pageSize = 50;
 	const { items, totals, pageInfo } = useProcurementData({
@@ -160,6 +165,9 @@ function App() {
 						pageInfo={pageInfo}
 						onSort={handleSort}
 						onPageChange={handlePageChange}
+						onDeleteItem={deleteItem}
+						onRenameItem={renameItem}
+						onAssignFolder={assignItem}
 					/>
 				</main>
 			</div>

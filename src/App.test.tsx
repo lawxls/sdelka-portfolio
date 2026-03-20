@@ -244,4 +244,82 @@ describe("App", () => {
 		expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
 		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
 	});
+
+	test("context menu opens on right-click with folder/rename/delete options", () => {
+		renderApp();
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		// "Удалить" appears both in context menu and potentially other places
+		// Just verify the menu opened with the expected items
+		const menuItems = screen.getAllByText("Удалить");
+		expect(menuItems.length).toBeGreaterThanOrEqual(1);
+	});
+
+	test("deleting item via context menu removes it from table", () => {
+		renderApp();
+
+		// item-1 (Арматура А500С) should be in the table
+		expect(screen.getByTestId("row-item-1")).toBeInTheDocument();
+
+		// Right-click first row and delete via context menu menuitem
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+
+		// Confirm in AlertDialog
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Item should no longer be in the table
+		expect(screen.queryByTestId("row-item-1")).not.toBeInTheDocument();
+	});
+
+	test("deleted item persists in localStorage", () => {
+		renderApp();
+
+		// Delete an item
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// localStorage should have the override
+		const stored = JSON.parse(localStorage.getItem("item-overrides") ?? "{}");
+		expect(stored.deleted).toContain("item-1");
+	});
+
+	test("deleting item updates sidebar folder counts", () => {
+		renderApp();
+
+		const sidebar = screen.getByTestId("sidebar");
+		// item-1 is in folder-1 (Металлопрокат) which has 9 items in seed
+		const countBefore = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
+		expect(countBefore.textContent).toContain("9");
+
+		// Delete item-1
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Count should decrease
+		const countAfter = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
+		expect(countAfter.textContent).toContain("8");
+	});
+
+	test("folder assignment via context menu updates badge", () => {
+		renderApp();
+
+		// item-16 is unassigned per seed
+		const row = screen.getByTestId("row-item-16");
+		fireEvent.contextMenu(row);
+
+		// Open folder submenu
+		fireEvent.click(screen.getByText("Переместить в папку"));
+
+		// Assign to Металлопрокат via menuitemcheckbox (avoids sidebar match)
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Металлопрокат/ }));
+
+		// Badge should now appear
+		expect(screen.getByTestId("folder-badge-item-16")).toBeInTheDocument();
+	});
 });
