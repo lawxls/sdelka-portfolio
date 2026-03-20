@@ -3,8 +3,8 @@ set -eo pipefail
 
 # RALPH — run Claude on GitHub issues, one at a time
 # Usage: bash scripts/ralph.sh 1 2 3
-#   Processes each issue sequentially.
-#   If no numbers given, fetches all open issues and processes them all.
+#   Processes issues iteratively. Claude picks which issue to work on next.
+#   If no numbers given, fetches all open issues.
 #   Creates a PR with all changes when done.
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
@@ -38,24 +38,39 @@ TEMP_BRANCH="claude/ralph-$(date +%s)"
 git checkout -b "$TEMP_BRANCH"
 
 WORKER_PROMPT=$(cat "$REPO_ROOT/scripts/worker-prompt.md")
-COMPLETED_ISSUES=()
 RALPH_COMMIT_SHAS=()
+MAX_ITERATIONS=${#ISSUE_NUMBERS[@]}
+ITERATION=0
 
-for num in "${ISSUE_NUMBERS[@]}"; do
+# --- Iterative loop: Claude picks the next issue each iteration ---
+while [ $ITERATION -lt $MAX_ITERATIONS ]; do
+  ITERATION=$((ITERATION + 1))
+
   echo "=========================================="
-  echo "RALPH — Issue #$num"
+  echo "RALPH — Iteration $ITERATION/$MAX_ITERATIONS"
   echo "=========================================="
 
-  # --- Fetch issue ---
-  ISSUE_JSON=$(gh issue view "$num" --json number,title,body,comments)
+  # --- Fetch all issues JSON ---
+  ALL_ISSUES_JSON="["
+  FIRST=true
+  for num in "${ISSUE_NUMBERS[@]}"; do
+    ISSUE_JSON=$(gh issue view "$num" --json number,title,body,comments)
+    if $FIRST; then
+      FIRST=false
+    else
+      ALL_ISSUES_JSON+=","
+    fi
+    ALL_ISSUES_JSON+="$ISSUE_JSON"
+  done
+  ALL_ISSUES_JSON+="]"
 
   # --- Fetch recent RALPH commits ---
   RALPH_COMMITS=$(git log --grep="RALPH" -n 10 --format="%H%n%ad%n%B---" --date=short 2>/dev/null || echo "No RALPH commits found")
 
   # --- Build prompt ---
-  FULL_PROMPT="## Your Issue
+  FULL_PROMPT="## Available Issues
 
-${ISSUE_JSON}
+${ALL_ISSUES_JSON}
 
 ## Previous RALPH Commits
 
@@ -78,25 +93,22 @@ ${WORKER_PROMPT}"
   RESULT=$(jq -r 'select(.type == "result").result // empty' "$tmpfile")
   rm -f "$tmpfile"
 
-  # --- Extract issue comment and post it ---
-  COMMENT=$(echo "$RESULT" | sed -n '/<issue_comment>/,/<\/issue_comment>/p' | sed '1d;$d')
-  if [ -n "$COMMENT" ]; then
-    echo "Commenting on issue #$num..."
-    gh issue comment "$num" --body "$COMMENT"
+  # --- Check if Claude signaled completion ---
+  if echo "$RESULT" | grep -q '<promise>COMPLETE</promise>'; then
+    echo "Claude signaled all tasks complete."
+    break
   fi
 
-  # --- Close the issue ---
-  echo "Closing issue #$num..."
-  gh issue close "$num"
+  # Capture commit SHA if Claude made changes
+  CURRENT_SHA=$(git rev-parse HEAD)
+  LAST_SHA=""
+  if [ ${#RALPH_COMMIT_SHAS[@]} -gt 0 ]; then
+    LAST_SHA="${RALPH_COMMIT_SHAS[${#RALPH_COMMIT_SHAS[@]}-1]}"
+  fi
+  if [[ "$LAST_SHA" != "$CURRENT_SHA" ]]; then
+    RALPH_COMMIT_SHAS+=("$CURRENT_SHA")
+  fi
 
-  COMPLETED_ISSUES+=("$num")
-
-  # Capture the commit SHA from this iteration
-  LATEST_SHA=$(git rev-parse HEAD)
-  RALPH_COMMIT_SHAS+=("$LATEST_SHA")
-
-  echo ""
-  echo "Issue #$num complete."
   echo ""
 done
 
@@ -127,7 +139,7 @@ echo "RALPH — Creating PR"
 echo "=========================================="
 
 ISSUES_REF=""
-for num in "${COMPLETED_ISSUES[@]}"; do
+for num in "${ISSUE_NUMBERS[@]}"; do
   ISSUES_REF="${ISSUES_REF}#${num} "
 done
 
@@ -139,7 +151,7 @@ PR_PROMPT="You need to create a GitHub pull request for this RALPH run.
 ## Context
 
 Current branch: $TEMP_BRANCH
-Completed issues: ${ISSUES_REF}
+Issues: ${ISSUES_REF}
 
 ## Commits on this branch
 
@@ -169,4 +181,4 @@ echo "$PR_PROMPT" | claude -p \
   --verbose
 
 echo ""
-echo "RALPH complete. Processed ${#COMPLETED_ISSUES[@]} issue(s)."
+echo "RALPH complete."
