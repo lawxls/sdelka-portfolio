@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDeviation, formatPercent } from "./format";
+import { formatCurrency, formatDeviation, formatNumber, formatPercent } from "./format";
 
 describe("formatCurrency", () => {
 	it("includes ₽ symbol", () => {
@@ -30,6 +30,25 @@ describe("formatCurrency", () => {
 
 	it("returns dash for undefined", () => {
 		expect(formatCurrency(undefined)).toBe("\u2014");
+	});
+});
+
+describe("formatNumber", () => {
+	it("formats with thousands separators", () => {
+		const result = formatNumber(1234567);
+		expect(result).toMatch(/1.*234.*567/);
+	});
+
+	it("formats zero", () => {
+		expect(formatNumber(0)).toBe("0");
+	});
+
+	it("returns dash for null", () => {
+		expect(formatNumber(null)).toBe("\u2014");
+	});
+
+	it("returns dash for undefined", () => {
+		expect(formatNumber(undefined)).toBe("\u2014");
 	});
 });
 
