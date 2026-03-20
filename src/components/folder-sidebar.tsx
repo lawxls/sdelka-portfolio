@@ -331,7 +331,7 @@ function FolderNavItem({
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" side="right">
-					<DropdownMenuItem onClick={onRename}>
+					<DropdownMenuItem onSelect={onRename}>
 						<Pencil className="size-3.5" />
 						Переименовать
 					</DropdownMenuItem>
@@ -354,7 +354,7 @@ function FolderNavItem({
 						</div>
 					</div>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+					<DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
 						<Trash2 className="size-3.5" />
 						Удалить
 					</DropdownMenuItem>
@@ -404,6 +404,7 @@ function InlineFolderRow({
 		onSave,
 		onCancel,
 		selectOnMount: !!defaultValue,
+		deferFocus: !!defaultValue,
 	});
 
 	return (
