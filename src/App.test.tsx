@@ -322,4 +322,26 @@ describe("App", () => {
 		// Badge should now appear
 		expect(screen.getByTestId("folder-badge-item-16")).toBeInTheDocument();
 	});
+
+	test("table rows are draggable in app", () => {
+		renderApp();
+		const row = screen.getByTestId("row-item-1");
+		expect(row.getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	test("sidebar folders are droppable targets in app", () => {
+		renderApp();
+		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
+		expect(screen.getByTestId("droppable-none")).toBeInTheDocument();
+	});
+
+	test("'Все закупки' is not a droppable target in app", () => {
+		renderApp();
+		expect(screen.queryByTestId("droppable-all")).not.toBeInTheDocument();
+	});
+
+	test("drag overlay container exists in app", () => {
+		renderApp();
+		expect(screen.getByTestId("dnd-overlay-container")).toBeInTheDocument();
+	});
 });

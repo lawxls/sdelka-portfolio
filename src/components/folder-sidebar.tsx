@@ -1,3 +1,4 @@
+import { useDroppable } from "@dnd-kit/core";
 import {
 	Check,
 	ChevronLeft,
@@ -144,7 +145,8 @@ export function FolderSidebar({
 						active={activeFolder === undefined}
 						onClick={() => selectFolder(undefined)}
 					/>
-					<NavItem
+					<DroppableNavItem
+						droppableId="none"
 						icon={<Inbox className="size-4" />}
 						label="Без папки"
 						count={counts.none ?? 0}
@@ -248,6 +250,46 @@ function NavItem({
 	);
 }
 
+function DroppableNavItem({
+	droppableId,
+	icon,
+	label,
+	count,
+	active,
+	onClick,
+}: {
+	droppableId: string;
+	icon: React.ReactNode;
+	label: string;
+	count: number;
+	active: boolean;
+	onClick: () => void;
+}) {
+	const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+	return (
+		<div ref={setNodeRef} data-testid={`droppable-${droppableId}`}>
+			<button
+				type="button"
+				className={cn(
+					"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+					isOver
+						? "bg-sidebar-accent ring-2 ring-sidebar-accent-foreground/20"
+						: active
+							? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+							: "text-sidebar-foreground hover:bg-sidebar-accent/50",
+				)}
+				onClick={onClick}
+			>
+				<span className="shrink-0" aria-hidden="true">
+					{icon}
+				</span>
+				<span className="flex-1 text-left">{label}</span>
+				<span className="tabular-nums text-xs text-muted-foreground">{count}</span>
+			</button>
+		</div>
+	);
+}
+
 function FolderNavItem({
 	folder,
 	count,
@@ -266,16 +308,19 @@ function FolderNavItem({
 	onDelete: () => void;
 }) {
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const { setNodeRef, isOver } = useDroppable({ id: `folder-drop-${folder.id}` });
 
 	return (
-		<div className="group relative">
+		<div className="group relative" ref={setNodeRef} data-testid={`droppable-${folder.id}`}>
 			<button
 				type="button"
 				className={cn(
 					"flex w-full items-center gap-2 rounded-md px-2 py-1.5 pr-7 text-sm transition-colors",
-					active
-						? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-						: "text-sidebar-foreground hover:bg-sidebar-accent/50",
+					isOver
+						? "bg-sidebar-accent ring-2 ring-sidebar-accent-foreground/20"
+						: active
+							? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+							: "text-sidebar-foreground hover:bg-sidebar-accent/50",
 				)}
 				onClick={onClick}
 			>

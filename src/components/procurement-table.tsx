@@ -1,3 +1,4 @@
+import { useDraggable } from "@dnd-kit/core";
 import {
 	ArrowDown,
 	ArrowUp,
@@ -92,6 +93,7 @@ interface ProcurementTableProps {
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
+	draggable?: boolean;
 }
 
 export function ProcurementTable({
@@ -105,6 +107,7 @@ export function ProcurementTable({
 	onDeleteItem,
 	onRenameItem,
 	onAssignFolder,
+	draggable,
 }: ProcurementTableProps) {
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
 	const folderMap: Record<string, Folder> = {};
@@ -199,13 +202,14 @@ export function ProcurementTable({
 								</TableCell>
 							);
 
-							const row = (
-								<TableRow
-									key={item.id}
-									className={item.status === "negotiating" ? `${rowCls} negotiating-stripe` : rowCls}
-									onClick={onRowClick ? () => onRowClick(item) : undefined}
-									data-testid={hasContextMenu ? `row-${item.id}` : undefined}
-								>
+							const rowClassName = item.status === "negotiating" ? `${rowCls} negotiating-stripe` : rowCls;
+							const rowProps = {
+								className: rowClassName,
+								onClick: onRowClick ? () => onRowClick(item) : undefined,
+								"data-testid": hasContextMenu ? `row-${item.id}` : undefined,
+							};
+							const rowChildren = (
+								<>
 									<TableCell className="text-right tabular-nums text-muted-foreground">
 										{startIndex + index + 1}
 									</TableCell>
@@ -226,6 +230,16 @@ export function ProcurementTable({
 											{status.label}
 										</span>
 									</TableCell>
+								</>
+							);
+
+							const row = draggable ? (
+								<DraggableRow key={item.id} id={item.id} {...rowProps}>
+									{rowChildren}
+								</DraggableRow>
+							) : (
+								<TableRow key={item.id} {...rowProps}>
+									{rowChildren}
 								</TableRow>
 							);
 
@@ -342,6 +356,23 @@ export function ProcurementTable({
 				</AlertDialog>
 			)}
 		</div>
+	);
+}
+
+function DraggableRow({ id, children, className, ...props }: { id: string } & React.ComponentProps<typeof TableRow>) {
+	const { listeners, setNodeRef, isDragging } = useDraggable({ id });
+	return (
+		<TableRow
+			ref={setNodeRef}
+			className={className}
+			style={isDragging ? { opacity: 0.5 } : undefined}
+			tabIndex={0}
+			aria-roledescription="draggable"
+			{...listeners}
+			{...props}
+		>
+			{children}
+		</TableRow>
 	);
 }
 
