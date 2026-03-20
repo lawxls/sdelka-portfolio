@@ -38,8 +38,10 @@ const defaultProps = {
 	items: mockItems,
 	startIndex: 0,
 	sort: null,
+	pageInfo: { currentPage: 1, totalPages: 1, pageSize: 50 },
 	onSort: () => {},
 	onRowClick: () => {},
+	onPageChange: () => {},
 };
 
 describe("ProcurementTable", () => {
@@ -149,5 +151,46 @@ describe("ProcurementTable", () => {
 		expect(svgs).toHaveLength(1);
 		// lucide ArrowUp has a specific path — just check the icon renders
 		expect(svgs[0].classList.contains("size-3.5")).toBe(true);
+	});
+
+	test("does not render pagination when only one page", () => {
+		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 1, totalPages: 1, pageSize: 50 }} />);
+		expect(screen.queryByText(/Страница/)).not.toBeInTheDocument();
+	});
+
+	test("renders pagination controls when multiple pages exist", () => {
+		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 1, totalPages: 3, pageSize: 50 }} />);
+		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Предыдущая страница" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Следующая страница" })).toBeEnabled();
+	});
+
+	test("disables next button on last page", () => {
+		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 3, totalPages: 3, pageSize: 50 }} />);
+		expect(screen.getByRole("button", { name: "Предыдущая страница" })).toBeEnabled();
+		expect(screen.getByRole("button", { name: "Следующая страница" })).toBeDisabled();
+	});
+
+	test("renders page indicator with correct text", () => {
+		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 2, totalPages: 5, pageSize: 50 }} />);
+		expect(screen.getByText(/Страница 2 из/)).toBeInTheDocument();
+	});
+
+	test("calls onPageChange with correct page on prev/next click", async () => {
+		const user = userEvent.setup();
+		const onPageChange = vi.fn();
+		render(
+			<ProcurementTable
+				{...defaultProps}
+				pageInfo={{ currentPage: 2, totalPages: 3, pageSize: 50 }}
+				onPageChange={onPageChange}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Предыдущая страница" }));
+		expect(onPageChange).toHaveBeenCalledWith(1);
+
+		await user.click(screen.getByRole("button", { name: "Следующая страница" }));
+		expect(onPageChange).toHaveBeenCalledWith(3);
 	});
 });

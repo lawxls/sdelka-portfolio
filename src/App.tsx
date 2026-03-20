@@ -12,12 +12,13 @@ function App() {
 	const [sort, setSort] = useState<SortState | null>(null);
 	const [page, setPage] = useState(1);
 
-	const { items, totals } = useProcurementData({
+	const pageSize = 50;
+	const { items, totals, pageInfo } = useProcurementData({
 		search,
 		filters,
 		sort,
 		page,
-		pageSize: 50,
+		pageSize,
 	});
 
 	const handleSearchChange = useCallback((query: string) => {
@@ -48,7 +49,15 @@ function App() {
 
 			<main className="flex-1 px-4">
 				<Toolbar onSearchChange={handleSearchChange} filters={filters} onFiltersChange={handleFiltersChange} />
-				<ProcurementTable items={items} startIndex={0} sort={sort} onSort={handleSort} onRowClick={() => {}} />
+				<ProcurementTable
+					items={items}
+					startIndex={(pageInfo.currentPage - 1) * pageSize}
+					sort={sort}
+					pageInfo={pageInfo}
+					onSort={handleSort}
+					onRowClick={() => {}}
+					onPageChange={setPage}
+				/>
 			</main>
 
 			<footer className="sticky bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">

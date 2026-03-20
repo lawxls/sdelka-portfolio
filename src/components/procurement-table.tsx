@@ -1,7 +1,8 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
+import type { PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getDeviation, getOverpayment } from "@/data/types";
 import { formatCurrency, formatDeviation, formatNumber } from "@/lib/format";
 
@@ -54,61 +55,102 @@ interface ProcurementTableProps {
 	items: ProcurementItem[];
 	startIndex: number;
 	sort: SortState | null;
+	pageInfo: PageInfo;
 	onSort: (field: SortField) => void;
 	onRowClick: (item: ProcurementItem) => void;
+	onPageChange: (page: number) => void;
 }
 
-export function ProcurementTable({ items, startIndex, sort, onSort, onRowClick }: ProcurementTableProps) {
+export function ProcurementTable({
+	items,
+	startIndex,
+	sort,
+	pageInfo,
+	onSort,
+	onRowClick,
+	onPageChange,
+}: ProcurementTableProps) {
 	return (
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead className="w-12 text-right">№</TableHead>
-					<TableHead>Наименование</TableHead>
-					<TableHead>Статус</TableHead>
-					{SORTABLE_COLUMNS.map((col) => (
-						<TableHead key={col.field} className="text-right">
-							<button
-								type="button"
-								className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-								onClick={() => onSort(col.field)}
-								aria-label={`Сортировать по ${col.label}`}
-							>
-								{col.label}
-								<SortIcon field={col.field} sort={sort} />
-							</button>
-						</TableHead>
-					))}
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{items.map((item, index) => {
-					const deviation = getDeviation(item);
-					const overpayment = getOverpayment(item);
-					const dev = formatDeviation(deviation);
-					const status = STATUS_CONFIG[item.status];
+		<div>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="w-12 text-right">№</TableHead>
+						<TableHead>Наименование</TableHead>
+						<TableHead>Статус</TableHead>
+						{SORTABLE_COLUMNS.map((col) => (
+							<TableHead key={col.field} className="text-right">
+								<button
+									type="button"
+									className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+									onClick={() => onSort(col.field)}
+									aria-label={`Сортировать по ${col.label}`}
+								>
+									{col.label}
+									<SortIcon field={col.field} sort={sort} />
+								</button>
+							</TableHead>
+						))}
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{items.map((item, index) => {
+						const deviation = getDeviation(item);
+						const overpayment = getOverpayment(item);
+						const dev = formatDeviation(deviation);
+						const status = STATUS_CONFIG[item.status];
 
-					return (
-						<TableRow key={item.id} className="cursor-pointer" onClick={() => onRowClick(item)}>
-							<TableCell className="text-right tabular-nums text-muted-foreground">{startIndex + index + 1}</TableCell>
-							<TableCell className="font-medium">{item.name}</TableCell>
-							<TableCell>
-								<Badge variant="outline" className={status.className}>
-									{status.label}
-								</Badge>
-							</TableCell>
-							<TableCell className="text-right tabular-nums">{formatNumber(item.annualQuantity)}</TableCell>
-							<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
-							<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
-							<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
-							<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
-							<TableCell className={`text-right tabular-nums ${getOverpaymentClassName(overpayment)}`}>
-								{formatCurrency(overpayment)}
-							</TableCell>
-						</TableRow>
-					);
-				})}
-			</TableBody>
-		</Table>
+						return (
+							<TableRow key={item.id} className="cursor-pointer" onClick={() => onRowClick(item)}>
+								<TableCell className="text-right tabular-nums text-muted-foreground">
+									{startIndex + index + 1}
+								</TableCell>
+								<TableCell className="font-medium">{item.name}</TableCell>
+								<TableCell>
+									<Badge variant="outline" className={status.className}>
+										{status.label}
+									</Badge>
+								</TableCell>
+								<TableCell className="text-right tabular-nums">{formatNumber(item.annualQuantity)}</TableCell>
+								<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
+								<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
+								<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
+								<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
+								<TableCell className={`text-right tabular-nums ${getOverpaymentClassName(overpayment)}`}>
+									{formatCurrency(overpayment)}
+								</TableCell>
+							</TableRow>
+						);
+					})}
+				</TableBody>
+			</Table>
+			{pageInfo.totalPages > 1 && (
+				<div className="flex items-center justify-center gap-4 py-4">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => onPageChange(pageInfo.currentPage - 1)}
+						disabled={pageInfo.currentPage <= 1}
+						aria-label="Предыдущая страница"
+					>
+						<ChevronLeft aria-hidden="true" />
+						Назад
+					</Button>
+					<span className="text-sm tabular-nums text-muted-foreground">
+						Страница {pageInfo.currentPage} из&nbsp;{pageInfo.totalPages}
+					</span>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => onPageChange(pageInfo.currentPage + 1)}
+						disabled={pageInfo.currentPage >= pageInfo.totalPages}
+						aria-label="Следующая страница"
+					>
+						Вперёд
+						<ChevronRight aria-hidden="true" />
+					</Button>
+				</div>
+			)}
+		</div>
 	);
 }
