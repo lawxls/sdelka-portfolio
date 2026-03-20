@@ -132,9 +132,9 @@ describe("ProcurementTable", () => {
 
 	test("sortable column headers have sort buttons", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getByRole("button", { name: /Сортировать по Текущая цена/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по Лучшая цена/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по Откл/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШАЯ ЦЕНА/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ/ })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with correct field", async () => {
@@ -142,7 +142,7 @@ describe("ProcurementTable", () => {
 		const onSort = vi.fn();
 		render(<ProcurementTable {...defaultProps} onSort={onSort} />);
 
-		await user.click(screen.getByRole("button", { name: /Сортировать по Текущая цена/ }));
+		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
@@ -150,7 +150,7 @@ describe("ProcurementTable", () => {
 		render(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
 		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
 		// Instead it should have ArrowUp (asc)
-		const sortBtn = screen.getByRole("button", { name: /Сортировать по Текущая цена/ });
+		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ });
 		const svgs = sortBtn.querySelectorAll("svg");
 		expect(svgs).toHaveLength(1);
 		// lucide ArrowUp has a specific path — just check the icon renders
@@ -217,7 +217,7 @@ describe("ProcurementTable", () => {
 
 	test("name column header has sticky left-0 class for horizontal pinning", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		const nameHeader = screen.getByText("Наименование").closest("[data-slot='table-head']");
+		const nameHeader = screen.getByText("НАИМЕНОВАНИЕ").closest("[data-slot='table-head']");
 		expect(nameHeader?.className).toContain("sticky");
 		expect(nameHeader?.className).toContain("left-0");
 		expect(nameHeader?.className).toContain("z-30");

@@ -24,8 +24,8 @@ describe("App", () => {
 	test("renders procurement table with data", () => {
 		renderApp();
 		expect(screen.getByRole("table")).toBeInTheDocument();
-		expect(screen.getByText("Наименование")).toBeInTheDocument();
-		expect(screen.getByText("Статус")).toBeInTheDocument();
+		expect(screen.getByText("НАИМЕНОВАНИЕ")).toBeInTheDocument();
+		expect(screen.getByText("СТАТУС")).toBeInTheDocument();
 	});
 
 	test("renders toolbar with search, filters, and create button", () => {
@@ -86,11 +86,11 @@ describe("App", () => {
 		const nameBefore = getFirstDataRowCells()[1].textContent;
 
 		// Click sort on current price (asc)
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по Текущая цена/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
 		const nameAfterAsc = getFirstDataRowCells()[1].textContent;
 
 		// Click again for descending
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по Текущая цена/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
 		const nameAfterDesc = getFirstDataRowCells()[1].textContent;
 
 		// At least one sort direction should change the first row

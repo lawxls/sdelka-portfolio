@@ -28,15 +28,15 @@ interface SortableColumn {
 }
 
 const INPUT_COLUMNS: SortableColumn[] = [
-	{ label: "Стоимость в\u00A0год", field: "annualCost" },
-	{ label: "Текущая цена", field: "currentPrice" },
+	{ label: "СТОИМОСТЬ В\u00A0ГОД", field: "annualCost" },
+	{ label: "ТЕКУЩАЯ ЦЕНА", field: "currentPrice" },
 ];
 
 const ANALYSIS_COLUMNS: SortableColumn[] = [
-	{ label: "Лучшая цена", field: "bestPrice" },
-	{ label: "Средняя цена", field: "averagePrice" },
-	{ label: "Откл.\u00A0(%)", field: "deviation" },
-	{ label: "Переплата\u00A0(₽)", field: "overpayment" },
+	{ label: "ЛУЧШАЯ ЦЕНА", field: "bestPrice" },
+	{ label: "СРЕДНЯЯ ЦЕНА", field: "averagePrice" },
+	{ label: "ОТКЛ.\u00A0(%)", field: "deviation" },
+	{ label: "ПЕРЕПЛАТА\u00A0(₽)", field: "overpayment" },
 ];
 
 function SortIcon({ field, sort }: { field: SortField; sort: SortState | null }) {
@@ -72,7 +72,7 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 					<TableHeader className="[&_tr]:border-b-0">
 						<TableRow>
 							<TableHead className={`w-12 text-right ${stickyHead}`}>№</TableHead>
-							<TableHead className={stickyNameHead}>Наименование</TableHead>
+							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
 							{INPUT_COLUMNS.map((col) => (
 								<TableHead key={col.field} className={`text-right ${stickyHead}`}>
 									<button
@@ -99,7 +99,7 @@ export function ProcurementTable({ items, sort, pageInfo, onSort, onRowClick, on
 									</button>
 								</TableHead>
 							))}
-							<TableHead className={analysisHead}>Статус</TableHead>
+							<TableHead className={analysisHead}>СТАТУС</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
