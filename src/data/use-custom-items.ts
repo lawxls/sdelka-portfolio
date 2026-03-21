@@ -43,34 +43,18 @@ function persistItems(items: ProcurementItem[]) {
 }
 
 export interface UseCustomItemsResult {
-	getItems: () => ProcurementItem[];
+	items: ProcurementItem[];
 	addItems: (inputs: NewItemInput[]) => void;
 }
 
 export function useCustomItems(): UseCustomItemsResult {
 	const [items, setItems] = useState<ProcurementItem[]>(readItems);
 
-	const getItems = useCallback(() => items, [items]);
-
 	const addItems = useCallback((inputs: NewItemInput[]) => {
 		setItems((prev) => {
 			const newItems: ProcurementItem[] = inputs.map((input) => ({
+				...input,
 				id: `custom-${crypto.randomUUID()}`,
-				name: input.name,
-				description: input.description,
-				unit: input.unit,
-				procurementType: input.procurementType,
-				frequency: input.frequency,
-				legalEntityMode: input.legalEntityMode,
-				legalEntityCompany: input.legalEntityCompany,
-				paymentType: input.paymentType,
-				paymentDeferralDays: input.paymentDeferralDays,
-				vatIncluded: input.vatIncluded,
-				paymentMethod: input.paymentMethod,
-				deliveryType: input.deliveryType,
-				deliveryAddress: input.deliveryAddress,
-				unloading: input.unloading,
-				analoguesAllowed: input.analoguesAllowed,
 				status: "searching" as const,
 				annualQuantity: input.annualQuantity ?? 0,
 				currentPrice: input.currentPrice ?? 0,
@@ -84,5 +68,5 @@ export function useCustomItems(): UseCustomItemsResult {
 		});
 	}, []);
 
-	return { getItems, addItems };
+	return { items, addItems };
 }

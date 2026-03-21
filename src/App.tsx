@@ -68,10 +68,10 @@ function App() {
 	const folder = searchParams.get("folder") ?? undefined;
 
 	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
-	const { getItems: getCustomItems, addItems } = useCustomItems();
+	const { items: customItems, addItems } = useCustomItems();
 	const effectiveItems = useMemo(
-		() => [...applyOverrides(mockProcurementItems), ...getCustomItems()],
-		[applyOverrides, getCustomItems],
+		() => [...applyOverrides(mockProcurementItems), ...customItems],
+		[applyOverrides, customItems],
 	);
 
 	const { folders, counts, applyFolders, assignItem, createFolder, renameFolder, recolorFolder, deleteFolder } =

@@ -26,14 +26,20 @@ import type {
 } from "@/data/types";
 import {
 	DELIVERY_TYPE_LABELS,
+	DELIVERY_TYPES,
 	FREQUENCIES,
 	FREQUENCY_LABELS,
 	LEGAL_ENTITY_LABELS,
+	LEGAL_ENTITY_MODES,
 	PAYMENT_METHOD_LABELS,
+	PAYMENT_METHODS,
 	PAYMENT_TYPE_LABELS,
+	PAYMENT_TYPES,
 	PROCUREMENT_TYPE_LABELS,
+	PROCUREMENT_TYPES,
 	UNITS,
 	UNLOADING_LABELS,
+	UNLOADING_TYPES,
 } from "@/data/types";
 import type { NewItemInput } from "@/data/use-custom-items";
 
@@ -63,13 +69,6 @@ interface AddPositionsDrawerProps {
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (items: NewItemInput[]) => void;
 }
-
-const PROCUREMENT_TYPES = Object.keys(PROCUREMENT_TYPE_LABELS) as ProcurementType[];
-const LEGAL_ENTITY_MODES = Object.keys(LEGAL_ENTITY_LABELS) as LegalEntityMode[];
-const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
-const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
-const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
-const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
 
 const MOCK_COMPANIES = ["ООО «Сделка»"];
 

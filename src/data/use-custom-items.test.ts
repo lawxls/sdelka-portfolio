@@ -21,10 +21,10 @@ afterEach(() => {
 });
 
 describe("useCustomItems", () => {
-	describe("getItems", () => {
+	describe("items", () => {
 		it("returns empty array when no custom items exist", () => {
 			const { result } = renderHook(() => useCustomItems());
-			expect(result.current.getItems()).toEqual([]);
+			expect(result.current.items).toEqual([]);
 		});
 
 		it("returns previously added items", () => {
@@ -32,7 +32,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "Test Item" }]);
 			});
-			const items = result.current.getItems();
+			const items = result.current.items;
 			expect(items).toHaveLength(1);
 			expect(items[0].name).toBe("Test Item");
 		});
@@ -44,7 +44,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "New Position" }]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.status).toBe("searching");
 			expect(item.bestPrice).toBeNull();
 			expect(item.averagePrice).toBeNull();
@@ -55,7 +55,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "A" }, { name: "B" }]);
 			});
-			const items = result.current.getItems();
+			const items = result.current.items;
 			expect(items[0].id).not.toBe(items[1].id);
 		});
 
@@ -64,7 +64,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "Item" }]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.annualQuantity).toBe(0);
 			expect(item.currentPrice).toBe(0);
 			expect(item.folderId).toBeNull();
@@ -83,7 +83,7 @@ describe("useCustomItems", () => {
 					},
 				]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.description).toBe("Портландцемент");
 			expect(item.unit).toBe("т");
 			expect(item.annualQuantity).toBe(120);
@@ -95,7 +95,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "Plain" }]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.description).toBeUndefined();
 			expect(item.unit).toBeUndefined();
 		});
@@ -105,7 +105,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "A" }, { name: "B" }, { name: "C" }]);
 			});
-			expect(result.current.getItems()).toHaveLength(3);
+			expect(result.current.items).toHaveLength(3);
 		});
 
 		it("accumulates items across multiple addItems calls", () => {
@@ -116,7 +116,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "Second" }]);
 			});
-			expect(result.current.getItems()).toHaveLength(2);
+			expect(result.current.items).toHaveLength(2);
 		});
 
 		it("persists items to localStorage", () => {
@@ -147,8 +147,8 @@ describe("useCustomItems", () => {
 			localStorage.setItem(LS_KEY, JSON.stringify(items));
 
 			const { result } = renderHook(() => useCustomItems());
-			expect(result.current.getItems()).toHaveLength(1);
-			expect(result.current.getItems()[0].name).toBe("Stored Item");
+			expect(result.current.items).toHaveLength(1);
+			expect(result.current.items[0].name).toBe("Stored Item");
 		});
 
 		it("survives remount (simulating page reload)", () => {
@@ -159,13 +159,13 @@ describe("useCustomItems", () => {
 			unmount();
 
 			const { result: result2 } = renderHook(() => useCustomItems());
-			expect(result2.current.getItems()).toHaveLength(1);
-			expect(result2.current.getItems()[0].name).toBe("Survivor");
+			expect(result2.current.items).toHaveLength(1);
+			expect(result2.current.items[0].name).toBe("Survivor");
 		});
 
 		it("falls back to empty array when localStorage is empty", () => {
 			const { result } = renderHook(() => useCustomItems());
-			expect(result.current.getItems()).toEqual([]);
+			expect(result.current.items).toEqual([]);
 		});
 	});
 
@@ -181,7 +181,7 @@ describe("useCustomItems", () => {
 					},
 				]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.procurementType).toBe("regular");
 			expect(item.frequency).toBe("monthly");
 		});
@@ -191,7 +191,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "Plain" }]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.procurementType).toBeUndefined();
 			expect(item.frequency).toBeUndefined();
 		});
@@ -206,7 +206,7 @@ describe("useCustomItems", () => {
 					},
 				]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.procurementType).toBe("one-time");
 			expect(item.frequency).toBeUndefined();
 		});
@@ -232,7 +232,7 @@ describe("useCustomItems", () => {
 					},
 				]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.legalEntityMode).toBe("company");
 			expect(item.legalEntityCompany).toBe("ООО «Сделка»");
 			expect(item.paymentType).toBe("deferred");
@@ -250,7 +250,7 @@ describe("useCustomItems", () => {
 			act(() => {
 				result.current.addItems([{ name: "No delivery" }]);
 			});
-			const item = result.current.getItems()[0];
+			const item = result.current.items[0];
 			expect(item.legalEntityMode).toBeUndefined();
 			expect(item.legalEntityCompany).toBeUndefined();
 			expect(item.paymentType).toBeUndefined();

@@ -64,6 +64,13 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
 
 export const FREQUENCIES = Object.keys(FREQUENCY_LABELS) as Frequency[];
 
+export const PROCUREMENT_TYPES = Object.keys(PROCUREMENT_TYPE_LABELS) as ProcurementType[];
+export const LEGAL_ENTITY_MODES = Object.keys(LEGAL_ENTITY_LABELS) as LegalEntityMode[];
+export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
+export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
+export const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
+export const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
