@@ -1,8 +1,8 @@
 export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<ProcurementStatus, string> = {
-	searching: "Ведём переговоры",
-	negotiating: "Ищем поставщиков",
+	searching: "Ищем поставщиков",
+	negotiating: "Ведём переговоры",
 	completed: "Переговоры завершены",
 };
 

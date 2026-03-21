@@ -99,7 +99,7 @@ function generateItems(): ProcurementItem[] {
 		const currentPrice = Math.round((rng() * 499500 + 500) * 100) / 100;
 
 		const hasMarketData = !NULL_PRICE_INDICES.has(i);
-		const status: ProcurementStatus = hasMarketData ? (rng() < 0.5 ? "searching" : "completed") : "negotiating";
+		const status: ProcurementStatus = hasMarketData ? (rng() < 0.5 ? "negotiating" : "completed") : "searching";
 
 		let bestPrice: number | null = null;
 		let averagePrice: number | null = null;

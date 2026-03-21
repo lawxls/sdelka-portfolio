@@ -44,11 +44,11 @@ const STATUS_BG = "bg-[#ebebed] dark:bg-[#35353a]";
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: {
 		label: STATUS_LABELS.searching,
-		className: `${STATUS_BG} text-blue-700 dark:text-blue-400`,
+		className: `${STATUS_BG} text-status-highlight`,
 	},
 	negotiating: {
 		label: STATUS_LABELS.negotiating,
-		className: `${STATUS_BG} text-status-highlight`,
+		className: `${STATUS_BG} text-blue-700 dark:text-blue-400`,
 	},
 	completed: {
 		label: STATUS_LABELS.completed,
@@ -205,7 +205,7 @@ export function ProcurementTable({
 								</TableCell>
 							);
 
-							const rowClassName = item.status === "negotiating" ? `${rowCls} negotiating-stripe` : rowCls;
+							const rowClassName = item.status === "searching" ? `${rowCls} negotiating-stripe` : rowCls;
 							const rowProps = {
 								className: rowClassName,
 								onClick: onRowClick ? () => onRowClick(item) : undefined,

@@ -74,14 +74,14 @@ describe("ProcurementTable", () => {
 
 	test("renders status badges with correct labels", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ведём переговоры")).toHaveLength(2);
-		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
+		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
+		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ведём переговоры")[0].className).toContain("text-blue-700");
-		expect(screen.getByText("Ищем поставщиков").className).toContain("text-status-highlight");
+		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-status-highlight");
+		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-700");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
