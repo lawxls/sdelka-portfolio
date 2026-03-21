@@ -162,6 +162,23 @@
 	animation: status-pulse 2s ease-in-out infinite;
 }
 
+/* Dragging row: only name cell visible */
+tbody > tr.dragging-row,
+tbody > tr.dragging-row:hover,
+tbody > tr.dragging-row:nth-child(even) {
+	background-color: transparent;
+}
+
+tbody > tr.dragging-row > [data-slot="table-cell"] {
+	opacity: 0;
+	background-color: transparent;
+}
+
+tbody > tr.dragging-row > [data-slot="table-cell"]:nth-child(2) {
+	opacity: 1;
+	background-color: var(--color-background);
+}
+
 .negotiating-stripe {
 	position: relative;
 }

@@ -12,6 +12,9 @@ import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortStat
 import { useFolders } from "@/data/use-folders";
 import { useItemOverrides } from "@/data/use-item-overrides";
 import { useProcurementData } from "@/data/use-procurement-data";
+import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+
+const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
 
 const SORT_FIELDS = new Set<string>([
 	"annualCost",
@@ -37,6 +40,17 @@ function parseDeviation(params: URLSearchParams): DeviationFilter {
 function parseStatus(params: URLSearchParams): StatusFilter {
 	const v = params.get("status");
 	return v === "searching" || v === "negotiating" || v === "completed" ? v : "all";
+}
+
+export function DragItemOverlay({ item }: { item: ProcurementItem }) {
+	return (
+		<div
+			className="inline-flex items-center rounded-md bg-background px-3 py-2 text-sm font-medium shadow-lg ring-1 ring-border"
+			data-testid="drag-overlay"
+		>
+			{item.name}
+		</div>
+	);
 }
 
 function App() {
@@ -198,6 +212,7 @@ function App() {
 							onRenameItem={renameItem}
 							onAssignFolder={assignItem}
 							draggable
+							activeItemId={activeItem?.id}
 						/>
 					</main>
 				</div>
@@ -207,15 +222,8 @@ function App() {
 				</footer>
 			</div>
 
-			<DragOverlay dropAnimation={reducedMotion ? null : undefined}>
-				{activeItem ? (
-					<div
-						className="rounded-md bg-background px-3 py-2 text-sm font-medium shadow-lg ring-1 ring-border"
-						data-testid="drag-overlay"
-					>
-						{activeItem.name}
-					</div>
-				) : null}
+			<DragOverlay dropAnimation={reducedMotion ? null : undefined} modifiers={DRAG_OVERLAY_MODIFIERS}>
+				{activeItem ? <DragItemOverlay item={activeItem} /> : null}
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 		</DndContext>

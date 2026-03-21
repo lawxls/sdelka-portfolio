@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import App from "./App";
+import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+import App, { DragItemOverlay } from "./App";
 
 function renderApp(initialEntries?: string[]) {
 	return render(
@@ -343,5 +344,49 @@ describe("App", () => {
 	test("drag overlay container exists in app", () => {
 		renderApp();
 		expect(screen.getByTestId("dnd-overlay-container")).toBeInTheDocument();
+	});
+
+	test("drag overlay shrink-wraps the item label", () => {
+		render(
+			<DragItemOverlay
+				item={{
+					id: "item-1",
+					name: "Арматура А500С ∅12",
+					status: "searching",
+					annualQuantity: 1,
+					currentPrice: 1,
+					bestPrice: 1,
+					averagePrice: 1,
+					folderId: null,
+				}}
+			/>,
+		);
+		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
+	});
+
+	test("drag overlay anchors to the cursor position", () => {
+		const transform = anchorDragOverlayToCursor({
+			activatorEvent: new MouseEvent("pointerdown", { clientX: 520, clientY: 140 }),
+			activeNodeRect: {
+				top: 100,
+				left: 260,
+				right: 560,
+				bottom: 160,
+				width: 300,
+				height: 60,
+			},
+			overlayNodeRect: {
+				top: 0,
+				left: 0,
+				right: 180,
+				bottom: 36,
+				width: 180,
+				height: 36,
+			},
+			transform: { x: 40, y: 10, scaleX: 1, scaleY: 1 },
+		});
+
+		expect(transform.x).toBe(312);
+		expect(transform.y).toBe(32);
 	});
 });

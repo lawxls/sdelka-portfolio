@@ -449,9 +449,18 @@ describe("ProcurementTable drag-and-drop", () => {
 				<ProcurementTable {...contextMenuProps} draggable />
 			</DndContext>,
 		);
-		// We can verify the row has the data-dragging attribute structure
-		// Actual drag state requires pointer simulation which doesn't work in jsdom
+		// Actual drag state requires pointer simulation which doesn't work in jsdom.
 		const row = screen.getByTestId("row-1");
 		expect(row).toBeInTheDocument();
+	});
+
+	test("active dragged row gets drag-state class", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} draggable activeItemId="1" />
+			</DndContext>,
+		);
+		const row = screen.getByTestId("row-1");
+		expect(row.className).toContain("dragging-row");
 	});
 });

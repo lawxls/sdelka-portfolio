@@ -10,7 +10,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -94,6 +94,7 @@ interface ProcurementTableProps {
 	onRenameItem?: (id: string, name: string) => void;
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	draggable?: boolean;
+	activeItemId?: string | null;
 }
 
 export function ProcurementTable({
@@ -108,6 +109,7 @@ export function ProcurementTable({
 	onRenameItem,
 	onAssignFolder,
 	draggable,
+	activeItemId,
 }: ProcurementTableProps) {
 	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
 	const folderMap = useMemo(() => {
@@ -126,7 +128,6 @@ export function ProcurementTable({
 	const stickyNameCell =
 		"sticky left-0 z-10 bg-background transition-colors group-even:bg-muted/40 group-hover:bg-muted/60";
 	const analysisHead = "sticky top-0 z-20 bg-background border-b border-border text-status-highlight";
-
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div className="flex-1 overflow-auto touch-manipulation" data-testid="table-scroll-container">
@@ -205,7 +206,8 @@ export function ProcurementTable({
 								</TableCell>
 							);
 
-							const rowClassName = item.status === "searching" ? `${rowCls} negotiating-stripe` : rowCls;
+							const isDragActive = activeItemId === item.id;
+							const rowClassName = `${item.status === "searching" ? `${rowCls} negotiating-stripe` : rowCls}${isDragActive ? " dragging-row" : ""}`;
 							const rowProps = {
 								className: rowClassName,
 								onClick: onRowClick ? () => onRowClick(item) : undefined,
@@ -362,17 +364,32 @@ export function ProcurementTable({
 	);
 }
 
-function DraggableRow({ id, children, className, ...props }: { id: string } & React.ComponentProps<typeof TableRow>) {
-	const { listeners, setNodeRef, isDragging } = useDraggable({ id });
+function DraggableRow({
+	id,
+	children,
+	className,
+	ref: externalRef,
+	...props
+}: { id: string } & React.ComponentProps<typeof TableRow>) {
+	const { listeners, setNodeRef } = useDraggable({ id });
+
+	const composedRef = useCallback(
+		(node: HTMLTableRowElement | null) => {
+			setNodeRef(node);
+			if (typeof externalRef === "function") externalRef(node);
+			else if (externalRef) externalRef.current = node;
+		},
+		[setNodeRef, externalRef],
+	);
+
 	return (
 		<TableRow
-			ref={setNodeRef}
+			ref={composedRef}
 			className={className}
-			style={isDragging ? { opacity: 0.5 } : undefined}
 			tabIndex={0}
 			aria-roledescription="draggable"
-			{...listeners}
 			{...props}
+			{...listeners}
 		>
 			{children}
 		</TableRow>
