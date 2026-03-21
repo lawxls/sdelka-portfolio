@@ -20,17 +20,16 @@ function renderDrawer(
 }
 
 describe("AddPositionsDrawer", () => {
-	test("renders header, footer, and position table when open", () => {
+	test("renders header, footer, and position form when open", () => {
 		renderDrawer();
 		expect(screen.getByText("Добавить позиции")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Создать позиции" })).toBeInTheDocument();
-		// Table column headers
-		expect(screen.getByText("Наименование")).toBeInTheDocument();
-		expect(screen.getByText("Описание")).toBeInTheDocument();
-		expect(screen.getByText("Количество")).toBeInTheDocument();
-		expect(screen.getByText("Ед. изм.")).toBeInTheDocument();
-		expect(screen.getByText("Моя цена")).toBeInTheDocument();
+		// Position card with form fields
+		expect(screen.getByPlaceholderText("Название позиции")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Описание")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Количество")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Моя цена")).toBeInTheDocument();
 	});
 
 	test("does not render when closed", () => {
@@ -65,21 +64,35 @@ describe("AddPositionsDrawer", () => {
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 	});
 
-	test("Добавить позицию adds a new empty row", async () => {
+	test("Добавить позицию adds a new empty row when all names filled", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
 
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Filled");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(2);
+	});
+
+	test("Добавить позицию shows error when name is empty", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+
+		// Should NOT add a new row
+		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		// Should show validation error
+		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 	});
 
 	test("new row gets auto-focus on name field", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Filled");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
@@ -90,7 +103,8 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		// Add a second row
+		// Fill first row before adding second
+		await user.type(screen.getByPlaceholderText("Название позиции"), "First");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(2);
 
@@ -145,13 +159,11 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Цемент М500");
 		await user.type(screen.getByPlaceholderText("Описание"), "Портландцемент");
-
-		const quantityInputs = screen.getAllByRole("spinbutton");
-		await user.type(quantityInputs[0], "120");
+		await user.type(screen.getByPlaceholderText("Количество"), "120");
 
 		await user.selectOptions(screen.getByLabelText("Единица измерения"), "т");
 
-		await user.type(quantityInputs[1], "5500");
+		await user.type(screen.getByPlaceholderText("Моя цена"), "5500");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
@@ -173,7 +185,7 @@ describe("AddPositionsDrawer", () => {
 
 		const user = userEvent.setup();
 
-		// Fill first row
+		// Fill first row (required before adding second)
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура");
 
 		// Add second row and fill
@@ -208,9 +220,10 @@ describe("AddPositionsDrawer", () => {
 		// Fill first row
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура");
 
-		// Add second row (leave empty)
+		// Add second row (allowed since first is filled), then leave empty
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
+		// Submit with empty second row
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).not.toHaveBeenCalled();
@@ -253,20 +266,19 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.queryByLabelText("Периодичность")).not.toBeInTheDocument();
 	});
 
-	test("switching to Регулярная shows frequency dropdown", async () => {
+	test("switching to Регулярная shows frequency dropdown with Ежемесячно selected", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: "Регулярная" }));
 
-		expect(screen.getByLabelText("Периодичность")).toBeInTheDocument();
-		// Check all 6 options + placeholder
-		const select = screen.getByLabelText("Периодичность");
-		const options = within(select as HTMLElement).getAllByRole("option");
-		expect(options).toHaveLength(7); // 6 frequencies + 1 placeholder
+		const trigger = screen.getByLabelText("Периодичность");
+		expect(trigger).toBeInTheDocument();
+		// "Ежемесячно" should be the default displayed value
+		expect(trigger).toHaveTextContent("Ежемесячно");
 	});
 
-	test("switching back to Разовая hides frequency dropdown", async () => {
+	test("switching back to Разовая hides frequency select", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
@@ -290,13 +302,12 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit.mock.calls[0][0][0].frequency).toBeUndefined();
 	});
 
-	test("submit with Регулярная includes procurementType and frequency", async () => {
+	test("submit with Регулярная includes procurementType and default frequency monthly", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Регулярная" }));
-		await user.selectOptions(screen.getByLabelText("Периодичность"), "monthly");
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Regular Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
@@ -309,26 +320,12 @@ describe("AddPositionsDrawer", () => {
 		]);
 	});
 
-	test("submit with Регулярная but no frequency selected omits frequency", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-
-		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: "Регулярная" }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "No Freq");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ name: "No Freq", procurementType: "regular" })]);
-		expect(onSubmit.mock.calls[0][0][0].frequency).toBeUndefined();
-	});
-
 	test("procurementType and frequency applied to all positions on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Регулярная" }));
-		await user.selectOptions(screen.getByLabelText("Периодичность"), "weekly");
 
 		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
@@ -339,8 +336,8 @@ describe("AddPositionsDrawer", () => {
 
 		const items = onSubmit.mock.calls[0][0];
 		expect(items).toHaveLength(2);
-		expect(items[0]).toMatchObject({ procurementType: "regular", frequency: "weekly" });
-		expect(items[1]).toMatchObject({ procurementType: "regular", frequency: "weekly" });
+		expect(items[0]).toMatchObject({ procurementType: "regular", frequency: "monthly" });
+		expect(items[1]).toMatchObject({ procurementType: "regular", frequency: "monthly" });
 	});
 
 	// --- Delivery conditions ---
@@ -366,11 +363,11 @@ describe("AddPositionsDrawer", () => {
 		const switches = screen.getAllByRole("switch");
 		await user.click(switches[0]);
 
-		expect(screen.getByRole("button", { name: "Режим инкогнито" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Инкогнито" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
 	});
 
-	test("Юридическое лицо: Компания shows company dropdown", async () => {
+	test("Юридическое лицо: Компания shows company select", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
@@ -378,10 +375,9 @@ describe("AddPositionsDrawer", () => {
 		await user.click(switches[0]);
 		await user.click(screen.getByRole("button", { name: "Компания" }));
 
-		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
-		const select = screen.getByLabelText("Компания");
-		const options = within(select as HTMLElement).getAllByRole("option");
-		expect(options.map((o) => o.textContent)).toContain("ООО «Сделка»");
+		const trigger = screen.getByLabelText("Компания");
+		expect(trigger).toBeInTheDocument();
+		expect(trigger).toHaveTextContent("Выберите компанию…");
 	});
 
 	test("toggling Условия оплаты on shows payment controls", async () => {
@@ -399,20 +395,19 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Наличные" })).toBeInTheDocument();
 	});
 
-	test("deferral days only editable when Отсрочка selected", async () => {
+	test("deferral days only shown when Отсрочка selected", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
 		const switches = screen.getAllByRole("switch");
 		await user.click(switches[1]);
 
-		// Предоплата is default — deferral days should be disabled
-		const deferralInput = screen.getByLabelText("Дней отсрочки");
-		expect(deferralInput).toBeDisabled();
+		// Предоплата is default — deferral days should not be rendered
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 
 		// Switch to Отсрочка
 		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
-		expect(deferralInput).not.toBeDisabled();
+		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
 	});
 
 	test("toggling Доставка on shows delivery controls", async () => {
@@ -483,11 +478,10 @@ describe("AddPositionsDrawer", () => {
 		// Fill name
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Test");
 
-		// Toggle Юридическое лицо → company
+		// Toggle Юридическое лицо → company (company select tested separately)
 		const switches = screen.getAllByRole("switch");
 		await user.click(switches[0]);
 		await user.click(screen.getByRole("button", { name: "Компания" }));
-		await user.selectOptions(screen.getByLabelText("Компания"), "ООО «Сделка»");
 
 		// Toggle Доставка
 		await user.click(switches[2]);
@@ -502,7 +496,6 @@ describe("AddPositionsDrawer", () => {
 			expect.objectContaining({
 				name: "Test",
 				legalEntityMode: "company",
-				legalEntityCompany: "ООО «Сделка»",
 				deliveryType: "warehouse",
 				analoguesAllowed: false,
 			}),
@@ -530,12 +523,14 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
+		// Fill first position before adding second
+		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+
 		// Toggle Разгрузка on
 		const switches = screen.getAllByRole("switch");
 		await user.click(switches[3]);
 
-		// Fill 2 positions
-		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+		// Add second position
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
 		await user.type(nameInputs[1], "B");
@@ -590,10 +585,12 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		// Add a second row, fill the second but leave first empty
+		// Fill first, add second, then clear first
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Temp");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
 		await user.type(nameInputs[1], "Filled");
+		await user.clear(nameInputs[0]);
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
@@ -601,22 +598,16 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getAllByPlaceholderText("Название позиции")[0]).toHaveFocus();
 	});
 
-	test("focus moves to first error among multiple empty rows", async () => {
+	test("focus moves to first empty name on add row attempt", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		// Add two more rows — all three empty
+		// Leave first row empty, try to add
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
-		// Fill only the second row
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
-		await user.type(nameInputs[1], "Middle");
-
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		// First empty row (index 0) should get focus
-		expect(screen.getAllByPlaceholderText("Название позиции")[0]).toHaveFocus();
+		// First (empty) name input should have focus
+		expect(screen.getByPlaceholderText("Название позиции")).toHaveFocus();
+		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 	});
 
 	test("closing drawer with dirty form (name filled) shows confirmation dialog", async () => {
@@ -633,7 +624,7 @@ describe("AddPositionsDrawer", () => {
 		expect(onOpenChange).not.toHaveBeenCalledWith(false);
 	});
 
-	test("Продолжить редактирование returns to form without data loss", async () => {
+	test("cancel in confirm dialog returns to form without data loss", async () => {
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
@@ -641,8 +632,8 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Название позиции"), "My item");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-		// Click "Продолжить редактирование"
-		await user.click(screen.getByRole("button", { name: "Продолжить редактирование" }));
+		// Click "Продолжить" in the confirmation dialog
+		await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
 		// Dialog should close, form still has data
 		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();

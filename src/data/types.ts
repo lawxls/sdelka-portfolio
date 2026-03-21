@@ -12,7 +12,7 @@ export type Unit = (typeof UNITS)[number];
 export type LegalEntityMode = "incognito" | "company";
 
 export const LEGAL_ENTITY_LABELS: Record<LegalEntityMode, string> = {
-	incognito: "Режим инкогнито",
+	incognito: "Инкогнито",
 	company: "Компания",
 };
 

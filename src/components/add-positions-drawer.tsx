@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type {
 	DeliveryType,
 	Frequency,
@@ -167,7 +167,7 @@ function DeliverySection({
 export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
 	const [positions, setPositions] = useState<PositionRow[]>(() => [createEmptyRow()]);
 	const [procurementType, setProcurementType] = useState<ProcurementType>("one-time");
-	const [frequency, setFrequency] = useState<Frequency | "">("");
+	const [frequency, setFrequency] = useState<Frequency>("monthly");
 	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
 	const [showConfirm, setShowConfirm] = useState(false);
 	const pendingFocusKey = useRef<string | null>(null);
@@ -185,7 +185,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	function resetForm() {
 		setPositions([createEmptyRow()]);
 		setProcurementType("one-time");
-		setFrequency("");
+		setFrequency("monthly");
 		setDelivery(createDefaultDelivery());
 	}
 
@@ -230,25 +230,27 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		return fields;
 	}
 
-	function handleSubmit() {
-		let hasError = false;
+	/** Validate all position names; returns true if valid, focuses first error otherwise. */
+	function validatePositions(): boolean {
 		let firstErrorKey: string | null = null;
 		const validated = positions.map((p) => {
 			if (!p.name.trim()) {
-				hasError = true;
 				if (!firstErrorKey) firstErrorKey = p.key;
 				return { ...p, error: "Укажите название позиции" };
 			}
-			return { ...p, error: undefined };
+			return p.error ? { ...p, error: undefined } : p;
 		});
 
-		if (hasError) {
+		if (firstErrorKey) {
 			setPositions(validated);
-			if (firstErrorKey) {
-				nameRefs.current.get(firstErrorKey)?.focus();
-			}
-			return;
+			nameRefs.current.get(firstErrorKey)?.focus();
+			return false;
 		}
+		return true;
+	}
+
+	function handleSubmit() {
+		if (!validatePositions()) return;
 
 		const deliveryFields = buildDeliveryFields();
 
@@ -259,7 +261,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			annualQuantity: p.quantity ? Number(p.quantity) : undefined,
 			currentPrice: p.price ? Number(p.price) : undefined,
 			procurementType,
-			frequency: procurementType === "regular" && frequency ? (frequency as Frequency) : undefined,
+			frequency: procurementType === "regular" ? frequency : undefined,
 			...deliveryFields,
 		}));
 
@@ -308,6 +310,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	}
 
 	function handleAddRow() {
+		if (!validatePositions()) return;
 		const row = createEmptyRow();
 		pendingFocusKey.current = row.key;
 		setPositions((prev) => [...prev, row]);
@@ -323,289 +326,275 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	}
 
 	return (
-		<Sheet open={open} onOpenChange={handleOpenChange}>
-			<SheetContent className="flex flex-col">
-				<SheetHeader>
-					<SheetTitle>Добавить позиции</SheetTitle>
-					<SheetDescription className="sr-only">Создание новых позиций закупок</SheetDescription>
-				</SheetHeader>
+		<>
+			<Sheet open={open} onOpenChange={handleOpenChange}>
+				<SheetContent className="flex flex-col">
+					<SheetHeader>
+						<SheetTitle>Добавить позиции</SheetTitle>
+						<SheetDescription className="sr-only">Создание новых позиций закупок</SheetDescription>
+					</SheetHeader>
 
-				<div className="flex-1 overflow-y-auto px-4">
-					<div className="mb-4 flex flex-wrap items-center gap-3">
-						<SegmentedControl
-							options={PROCUREMENT_TYPES}
-							labels={PROCUREMENT_TYPE_LABELS}
-							value={procurementType}
-							onChange={setProcurementType}
-						/>
-						{procurementType === "regular" && (
-							<select
-								value={frequency}
-								onChange={(e) => setFrequency(e.target.value as Frequency | "")}
-								className="h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground"
-								aria-label="Периодичность"
-							>
-								<option value="">Периодичность…</option>
-								{FREQUENCIES.map((f) => (
-									<option key={f} value={f}>
-										{FREQUENCY_LABELS[f]}
-									</option>
-								))}
-							</select>
-						)}
-					</div>
+					<div className="flex-1 overflow-y-auto px-4">
+						<div className="mb-4 flex flex-wrap items-center gap-3">
+							<SegmentedControl
+								options={PROCUREMENT_TYPES}
+								labels={PROCUREMENT_TYPE_LABELS}
+								value={procurementType}
+								onChange={setProcurementType}
+							/>
+							{procurementType === "regular" && (
+								<Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
+									<SelectTrigger aria-label="Периодичность">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{FREQUENCIES.map((f) => (
+											<SelectItem key={f} value={f}>
+												{FREQUENCY_LABELS[f]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							)}
+						</div>
 
-					<div className="overflow-x-auto">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="w-8">№</TableHead>
-									<TableHead className="min-w-40">Наименование</TableHead>
-									<TableHead className="min-w-32">Описание</TableHead>
-									<TableHead className="w-24">Количество</TableHead>
-									<TableHead className="w-24">Ед. изм.</TableHead>
-									<TableHead className="w-28">Моя цена</TableHead>
-									<TableHead className="w-10" />
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{positions.map((pos, i) => (
-									<TableRow key={pos.key} data-testid={`position-row-${i}`}>
-										<TableCell className="text-muted-foreground">{i + 1}</TableCell>
-										<TableCell>
-											<div className="flex flex-col gap-1">
-												<Input
-													ref={(el) => {
-														if (el) {
-															nameRefs.current.set(pos.key, el);
-															if (pos.key === pendingFocusKey.current) {
-																el.focus();
-																pendingFocusKey.current = null;
-															}
-														} else {
-															nameRefs.current.delete(pos.key);
-														}
-													}}
-													placeholder="Название позиции"
-													value={pos.name}
-													onChange={(e) => updatePosition(pos.key, "name", e.target.value)}
-													autoFocus={i === 0}
-													spellCheck={false}
-													autoComplete="off"
-													aria-invalid={pos.error ? true : undefined}
-													aria-describedby={pos.error ? `error-${pos.key}` : undefined}
-												/>
-												{pos.error && (
-													<p id={`error-${pos.key}`} className="text-sm text-destructive">
-														{pos.error}
-													</p>
-												)}
-											</div>
-										</TableCell>
-										<TableCell>
+						<div className="flex flex-col gap-3">
+							{positions.map((pos, i) => (
+								<div key={pos.key} data-testid={`position-row-${i}`} className="rounded-lg border border-border p-3">
+									<div className="mb-2 flex items-center justify-between">
+										<span className="text-sm font-medium text-muted-foreground">Позиция {i + 1}</span>
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon-xs"
+											onClick={() => handleDeleteRow(pos.key)}
+											aria-label="Удалить позицию"
+										>
+											<Trash2 aria-hidden="true" />
+										</Button>
+									</div>
+									<div className="flex flex-col gap-2">
+										<div>
 											<Input
-												placeholder="Описание"
-												value={pos.description}
-												onChange={(e) => updatePosition(pos.key, "description", e.target.value)}
+												ref={(el) => {
+													if (el) {
+														nameRefs.current.set(pos.key, el);
+														if (pos.key === pendingFocusKey.current) {
+															el.focus();
+															pendingFocusKey.current = null;
+														}
+													} else {
+														nameRefs.current.delete(pos.key);
+													}
+												}}
+												placeholder="Название позиции"
+												value={pos.name}
+												onChange={(e) => updatePosition(pos.key, "name", e.target.value)}
+												autoFocus={i === 0}
 												spellCheck={false}
 												autoComplete="off"
+												aria-invalid={pos.error ? true : undefined}
+												aria-describedby={pos.error ? `error-${pos.key}` : undefined}
+												className={pos.error ? "border-destructive" : undefined}
 											/>
-										</TableCell>
-										<TableCell>
+											{pos.error && (
+												<p id={`error-${pos.key}`} className="mt-1 text-sm text-destructive">
+													{pos.error}
+												</p>
+											)}
+										</div>
+										<Input
+											placeholder="Описание"
+											value={pos.description}
+											onChange={(e) => updatePosition(pos.key, "description", e.target.value)}
+											spellCheck={false}
+											autoComplete="off"
+										/>
+										<div className="flex gap-2">
 											<Input
 												type="number"
 												inputMode="numeric"
 												min={0}
-												placeholder="0"
+												placeholder="Количество"
 												value={pos.quantity}
 												onChange={(e) => updatePosition(pos.key, "quantity", e.target.value)}
 												autoComplete="off"
+												className="flex-1"
 											/>
-										</TableCell>
-										<TableCell>
 											<select
 												value={pos.unit}
 												onChange={(e) => updatePosition(pos.key, "unit", e.target.value)}
-												className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground"
+												className="h-8 w-24 rounded-lg border border-input bg-background px-2 text-sm text-foreground"
 												aria-label="Единица измерения"
 											>
-												<option value="">—</option>
+												<option value="">Ед. изм.</option>
 												{UNITS.map((u) => (
 													<option key={u} value={u}>
 														{u}
 													</option>
 												))}
 											</select>
-										</TableCell>
-										<TableCell>
 											<Input
 												type="number"
 												inputMode="numeric"
 												min={0}
-												placeholder="0"
+												placeholder="Моя цена"
 												value={pos.price}
 												onChange={(e) => updatePosition(pos.key, "price", e.target.value)}
 												autoComplete="off"
+												className="flex-1"
 											/>
-										</TableCell>
-										<TableCell>
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon-xs"
-												onClick={() => handleDeleteRow(pos.key)}
-												aria-label="Удалить позицию"
-											>
-												<Trash2 aria-hidden="true" />
-											</Button>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
 
-					<div className="mt-3 flex gap-2">
-						<Button type="button" variant="outline" size="sm" onClick={handleAddRow}>
-							<Plus aria-hidden="true" />
-							Добавить позицию
-						</Button>
-						<Button type="button" variant="outline" size="sm" disabled>
-							<Upload aria-hidden="true" />
-							Загрузить из файла
-						</Button>
-					</div>
+						<div className="mt-3 flex gap-2">
+							<Button type="button" variant="outline" size="sm" onClick={handleAddRow}>
+								<Plus aria-hidden="true" />
+								Добавить позицию
+							</Button>
+							<Button type="button" variant="outline" size="sm" disabled>
+								<Upload aria-hidden="true" />
+								Загрузить из файла
+							</Button>
+						</div>
 
-					{/* Delivery conditions */}
-					<div className="mt-4">
-						<DeliverySection
-							label="Юридическое лицо"
-							enabled={delivery.legalEntityEnabled}
-							onToggle={(v) => updateDelivery("legalEntityEnabled", v)}
-						>
-							<SegmentedControl
-								options={LEGAL_ENTITY_MODES}
-								labels={LEGAL_ENTITY_LABELS}
-								value={delivery.legalEntityMode}
-								onChange={(v) => updateDelivery("legalEntityMode", v)}
-							/>
-							{delivery.legalEntityMode === "company" && (
-								<select
-									value={delivery.legalEntityCompany}
-									onChange={(e) => updateDelivery("legalEntityCompany", e.target.value)}
-									className="h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground"
-									aria-label="Компания"
-								>
-									<option value="">Выберите компанию…</option>
-									{MOCK_COMPANIES.map((c) => (
-										<option key={c} value={c}>
-											{c}
-										</option>
-									))}
-								</select>
-							)}
-						</DeliverySection>
-
-						<DeliverySection
-							label="Условия оплаты"
-							enabled={delivery.paymentEnabled}
-							onToggle={(v) => updateDelivery("paymentEnabled", v)}
-						>
-							<SegmentedControl
-								options={PAYMENT_TYPES}
-								labels={PAYMENT_TYPE_LABELS}
-								value={delivery.paymentType}
-								onChange={(v) => updateDelivery("paymentType", v)}
-							/>
-							<div className="flex items-center gap-2">
-								<Input
-									type="number"
-									inputMode="numeric"
-									min={0}
-									placeholder="0"
-									value={delivery.paymentDeferralDays}
-									onChange={(e) => updateDelivery("paymentDeferralDays", e.target.value)}
-									disabled={delivery.paymentType !== "deferred"}
-									aria-label="Дней отсрочки"
-									className="w-20"
-									autoComplete="off"
+						{/* Delivery conditions */}
+						<div className="mt-4">
+							<DeliverySection
+								label="Юридическое лицо"
+								enabled={delivery.legalEntityEnabled}
+								onToggle={(v) => updateDelivery("legalEntityEnabled", v)}
+							>
+								<SegmentedControl
+									options={LEGAL_ENTITY_MODES}
+									labels={LEGAL_ENTITY_LABELS}
+									value={delivery.legalEntityMode}
+									onChange={(v) => updateDelivery("legalEntityMode", v)}
 								/>
-								<span className="text-sm text-muted-foreground">дн.</span>
-							</div>
-							<SegmentedControl
-								options={["vat-yes", "vat-no"] as const}
-								labels={{ "vat-yes": "С НДС", "vat-no": "Без НДС" }}
-								value={delivery.vatIncluded ? "vat-yes" : "vat-no"}
-								onChange={(v) => updateDelivery("vatIncluded", v === "vat-yes")}
-							/>
-							<SegmentedControl
-								options={PAYMENT_METHODS}
-								labels={PAYMENT_METHOD_LABELS}
-								value={delivery.paymentMethod}
-								onChange={(v) => updateDelivery("paymentMethod", v)}
-							/>
-						</DeliverySection>
+								{delivery.legalEntityMode === "company" && (
+									<Select
+										value={delivery.legalEntityCompany || undefined}
+										onValueChange={(v) => updateDelivery("legalEntityCompany", v)}
+									>
+										<SelectTrigger aria-label="Компания">
+											<SelectValue placeholder="Выберите компанию…" />
+										</SelectTrigger>
+										<SelectContent>
+											{MOCK_COMPANIES.map((c) => (
+												<SelectItem key={c} value={c}>
+													{c}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
+							</DeliverySection>
 
-						<DeliverySection
-							label="Доставка"
-							enabled={delivery.deliveryEnabled}
-							onToggle={(v) => updateDelivery("deliveryEnabled", v)}
-						>
-							<SegmentedControl
-								options={DELIVERY_TYPES}
-								labels={DELIVERY_TYPE_LABELS}
-								value={delivery.deliveryType}
-								onChange={(v) => updateDelivery("deliveryType", v)}
-							/>
-							{delivery.deliveryType === "warehouse" && (
-								<Input
-									placeholder="Адрес доставки"
-									value={delivery.deliveryAddress}
-									onChange={(e) => updateDelivery("deliveryAddress", e.target.value)}
-									spellCheck={false}
-									autoComplete="off"
-									className="min-w-48"
+							<DeliverySection
+								label="Условия оплаты"
+								enabled={delivery.paymentEnabled}
+								onToggle={(v) => updateDelivery("paymentEnabled", v)}
+							>
+								<SegmentedControl
+									options={PAYMENT_TYPES}
+									labels={PAYMENT_TYPE_LABELS}
+									value={delivery.paymentType}
+									onChange={(v) => updateDelivery("paymentType", v)}
 								/>
-							)}
-						</DeliverySection>
+								{delivery.paymentType === "deferred" && (
+									<div className="flex items-center gap-2">
+										<Input
+											type="number"
+											inputMode="numeric"
+											min={0}
+											placeholder="0"
+											value={delivery.paymentDeferralDays}
+											onChange={(e) => updateDelivery("paymentDeferralDays", e.target.value)}
+											aria-label="Дней отсрочки"
+											className="w-20"
+											autoComplete="off"
+										/>
+										<span className="text-sm text-muted-foreground">дн.</span>
+									</div>
+								)}
+								<SegmentedControl
+									options={["vat-yes", "vat-no"] as const}
+									labels={{ "vat-yes": "С НДС", "vat-no": "Без НДС" }}
+									value={delivery.vatIncluded ? "vat-yes" : "vat-no"}
+									onChange={(v) => updateDelivery("vatIncluded", v === "vat-yes")}
+								/>
+								<SegmentedControl
+									options={PAYMENT_METHODS}
+									labels={PAYMENT_METHOD_LABELS}
+									value={delivery.paymentMethod}
+									onChange={(v) => updateDelivery("paymentMethod", v)}
+								/>
+							</DeliverySection>
 
-						<DeliverySection
-							label="Разгрузка"
-							enabled={delivery.unloadingEnabled}
-							onToggle={(v) => updateDelivery("unloadingEnabled", v)}
-						>
-							<SegmentedControl
-								options={UNLOADING_TYPES}
-								labels={UNLOADING_LABELS}
-								value={delivery.unloading}
-								onChange={(v) => updateDelivery("unloading", v)}
-							/>
-						</DeliverySection>
+							<DeliverySection
+								label="Доставка"
+								enabled={delivery.deliveryEnabled}
+								onToggle={(v) => updateDelivery("deliveryEnabled", v)}
+							>
+								<SegmentedControl
+									options={DELIVERY_TYPES}
+									labels={DELIVERY_TYPE_LABELS}
+									value={delivery.deliveryType}
+									onChange={(v) => updateDelivery("deliveryType", v)}
+								/>
+								{delivery.deliveryType === "warehouse" && (
+									<Input
+										placeholder="Адрес доставки"
+										value={delivery.deliveryAddress}
+										onChange={(e) => updateDelivery("deliveryAddress", e.target.value)}
+										spellCheck={false}
+										autoComplete="off"
+										className="min-w-48"
+									/>
+								)}
+							</DeliverySection>
 
-						<DeliverySection
-							label="Аналоги"
-							enabled={delivery.analoguesEnabled}
-							onToggle={(v) => updateDelivery("analoguesEnabled", v)}
-						>
-							<SegmentedControl
-								options={["allowed", "not-allowed"] as const}
-								labels={{ allowed: "Допускаются", "not-allowed": "Не допускаются" }}
-								value={delivery.analoguesAllowed ? "allowed" : "not-allowed"}
-								onChange={(v) => updateDelivery("analoguesAllowed", v === "allowed")}
-							/>
-						</DeliverySection>
+							<DeliverySection
+								label="Разгрузка"
+								enabled={delivery.unloadingEnabled}
+								onToggle={(v) => updateDelivery("unloadingEnabled", v)}
+							>
+								<SegmentedControl
+									options={UNLOADING_TYPES}
+									labels={UNLOADING_LABELS}
+									value={delivery.unloading}
+									onChange={(v) => updateDelivery("unloading", v)}
+								/>
+							</DeliverySection>
+
+							<DeliverySection
+								label="Аналоги"
+								enabled={delivery.analoguesEnabled}
+								onToggle={(v) => updateDelivery("analoguesEnabled", v)}
+							>
+								<SegmentedControl
+									options={["allowed", "not-allowed"] as const}
+									labels={{ allowed: "Допускаются", "not-allowed": "Не допускаются" }}
+									value={delivery.analoguesAllowed ? "allowed" : "not-allowed"}
+									onChange={(v) => updateDelivery("analoguesAllowed", v === "allowed")}
+								/>
+							</DeliverySection>
+						</div>
 					</div>
-				</div>
 
-				<SheetFooter className="sticky bottom-0 flex-row justify-between border-t border-border bg-background">
-					<Button type="button" variant="ghost" onClick={handleCancel}>
-						Отмена
-					</Button>
-					<Button type="button" onClick={handleSubmit}>
-						Создать позиции
-					</Button>
-				</SheetFooter>
-			</SheetContent>
+					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t border-border bg-background">
+						<Button type="button" variant="ghost" onClick={handleCancel}>
+							Отмена
+						</Button>
+						<Button type="button" onClick={handleSubmit}>
+							Создать позиции
+						</Button>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
 
 			<AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
 				<AlertDialogContent>
@@ -614,13 +603,13 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 						<AlertDialogDescription>Внесённые данные будут потеряны.</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Продолжить редактирование</AlertDialogCancel>
+						<AlertDialogCancel>Продолжить</AlertDialogCancel>
 						<AlertDialogAction variant="destructive" onClick={handleConfirmDiscard}>
 							Закрыть без сохранения
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-		</Sheet>
+		</>
 	);
 }

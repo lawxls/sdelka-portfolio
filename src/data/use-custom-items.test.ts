@@ -282,7 +282,7 @@ describe("type constants", () => {
 
 	it("LEGAL_ENTITY_LABELS covers incognito and company", () => {
 		expect(Object.keys(LEGAL_ENTITY_LABELS)).toEqual(["incognito", "company"]);
-		expect(LEGAL_ENTITY_LABELS.incognito).toBe("Режим инкогнито");
+		expect(LEGAL_ENTITY_LABELS.incognito).toBe("Инкогнито");
 		expect(LEGAL_ENTITY_LABELS.company).toBe("Компания");
 	});
 
