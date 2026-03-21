@@ -18,7 +18,7 @@ TL;DR - build a tiny, end-to-end slice of the feature first, then expand it out.
 3. Polish and quick wins
 4. Refactors
 
-If all tasks are complete, output `<promise>COMPLETE</promise>`.
+If every issue in the provided list has already been completed (closed in a previous iteration or no remaining work), output `<promise>COMPLETE</promise>`. Do NOT output this after completing your single task — only when there is genuinely nothing left to do across all provided issues.
 
 # EXPLORATION
 
