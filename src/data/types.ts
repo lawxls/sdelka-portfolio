@@ -6,6 +6,9 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 	completed: "Переговоры завершены",
 };
 
+export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
+export type Unit = (typeof UNITS)[number];
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -15,6 +18,8 @@ export interface ProcurementItem {
 	bestPrice: number | null;
 	averagePrice: number | null;
 	folderId: string | null;
+	description?: string;
+	unit?: Unit;
 }
 
 export interface Folder {
