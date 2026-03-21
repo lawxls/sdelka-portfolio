@@ -203,13 +203,10 @@ export function ProcurementTable({
 												className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
 											>
 												{item.status === "searching" && (
-													<LoaderCircle className="size-3 motion-safe:animate-spin" aria-hidden="true" />
+													<LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
 												)}
 												{item.status === "negotiating" && (
-													<span
-														className="size-1.5 rounded-full bg-current motion-safe:animate-pulse"
-														aria-hidden="true"
-													/>
+													<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
 												)}
 												{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
 												{status.label}
