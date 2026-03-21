@@ -2,13 +2,16 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import App, { DragItemOverlay } from "./App";
 
 function renderApp(initialEntries?: string[]) {
 	return render(
 		<MemoryRouter initialEntries={initialEntries}>
-			<App />
+			<TooltipProvider>
+				<App />
+			</TooltipProvider>
 		</MemoryRouter>,
 	);
 }
@@ -21,7 +24,7 @@ describe("App", () => {
 	test("renders page layout with header, main, and footer", () => {
 		renderApp();
 		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Toggle theme" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 		expect(screen.getByRole("contentinfo")).toBeInTheDocument();
@@ -40,7 +43,7 @@ describe("App", () => {
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
-	test("renders summary panel with metrics and export button", () => {
+	test("renders summary panel with SKU count and export button in toolbar", () => {
 		renderApp();
 		expect(screen.getByText(/SKU/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
@@ -91,11 +94,11 @@ describe("App", () => {
 		const nameBefore = getFirstDataRowCells()[1].textContent;
 
 		// Click sort on current price (asc)
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
 		const nameAfterAsc = getFirstDataRowCells()[1].textContent;
 
 		// Click again for descending
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
 		const nameAfterDesc = getFirstDataRowCells()[1].textContent;
 
 		// At least one sort direction should change the first row
@@ -371,7 +374,7 @@ describe("App", () => {
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
-		expect(screen.getByText("Наименование")).toBeInTheDocument();
+		expect(screen.getByText("Позиция 1")).toBeInTheDocument();
 	});
 
 	test("creating a position through the drawer increases SKU count and persists", async () => {

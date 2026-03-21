@@ -330,14 +330,14 @@ function FolderNavItem({
 						<EllipsisVertical className="size-3.5" />
 					</button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" side="right">
+				<DropdownMenuContent align="end" side="right" className="min-w-40">
 					<DropdownMenuItem onSelect={onRename}>
 						<Pencil className="size-3.5" />
 						Переименовать
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<div className="px-1.5 py-1" data-testid="color-picker">
-						<div className="flex gap-1">
+						<div className="flex flex-wrap gap-1 max-w-[92px]">
 							{FOLDER_COLORS.map((color) => (
 								<button
 									key={color}

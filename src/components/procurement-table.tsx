@@ -40,6 +40,7 @@ import type { Folder, PageInfo, ProcurementItem, ProcurementStatus, SortField, S
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
@@ -54,7 +55,7 @@ interface SortableColumn {
 
 const INPUT_COLUMNS: SortableColumn[] = [
 	{ label: "СТОИМОСТЬ В\u00A0ГОД", field: "annualCost" },
-	{ label: "ТЕКУЩАЯ ЦЕНА", field: "currentPrice" },
+	{ label: "ТЕКУЩАЯ ЦЕНА (ед.)", field: "currentPrice" },
 ];
 
 const ANALYSIS_COLUMNS: SortableColumn[] = [
@@ -114,15 +115,16 @@ export function ProcurementTable({
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
 
-	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
-	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
+	const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
+	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
 	const stickyNameCell = "sticky left-0 z-10 transition-colors bg-inherit";
-	const analysisHead = "sticky top-0 z-20 bg-background border-b border-border text-highlight-foreground";
+	const analysisHead =
+		"sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] text-highlight-foreground";
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div className="flex-1 overflow-auto touch-manipulation" data-testid="table-scroll-container">
 				<Table>
-					<TableHeader className="[&_tr]:border-b-0">
+					<TableHeader>
 						<TableRow>
 							<TableHead className={`w-12 text-right ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
@@ -218,7 +220,11 @@ export function ProcurementTable({
 							);
 
 							const isDragActive = activeItemId === item.id;
-							const rowClassName = `${item.status === "searching" ? `${rowCls} negotiating-stripe` : rowCls}${isDragActive ? " dragging-row" : ""}`;
+							const rowClassName = cn(
+								rowCls,
+								item.status === "searching" && "negotiating-stripe",
+								isDragActive && "dragging-row",
+							);
 							const rowProps = {
 								className: rowClassName,
 								onClick: onRowClick ? () => onRowClick(item) : undefined,

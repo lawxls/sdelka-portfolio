@@ -136,7 +136,7 @@ describe("ProcurementTable", () => {
 
 	test("sortable column headers have sort buttons", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШАЯ ЦЕНА/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ/ })).toBeInTheDocument();
 	});
@@ -146,7 +146,7 @@ describe("ProcurementTable", () => {
 		const onSort = vi.fn();
 		render(<ProcurementTable {...defaultProps} onSort={onSort} />);
 
-		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ }));
+		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
@@ -154,7 +154,7 @@ describe("ProcurementTable", () => {
 		render(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
 		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
 		// Instead it should have ArrowUp (asc)
-		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА/ });
+		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ });
 		const svgs = sortBtn.querySelectorAll("svg");
 		expect(svgs).toHaveLength(1);
 		// lucide ArrowUp has a specific path — just check the icon renders
