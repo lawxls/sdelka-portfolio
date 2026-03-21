@@ -12,6 +12,7 @@ interface ToolbarProps {
 	onSearchChange: (query: string) => void;
 	filters: FilterState;
 	onFiltersChange: (filters: FilterState) => void;
+	onAddPositions?: () => void;
 }
 
 const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
@@ -32,7 +33,7 @@ function hasActiveFilter(filters: FilterState): boolean {
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChange }: ToolbarProps) {
+export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChange, onAddPositions }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
 
@@ -119,7 +120,12 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 					</div>
 				</PopoverContent>
 			</Popover>
-			<Button type="button" size="sm" onClick={() => {}} className="bg-status-highlight hover:bg-status-highlight/80">
+			<Button
+				type="button"
+				size="sm"
+				onClick={onAddPositions}
+				className="bg-status-highlight hover:bg-status-highlight/80"
+			>
 				<Plus data-icon="inline-start" aria-hidden="true" />
 				Добавить позиции
 			</Button>

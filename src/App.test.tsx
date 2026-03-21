@@ -364,6 +364,84 @@ describe("App", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
+	test("clicking Добавить позиции opens the drawer with position table", async () => {
+		renderApp();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
+		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getByText("Наименование")).toBeInTheDocument();
+	});
+
+	test("creating a position through the drawer increases SKU count and persists", async () => {
+		renderApp();
+		const user = userEvent.setup();
+		const footer = screen.getByRole("contentinfo");
+
+		// SKU count before
+		expect(within(footer).getByText("75")).toBeInTheDocument();
+
+		// Open drawer, create position
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Тестовая позиция");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer should close
+		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+
+		// SKU count should increase
+		expect(within(footer).getByText("76")).toBeInTheDocument();
+
+		// Verify localStorage persistence
+		const stored = JSON.parse(localStorage.getItem("custom-items") ?? "[]");
+		expect(stored).toHaveLength(1);
+		expect(stored[0].name).toBe("Тестовая позиция");
+		expect(stored[0].status).toBe("searching");
+		expect(stored[0].bestPrice).toBeNull();
+		expect(stored[0].averagePrice).toBeNull();
+	});
+
+	test("created position survives remount via localStorage", async () => {
+		const { unmount } = renderApp();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Persistent Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		unmount();
+		renderApp();
+
+		// SKU count should still be 76 (75 mock + 1 custom)
+		const footer = screen.getByRole("contentinfo");
+		expect(within(footer).getByText("76")).toBeInTheDocument();
+	});
+
+	test("Отмена closes drawer without creating items", async () => {
+		renderApp();
+		const user = userEvent.setup();
+
+		const table = screen.getByRole("table");
+		const rowCountBefore = within(table).getAllByRole("row").length;
+
+		// Open drawer
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// Dirty form → confirmation dialog
+		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
+
+		// Drawer should close
+		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+
+		// No new items
+		const rowCountAfter = within(table).getAllByRole("row").length;
+		expect(rowCountAfter).toBe(rowCountBefore);
+	});
+
 	test("drag overlay anchors to the cursor position", () => {
 		const transform = anchorDragOverlayToCursor({
 			activatorEvent: new MouseEvent("pointerdown", { clientX: 520, clientY: 140 }),

@@ -2,6 +2,7 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
+import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
@@ -9,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
+import { useCustomItems } from "@/data/use-custom-items";
 import { useFolders } from "@/data/use-folders";
 import { useItemOverrides } from "@/data/use-item-overrides";
 import { useProcurementData } from "@/data/use-procurement-data";
@@ -66,11 +68,17 @@ function App() {
 	const folder = searchParams.get("folder") ?? undefined;
 
 	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
-	const effectiveItems = useMemo(() => applyOverrides(mockProcurementItems), [applyOverrides]);
+	const { items: customItems, addItems } = useCustomItems();
+	const effectiveItems = useMemo(
+		() => applyOverrides([...customItems, ...mockProcurementItems]),
+		[applyOverrides, customItems],
+	);
 
 	const { folders, counts, applyFolders, assignItem, createFolder, renameFolder, recolorFolder, deleteFolder } =
 		useFolders(effectiveItems);
 	const itemsWithFolders = useMemo(() => applyFolders(effectiveItems), [applyFolders, effectiveItems]);
+
+	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	const pageSize = 50;
 	const { items, totals, pageInfo } = useProcurementData({
@@ -184,6 +192,7 @@ function App() {
 							onSearchChange={handleSearchChange}
 							filters={filters}
 							onFiltersChange={handleFiltersChange}
+							onAddPositions={() => setDrawerOpen(true)}
 						/>
 						<ThemeToggle />
 					</div>
@@ -226,6 +235,8 @@ function App() {
 				{activeItem ? <DragItemOverlay item={activeItem} /> : null}
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
+
+			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={addItems} />
 		</DndContext>
 	);
 }
