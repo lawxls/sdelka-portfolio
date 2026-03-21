@@ -1,10 +1,14 @@
 import { useCallback, useState } from "react";
-import type { ProcurementItem } from "./types";
+import type { ProcurementItem, Unit } from "./types";
 
 const LS_KEY = "custom-items";
 
 export interface NewItemInput {
 	name: string;
+	description?: string;
+	unit?: Unit;
+	annualQuantity?: number;
+	currentPrice?: number;
 }
 
 function readItems(): ProcurementItem[] {
@@ -31,9 +35,11 @@ export function useCustomItems(): UseCustomItemsResult {
 			const newItems: ProcurementItem[] = inputs.map((input) => ({
 				id: `custom-${crypto.randomUUID()}`,
 				name: input.name,
+				description: input.description,
+				unit: input.unit,
 				status: "searching" as const,
-				annualQuantity: 0,
-				currentPrice: 0,
+				annualQuantity: input.annualQuantity ?? 0,
+				currentPrice: input.currentPrice ?? 0,
 				bestPrice: null,
 				averagePrice: null,
 				folderId: null,

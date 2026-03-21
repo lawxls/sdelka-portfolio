@@ -60,6 +60,36 @@ describe("useCustomItems", () => {
 			expect(item.folderId).toBeNull();
 		});
 
+		it("maps description, unit, annualQuantity, and currentPrice to ProcurementItem", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([
+					{
+						name: "Цемент М500",
+						description: "Портландцемент",
+						unit: "т",
+						annualQuantity: 120,
+						currentPrice: 5500,
+					},
+				]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.description).toBe("Портландцемент");
+			expect(item.unit).toBe("т");
+			expect(item.annualQuantity).toBe(120);
+			expect(item.currentPrice).toBe(5500);
+		});
+
+		it("leaves description and unit undefined when not provided", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([{ name: "Plain" }]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.description).toBeUndefined();
+			expect(item.unit).toBeUndefined();
+		});
+
 		it("adds multiple items in a single call", () => {
 			const { result } = renderHook(() => useCustomItems());
 			act(() => {

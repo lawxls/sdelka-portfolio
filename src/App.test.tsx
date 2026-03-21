@@ -364,14 +364,15 @@ describe("App", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
-	test("clicking Добавить позиции opens the drawer", async () => {
+	test("clicking Добавить позиции opens the drawer with position table", async () => {
 		renderApp();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Название позиции")).toBeInTheDocument();
+		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getByText("Наименование")).toBeInTheDocument();
 	});
 
 	test("creating a position through the drawer increases SKU count and persists", async () => {
@@ -384,7 +385,7 @@ describe("App", () => {
 
 		// Open drawer, create position
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Тестовая позиция");
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Тестовая позиция");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer should close
@@ -407,7 +408,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Persistent Item");
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Persistent Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		unmount();
@@ -427,7 +428,7 @@ describe("App", () => {
 
 		// Open drawer
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Should not appear");
+		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		// Drawer should close

@@ -145,10 +145,6 @@ function App() {
 		});
 	}
 
-	function handleAddPositionsSubmit(positions: { name: string }[]) {
-		addItems(positions);
-	}
-
 	// Drag-and-drop
 	const [reducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 	const [activeItem, setActiveItem] = useState<ProcurementItem | null>(null);
@@ -240,7 +236,7 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
-			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleAddPositionsSubmit} />
+			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={addItems} />
 		</DndContext>
 	);
 }
