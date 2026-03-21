@@ -273,6 +273,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			setShowConfirm(true);
 			return;
 		}
+		resetForm();
 		onOpenChange(false);
 	}
 

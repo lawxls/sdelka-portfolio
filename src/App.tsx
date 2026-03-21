@@ -70,7 +70,7 @@ function App() {
 	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
 	const { items: customItems, addItems } = useCustomItems();
 	const effectiveItems = useMemo(
-		() => [...applyOverrides(mockProcurementItems), ...customItems],
+		() => applyOverrides([...customItems, ...mockProcurementItems]),
 		[applyOverrides, customItems],
 	);
 
