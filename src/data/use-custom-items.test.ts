@@ -1,7 +1,16 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProcurementItem } from "./types";
-import { FREQUENCIES, FREQUENCY_LABELS, PROCUREMENT_TYPE_LABELS } from "./types";
+import {
+	DELIVERY_TYPE_LABELS,
+	FREQUENCIES,
+	FREQUENCY_LABELS,
+	LEGAL_ENTITY_LABELS,
+	PAYMENT_METHOD_LABELS,
+	PAYMENT_TYPE_LABELS,
+	PROCUREMENT_TYPE_LABELS,
+	UNLOADING_LABELS,
+} from "./types";
 import { useCustomItems } from "./use-custom-items";
 
 const LS_KEY = "custom-items";
@@ -202,6 +211,58 @@ describe("useCustomItems", () => {
 			expect(item.frequency).toBeUndefined();
 		});
 	});
+
+	describe("delivery conditions", () => {
+		it("maps all delivery condition fields to ProcurementItem", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([
+					{
+						name: "Full delivery",
+						legalEntityMode: "company",
+						legalEntityCompany: "ООО «Сделка»",
+						paymentType: "deferred",
+						paymentDeferralDays: 30,
+						vatIncluded: true,
+						paymentMethod: "bank_transfer",
+						deliveryType: "warehouse",
+						deliveryAddress: "г. Москва, ул. Примерная, 1",
+						unloading: "supplier",
+						analoguesAllowed: true,
+					},
+				]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.legalEntityMode).toBe("company");
+			expect(item.legalEntityCompany).toBe("ООО «Сделка»");
+			expect(item.paymentType).toBe("deferred");
+			expect(item.paymentDeferralDays).toBe(30);
+			expect(item.vatIncluded).toBe(true);
+			expect(item.paymentMethod).toBe("bank_transfer");
+			expect(item.deliveryType).toBe("warehouse");
+			expect(item.deliveryAddress).toBe("г. Москва, ул. Примерная, 1");
+			expect(item.unloading).toBe("supplier");
+			expect(item.analoguesAllowed).toBe(true);
+		});
+
+		it("leaves delivery fields undefined when not provided", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([{ name: "No delivery" }]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.legalEntityMode).toBeUndefined();
+			expect(item.legalEntityCompany).toBeUndefined();
+			expect(item.paymentType).toBeUndefined();
+			expect(item.paymentDeferralDays).toBeUndefined();
+			expect(item.vatIncluded).toBeUndefined();
+			expect(item.paymentMethod).toBeUndefined();
+			expect(item.deliveryType).toBeUndefined();
+			expect(item.deliveryAddress).toBeUndefined();
+			expect(item.unloading).toBeUndefined();
+			expect(item.analoguesAllowed).toBeUndefined();
+		});
+	});
 });
 
 describe("type constants", () => {
@@ -217,5 +278,29 @@ describe("type constants", () => {
 
 	it("FREQUENCIES array matches FREQUENCY_LABELS keys", () => {
 		expect(FREQUENCIES).toEqual(Object.keys(FREQUENCY_LABELS));
+	});
+
+	it("LEGAL_ENTITY_LABELS covers incognito and company", () => {
+		expect(Object.keys(LEGAL_ENTITY_LABELS)).toEqual(["incognito", "company"]);
+		expect(LEGAL_ENTITY_LABELS.incognito).toBe("Режим инкогнито");
+		expect(LEGAL_ENTITY_LABELS.company).toBe("Компания");
+	});
+
+	it("PAYMENT_TYPE_LABELS covers prepayment and deferred", () => {
+		expect(Object.keys(PAYMENT_TYPE_LABELS)).toEqual(["prepayment", "deferred"]);
+	});
+
+	it("PAYMENT_METHOD_LABELS covers bank_transfer and cash", () => {
+		expect(Object.keys(PAYMENT_METHOD_LABELS)).toEqual(["bank_transfer", "cash"]);
+		expect(PAYMENT_METHOD_LABELS.bank_transfer).toBe("Р/С");
+		expect(PAYMENT_METHOD_LABELS.cash).toBe("Наличные");
+	});
+
+	it("DELIVERY_TYPE_LABELS covers warehouse and pickup", () => {
+		expect(Object.keys(DELIVERY_TYPE_LABELS)).toEqual(["warehouse", "pickup"]);
+	});
+
+	it("UNLOADING_LABELS covers supplier and self", () => {
+		expect(Object.keys(UNLOADING_LABELS)).toEqual(["supplier", "self"]);
 	});
 });

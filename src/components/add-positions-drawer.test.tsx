@@ -343,6 +343,232 @@ describe("AddPositionsDrawer", () => {
 		expect(items[1]).toMatchObject({ procurementType: "regular", frequency: "weekly" });
 	});
 
+	// --- Delivery conditions ---
+
+	test("all 5 delivery condition sections are visible with toggles off by default", () => {
+		renderDrawer();
+		const sections = ["Юридическое лицо", "Условия оплаты", "Доставка", "Разгрузка", "Аналоги"];
+		for (const label of sections) {
+			expect(screen.getByText(label)).toBeInTheDocument();
+		}
+		// All toggles should be unchecked
+		const switches = screen.getAllByRole("switch");
+		for (const sw of switches) {
+			expect(sw).toHaveAttribute("aria-checked", "false");
+		}
+	});
+
+	test("toggling Юридическое лицо on shows segmented control", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		// Find the switch for Юридическое лицо (first switch)
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[0]);
+
+		expect(screen.getByRole("button", { name: "Режим инкогнито" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
+	});
+
+	test("Юридическое лицо: Компания shows company dropdown", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[0]);
+		await user.click(screen.getByRole("button", { name: "Компания" }));
+
+		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
+		const select = screen.getByLabelText("Компания");
+		const options = within(select as HTMLElement).getAllByRole("option");
+		expect(options.map((o) => o.textContent)).toContain("ООО «Сделка»");
+	});
+
+	test("toggling Условия оплаты on shows payment controls", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[1]);
+
+		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "С НДС" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Без НДС" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Р/С" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Наличные" })).toBeInTheDocument();
+	});
+
+	test("deferral days only editable when Отсрочка selected", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[1]);
+
+		// Предоплата is default — deferral days should be disabled
+		const deferralInput = screen.getByLabelText("Дней отсрочки");
+		expect(deferralInput).toBeDisabled();
+
+		// Switch to Отсрочка
+		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
+		expect(deferralInput).not.toBeDisabled();
+	});
+
+	test("toggling Доставка on shows delivery controls", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[2]);
+
+		expect(screen.getByRole("button", { name: "До склада" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Самовывоз" })).toBeInTheDocument();
+	});
+
+	test("delivery address only shown when До склада selected", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[2]);
+
+		// До склада is default — address input should be shown
+		expect(screen.getByPlaceholderText("Адрес доставки")).toBeInTheDocument();
+
+		// Switch to Самовывоз
+		await user.click(screen.getByRole("button", { name: "Самовывоз" }));
+		expect(screen.queryByPlaceholderText("Адрес доставки")).not.toBeInTheDocument();
+	});
+
+	test("toggling Разгрузка on shows unloading controls", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[3]);
+
+		expect(screen.getByRole("button", { name: "Силами поставщика" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Своими силами" })).toBeInTheDocument();
+	});
+
+	test("toggling Аналоги on shows analogues controls", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[4]);
+
+		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Не допускаются" })).toBeInTheDocument();
+	});
+
+	test("toggling a section off hides controls", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		// Toggle on then off
+		await user.click(switches[4]); // Аналоги on
+		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
+		await user.click(switches[4]); // Аналоги off
+		expect(screen.queryByRole("button", { name: "Допускаются" })).not.toBeInTheDocument();
+	});
+
+	test("submit includes delivery conditions from enabled sections", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		// Fill name
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Test");
+
+		// Toggle Юридическое лицо → company
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[0]);
+		await user.click(screen.getByRole("button", { name: "Компания" }));
+		await user.selectOptions(screen.getByLabelText("Компания"), "ООО «Сделка»");
+
+		// Toggle Доставка
+		await user.click(switches[2]);
+
+		// Toggle Аналоги → не допускаются
+		await user.click(switches[4]);
+		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({
+				name: "Test",
+				legalEntityMode: "company",
+				legalEntityCompany: "ООО «Сделка»",
+				deliveryType: "warehouse",
+				analoguesAllowed: false,
+			}),
+		]);
+	});
+
+	test("submit omits delivery fields from toggled-off sections", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Plain");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		const item = onSubmit.mock.calls[0][0][0];
+		expect(item.legalEntityMode).toBeUndefined();
+		expect(item.paymentType).toBeUndefined();
+		expect(item.deliveryType).toBeUndefined();
+		expect(item.unloading).toBeUndefined();
+		expect(item.analoguesAllowed).toBeUndefined();
+	});
+
+	test("delivery conditions applied to all positions on submit", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		// Toggle Разгрузка on
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[3]);
+
+		// Fill 2 positions
+		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		await user.type(nameInputs[1], "B");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		const items = onSubmit.mock.calls[0][0];
+		expect(items).toHaveLength(2);
+		expect(items[0].unloading).toBe("supplier");
+		expect(items[1].unloading).toBe("supplier");
+	});
+
+	test("delivery conditions reset after submit", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		// Toggle Аналоги on
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[4]);
+		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
+
+		// Submit
+		await user.type(screen.getByPlaceholderText("Название позиции"), "X");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// After reset, all toggles should be off
+		const resetSwitches = screen.getAllByRole("switch");
+		for (const sw of resetSwitches) {
+			expect(sw).toHaveAttribute("aria-checked", "false");
+		}
+	});
+
 	test("form resets procurement type to Разовая after submit", async () => {
 		const onSubmit = vi.fn();
 		const onOpenChange = vi.fn();

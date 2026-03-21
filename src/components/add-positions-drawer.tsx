@@ -3,9 +3,28 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Frequency, ProcurementType } from "@/data/types";
-import { FREQUENCIES, FREQUENCY_LABELS, PROCUREMENT_TYPE_LABELS, UNITS } from "@/data/types";
+import type {
+	DeliveryType,
+	Frequency,
+	LegalEntityMode,
+	PaymentMethod,
+	PaymentType,
+	ProcurementType,
+	UnloadingType,
+} from "@/data/types";
+import {
+	DELIVERY_TYPE_LABELS,
+	FREQUENCIES,
+	FREQUENCY_LABELS,
+	LEGAL_ENTITY_LABELS,
+	PAYMENT_METHOD_LABELS,
+	PAYMENT_TYPE_LABELS,
+	PROCUREMENT_TYPE_LABELS,
+	UNITS,
+	UNLOADING_LABELS,
+} from "@/data/types";
 import type { NewItemInput } from "@/data/use-custom-items";
 
 interface PositionRow {
@@ -36,17 +55,159 @@ interface AddPositionsDrawerProps {
 }
 
 const PROCUREMENT_TYPES = Object.keys(PROCUREMENT_TYPE_LABELS) as ProcurementType[];
+const LEGAL_ENTITY_MODES = Object.keys(LEGAL_ENTITY_LABELS) as LegalEntityMode[];
+const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
+const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
+const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
+const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
+
+const MOCK_COMPANIES = ["ООО «Сделка»"];
+
+interface DeliveryState {
+	legalEntityEnabled: boolean;
+	legalEntityMode: LegalEntityMode;
+	legalEntityCompany: string;
+	paymentEnabled: boolean;
+	paymentType: PaymentType;
+	paymentDeferralDays: string;
+	vatIncluded: boolean;
+	paymentMethod: PaymentMethod;
+	deliveryEnabled: boolean;
+	deliveryType: DeliveryType;
+	deliveryAddress: string;
+	unloadingEnabled: boolean;
+	unloading: UnloadingType;
+	analoguesEnabled: boolean;
+	analoguesAllowed: boolean;
+}
+
+function createDefaultDelivery(): DeliveryState {
+	return {
+		legalEntityEnabled: false,
+		legalEntityMode: "incognito",
+		legalEntityCompany: "",
+		paymentEnabled: false,
+		paymentType: "prepayment",
+		paymentDeferralDays: "",
+		vatIncluded: true,
+		paymentMethod: "bank_transfer",
+		deliveryEnabled: false,
+		deliveryType: "warehouse",
+		deliveryAddress: "",
+		unloadingEnabled: false,
+		unloading: "supplier",
+		analoguesEnabled: false,
+		analoguesAllowed: true,
+	};
+}
+
+function SegmentedControl<T extends string>({
+	options,
+	labels,
+	value,
+	onChange,
+}: {
+	options: readonly T[];
+	labels: Record<T, string>;
+	value: T;
+	onChange: (v: T) => void;
+}) {
+	return (
+		<div className="flex rounded-lg border border-input">
+			{options.map((opt) => (
+				<button
+					key={opt}
+					type="button"
+					aria-pressed={value === opt}
+					className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
+						value === opt
+							? "bg-primary text-primary-foreground"
+							: "bg-background text-muted-foreground hover:text-foreground"
+					}`}
+					onClick={() => onChange(opt)}
+				>
+					{labels[opt]}
+				</button>
+			))}
+		</div>
+	);
+}
+
+function DeliverySection({
+	label,
+	enabled,
+	onToggle,
+	children,
+}: {
+	label: string;
+	enabled: boolean;
+	onToggle: (v: boolean) => void;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="border-t border-border py-3">
+			<div className="flex items-center justify-between">
+				<span className="text-sm font-medium">{label}</span>
+				<Switch checked={enabled} onCheckedChange={onToggle} />
+			</div>
+			{enabled && <div className="mt-3 flex flex-wrap items-center gap-3">{children}</div>}
+		</div>
+	);
+}
 
 export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
 	const [positions, setPositions] = useState<PositionRow[]>(() => [createEmptyRow()]);
 	const [procurementType, setProcurementType] = useState<ProcurementType>("one-time");
 	const [frequency, setFrequency] = useState<Frequency | "">("");
+	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
 	const pendingFocusKey = useRef<string | null>(null);
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
 		setProcurementType("one-time");
 		setFrequency("");
+		setDelivery(createDefaultDelivery());
+	}
+
+	function updateDelivery<K extends keyof DeliveryState>(field: K, value: DeliveryState[K]) {
+		setDelivery((prev) => ({ ...prev, [field]: value }));
+	}
+
+	function buildDeliveryFields(): Partial<NewItemInput> {
+		const fields: Partial<NewItemInput> = {};
+
+		if (delivery.legalEntityEnabled) {
+			fields.legalEntityMode = delivery.legalEntityMode;
+			if (delivery.legalEntityMode === "company" && delivery.legalEntityCompany) {
+				fields.legalEntityCompany = delivery.legalEntityCompany;
+			}
+		}
+
+		if (delivery.paymentEnabled) {
+			fields.paymentType = delivery.paymentType;
+			if (delivery.paymentType === "deferred" && delivery.paymentDeferralDays) {
+				fields.paymentDeferralDays = Number(delivery.paymentDeferralDays);
+			}
+			fields.vatIncluded = delivery.vatIncluded;
+			fields.paymentMethod = delivery.paymentMethod;
+		}
+
+		if (delivery.deliveryEnabled) {
+			fields.deliveryType = delivery.deliveryType;
+			if (delivery.deliveryType === "warehouse" && delivery.deliveryAddress.trim()) {
+				fields.deliveryAddress = delivery.deliveryAddress.trim();
+			}
+		}
+
+		if (delivery.unloadingEnabled) {
+			fields.unloading = delivery.unloading;
+		}
+
+		if (delivery.analoguesEnabled) {
+			fields.analoguesAllowed = delivery.analoguesAllowed;
+		}
+
+		return fields;
 	}
 
 	function handleSubmit() {
@@ -64,6 +225,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			return;
 		}
 
+		const deliveryFields = buildDeliveryFields();
+
 		const items: NewItemInput[] = positions.map((p) => ({
 			name: p.name.trim(),
 			description: p.description.trim() || undefined,
@@ -72,6 +235,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			currentPrice: p.price ? Number(p.price) : undefined,
 			procurementType,
 			frequency: procurementType === "regular" && frequency ? (frequency as Frequency) : undefined,
+			...deliveryFields,
 		}));
 
 		onSubmit(items);
@@ -128,23 +292,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 				<div className="flex-1 overflow-y-auto px-4">
 					<div className="mb-4 flex flex-wrap items-center gap-3">
-						<div className="flex rounded-lg border border-input">
-							{PROCUREMENT_TYPES.map((type) => (
-								<button
-									key={type}
-									type="button"
-									aria-pressed={procurementType === type}
-									className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
-										procurementType === type
-											? "bg-primary text-primary-foreground"
-											: "bg-background text-muted-foreground hover:text-foreground"
-									}`}
-									onClick={() => setProcurementType(type)}
-								>
-									{PROCUREMENT_TYPE_LABELS[type]}
-								</button>
-							))}
-						</div>
+						<SegmentedControl
+							options={PROCUREMENT_TYPES}
+							labels={PROCUREMENT_TYPE_LABELS}
+							value={procurementType}
+							onChange={setProcurementType}
+						/>
 						{procurementType === "regular" && (
 							<select
 								value={frequency}
@@ -280,6 +433,126 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 							<Upload aria-hidden="true" />
 							Загрузить из файла
 						</Button>
+					</div>
+
+					{/* Delivery conditions */}
+					<div className="mt-4">
+						<DeliverySection
+							label="Юридическое лицо"
+							enabled={delivery.legalEntityEnabled}
+							onToggle={(v) => updateDelivery("legalEntityEnabled", v)}
+						>
+							<SegmentedControl
+								options={LEGAL_ENTITY_MODES}
+								labels={LEGAL_ENTITY_LABELS}
+								value={delivery.legalEntityMode}
+								onChange={(v) => updateDelivery("legalEntityMode", v)}
+							/>
+							{delivery.legalEntityMode === "company" && (
+								<select
+									value={delivery.legalEntityCompany}
+									onChange={(e) => updateDelivery("legalEntityCompany", e.target.value)}
+									className="h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground"
+									aria-label="Компания"
+								>
+									<option value="">Выберите компанию…</option>
+									{MOCK_COMPANIES.map((c) => (
+										<option key={c} value={c}>
+											{c}
+										</option>
+									))}
+								</select>
+							)}
+						</DeliverySection>
+
+						<DeliverySection
+							label="Условия оплаты"
+							enabled={delivery.paymentEnabled}
+							onToggle={(v) => updateDelivery("paymentEnabled", v)}
+						>
+							<SegmentedControl
+								options={PAYMENT_TYPES}
+								labels={PAYMENT_TYPE_LABELS}
+								value={delivery.paymentType}
+								onChange={(v) => updateDelivery("paymentType", v)}
+							/>
+							<div className="flex items-center gap-2">
+								<Input
+									type="number"
+									inputMode="numeric"
+									min={0}
+									placeholder="0"
+									value={delivery.paymentDeferralDays}
+									onChange={(e) => updateDelivery("paymentDeferralDays", e.target.value)}
+									disabled={delivery.paymentType !== "deferred"}
+									aria-label="Дней отсрочки"
+									className="w-20"
+									autoComplete="off"
+								/>
+								<span className="text-sm text-muted-foreground">дн.</span>
+							</div>
+							<SegmentedControl
+								options={["vat-yes", "vat-no"] as const}
+								labels={{ "vat-yes": "С НДС", "vat-no": "Без НДС" }}
+								value={delivery.vatIncluded ? "vat-yes" : "vat-no"}
+								onChange={(v) => updateDelivery("vatIncluded", v === "vat-yes")}
+							/>
+							<SegmentedControl
+								options={PAYMENT_METHODS}
+								labels={PAYMENT_METHOD_LABELS}
+								value={delivery.paymentMethod}
+								onChange={(v) => updateDelivery("paymentMethod", v)}
+							/>
+						</DeliverySection>
+
+						<DeliverySection
+							label="Доставка"
+							enabled={delivery.deliveryEnabled}
+							onToggle={(v) => updateDelivery("deliveryEnabled", v)}
+						>
+							<SegmentedControl
+								options={DELIVERY_TYPES}
+								labels={DELIVERY_TYPE_LABELS}
+								value={delivery.deliveryType}
+								onChange={(v) => updateDelivery("deliveryType", v)}
+							/>
+							{delivery.deliveryType === "warehouse" && (
+								<Input
+									placeholder="Адрес доставки"
+									value={delivery.deliveryAddress}
+									onChange={(e) => updateDelivery("deliveryAddress", e.target.value)}
+									spellCheck={false}
+									autoComplete="off"
+									className="min-w-48"
+								/>
+							)}
+						</DeliverySection>
+
+						<DeliverySection
+							label="Разгрузка"
+							enabled={delivery.unloadingEnabled}
+							onToggle={(v) => updateDelivery("unloadingEnabled", v)}
+						>
+							<SegmentedControl
+								options={UNLOADING_TYPES}
+								labels={UNLOADING_LABELS}
+								value={delivery.unloading}
+								onChange={(v) => updateDelivery("unloading", v)}
+							/>
+						</DeliverySection>
+
+						<DeliverySection
+							label="Аналоги"
+							enabled={delivery.analoguesEnabled}
+							onToggle={(v) => updateDelivery("analoguesEnabled", v)}
+						>
+							<SegmentedControl
+								options={["allowed", "not-allowed"] as const}
+								labels={{ allowed: "Допускаются", "not-allowed": "Не допускаются" }}
+								value={delivery.analoguesAllowed ? "allowed" : "not-allowed"}
+								onChange={(v) => updateDelivery("analoguesAllowed", v === "allowed")}
+							/>
+						</DeliverySection>
 					</div>
 				</div>
 

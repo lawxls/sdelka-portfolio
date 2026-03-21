@@ -9,6 +9,41 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
+export type LegalEntityMode = "incognito" | "company";
+
+export const LEGAL_ENTITY_LABELS: Record<LegalEntityMode, string> = {
+	incognito: "Режим инкогнито",
+	company: "Компания",
+};
+
+export type PaymentType = "prepayment" | "deferred";
+
+export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
+	prepayment: "Предоплата",
+	deferred: "Отсрочка",
+};
+
+export type PaymentMethod = "bank_transfer" | "cash";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+	bank_transfer: "Р/С",
+	cash: "Наличные",
+};
+
+export type DeliveryType = "warehouse" | "pickup";
+
+export const DELIVERY_TYPE_LABELS: Record<DeliveryType, string> = {
+	warehouse: "До склада",
+	pickup: "Самовывоз",
+};
+
+export type UnloadingType = "supplier" | "self";
+
+export const UNLOADING_LABELS: Record<UnloadingType, string> = {
+	supplier: "Силами поставщика",
+	self: "Своими силами",
+};
+
 export type ProcurementType = "one-time" | "regular";
 
 export const PROCUREMENT_TYPE_LABELS: Record<ProcurementType, string> = {
@@ -42,6 +77,16 @@ export interface ProcurementItem {
 	unit?: Unit;
 	procurementType?: ProcurementType;
 	frequency?: Frequency;
+	legalEntityMode?: LegalEntityMode;
+	legalEntityCompany?: string;
+	paymentType?: PaymentType;
+	paymentDeferralDays?: number;
+	vatIncluded?: boolean;
+	paymentMethod?: PaymentMethod;
+	deliveryType?: DeliveryType;
+	deliveryAddress?: string;
+	unloading?: UnloadingType;
+	analoguesAllowed?: boolean;
 }
 
 export interface Folder {

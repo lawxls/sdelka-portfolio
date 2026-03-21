@@ -1,5 +1,15 @@
 import { useCallback, useState } from "react";
-import type { Frequency, ProcurementItem, ProcurementType, Unit } from "./types";
+import type {
+	DeliveryType,
+	Frequency,
+	LegalEntityMode,
+	PaymentMethod,
+	PaymentType,
+	ProcurementItem,
+	ProcurementType,
+	Unit,
+	UnloadingType,
+} from "./types";
 
 const LS_KEY = "custom-items";
 
@@ -11,6 +21,16 @@ export interface NewItemInput {
 	currentPrice?: number;
 	procurementType?: ProcurementType;
 	frequency?: Frequency;
+	legalEntityMode?: LegalEntityMode;
+	legalEntityCompany?: string;
+	paymentType?: PaymentType;
+	paymentDeferralDays?: number;
+	vatIncluded?: boolean;
+	paymentMethod?: PaymentMethod;
+	deliveryType?: DeliveryType;
+	deliveryAddress?: string;
+	unloading?: UnloadingType;
+	analoguesAllowed?: boolean;
 }
 
 function readItems(): ProcurementItem[] {
@@ -41,6 +61,16 @@ export function useCustomItems(): UseCustomItemsResult {
 				unit: input.unit,
 				procurementType: input.procurementType,
 				frequency: input.frequency,
+				legalEntityMode: input.legalEntityMode,
+				legalEntityCompany: input.legalEntityCompany,
+				paymentType: input.paymentType,
+				paymentDeferralDays: input.paymentDeferralDays,
+				vatIncluded: input.vatIncluded,
+				paymentMethod: input.paymentMethod,
+				deliveryType: input.deliveryType,
+				deliveryAddress: input.deliveryAddress,
+				unloading: input.unloading,
+				analoguesAllowed: input.analoguesAllowed,
 				status: "searching" as const,
 				annualQuantity: input.annualQuantity ?? 0,
 				currentPrice: input.currentPrice ?? 0,
