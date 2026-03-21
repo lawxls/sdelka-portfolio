@@ -431,6 +431,9 @@ describe("App", () => {
 		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
+		// Dirty form → confirmation dialog
+		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
+
 		// Drawer should close
 		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
 

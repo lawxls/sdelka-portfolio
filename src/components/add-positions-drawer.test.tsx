@@ -583,4 +583,144 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Разовая" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.queryByLabelText("Периодичность")).not.toBeInTheDocument();
 	});
+
+	// --- Validation & unsaved changes (#56) ---
+
+	test("focus moves to first error field on failed submit", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		// Add a second row, fill the second but leave first empty
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		await user.type(nameInputs[1], "Filled");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// First (empty) name input should have focus
+		expect(screen.getAllByPlaceholderText("Название позиции")[0]).toHaveFocus();
+	});
+
+	test("focus moves to first error among multiple empty rows", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		// Add two more rows — all three empty
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+
+		// Fill only the second row
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		await user.type(nameInputs[1], "Middle");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// First empty row (index 0) should get focus
+		expect(screen.getAllByPlaceholderText("Название позиции")[0]).toHaveFocus();
+	});
+
+	test("closing drawer with dirty form (name filled) shows confirmation dialog", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Something");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// AlertDialog should appear
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+		// Drawer should NOT have closed yet
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
+	});
+
+	test("Продолжить редактирование returns to form without data loss", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "My item");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// Click "Продолжить редактирование"
+		await user.click(screen.getByRole("button", { name: "Продолжить редактирование" }));
+
+		// Dialog should close, form still has data
+		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Название позиции")).toHaveValue("My item");
+		expect(onOpenChange).not.toHaveBeenCalledWith(false);
+	});
+
+	test("Закрыть без сохранения closes drawer and discards form state", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Something");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// Click "Закрыть без сохранения"
+		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
+
+		// Dialog should close, drawer should close
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	test("closing clean form (untouched) closes immediately without dialog", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// No dialog — immediate close
+		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	test("dirty detection: description filled triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Описание"), "desc");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("dirty detection: procurement type changed triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("dirty detection: delivery section toggled on triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		const switches = screen.getAllByRole("switch");
+		await user.click(switches[2]); // Toggle Доставка
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("form resets after discard via confirmation dialog", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Discard me");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
+
+		// After discard, form should be reset
+		expect(screen.getByPlaceholderText("Название позиции")).toHaveValue("");
+	});
 });

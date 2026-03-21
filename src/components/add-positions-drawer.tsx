@@ -1,5 +1,15 @@
 import { Plus, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -160,7 +170,18 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const [procurementType, setProcurementType] = useState<ProcurementType>("one-time");
 	const [frequency, setFrequency] = useState<Frequency | "">("");
 	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
+	const [showConfirm, setShowConfirm] = useState(false);
 	const pendingFocusKey = useRef<string | null>(null);
+	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+	const isDirty =
+		positions.some((p) => p.name || p.description || p.quantity || p.unit || p.price) ||
+		procurementType !== "one-time" ||
+		delivery.legalEntityEnabled ||
+		delivery.paymentEnabled ||
+		delivery.deliveryEnabled ||
+		delivery.unloadingEnabled ||
+		delivery.analoguesEnabled;
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
@@ -212,9 +233,11 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 	function handleSubmit() {
 		let hasError = false;
+		let firstErrorKey: string | null = null;
 		const validated = positions.map((p) => {
 			if (!p.name.trim()) {
 				hasError = true;
+				if (!firstErrorKey) firstErrorKey = p.key;
 				return { ...p, error: "Укажите название позиции" };
 			}
 			return { ...p, error: undefined };
@@ -222,6 +245,9 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 		if (hasError) {
 			setPositions(validated);
+			if (firstErrorKey) {
+				nameRefs.current.get(firstErrorKey)?.focus();
+			}
 			return;
 		}
 
@@ -244,11 +270,25 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	}
 
 	function handleCancel() {
+		if (isDirty) {
+			setShowConfirm(true);
+			return;
+		}
+		onOpenChange(false);
+	}
+
+	function handleConfirmDiscard() {
+		setShowConfirm(false);
+		resetForm();
 		onOpenChange(false);
 	}
 
 	function handleOpenChange(nextOpen: boolean) {
 		if (!nextOpen) {
+			if (isDirty) {
+				setShowConfirm(true);
+				return;
+			}
 			resetForm();
 		}
 		onOpenChange(nextOpen);
@@ -335,16 +375,17 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 										<TableCell>
 											<div className="flex flex-col gap-1">
 												<Input
-													ref={
-														pos.key === pendingFocusKey.current
-															? (el) => {
-																	if (el) {
-																		el.focus();
-																		pendingFocusKey.current = null;
-																	}
-																}
-															: undefined
-													}
+													ref={(el) => {
+														if (el) {
+															nameRefs.current.set(pos.key, el);
+															if (pos.key === pendingFocusKey.current) {
+																el.focus();
+																pendingFocusKey.current = null;
+															}
+														} else {
+															nameRefs.current.delete(pos.key);
+														}
+													}}
 													placeholder="Название позиции"
 													value={pos.name}
 													onChange={(e) => updatePosition(pos.key, "name", e.target.value)}
@@ -565,6 +606,21 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 					</Button>
 				</SheetFooter>
 			</SheetContent>
+
+			<AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Закрыть без сохранения?</AlertDialogTitle>
+						<AlertDialogDescription>Внесённые данные будут потеряны.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Продолжить редактирование</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleConfirmDiscard}>
+							Закрыть без сохранения
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Sheet>
 	);
 }
