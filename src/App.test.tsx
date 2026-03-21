@@ -31,7 +31,6 @@ describe("App", () => {
 		renderApp();
 		expect(screen.getByRole("table")).toBeInTheDocument();
 		expect(screen.getByText("НАИМЕНОВАНИЕ")).toBeInTheDocument();
-		expect(screen.getByText("СТАТУС")).toBeInTheDocument();
 	});
 
 	test("renders toolbar with search, filters, and create button", () => {

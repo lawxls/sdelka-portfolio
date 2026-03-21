@@ -3,10 +3,12 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	Check,
 	ChevronLeft,
 	ChevronRight,
 	FolderInput,
 	Inbox,
+	LoaderCircle,
 	Pencil,
 	Trash2,
 } from "lucide-react";
@@ -39,21 +41,10 @@ import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/da
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 
-const STATUS_BG = "bg-[#ebebed] dark:bg-[#35353a]";
-
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
-	searching: {
-		label: STATUS_LABELS.searching,
-		className: `${STATUS_BG} text-status-highlight`,
-	},
-	negotiating: {
-		label: STATUS_LABELS.negotiating,
-		className: `${STATUS_BG} text-blue-700 dark:text-blue-400`,
-	},
-	completed: {
-		label: STATUS_LABELS.completed,
-		className: `${STATUS_BG} text-emerald-700 dark:text-emerald-400`,
-	},
+	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
+	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
+	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
 };
 
 interface SortableColumn {
@@ -125,9 +116,8 @@ export function ProcurementTable({
 
 	const stickyHead = "sticky top-0 z-20 bg-background border-b border-border";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background border-b border-border";
-	const stickyNameCell =
-		"sticky left-0 z-10 bg-background transition-colors group-even:bg-muted/40 group-hover:bg-muted/60";
-	const analysisHead = "sticky top-0 z-20 bg-background border-b border-border text-status-highlight";
+	const stickyNameCell = "sticky left-0 z-10 transition-colors bg-inherit";
+	const analysisHead = "sticky top-0 z-20 bg-background border-b border-border text-highlight-foreground";
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div className="flex-1 overflow-auto touch-manipulation" data-testid="table-scroll-container">
@@ -162,7 +152,6 @@ export function ProcurementTable({
 									</button>
 								</TableHead>
 							))}
-							<TableHead className={analysisHead}>СТАТУС</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -171,7 +160,7 @@ export function ProcurementTable({
 							const overpayment = getOverpayment(item);
 							const dev = formatDeviation(deviation);
 							const status = STATUS_CONFIG[item.status];
-							const isInProgress = item.status !== "completed";
+							const folder = item.folderId ? folderMap[item.folderId] : undefined;
 							const rowCls = onRowClick ? "cursor-pointer group" : "group";
 							const isEditing = editingItemId === item.id;
 
@@ -189,19 +178,41 @@ export function ProcurementTable({
 							) : (
 								<TableCell className={`font-medium ${stickyNameCell}`}>
 									<div>
-										{item.name}
-										{item.folderId && folderMap[item.folderId] && (
-											<div className="mt-0.5 flex items-center gap-1" data-testid={`folder-badge-${item.id}`}>
-												<span
-													className="size-2 shrink-0 rounded-full"
-													style={{
-														backgroundColor: `var(--folder-${folderMap[item.folderId].color})`,
-													}}
-													aria-hidden="true"
-												/>
-												<span className="text-xs text-muted-foreground">{folderMap[item.folderId].name}</span>
-											</div>
-										)}
+										<div className="flex items-center gap-2">
+											{item.name}
+											{folder && (
+												<div
+													className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+													data-testid={`folder-badge-${item.id}`}
+												>
+													<span
+														className="size-2 shrink-0 rounded-full"
+														style={{
+															backgroundColor: `var(--folder-${folder.color})`,
+														}}
+														aria-hidden="true"
+													/>
+													<span className="text-xs text-muted-foreground">{folder.name}</span>
+												</div>
+											)}
+										</div>
+										<div className="mt-0.5">
+											<span
+												className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
+											>
+												{item.status === "searching" && (
+													<LoaderCircle className="size-3 motion-safe:animate-spin" aria-hidden="true" />
+												)}
+												{item.status === "negotiating" && (
+													<span
+														className="size-1.5 rounded-full bg-current motion-safe:animate-pulse"
+														aria-hidden="true"
+													/>
+												)}
+												{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
+												{status.label}
+											</span>
+										</div>
 									</div>
 								</TableCell>
 							);
@@ -226,14 +237,6 @@ export function ProcurementTable({
 									<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
 									<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
 										{formatCurrency(overpayment)}
-									</TableCell>
-									<TableCell>
-										<span
-											className={`relative z-10 inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${status.className}${isInProgress ? " status-pulse" : ""}`}
-										>
-											<span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-											{status.label}
-										</span>
 									</TableCell>
 								</>
 							);

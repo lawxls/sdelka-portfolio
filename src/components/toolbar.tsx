@@ -32,6 +32,7 @@ function hasActiveFilter(filters: FilterState): boolean {
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
 export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChange, onAddPositions }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -90,7 +91,7 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 					<div className="flex flex-col gap-1">
 						<button
 							type="button"
-							className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? "font-medium text-primary" : ""}`}
+							className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? FILTER_BTN_ACTIVE : ""}`}
 							onClick={handleResetFilters}
 						>
 							Все
@@ -100,7 +101,7 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 							<button
 								key={preset.value}
 								type="button"
-								className={`${FILTER_BTN} ${filters.deviation === preset.value ? "font-medium text-primary" : ""}`}
+								className={`${FILTER_BTN} ${filters.deviation === preset.value ? FILTER_BTN_ACTIVE : ""}`}
 								onClick={() => handleDeviationClick(preset.value)}
 							>
 								{preset.label}
@@ -111,7 +112,7 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 							<button
 								key={preset.value}
 								type="button"
-								className={`${FILTER_BTN} ${filters.status === preset.value ? "font-medium text-primary" : ""}`}
+								className={`${FILTER_BTN} ${filters.status === preset.value ? FILTER_BTN_ACTIVE : ""}`}
 								onClick={() => handleStatusClick(preset.value)}
 							>
 								{preset.label}

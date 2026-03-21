@@ -47,9 +47,9 @@ const defaultProps = {
 };
 
 describe("ProcurementTable", () => {
-	test("renders 9 column headers", () => {
+	test("renders 8 column headers", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByRole("columnheader")).toHaveLength(9);
+		expect(screen.getAllByRole("columnheader")).toHaveLength(8);
 	});
 
 	test("renders correct number of data rows", () => {
@@ -80,8 +80,8 @@ describe("ProcurementTable", () => {
 
 	test("renders status labels with correct color classes", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-status-highlight");
-		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-700");
+		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
+		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
@@ -232,7 +232,7 @@ describe("ProcurementTable", () => {
 		const nameCell = screen.getByText("Арматура А500").closest("[data-slot='table-cell']");
 		expect(nameCell?.className).toContain("sticky");
 		expect(nameCell?.className).toContain("left-0");
-		expect(nameCell?.className).toContain("bg-background");
+		expect(nameCell?.className).toContain("bg-inherit");
 	});
 });
 
