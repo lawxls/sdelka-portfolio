@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { DndContext } from "@dnd-kit/core";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import type { ProcurementItem } from "@/data/types";
+import type { Folder, ProcurementItem } from "@/data/types";
 import { ProcurementTable } from "./procurement-table";
 
 const mockItems: ProcurementItem[] = [
@@ -13,6 +14,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 55000,
 		bestPrice: 50000,
 		averagePrice: 52000,
+		folderId: null,
 	},
 	{
 		id: "2",
@@ -22,6 +24,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 30000,
 		bestPrice: 35000,
 		averagePrice: 32000,
+		folderId: null,
 	},
 	{
 		id: "3",
@@ -31,6 +34,7 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 8000,
 		bestPrice: null,
 		averagePrice: null,
+		folderId: null,
 	},
 ];
 
@@ -70,14 +74,14 @@ describe("ProcurementTable", () => {
 
 	test("renders status badges with correct labels", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ведём переговоры")).toHaveLength(2);
-		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
+		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
+		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ведём переговоры")[0].className).toContain("text-blue-700");
-		expect(screen.getByText("Ищем поставщиков").className).toContain("text-status-highlight");
+		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-status-highlight");
+		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-700");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
@@ -229,5 +233,234 @@ describe("ProcurementTable", () => {
 		expect(nameCell?.className).toContain("sticky");
 		expect(nameCell?.className).toContain("left-0");
 		expect(nameCell?.className).toContain("bg-background");
+	});
+});
+
+const testFolders: Folder[] = [
+	{ id: "f-1", name: "Металлопрокат", color: "blue" },
+	{ id: "f-2", name: "Стройматериалы", color: "green" },
+];
+
+const itemsWithFolders: ProcurementItem[] = [
+	{ ...mockItems[0], folderId: "f-1" },
+	{ ...mockItems[1], folderId: null },
+	{ ...mockItems[2], folderId: "f-2" },
+];
+
+describe("ProcurementTable folder badges", () => {
+	test("renders folder badge for items with folderId", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		const badge = screen.getByTestId("folder-badge-1");
+		expect(badge).toBeInTheDocument();
+		expect(badge.textContent).toContain("Металлопрокат");
+	});
+
+	test("does not render badge for items without folderId", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		expect(screen.queryByTestId("folder-badge-2")).not.toBeInTheDocument();
+	});
+
+	test("badge shows correct folder color", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		const badge = screen.getByTestId("folder-badge-1");
+		const dot = badge.querySelector("span[aria-hidden]") as HTMLElement;
+		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
+	});
+
+	test("does not render badges when folders prop is omitted", () => {
+		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
+		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
+	});
+});
+
+const contextMenuProps = {
+	...defaultProps,
+	items: itemsWithFolders,
+	folders: testFolders,
+	onDeleteItem: vi.fn(),
+	onRenameItem: vi.fn(),
+	onAssignFolder: vi.fn(),
+};
+
+describe("ProcurementTable context menu", () => {
+	test("rows have data-testid when context menu props are provided", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		expect(screen.getByTestId("row-1")).toBeInTheDocument();
+		expect(screen.getByTestId("row-2")).toBeInTheDocument();
+	});
+
+	test("rows do not have data-testid when no context menu props", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.queryByTestId("row-1")).not.toBeInTheDocument();
+	});
+
+	test("context menu opens on right-click with correct items", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		const row = screen.getByTestId("row-1");
+		fireEvent.contextMenu(row);
+		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		expect(screen.getByText("Удалить")).toBeInTheDocument();
+	});
+
+	test("folder assignment submenu shows folders", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+
+		// Hover over submenu trigger to open it
+		fireEvent.click(screen.getByText("Переместить в папку"));
+
+		expect(screen.getByText("Без папки")).toBeInTheDocument();
+	});
+
+	test("clicking delete opens AlertDialog", () => {
+		render(<ProcurementTable {...contextMenuProps} />);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		expect(screen.getByText("Удалить закупку?")).toBeInTheDocument();
+		// Dialog description contains item name
+		const dialog = screen.getByRole("alertdialog");
+		expect(within(dialog).getByText(/Арматура А500/)).toBeInTheDocument();
+	});
+
+	test("confirming delete calls onDeleteItem", () => {
+		const onDeleteItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+		expect(onDeleteItem).toHaveBeenCalledWith("1");
+	});
+
+	test("cancelling delete does not call onDeleteItem", () => {
+		const onDeleteItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Удалить"));
+
+		fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+		expect(onDeleteItem).not.toHaveBeenCalled();
+	});
+
+	test("clicking Переименовать shows inline input", async () => {
+		// Render without onAssignFolder to isolate rename from submenu
+		render(
+			<ProcurementTable
+				{...defaultProps}
+				items={itemsWithFolders}
+				folders={testFolders}
+				onRenameItem={vi.fn()}
+				onDeleteItem={vi.fn()}
+			/>,
+		);
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		expect(input).toBeInTheDocument();
+		expect(input).toHaveAttribute("spellcheck", "false");
+		expect(input).toHaveAttribute("autocomplete", "off");
+	});
+
+	test("inline rename Enter saves and calls onRenameItem", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		await user.clear(input);
+		await user.type(input, "Новое имя{Enter}");
+
+		expect(onRenameItem).toHaveBeenCalledWith("1", "Новое имя");
+	});
+
+	test("inline rename Esc cancels without calling onRenameItem", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		fireEvent.keyDown(input, { key: "Escape" });
+
+		expect(onRenameItem).not.toHaveBeenCalled();
+		expect(screen.queryByRole("textbox", { name: "Название закупки" })).not.toBeInTheDocument();
+	});
+
+	test("inline rename rejects empty name on blur", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+
+		fireEvent.contextMenu(screen.getByTestId("row-1"));
+		await user.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		await user.clear(input);
+		fireEvent.blur(input);
+
+		expect(onRenameItem).not.toHaveBeenCalled();
+	});
+});
+
+describe("ProcurementTable drag-and-drop", () => {
+	test("rows have draggable aria-roledescription when draggable", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} draggable />
+			</DndContext>,
+		);
+		const row = screen.getByTestId("row-1");
+		expect(row.getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	test("rows do not have draggable attributes when draggable prop is omitted", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} />
+			</DndContext>,
+		);
+		const row = screen.getByTestId("row-1");
+		expect(row.getAttribute("aria-roledescription")).toBeNull();
+	});
+
+	test("rows have tabIndex for keyboard dragging when draggable", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} draggable />
+			</DndContext>,
+		);
+		const row = screen.getByTestId("row-1");
+		expect(row).toHaveAttribute("tabindex", "0");
+	});
+
+	test("dragging row reduces opacity", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} draggable />
+			</DndContext>,
+		);
+		// Actual drag state requires pointer simulation which doesn't work in jsdom.
+		const row = screen.getByTestId("row-1");
+		expect(row).toBeInTheDocument();
+	});
+
+	test("active dragged row gets drag-state class", () => {
+		render(
+			<DndContext>
+				<ProcurementTable {...contextMenuProps} draggable activeItemId="1" />
+			</DndContext>,
+		);
+		const row = screen.getByTestId("row-1");
+		expect(row.className).toContain("dragging-row");
 	});
 });

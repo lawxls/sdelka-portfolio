@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, test, vi } from "vitest";
-import App from "./App";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+import App, { DragItemOverlay } from "./App";
 
 function renderApp(initialEntries?: string[]) {
 	return render(
@@ -10,6 +12,10 @@ function renderApp(initialEntries?: string[]) {
 		</MemoryRouter>,
 	);
 }
+
+beforeEach(() => {
+	localStorage.clear();
+});
 
 describe("App", () => {
 	test("renders page layout with header, main, and footer", () => {
@@ -110,5 +116,277 @@ describe("App", () => {
 	test("pagination renders with 75 items at pageSize 50", () => {
 		renderApp();
 		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
+	});
+
+	test("renders sidebar with folders and counts", () => {
+		renderApp();
+		expect(screen.getByText("Папки")).toBeInTheDocument();
+		expect(screen.getByText("Все закупки")).toBeInTheDocument();
+		expect(screen.getByText("Без папки")).toBeInTheDocument();
+		const sidebar = screen.getByTestId("sidebar");
+		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
+	});
+
+	test("deep-link with folder param filters table to folder items", () => {
+		renderApp(["/?folder=folder-1"]);
+
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		// folder-1 has 9 items + 1 header
+		expect(rows).toHaveLength(10);
+	});
+
+	test("deep-link with folder=none shows only unassigned items", () => {
+		renderApp(["/?folder=none"]);
+
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		// 47 unassigned items + 1 header
+		expect(rows).toHaveLength(48);
+	});
+
+	test("folder selection filters table via sidebar click", async () => {
+		renderApp();
+
+		const table = screen.getByRole("table");
+		const initialRowCount = within(table).getAllByRole("row").length;
+
+		const sidebar = screen.getByTestId("sidebar");
+		await userEvent.setup().click(within(sidebar).getByText("Металлопрокат"));
+
+		const filteredRowCount = within(table).getAllByRole("row").length;
+		expect(filteredRowCount).toBeLessThan(initialRowCount);
+	});
+
+	test("folder filter stacks with search filter", () => {
+		vi.useFakeTimers();
+		renderApp(["/?folder=folder-1"]);
+
+		const table = screen.getByRole("table");
+		const folderRowCount = within(table).getAllByRole("row").length;
+
+		// Search within folder
+		const input = screen.getByPlaceholderText("Поиск по названию…");
+		fireEvent.change(input, { target: { value: "арматура" } });
+		act(() => {
+			vi.advanceTimersByTime(300);
+		});
+
+		const filteredRowCount = within(table).getAllByRole("row").length;
+		expect(filteredRowCount).toBeLessThanOrEqual(folderRowCount);
+
+		vi.useRealTimers();
+	});
+
+	test("folder badges appear on items with folder assignments", () => {
+		renderApp();
+		// Арматура А500С is in folder-1 (Металлопрокат)
+		expect(screen.getByTestId("folder-badge-item-1")).toBeInTheDocument();
+	});
+
+	test("creating a folder adds it to sidebar and activates it", async () => {
+		renderApp();
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+
+		// Click "Новая папка"
+		await user.click(within(sidebar).getByRole("button", { name: /Новая папка/ }));
+
+		// Type name and save
+		const input = within(sidebar).getByRole("textbox", { name: "Название папки" });
+		await user.type(input, "Тестовая папка{Enter}");
+
+		// New folder appears in sidebar
+		expect(within(sidebar).getByText("Тестовая папка")).toBeInTheDocument();
+	});
+
+	test("deleting active folder shows all items", async () => {
+		renderApp(["/?folder=folder-1"]);
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+		const table = screen.getByRole("table");
+
+		// folder-1 has 9 items + 1 header
+		expect(within(table).getAllByRole("row")).toHaveLength(10);
+
+		// Open folder menu and delete
+		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await screen.findByText("Удалить");
+		fireEvent.click(screen.getByText("Удалить"));
+
+		await screen.findByText("Удалить папку?");
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Should switch to all items — more rows than folder-1's 9
+		const rowsAfter = within(table).getAllByRole("row").length;
+		expect(rowsAfter).toBeGreaterThan(10);
+
+		// Folder should be gone from sidebar
+		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+	});
+
+	test("renaming a folder updates sidebar", async () => {
+		renderApp();
+
+		const user = userEvent.setup();
+		const sidebar = screen.getByTestId("sidebar");
+
+		// Open folder menu and rename
+		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await screen.findByText("Переименовать");
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = within(sidebar).getByDisplayValue("Металлопрокат");
+		await user.clear(input);
+		await user.type(input, "Сталь{Enter}");
+
+		expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
+		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+	});
+
+	test("context menu opens on right-click with folder/rename/delete options", () => {
+		renderApp();
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		// "Удалить" appears both in context menu and potentially other places
+		// Just verify the menu opened with the expected items
+		const menuItems = screen.getAllByText("Удалить");
+		expect(menuItems.length).toBeGreaterThanOrEqual(1);
+	});
+
+	test("deleting item via context menu removes it from table", () => {
+		renderApp();
+
+		// item-1 (Арматура А500С) should be in the table
+		expect(screen.getByTestId("row-item-1")).toBeInTheDocument();
+
+		// Right-click first row and delete via context menu menuitem
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+
+		// Confirm in AlertDialog
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Item should no longer be in the table
+		expect(screen.queryByTestId("row-item-1")).not.toBeInTheDocument();
+	});
+
+	test("deleted item persists in localStorage", () => {
+		renderApp();
+
+		// Delete an item
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// localStorage should have the override
+		const stored = JSON.parse(localStorage.getItem("item-overrides") ?? "{}");
+		expect(stored.deleted).toContain("item-1");
+	});
+
+	test("deleting item updates sidebar folder counts", () => {
+		renderApp();
+
+		const sidebar = screen.getByTestId("sidebar");
+		// item-1 is in folder-1 (Металлопрокат) which has 9 items in seed
+		const countBefore = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
+		expect(countBefore.textContent).toContain("9");
+
+		// Delete item-1
+		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
+		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		// Count should decrease
+		const countAfter = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
+		expect(countAfter.textContent).toContain("8");
+	});
+
+	test("folder assignment via context menu updates badge", () => {
+		renderApp();
+
+		// item-16 is unassigned per seed
+		const row = screen.getByTestId("row-item-16");
+		fireEvent.contextMenu(row);
+
+		// Open folder submenu
+		fireEvent.click(screen.getByText("Переместить в папку"));
+
+		// Assign to Металлопрокат via menuitemcheckbox (avoids sidebar match)
+		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Металлопрокат/ }));
+
+		// Badge should now appear
+		expect(screen.getByTestId("folder-badge-item-16")).toBeInTheDocument();
+	});
+
+	test("table rows are draggable in app", () => {
+		renderApp();
+		const row = screen.getByTestId("row-item-1");
+		expect(row.getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	test("sidebar folders are droppable targets in app", () => {
+		renderApp();
+		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
+		expect(screen.getByTestId("droppable-none")).toBeInTheDocument();
+	});
+
+	test("'Все закупки' is not a droppable target in app", () => {
+		renderApp();
+		expect(screen.queryByTestId("droppable-all")).not.toBeInTheDocument();
+	});
+
+	test("drag overlay container exists in app", () => {
+		renderApp();
+		expect(screen.getByTestId("dnd-overlay-container")).toBeInTheDocument();
+	});
+
+	test("drag overlay shrink-wraps the item label", () => {
+		render(
+			<DragItemOverlay
+				item={{
+					id: "item-1",
+					name: "Арматура А500С ∅12",
+					status: "searching",
+					annualQuantity: 1,
+					currentPrice: 1,
+					bestPrice: 1,
+					averagePrice: 1,
+					folderId: null,
+				}}
+			/>,
+		);
+		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
+	});
+
+	test("drag overlay anchors to the cursor position", () => {
+		const transform = anchorDragOverlayToCursor({
+			activatorEvent: new MouseEvent("pointerdown", { clientX: 520, clientY: 140 }),
+			activeNodeRect: {
+				top: 100,
+				left: 260,
+				right: 560,
+				bottom: 160,
+				width: 300,
+				height: 60,
+			},
+			overlayNodeRect: {
+				top: 0,
+				left: 0,
+				right: 180,
+				bottom: 36,
+				width: 180,
+				height: 36,
+			},
+			transform: { x: 40, y: 10, scaleX: 1, scaleY: 1 },
+		});
+
+		expect(transform.x).toBe(312);
+		expect(transform.y).toBe(32);
 	});
 });

@@ -21,3 +21,26 @@ const mockStorage: Storage = {
 };
 
 Object.defineProperty(globalThis, "localStorage", { value: mockStorage, writable: true });
+
+// ResizeObserver mock — required by Radix Popper (DropdownMenu, Popover, etc.)
+class ResizeObserverMock {
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+}
+Object.defineProperty(globalThis, "ResizeObserver", { value: ResizeObserverMock, writable: true });
+
+// matchMedia mock for responsive hooks (defaults to desktop: min-width 1024px matches)
+Object.defineProperty(window, "matchMedia", {
+	writable: true,
+	value: (query: string): MediaQueryList => ({
+		matches: query === "(min-width: 1024px)",
+		media: query,
+		onchange: null,
+		addEventListener: () => {},
+		removeEventListener: () => {},
+		addListener: () => {},
+		removeListener: () => {},
+		dispatchEvent: () => false,
+	}),
+});

@@ -1,4 +1,4 @@
-import type { ProcurementItem, ProcurementStatus } from "./types";
+import type { Folder, ProcurementItem, ProcurementStatus } from "./types";
 
 function mulberry32(seed: number): () => number {
 	let s = seed;
@@ -99,7 +99,7 @@ function generateItems(): ProcurementItem[] {
 		const currentPrice = Math.round((rng() * 499500 + 500) * 100) / 100;
 
 		const hasMarketData = !NULL_PRICE_INDICES.has(i);
-		const status: ProcurementStatus = hasMarketData ? (rng() < 0.5 ? "searching" : "completed") : "negotiating";
+		const status: ProcurementStatus = hasMarketData ? (rng() < 0.5 ? "negotiating" : "completed") : "searching";
 
 		let bestPrice: number | null = null;
 		let averagePrice: number | null = null;
@@ -121,8 +121,52 @@ function generateItems(): ProcurementItem[] {
 			currentPrice,
 			bestPrice,
 			averagePrice,
+			folderId: null,
 		};
 	});
 }
 
 export const mockProcurementItems: ProcurementItem[] = generateItems();
+
+export const SEED_FOLDERS: Folder[] = [
+	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
+	{ id: "folder-2", name: "Стройматериалы", color: "green" },
+	{ id: "folder-3", name: "Инженерные системы", color: "orange" },
+	{ id: "folder-4", name: "Электрика", color: "purple" },
+];
+
+/** Default folder assignments: itemId → folderId */
+export const SEED_FOLDER_ASSIGNMENTS: Record<string, string> = {
+	// Металлопрокат (folder-1): steel/metal items
+	"item-1": "folder-1", // Арматура А500С
+	"item-2": "folder-1", // Труба профильная
+	"item-3": "folder-1", // Швеллер
+	"item-4": "folder-1", // Лист горячекатаный
+	"item-5": "folder-1", // Уголок равнополочный
+	"item-6": "folder-1", // Двутавр
+	"item-7": "folder-1", // Проволока вязальная
+	"item-35": "folder-1", // Профлист
+	"item-36": "folder-1", // Металлочерепица
+	// Стройматериалы (folder-2): building materials
+	"item-8": "folder-2", // Цемент
+	"item-9": "folder-2", // Песок
+	"item-10": "folder-2", // Щебень
+	"item-11": "folder-2", // Кирпич
+	"item-12": "folder-2", // Блок газобетонный
+	"item-13": "folder-2", // Пеноплекс
+	"item-14": "folder-2", // Минвата
+	"item-15": "folder-2", // Гидроизоляция
+	"item-50": "folder-2", // Бетон
+	// Инженерные системы (folder-3): pipes/plumbing
+	"item-19": "folder-3", // Труба ПНД
+	"item-20": "folder-3", // Фитинг полипропилен
+	"item-51": "folder-3", // Воздуховод
+	"item-52": "folder-3", // Задвижка
+	"item-53": "folder-3", // Муфта
+	// Электрика (folder-4): electrical
+	"item-21": "folder-4", // Кабель ВВГнг
+	"item-22": "folder-4", // Автомат ABB
+	"item-23": "folder-4", // Светильник LED
+	"item-68": "folder-4", // Щит распределительный
+	"item-69": "folder-4", // Розетка двойная
+};

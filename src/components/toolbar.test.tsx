@@ -73,7 +73,7 @@ describe("Toolbar", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		fireEvent.click(screen.getByText("Ищем поставщиков"));
 
-		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "negotiating" });
+		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "searching" });
 	});
 
 	test("clicking active deviation filter resets it to all", () => {

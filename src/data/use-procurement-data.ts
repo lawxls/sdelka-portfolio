@@ -4,10 +4,19 @@ import type { ProcurementDataParams, ProcurementDataResult, ProcurementItem, Sor
 import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 
 export function useProcurementData(params: ProcurementDataParams): ProcurementDataResult {
-	const { search, filters, sort, page, pageSize } = params;
+	const { search, filters, sort, page, pageSize, folder, items: sourceItems } = params;
 
 	return useMemo(() => {
-		let filtered: ProcurementItem[] = mockProcurementItems;
+		let filtered: ProcurementItem[] = sourceItems ?? mockProcurementItems;
+
+		// Folder filter
+		if (folder != null) {
+			if (folder === "none") {
+				filtered = filtered.filter((item) => item.folderId == null);
+			} else {
+				filtered = filtered.filter((item) => item.folderId === folder);
+			}
+		}
 
 		// Search
 		if (search) {
@@ -61,7 +70,7 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 			totals,
 			pageInfo: { currentPage: clampedPage, totalPages, pageSize },
 		};
-	}, [search, filters.deviation, filters.status, sort, page, pageSize]);
+	}, [sourceItems, folder, search, filters.deviation, filters.status, sort, page, pageSize]);
 }
 
 function getSortValue(item: ProcurementItem, field: SortField): number | null {
