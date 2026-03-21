@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProcurementItem } from "./types";
+import { FREQUENCIES, FREQUENCY_LABELS, PROCUREMENT_TYPE_LABELS } from "./types";
 import { useCustomItems } from "./use-custom-items";
 
 const LS_KEY = "custom-items";
@@ -157,5 +158,64 @@ describe("useCustomItems", () => {
 			const { result } = renderHook(() => useCustomItems());
 			expect(result.current.getItems()).toEqual([]);
 		});
+	});
+
+	describe("procurementType and frequency", () => {
+		it("maps procurementType and frequency to ProcurementItem", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([
+					{
+						name: "Regular Item",
+						procurementType: "regular",
+						frequency: "monthly",
+					},
+				]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.procurementType).toBe("regular");
+			expect(item.frequency).toBe("monthly");
+		});
+
+		it("leaves procurementType and frequency undefined when not provided", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([{ name: "Plain" }]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.procurementType).toBeUndefined();
+			expect(item.frequency).toBeUndefined();
+		});
+
+		it("sets frequency undefined for one-time procurement", () => {
+			const { result } = renderHook(() => useCustomItems());
+			act(() => {
+				result.current.addItems([
+					{
+						name: "One-time",
+						procurementType: "one-time",
+					},
+				]);
+			});
+			const item = result.current.getItems()[0];
+			expect(item.procurementType).toBe("one-time");
+			expect(item.frequency).toBeUndefined();
+		});
+	});
+});
+
+describe("type constants", () => {
+	it("PROCUREMENT_TYPE_LABELS covers both types", () => {
+		expect(Object.keys(PROCUREMENT_TYPE_LABELS)).toEqual(["one-time", "regular"]);
+	});
+
+	it("FREQUENCY_LABELS covers all 6 frequencies", () => {
+		expect(Object.keys(FREQUENCY_LABELS)).toHaveLength(6);
+		expect(FREQUENCY_LABELS.weekly).toBe("Еженедельно");
+		expect(FREQUENCY_LABELS["on-demand"]).toBe("По требованию");
+	});
+
+	it("FREQUENCIES array matches FREQUENCY_LABELS keys", () => {
+		expect(FREQUENCIES).toEqual(Object.keys(FREQUENCY_LABELS));
 	});
 });

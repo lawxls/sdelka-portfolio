@@ -134,7 +134,7 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура А500С");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([{ name: "Арматура А500С" }]);
+		expect(onSubmit).toHaveBeenCalledWith([{ name: "Арматура А500С", procurementType: "one-time" }]);
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 	});
 
@@ -162,6 +162,7 @@ describe("AddPositionsDrawer", () => {
 				unit: "т",
 				annualQuantity: 120,
 				currentPrice: 5500,
+				procurementType: "one-time",
 			},
 		]);
 	});
@@ -182,7 +183,10 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([{ name: "Арматура" }, { name: "Цемент" }]);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{ name: "Арматура", procurementType: "one-time" },
+			{ name: "Цемент", procurementType: "one-time" },
+		]);
 	});
 
 	test("submit with empty name shows validation error", async () => {
@@ -234,5 +238,123 @@ describe("AddPositionsDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalled();
+	});
+
+	test("shows Разовая selected by default", () => {
+		renderDrawer();
+		const oneTime = screen.getByRole("button", { name: "Разовая" });
+		expect(oneTime).toHaveAttribute("aria-pressed", "true");
+		const regular = screen.getByRole("button", { name: "Регулярная" });
+		expect(regular).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("frequency dropdown is hidden when Разовая selected", () => {
+		renderDrawer();
+		expect(screen.queryByLabelText("Периодичность")).not.toBeInTheDocument();
+	});
+
+	test("switching to Регулярная shows frequency dropdown", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+
+		expect(screen.getByLabelText("Периодичность")).toBeInTheDocument();
+		// Check all 6 options + placeholder
+		const select = screen.getByLabelText("Периодичность");
+		const options = within(select as HTMLElement).getAllByRole("option");
+		expect(options).toHaveLength(7); // 6 frequencies + 1 placeholder
+	});
+
+	test("switching back to Разовая hides frequency dropdown", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		expect(screen.getByLabelText("Периодичность")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Разовая" }));
+		expect(screen.queryByLabelText("Периодичность")).not.toBeInTheDocument();
+	});
+
+	test("submit includes procurementType one-time by default", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+
+		const user = userEvent.setup();
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ name: "Item", procurementType: "one-time" })]);
+		// frequency should not be present
+		expect(onSubmit.mock.calls[0][0][0].frequency).toBeUndefined();
+	});
+
+	test("submit with Регулярная includes procurementType and frequency", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		await user.selectOptions(screen.getByLabelText("Периодичность"), "monthly");
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Regular Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({
+				name: "Regular Item",
+				procurementType: "regular",
+				frequency: "monthly",
+			}),
+		]);
+	});
+
+	test("submit with Регулярная but no frequency selected omits frequency", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		await user.type(screen.getByPlaceholderText("Название позиции"), "No Freq");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ name: "No Freq", procurementType: "regular" })]);
+		expect(onSubmit.mock.calls[0][0][0].frequency).toBeUndefined();
+	});
+
+	test("procurementType and frequency applied to all positions on submit", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		await user.selectOptions(screen.getByLabelText("Периодичность"), "weekly");
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		await user.type(nameInputs[1], "B");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		const items = onSubmit.mock.calls[0][0];
+		expect(items).toHaveLength(2);
+		expect(items[0]).toMatchObject({ procurementType: "regular", frequency: "weekly" });
+		expect(items[1]).toMatchObject({ procurementType: "regular", frequency: "weekly" });
+	});
+
+	test("form resets procurement type to Разовая after submit", async () => {
+		const onSubmit = vi.fn();
+		const onOpenChange = vi.fn();
+		renderDrawer({ onSubmit, onOpenChange });
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Регулярная" }));
+		await user.type(screen.getByPlaceholderText("Название позиции"), "X");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// After reset, Разовая should be default again
+		expect(screen.getByRole("button", { name: "Разовая" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.queryByLabelText("Периодичность")).not.toBeInTheDocument();
 	});
 });

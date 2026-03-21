@@ -9,6 +9,26 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
+export type ProcurementType = "one-time" | "regular";
+
+export const PROCUREMENT_TYPE_LABELS: Record<ProcurementType, string> = {
+	"one-time": "Разовая",
+	regular: "Регулярная",
+};
+
+export type Frequency = "weekly" | "biweekly" | "monthly" | "quarterly" | "biannual" | "on-demand";
+
+export const FREQUENCY_LABELS: Record<Frequency, string> = {
+	weekly: "Еженедельно",
+	biweekly: "Раз в 2 недели",
+	monthly: "Ежемесячно",
+	quarterly: "Ежеквартально",
+	biannual: "Раз в полгода",
+	"on-demand": "По требованию",
+};
+
+export const FREQUENCIES = Object.keys(FREQUENCY_LABELS) as Frequency[];
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -20,6 +40,8 @@ export interface ProcurementItem {
 	folderId: string | null;
 	description?: string;
 	unit?: Unit;
+	procurementType?: ProcurementType;
+	frequency?: Frequency;
 }
 
 export interface Folder {

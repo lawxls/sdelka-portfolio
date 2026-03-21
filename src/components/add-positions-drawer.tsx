@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { UNITS } from "@/data/types";
+import type { Frequency, ProcurementType } from "@/data/types";
+import { FREQUENCIES, FREQUENCY_LABELS, PROCUREMENT_TYPE_LABELS, UNITS } from "@/data/types";
 import type { NewItemInput } from "@/data/use-custom-items";
 
 interface PositionRow {
@@ -34,12 +35,18 @@ interface AddPositionsDrawerProps {
 	onSubmit: (items: NewItemInput[]) => void;
 }
 
+const PROCUREMENT_TYPES = Object.keys(PROCUREMENT_TYPE_LABELS) as ProcurementType[];
+
 export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
 	const [positions, setPositions] = useState<PositionRow[]>(() => [createEmptyRow()]);
+	const [procurementType, setProcurementType] = useState<ProcurementType>("one-time");
+	const [frequency, setFrequency] = useState<Frequency | "">("");
 	const pendingFocusKey = useRef<string | null>(null);
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
+		setProcurementType("one-time");
+		setFrequency("");
 	}
 
 	function handleSubmit() {
@@ -63,6 +70,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			unit: (p.unit || undefined) as NewItemInput["unit"],
 			annualQuantity: p.quantity ? Number(p.quantity) : undefined,
 			currentPrice: p.price ? Number(p.price) : undefined,
+			procurementType,
+			frequency: procurementType === "regular" && frequency ? (frequency as Frequency) : undefined,
 		}));
 
 		onSubmit(items);
@@ -118,6 +127,41 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 				</SheetHeader>
 
 				<div className="flex-1 overflow-y-auto px-4">
+					<div className="mb-4 flex flex-wrap items-center gap-3">
+						<div className="flex rounded-lg border border-input">
+							{PROCUREMENT_TYPES.map((type) => (
+								<button
+									key={type}
+									type="button"
+									aria-pressed={procurementType === type}
+									className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
+										procurementType === type
+											? "bg-primary text-primary-foreground"
+											: "bg-background text-muted-foreground hover:text-foreground"
+									}`}
+									onClick={() => setProcurementType(type)}
+								>
+									{PROCUREMENT_TYPE_LABELS[type]}
+								</button>
+							))}
+						</div>
+						{procurementType === "regular" && (
+							<select
+								value={frequency}
+								onChange={(e) => setFrequency(e.target.value as Frequency | "")}
+								className="h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground"
+								aria-label="Периодичность"
+							>
+								<option value="">Периодичность…</option>
+								{FREQUENCIES.map((f) => (
+									<option key={f} value={f}>
+										{FREQUENCY_LABELS[f]}
+									</option>
+								))}
+							</select>
+						)}
+					</div>
+
 					<div className="overflow-x-auto">
 						<Table>
 							<TableHeader>

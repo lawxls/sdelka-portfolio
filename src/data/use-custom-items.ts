@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { ProcurementItem, Unit } from "./types";
+import type { Frequency, ProcurementItem, ProcurementType, Unit } from "./types";
 
 const LS_KEY = "custom-items";
 
@@ -9,6 +9,8 @@ export interface NewItemInput {
 	unit?: Unit;
 	annualQuantity?: number;
 	currentPrice?: number;
+	procurementType?: ProcurementType;
+	frequency?: Frequency;
 }
 
 function readItems(): ProcurementItem[] {
@@ -37,6 +39,8 @@ export function useCustomItems(): UseCustomItemsResult {
 				name: input.name,
 				description: input.description,
 				unit: input.unit,
+				procurementType: input.procurementType,
+				frequency: input.frequency,
 				status: "searching" as const,
 				annualQuantity: input.annualQuantity ?? 0,
 				currentPrice: input.currentPrice ?? 0,
