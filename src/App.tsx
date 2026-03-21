@@ -6,7 +6,6 @@ import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
@@ -185,17 +184,14 @@ function App() {
 		<DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 			<div className="flex h-svh flex-col bg-background text-foreground">
 				<header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 py-2">
-					<h1 className="text-lg font-semibold tracking-tight whitespace-nowrap">Ваши закупки</h1>
-					<div className="flex items-center gap-2">
-						<Toolbar
-							defaultSearch={search}
-							onSearchChange={handleSearchChange}
-							filters={filters}
-							onFiltersChange={handleFiltersChange}
-							onAddPositions={() => setDrawerOpen(true)}
-						/>
-						<ThemeToggle />
-					</div>
+					<h1 className="text-lg tracking-tight whitespace-nowrap">Ваши закупки</h1>
+					<Toolbar
+						defaultSearch={search}
+						onSearchChange={handleSearchChange}
+						filters={filters}
+						onFiltersChange={handleFiltersChange}
+						onAddPositions={() => setDrawerOpen(true)}
+					/>
 				</header>
 
 				<div className="flex min-h-0 flex-1">

@@ -20,9 +20,4 @@ describe("SummaryPanel", () => {
 		render(<SummaryPanel totals={mockTotals} />);
 		expect(screen.getByText(/SKU/)).toBeInTheDocument();
 	});
-
-	test("renders export button", () => {
-		render(<SummaryPanel totals={mockTotals} />);
-		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
-	});
 });

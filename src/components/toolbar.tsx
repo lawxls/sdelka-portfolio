@@ -1,8 +1,10 @@
-import { Filter, Plus, Search } from "lucide-react";
+import { Download, ListFilter, Plus, Search } from "lucide-react";
 import { useRef } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DeviationFilter, FilterState, StatusFilter } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -80,13 +82,19 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 				/>
 			</div>
 			<Popover>
-				<PopoverTrigger asChild>
-					<Button type="button" variant="outline" size="sm" aria-label="Фильтры" className="relative">
-						<Filter data-icon="inline-start" aria-hidden="true" />
-						Фильтры
-						{hasActiveFilter(filters) && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
-					</Button>
-				</PopoverTrigger>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
+								<ListFilter aria-hidden="true" />
+								{hasActiveFilter(filters) && (
+									<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />
+								)}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Фильтры</TooltipContent>
+				</Tooltip>
 				<PopoverContent align="end" className="w-56">
 					<div className="flex flex-col gap-1">
 						<button
@@ -121,6 +129,15 @@ export function Toolbar({ defaultSearch, onSearchChange, filters, onFiltersChang
 					</div>
 				</PopoverContent>
 			</Popover>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={() => {}}>
+						<Download aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Скачать таблицу</TooltipContent>
+			</Tooltip>
+			<ThemeToggle />
 			<Button
 				type="button"
 				size="sm"

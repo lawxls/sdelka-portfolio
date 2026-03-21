@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { FilterState } from "@/data/types";
 import { Toolbar } from "./toolbar";
 
@@ -13,7 +14,14 @@ function renderToolbar(
 		filters: overrides.filters ?? defaultFilters,
 		onFiltersChange: overrides.onFiltersChange ?? vi.fn(),
 	};
-	return { ...render(<Toolbar {...props} />), ...props };
+	return {
+		...render(
+			<TooltipProvider>
+				<Toolbar {...props} />
+			</TooltipProvider>,
+		),
+		...props,
+	};
 }
 
 describe("Toolbar", () => {
