@@ -298,7 +298,7 @@ describe("ProcurementTable context menu", () => {
 		render(<ProcurementTable {...contextMenuProps} />);
 		const row = screen.getByTestId("row-1");
 		fireEvent.contextMenu(row);
-		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
@@ -308,9 +308,9 @@ describe("ProcurementTable context menu", () => {
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 
 		// Hover over submenu trigger to open it
-		fireEvent.click(screen.getByText("Переместить в папку"));
+		fireEvent.click(screen.getByText("Переместить в раздел"));
 
-		expect(screen.getByText("Без папки")).toBeInTheDocument();
+		expect(screen.getByText("Без раздела")).toBeInTheDocument();
 	});
 
 	test("clicking delete opens AlertDialog", () => {

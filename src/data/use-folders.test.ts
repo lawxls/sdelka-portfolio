@@ -99,7 +99,7 @@ describe("useFolders", () => {
 			const toCreate = FOLDER_COLORS.length - SEED_FOLDERS.length + 1;
 			act(() => {
 				for (let i = 0; i < toCreate; i++) {
-					result.current.createFolder(`Папка ${i}`);
+					result.current.createFolder(`Раздел ${i}`);
 				}
 			});
 			const lastCreated = result.current.folders.at(-1);

@@ -122,9 +122,9 @@ describe("App", () => {
 
 	test("renders sidebar with folders and counts", () => {
 		renderApp();
-		expect(screen.getByText("Папки")).toBeInTheDocument();
+		expect(screen.getByText("Разделы")).toBeInTheDocument();
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-		expect(screen.getByText("Без папки")).toBeInTheDocument();
+		expect(screen.getByText("Без раздела")).toBeInTheDocument();
 		const sidebar = screen.getByTestId("sidebar");
 		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
 	});
@@ -192,15 +192,15 @@ describe("App", () => {
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		// Click "Новая папка"
-		await user.click(within(sidebar).getByRole("button", { name: /Новая папка/ }));
+		// Click "Новый раздел"
+		await user.click(within(sidebar).getByRole("button", { name: /Новый раздел/ }));
 
 		// Type name and save
-		const input = within(sidebar).getByRole("textbox", { name: "Название папки" });
-		await user.type(input, "Тестовая папка{Enter}");
+		const input = within(sidebar).getByRole("textbox", { name: "Название раздела" });
+		await user.type(input, "Тестовый раздел{Enter}");
 
 		// New folder appears in sidebar
-		expect(within(sidebar).getByText("Тестовая папка")).toBeInTheDocument();
+		expect(within(sidebar).getByText("Тестовый раздел")).toBeInTheDocument();
 	});
 
 	test("deleting active folder shows all items", async () => {
@@ -214,11 +214,11 @@ describe("App", () => {
 		expect(within(table).getAllByRole("row")).toHaveLength(10);
 
 		// Open folder menu and delete
-		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
 		await screen.findByText("Удалить");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		await screen.findByText("Удалить папку?");
+		await screen.findByText("Удалить раздел?");
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
 		// Should switch to all items — more rows than folder-1's 9
@@ -236,7 +236,7 @@ describe("App", () => {
 		const sidebar = screen.getByTestId("sidebar");
 
 		// Open folder menu and rename
-		await user.click(screen.getByRole("button", { name: "Меню папки Металлопрокат" }));
+		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
 		await screen.findByText("Переименовать");
 		fireEvent.click(screen.getByText("Переименовать"));
 
@@ -253,7 +253,7 @@ describe("App", () => {
 		const row = screen.getByTestId("row-item-1");
 		fireEvent.contextMenu(row);
 
-		expect(screen.getByText("Переместить в папку")).toBeInTheDocument();
+		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		// "Удалить" appears both in context menu and potentially other places
 		// Just verify the menu opened with the expected items
@@ -317,7 +317,7 @@ describe("App", () => {
 		fireEvent.contextMenu(row);
 
 		// Open folder submenu
-		fireEvent.click(screen.getByText("Переместить в папку"));
+		fireEvent.click(screen.getByText("Переместить в раздел"));
 
 		// Assign to Металлопрокат via menuitemcheckbox (avoids sidebar match)
 		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Металлопрокат/ }));

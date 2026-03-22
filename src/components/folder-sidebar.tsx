@@ -136,14 +136,14 @@ export function FolderSidebar({
 		<aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground" data-testid="sidebar">
 			{/* Header */}
 			<div className="flex shrink-0 items-center justify-between border-b border-sidebar-border px-3 py-2">
-				<h2 className="text-sm font-semibold">Папки</h2>
+				<h2 className="text-sm font-semibold">Разделы</h2>
 				<Button variant="ghost" size="icon-sm" onClick={toggle} aria-label="Закрыть боковую панель">
 					<ChevronLeft className="size-4" />
 				</Button>
 			</div>
 
 			{/* Scrollable nav */}
-			<nav className="flex-1 overflow-y-auto p-2" aria-label="Папки">
+			<nav className="flex-1 overflow-y-auto p-2" aria-label="Разделы">
 				<div className="space-y-0.5">
 					<NavItem
 						icon={<Layers className="size-4" />}
@@ -155,7 +155,7 @@ export function FolderSidebar({
 					<DroppableNavItem
 						droppableId="none"
 						icon={<Inbox className="size-4" />}
-						label="Без папки"
+						label="Без раздела"
 						count={counts.none ?? 0}
 						active={activeFolder === "none"}
 						onClick={() => selectFolder("none")}
@@ -210,7 +210,7 @@ export function FolderSidebar({
 					onClick={() => setIsCreating(true)}
 				>
 					<FolderPlus className="size-4" />
-					Новая папка
+					Новый раздел
 				</Button>
 			</div>
 		</aside>
@@ -325,7 +325,7 @@ function FolderNavItem({
 							"lg:invisible lg:group-hover:visible lg:group-focus-within:visible",
 						)}
 						onClick={(e) => e.stopPropagation()}
-						aria-label={`Меню папки ${folder.name}`}
+						aria-label={`Меню раздела ${folder.name}`}
 					>
 						<EllipsisVertical className="size-3.5" />
 					</button>
@@ -364,9 +364,9 @@ function FolderNavItem({
 			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
 				<AlertDialogContent size="sm">
 					<AlertDialogHeader>
-						<AlertDialogTitle>Удалить папку?</AlertDialogTitle>
+						<AlertDialogTitle>Удалить раздел?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Папка «{folder.name}» будет удалена. Закупки из этой папки не будут удалены.
+							Раздел «{folder.name}» будет удалён. Закупки из этого раздела не будут удалены.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -420,7 +420,7 @@ function InlineFolderRow({
 				type="text"
 				className="h-5 flex-1 bg-transparent text-sm outline-none"
 				defaultValue={defaultValue}
-				aria-label="Название папки"
+				aria-label="Название раздела"
 				spellCheck={false}
 				autoComplete="off"
 				onKeyDown={handleKeyDown}
