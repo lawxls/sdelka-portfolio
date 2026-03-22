@@ -8,7 +8,15 @@ import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
-import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
+import type {
+	DeviationFilter,
+	FilterState,
+	PageInfo,
+	ProcurementItem,
+	SortField,
+	SortState,
+	StatusFilter,
+} from "@/data/types";
 import { useCustomItems } from "@/data/use-custom-items";
 import { useFolders } from "@/data/use-folders";
 import { useItemOverrides } from "@/data/use-item-overrides";
@@ -63,7 +71,6 @@ function App() {
 		status: parseStatus(searchParams),
 	};
 	const sort = parseSort(searchParams);
-	const page = Math.max(1, Number(searchParams.get("page")) || 1);
 	const folder = searchParams.get("folder") ?? undefined;
 
 	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
@@ -79,16 +86,17 @@ function App() {
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
-	const pageSize = 50;
-	const { items, totals, pageInfo } = useProcurementData({
+	const batchSize = 50;
+	const { items, totals } = useProcurementData({
 		items: itemsWithFolders,
 		search,
 		filters,
 		sort,
-		page,
-		pageSize,
+		batchSize,
 		folder,
 	});
+	// Temporary: construct PageInfo for ProcurementTable until #66 replaces with infinite scroll props
+	const pageInfo: PageInfo = { currentPage: 1, totalPages: 1, pageSize: batchSize };
 
 	function handleSearchChange(query: string) {
 		setSearchParams(

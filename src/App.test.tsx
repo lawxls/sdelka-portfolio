@@ -115,11 +115,6 @@ describe("App", () => {
 		expect(rowCount).toBeLessThan(51); // 50 data rows + 1 header
 	});
 
-	test("pagination renders with 75 items at pageSize 50", () => {
-		renderApp();
-		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
-	});
-
 	test("renders sidebar with folders and counts", () => {
 		renderApp();
 		expect(screen.getByText("Разделы")).toBeInTheDocument();

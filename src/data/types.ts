@@ -138,8 +138,7 @@ export interface ProcurementDataParams {
 	search: string;
 	filters: FilterState;
 	sort: SortState | null;
-	page: number;
-	pageSize: number;
+	batchSize: number;
 	folder?: string;
 }
 
@@ -147,7 +146,9 @@ export interface ProcurementDataResult {
 	items: ProcurementItem[];
 	totalItems: number;
 	totals: Totals;
-	pageInfo: PageInfo;
+	hasNextPage: boolean;
+	isFetchingMore: boolean;
+	loadMore: () => void;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

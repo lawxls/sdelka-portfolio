@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { mockProcurementItems } from "./mock-data";
 import type { ProcurementDataParams, ProcurementDataResult, ProcurementItem, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 
 export function useProcurementData(params: ProcurementDataParams): ProcurementDataResult {
-	const { search, filters, sort, page, pageSize, folder, items: sourceItems } = params;
+	const { search, filters, sort, folder, items: sourceItems, batchSize } = params;
 
-	return useMemo(() => {
+	// Filtered + sorted array (recomputed when filter/sort params change)
+	const allFiltered = useMemo(() => {
 		let filtered: ProcurementItem[] = sourceItems ?? mockProcurementItems;
 
 		// Folder filter
@@ -38,10 +39,6 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 			filtered = filtered.filter((item) => item.status === filters.status);
 		}
 
-		// Totals — computed on all filtered items before pagination
-		const totals = computeTotals(filtered);
-		const totalItems = filtered.length;
-
 		// Sort
 		if (sort) {
 			filtered = [...filtered].sort((a, b) => {
@@ -58,19 +55,49 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 			});
 		}
 
-		// Paginate
-		const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-		const clampedPage = Math.min(Math.max(1, page), totalPages);
-		const start = (clampedPage - 1) * pageSize;
-		const items = filtered.slice(start, start + pageSize);
+		return filtered;
+	}, [sourceItems, folder, search, filters.deviation, filters.status, sort]);
 
-		return {
-			items,
-			totalItems,
-			totals,
-			pageInfo: { currentPage: clampedPage, totalPages, pageSize },
-		};
-	}, [sourceItems, folder, search, filters.deviation, filters.status, sort, page, pageSize]);
+	// Cursor-based infinite scroll state
+	const [cursor, setCursor] = useState(batchSize);
+	const [prevResetKey, setPrevResetKey] = useState(() =>
+		resetKeyFor(search, filters.deviation, filters.status, sort, folder),
+	);
+
+	const currentResetKey = resetKeyFor(search, filters.deviation, filters.status, sort, folder);
+	if (prevResetKey !== currentResetKey) {
+		setPrevResetKey(currentResetKey);
+		setCursor(batchSize);
+	}
+
+	const effectiveCursor = Math.min(cursor, allFiltered.length);
+	const items = allFiltered.slice(0, effectiveCursor);
+	const hasNextPage = effectiveCursor < allFiltered.length;
+
+	const totals = useMemo(() => computeTotals(allFiltered), [allFiltered]);
+
+	const loadMore = useCallback(() => {
+		setCursor((prev) => prev + batchSize);
+	}, [batchSize]);
+
+	return {
+		items,
+		totalItems: allFiltered.length,
+		totals,
+		hasNextPage,
+		isFetchingMore: false,
+		loadMore,
+	};
+}
+
+function resetKeyFor(
+	search: string,
+	deviation: string,
+	status: string,
+	sort: { field: string; direction: string } | null,
+	folder: string | undefined,
+): string {
+	return `${search}\0${deviation}\0${status}\0${sort?.field}\0${sort?.direction}\0${folder}`;
 }
 
 function getSortValue(item: ProcurementItem, field: SortField): number | null {
