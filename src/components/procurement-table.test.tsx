@@ -1,33 +1,15 @@
 import { DndContext } from "@dnd-kit/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, type Mock, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Folder, ProcurementItem } from "@/data/types";
+import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
 import { ProcurementTable } from "./procurement-table";
-
-type ObserverRecord = {
-	callback: IntersectionObserverCallback;
-	options: IntersectionObserverInit | undefined;
-	observe: Mock;
-	disconnect: Mock;
-};
 
 let observers: ObserverRecord[];
 
 beforeEach(() => {
-	observers = [];
-	const MockObserver = function (
-		this: ObserverRecord,
-		callback: IntersectionObserverCallback,
-		options?: IntersectionObserverInit,
-	) {
-		this.callback = callback;
-		this.options = options;
-		this.observe = vi.fn();
-		this.disconnect = vi.fn();
-		observers.push(this);
-	} as unknown as typeof IntersectionObserver;
-	vi.stubGlobal("IntersectionObserver", MockObserver);
+	observers = installMockIntersectionObserver();
 });
 
 afterEach(() => {

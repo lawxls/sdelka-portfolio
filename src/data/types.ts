@@ -141,7 +141,6 @@ export interface ProcurementDataResult {
 	totalItems: number;
 	totals: Totals;
 	hasNextPage: boolean;
-	isFetchingMore: boolean;
 	loadMore: () => void;
 }
 

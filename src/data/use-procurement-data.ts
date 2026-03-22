@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { mockProcurementItems } from "./mock-data";
 import type { ProcurementDataParams, ProcurementDataResult, ProcurementItem, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getOverpayment } from "./types";
@@ -6,7 +6,6 @@ import { getAnnualCost, getDeviation, getOverpayment } from "./types";
 export function useProcurementData(params: ProcurementDataParams): ProcurementDataResult {
 	const { search, filters, sort, folder, items: sourceItems, batchSize } = params;
 
-	// Filtered + sorted array (recomputed when filter/sort params change)
 	const allFiltered = useMemo(() => {
 		let filtered: ProcurementItem[] = sourceItems ?? mockProcurementItems;
 
@@ -58,20 +57,17 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 		return filtered;
 	}, [sourceItems, folder, search, filters.deviation, filters.status, sort]);
 
-	// Cursor-based infinite scroll state
 	const [cursor, setCursor] = useState(batchSize);
-	const [prevResetKey, setPrevResetKey] = useState(() =>
-		resetKeyFor(search, filters.deviation, filters.status, sort, folder),
-	);
+	const prevResetKeyRef = useRef(resetKeyFor(search, filters.deviation, filters.status, sort, folder));
 
 	const currentResetKey = resetKeyFor(search, filters.deviation, filters.status, sort, folder);
-	if (prevResetKey !== currentResetKey) {
-		setPrevResetKey(currentResetKey);
+	if (prevResetKeyRef.current !== currentResetKey) {
+		prevResetKeyRef.current = currentResetKey;
 		setCursor(batchSize);
 	}
 
 	const effectiveCursor = Math.min(cursor, allFiltered.length);
-	const items = allFiltered.slice(0, effectiveCursor);
+	const items = useMemo(() => allFiltered.slice(0, effectiveCursor), [allFiltered, effectiveCursor]);
 	const hasNextPage = effectiveCursor < allFiltered.length;
 
 	const totals = useMemo(() => computeTotals(allFiltered), [allFiltered]);
@@ -85,7 +81,6 @@ export function useProcurementData(params: ProcurementDataParams): ProcurementDa
 		totalItems: allFiltered.length,
 		totals,
 		hasNextPage,
-		isFetchingMore: false,
 		loadMore,
 	};
 }

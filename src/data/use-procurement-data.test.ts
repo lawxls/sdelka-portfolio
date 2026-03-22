@@ -291,14 +291,6 @@ describe("useProcurementData", () => {
 			const { result } = renderHook(() => useProcurementData(defaultParams));
 			expect(result.current.totals).toEqual(allItems.totals);
 		});
-
-		it("isFetchingMore is always false", () => {
-			const { result } = renderHook(() => useProcurementData(defaultParams));
-			expect(result.current.isFetchingMore).toBe(false);
-
-			act(() => result.current.loadMore());
-			expect(result.current.isFetchingMore).toBe(false);
-		});
 	});
 
 	describe("totals", () => {
