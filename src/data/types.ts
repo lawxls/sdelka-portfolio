@@ -120,12 +120,6 @@ export interface SortState {
 	direction: SortDirection;
 }
 
-export interface PageInfo {
-	currentPage: number;
-	totalPages: number;
-	pageSize: number;
-}
-
 export interface Totals {
 	totalDeviation: number;
 	totalOverpayment: number;

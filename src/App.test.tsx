@@ -72,14 +72,15 @@ describe("App", () => {
 	test("filter updates table and summary totals", () => {
 		renderApp();
 
-		const table = screen.getByRole("table");
-		const initialRowCount = within(table).getAllByRole("row").length;
+		const footer = screen.getByRole("contentinfo");
+		const skuBefore = footer.textContent;
 
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		fireEvent.click(screen.getByText("С переплатой"));
 
-		const filteredRowCount = within(table).getAllByRole("row").length;
-		expect(filteredRowCount).toBeLessThan(initialRowCount);
+		// SKU count in summary panel should change after filtering
+		const skuAfter = footer.textContent;
+		expect(skuAfter).not.toBe(skuBefore);
 	});
 
 	test("sort reorders table rows", () => {
@@ -138,8 +139,8 @@ describe("App", () => {
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
-		// 47 unassigned items + 1 header
-		expect(rows).toHaveLength(48);
+		// 47 unassigned items, batchSize 25 → first batch of 25 + 1 header
+		expect(rows).toHaveLength(26);
 	});
 
 	test("folder selection filters table via sidebar click", async () => {

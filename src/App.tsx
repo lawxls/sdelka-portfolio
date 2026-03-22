@@ -8,15 +8,7 @@ import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
-import type {
-	DeviationFilter,
-	FilterState,
-	PageInfo,
-	ProcurementItem,
-	SortField,
-	SortState,
-	StatusFilter,
-} from "@/data/types";
+import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
 import { useCustomItems } from "@/data/use-custom-items";
 import { useFolders } from "@/data/use-folders";
 import { useItemOverrides } from "@/data/use-item-overrides";
@@ -86,17 +78,14 @@ function App() {
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
-	const batchSize = 50;
-	const { items, totals } = useProcurementData({
+	const { items, totals, hasNextPage, loadMore } = useProcurementData({
 		items: itemsWithFolders,
 		search,
 		filters,
 		sort,
-		batchSize,
+		batchSize: 25,
 		folder,
 	});
-	// Temporary: construct PageInfo for ProcurementTable until #66 replaces with infinite scroll props
-	const pageInfo: PageInfo = { currentPage: 1, totalPages: 1, pageSize: batchSize };
 
 	function handleSearchChange(query: string) {
 		setSearchParams(
@@ -104,7 +93,6 @@ function App() {
 				const next = new URLSearchParams(prev);
 				if (query) next.set("q", query);
 				else next.delete("q");
-				next.delete("page");
 				return next;
 			},
 			{ replace: true },
@@ -118,7 +106,6 @@ function App() {
 			else next.delete("deviation");
 			if (newFilters.status !== "all") next.set("status", newFilters.status);
 			else next.delete("status");
-			next.delete("page");
 			return next;
 		});
 	}
@@ -139,15 +126,6 @@ function App() {
 				next.set("sort", field);
 				next.set("dir", "asc");
 			}
-			return next;
-		});
-	}
-
-	function handlePageChange(newPage: number) {
-		setSearchParams((prev) => {
-			const next = new URLSearchParams(prev);
-			if (newPage > 1) next.set("page", String(newPage));
-			else next.delete("page");
 			return next;
 		});
 	}
@@ -183,7 +161,6 @@ function App() {
 			const next = new URLSearchParams(prev);
 			if (folderId != null) next.set("folder", folderId);
 			else next.delete("folder");
-			next.delete("page");
 			return next;
 		});
 	}
@@ -218,9 +195,9 @@ function App() {
 							items={items}
 							folders={folders}
 							sort={sort}
-							pageInfo={pageInfo}
+							hasNextPage={hasNextPage}
+							loadMore={loadMore}
 							onSort={handleSort}
-							onPageChange={handlePageChange}
 							onDeleteItem={deleteItem}
 							onRenameItem={renameItem}
 							onAssignFolder={assignItem}

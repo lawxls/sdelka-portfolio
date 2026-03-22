@@ -1,18 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
-import {
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
-	Check,
-	ChevronLeft,
-	ChevronRight,
-	FolderInput,
-	Inbox,
-	LoaderCircle,
-	Pencil,
-	Trash2,
-} from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, FolderInput, Inbox, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -23,7 +11,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import {
 	ContextMenu,
 	ContextMenuCheckboxItem,
@@ -36,9 +23,10 @@ import {
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Folder, PageInfo, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
+import type { Folder, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -78,10 +66,10 @@ interface ProcurementTableProps {
 	items: ProcurementItem[];
 	folders?: Folder[];
 	sort: SortState | null;
-	pageInfo: PageInfo;
+	hasNextPage: boolean;
+	loadMore: () => void;
 	onSort: (field: SortField) => void;
 	onRowClick?: (item: ProcurementItem) => void;
-	onPageChange: (page: number) => void;
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
@@ -93,17 +81,23 @@ export function ProcurementTable({
 	items,
 	folders,
 	sort,
-	pageInfo,
+	hasNextPage,
+	loadMore,
 	onSort,
 	onRowClick,
-	onPageChange,
 	onDeleteItem,
 	onRenameItem,
 	onAssignFolder,
 	draggable,
 	activeItemId,
 }: ProcurementTableProps) {
-	const startIndex = (pageInfo.currentPage - 1) * pageInfo.pageSize;
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	const sentinelRef = useRef<HTMLDivElement>(null);
+
+	useIntersectionObserver(sentinelRef, loadMore, {
+		root: scrollContainerRef.current,
+	});
+
 	const folderMap = useMemo(() => {
 		const map: Record<string, Folder> = {};
 		if (folders) {
@@ -122,7 +116,11 @@ export function ProcurementTable({
 		"sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] text-highlight-foreground";
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<div className="flex-1 overflow-auto touch-manipulation" data-testid="table-scroll-container">
+			<div
+				ref={scrollContainerRef}
+				className="flex-1 overflow-auto touch-manipulation"
+				data-testid="table-scroll-container"
+			>
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -229,9 +227,7 @@ export function ProcurementTable({
 							};
 							const rowChildren = (
 								<>
-									<TableCell className="text-right tabular-nums text-muted-foreground">
-										{startIndex + index + 1}
-									</TableCell>
+									<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
 									{nameCell}
 									<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
@@ -315,33 +311,7 @@ export function ProcurementTable({
 						})}
 					</TableBody>
 				</Table>
-				{pageInfo.totalPages > 1 && (
-					<div className="flex items-center justify-end gap-4 px-4 py-3">
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => onPageChange(pageInfo.currentPage - 1)}
-							disabled={pageInfo.currentPage <= 1}
-							aria-label="Предыдущая страница"
-						>
-							<ChevronLeft aria-hidden="true" />
-							Назад
-						</Button>
-						<span className="text-sm tabular-nums text-muted-foreground">
-							Страница {pageInfo.currentPage} из&nbsp;{pageInfo.totalPages}
-						</span>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => onPageChange(pageInfo.currentPage + 1)}
-							disabled={pageInfo.currentPage >= pageInfo.totalPages}
-							aria-label="Следующая страница"
-						>
-							Вперёд
-							<ChevronRight aria-hidden="true" />
-						</Button>
-					</div>
-				)}
+				{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
 			</div>
 
 			{deletingItem && (
