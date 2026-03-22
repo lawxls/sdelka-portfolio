@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const CODE_LENGTH = 5;
-const CELL_KEYS = ["c0", "c1", "c2", "c3", "c4"] as const;
+const CELL_KEYS = Array.from({ length: CODE_LENGTH }, (_, i) => `c${i}`);
 const ALPHANUMERIC = /^[a-zA-Z0-9]$/;
 
 interface AccessCodeInputProps {
@@ -12,27 +12,21 @@ interface AccessCodeInputProps {
 
 export function AccessCodeInput({ onComplete, error = false }: AccessCodeInputProps) {
 	const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
-	const valuesRef = useRef<string[]>(Array.from({ length: CODE_LENGTH }, () => ""));
+	const valuesRef = useRef<string[]>(Array(CODE_LENGTH).fill(""));
 
 	function focusCell(index: number) {
 		inputsRef.current[index]?.focus();
 	}
 
-	function getCode(): string {
-		return valuesRef.current.join("");
-	}
-
 	function checkComplete() {
-		const code = getCode();
-		if (code.length === CODE_LENGTH && valuesRef.current.every((v) => v.length === 1)) {
-			onComplete(code);
+		if (valuesRef.current.every((v) => v.length === 1)) {
+			onComplete(valuesRef.current.join(""));
 		}
 	}
 
 	function handleInput(index: number, e: React.FormEvent<HTMLInputElement>) {
 		const value = e.currentTarget.value;
 
-		// Reject non-alphanumeric
 		if (value && !ALPHANUMERIC.test(value)) {
 			e.currentTarget.value = valuesRef.current[index];
 			return;

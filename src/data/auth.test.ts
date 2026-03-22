@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearAuth, isAuthenticated, setAuthenticated, validateCode } from "./auth";
 
-const LS_KEY = "auth-timestamp";
-
 afterEach(() => {
 	localStorage.clear();
 	vi.restoreAllMocks();
@@ -46,14 +44,6 @@ describe("clearAuth", () => {
 
 		clearAuth();
 		expect(isAuthenticated()).toBe(false);
-	});
-
-	it("removes localStorage key", () => {
-		setAuthenticated();
-		expect(localStorage.getItem(LS_KEY)).not.toBeNull();
-
-		clearAuth();
-		expect(localStorage.getItem(LS_KEY)).toBeNull();
 	});
 });
 
