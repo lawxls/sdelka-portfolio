@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { setAuthenticated } from "@/data/auth";
+import { clearAuth, setAuthenticated } from "@/data/auth";
 import { AuthGate } from "./auth-gate";
 
 afterEach(() => {
@@ -63,6 +63,28 @@ describe("AuthGate", () => {
 		for (const cell of screen.getAllByRole("textbox")) {
 			expect(cell).toHaveValue("");
 		}
+	});
+
+	test("revalidates auth on visibility change and shows modal when expired", () => {
+		setAuthenticated();
+		render(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+		expect(screen.getByText("App Content")).toBeInTheDocument();
+
+		// Expire the session
+		clearAuth();
+
+		// Simulate tab becoming visible again
+		Object.defineProperty(document, "visibilityState", { value: "visible", writable: true });
+		act(() => {
+			document.dispatchEvent(new Event("visibilitychange"));
+		});
+
+		expect(screen.getByRole("dialog")).toBeInTheDocument();
+		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
 	});
 
 	test("modal cannot be dismissed via Escape key", async () => {

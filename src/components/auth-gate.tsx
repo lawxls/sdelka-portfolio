@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AccessCodeInput } from "@/components/access-code-input";
 import { isAuthenticated, setAuthenticated, validateCode } from "@/data/auth";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
 interface AuthGateProps {
@@ -12,6 +13,16 @@ export function AuthGate({ children }: AuthGateProps) {
 	const [error, setError] = useState(false);
 	const [shake, setShake] = useState(false);
 	const [inputKey, setInputKey] = useState(0);
+
+	useMountEffect(() => {
+		function revalidate() {
+			if (document.visibilityState === "visible" && !isAuthenticated()) {
+				setAuthed(false);
+			}
+		}
+		document.addEventListener("visibilitychange", revalidate);
+		return () => document.removeEventListener("visibilitychange", revalidate);
+	});
 
 	if (authed) {
 		return <>{children}</>;

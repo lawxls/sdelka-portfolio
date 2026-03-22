@@ -121,11 +121,12 @@ describe("AccessCodeInput", () => {
 		}
 	});
 
-	test("cells have autocomplete off and spellcheck disabled", () => {
+	test("cells have autocomplete off, autocapitalize none, and spellcheck disabled", () => {
 		renderInput();
 		const cells = getCells();
 		for (const cell of cells) {
 			expect(cell).toHaveAttribute("autocomplete", "off");
+			expect(cell).toHaveAttribute("autocapitalize", "none");
 			expect(cell).toHaveAttribute("spellcheck", "false");
 		}
 	});

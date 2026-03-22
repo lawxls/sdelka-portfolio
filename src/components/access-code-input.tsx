@@ -85,6 +85,7 @@ export function AccessCodeInput({ onComplete, error = false }: AccessCodeInputPr
 					inputMode="text"
 					maxLength={1}
 					autoComplete="off"
+					autoCapitalize="none"
 					spellCheck={false}
 					className={cn(
 						"h-12 w-10 rounded-lg border bg-transparent text-center text-lg font-medium outline-none transition-colors",
