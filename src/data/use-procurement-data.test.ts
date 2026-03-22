@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { mockProcurementItems, SEED_FOLDER_ASSIGNMENTS } from "./mock-data";
 import type { ProcurementDataParams, ProcurementItem } from "./types";
@@ -9,12 +9,12 @@ const defaultParams: ProcurementDataParams = {
 	search: "",
 	filters: { deviation: "all", status: "all" },
 	sort: null,
-	page: 1,
-	pageSize: 50,
+	batchSize: 25,
 };
 
+/** Renders with batchSize covering all 75 items — for tests that don't exercise infinite scroll */
 function renderData(overrides: Partial<ProcurementDataParams> = {}) {
-	return renderHook(() => useProcurementData({ ...defaultParams, ...overrides })).result.current;
+	return renderHook(() => useProcurementData({ ...defaultParams, batchSize: 75, ...overrides })).result.current;
 }
 
 describe("mock data", () => {
@@ -58,15 +58,10 @@ describe("mock data", () => {
 
 describe("useProcurementData", () => {
 	describe("no filters", () => {
-		it("returns first page of items", () => {
+		it("returns all items when batchSize covers full dataset", () => {
 			const result = renderData();
 			expect(result.totalItems).toBe(75);
-			expect(result.items).toHaveLength(50);
-		});
-
-		it("returns correct page info", () => {
-			const result = renderData();
-			expect(result.pageInfo).toEqual({ currentPage: 1, totalPages: 2, pageSize: 50 });
+			expect(result.items).toHaveLength(75);
 		});
 	});
 
@@ -190,39 +185,115 @@ describe("useProcurementData", () => {
 		});
 	});
 
-	describe("pagination", () => {
-		it("returns correct number of items per page", () => {
-			const result = renderData({ pageSize: 10 });
-			expect(result.items).toHaveLength(10);
-			expect(result.pageInfo.totalPages).toBe(8);
+	describe("infinite scroll", () => {
+		it("initial call returns first batch (default batchSize 25)", () => {
+			const { result } = renderHook(() => useProcurementData(defaultParams));
+			expect(result.current.items).toHaveLength(25);
+			expect(result.current.totalItems).toBe(75);
+			expect(result.current.hasNextPage).toBe(true);
 		});
 
-		it("page 2 has different items than page 1", () => {
-			const page1 = renderData({ pageSize: 10, page: 1 });
-			const page2 = renderData({ pageSize: 10, page: 2 });
-			expect(page1.items[0].id).not.toBe(page2.items[0].id);
+		it("loadMore appends next batch — items accumulate", () => {
+			const { result } = renderHook(() => useProcurementData(defaultParams));
+			expect(result.current.items).toHaveLength(25);
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(50);
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(75);
 		});
 
-		it("clamps out-of-range page to last page", () => {
-			const result = renderData({ pageSize: 10, page: 100 });
-			expect(result.pageInfo.currentPage).toBe(8);
-			expect(result.items.length).toBeGreaterThan(0);
+		it("hasNextPage is true until all items loaded, then false", () => {
+			const { result } = renderHook(() => useProcurementData(defaultParams));
+			expect(result.current.hasNextPage).toBe(true);
+
+			act(() => result.current.loadMore());
+			expect(result.current.hasNextPage).toBe(true);
+
+			act(() => result.current.loadMore());
+			expect(result.current.hasNextPage).toBe(false);
 		});
 
-		it("last page has correct partial count", () => {
-			const result = renderData({ pageSize: 20, page: 4 });
-			expect(result.items).toHaveLength(15); // 75 % 20 = 15
-			expect(result.pageInfo.totalPages).toBe(4);
+		it("loadMore is a no-op when hasNextPage is false", () => {
+			const { result } = renderHook(() => useProcurementData(defaultParams));
+
+			act(() => result.current.loadMore());
+			act(() => result.current.loadMore());
+			expect(result.current.hasNextPage).toBe(false);
+
+			const itemCount = result.current.items.length;
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(itemCount);
+		});
+
+		it("last batch contains remaining items (partial batch)", () => {
+			const { result } = renderHook(() => useProcurementData({ ...defaultParams, batchSize: 20 }));
+			expect(result.current.items).toHaveLength(20);
+
+			act(() => result.current.loadMore()); // 40
+			act(() => result.current.loadMore()); // 60
+			act(() => result.current.loadMore()); // 75 (partial: 15)
+			expect(result.current.items).toHaveLength(75);
+			expect(result.current.hasNextPage).toBe(false);
+		});
+
+		it("cursor resets when search changes", () => {
+			const { result, rerender } = renderHook((props: ProcurementDataParams) => useProcurementData(props), {
+				initialProps: defaultParams,
+			});
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(50);
+
+			rerender({ ...defaultParams, search: "арматура" });
+			expect(result.current.items.length).toBeLessThanOrEqual(25);
+		});
+
+		it("cursor resets when filters change", () => {
+			const { result, rerender } = renderHook((props: ProcurementDataParams) => useProcurementData(props), {
+				initialProps: defaultParams,
+			});
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(50);
+
+			rerender({ ...defaultParams, filters: { deviation: "overpaying", status: "all" } });
+			expect(result.current.items.length).toBeLessThanOrEqual(25);
+		});
+
+		it("cursor resets when sort changes", () => {
+			const { result, rerender } = renderHook((props: ProcurementDataParams) => useProcurementData(props), {
+				initialProps: defaultParams,
+			});
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(50);
+
+			rerender({ ...defaultParams, sort: { field: "currentPrice", direction: "asc" } });
+			expect(result.current.items.length).toBeLessThanOrEqual(25);
+		});
+
+		it("cursor resets when folder changes", () => {
+			const { result, rerender } = renderHook((props: ProcurementDataParams) => useProcurementData(props), {
+				initialProps: defaultParams,
+			});
+
+			act(() => result.current.loadMore());
+			expect(result.current.items).toHaveLength(50);
+
+			rerender({ ...defaultParams, folder: "folder-1" });
+			expect(result.current.items.length).toBeLessThanOrEqual(25);
+		});
+
+		it("totals reflect all filtered items, not just loaded batch", () => {
+			const allItems = renderData();
+			const { result } = renderHook(() => useProcurementData(defaultParams));
+			expect(result.current.totals).toEqual(allItems.totals);
 		});
 	});
 
 	describe("totals", () => {
-		it("reflect all filtered items, not just current page", () => {
-			const fullPage = renderData({ pageSize: 50 });
-			const smallPage = renderData({ pageSize: 10, page: 1 });
-			expect(smallPage.totals).toEqual(fullPage.totals);
-		});
-
 		it("overpaying filter produces zero savings", () => {
 			const result = renderData({ filters: { deviation: "overpaying", status: "all" } });
 			expect(result.totals.totalSavings).toBe(0);
@@ -236,7 +307,7 @@ describe("useProcurementData", () => {
 		});
 
 		it("computes correct totals from items with prices", () => {
-			const result = renderData({ pageSize: 75 });
+			const result = renderData();
 			const itemsWithPrices = mockProcurementItems.filter((i) => i.bestPrice != null);
 			let expectedOverpayment = 0;
 			let expectedSavings = 0;
@@ -274,7 +345,7 @@ describe("useProcurementData", () => {
 				useProcurementData({
 					...defaultParams,
 					items: itemsWithFolders(),
-					pageSize: 75,
+					batchSize: 75,
 					...overrides,
 				}),
 			).result.current;

@@ -63,7 +63,6 @@ function App() {
 		status: parseStatus(searchParams),
 	};
 	const sort = parseSort(searchParams);
-	const page = Math.max(1, Number(searchParams.get("page")) || 1);
 	const folder = searchParams.get("folder") ?? undefined;
 
 	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
@@ -79,14 +78,12 @@ function App() {
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
-	const pageSize = 50;
-	const { items, totals, pageInfo } = useProcurementData({
+	const { items, totals, hasNextPage, loadMore } = useProcurementData({
 		items: itemsWithFolders,
 		search,
 		filters,
 		sort,
-		page,
-		pageSize,
+		batchSize: 25,
 		folder,
 	});
 
@@ -96,7 +93,6 @@ function App() {
 				const next = new URLSearchParams(prev);
 				if (query) next.set("q", query);
 				else next.delete("q");
-				next.delete("page");
 				return next;
 			},
 			{ replace: true },
@@ -110,7 +106,6 @@ function App() {
 			else next.delete("deviation");
 			if (newFilters.status !== "all") next.set("status", newFilters.status);
 			else next.delete("status");
-			next.delete("page");
 			return next;
 		});
 	}
@@ -131,15 +126,6 @@ function App() {
 				next.set("sort", field);
 				next.set("dir", "asc");
 			}
-			return next;
-		});
-	}
-
-	function handlePageChange(newPage: number) {
-		setSearchParams((prev) => {
-			const next = new URLSearchParams(prev);
-			if (newPage > 1) next.set("page", String(newPage));
-			else next.delete("page");
 			return next;
 		});
 	}
@@ -175,7 +161,6 @@ function App() {
 			const next = new URLSearchParams(prev);
 			if (folderId != null) next.set("folder", folderId);
 			else next.delete("folder");
-			next.delete("page");
 			return next;
 		});
 	}
@@ -210,9 +195,9 @@ function App() {
 							items={items}
 							folders={folders}
 							sort={sort}
-							pageInfo={pageInfo}
+							hasNextPage={hasNextPage}
+							loadMore={loadMore}
 							onSort={handleSort}
-							onPageChange={handlePageChange}
 							onDeleteItem={deleteItem}
 							onRenameItem={renameItem}
 							onAssignFolder={assignItem}

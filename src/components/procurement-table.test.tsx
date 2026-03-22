@@ -1,9 +1,20 @@
 import { DndContext } from "@dnd-kit/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Folder, ProcurementItem } from "@/data/types";
+import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
 import { ProcurementTable } from "./procurement-table";
+
+let observers: ObserverRecord[];
+
+beforeEach(() => {
+	observers = installMockIntersectionObserver();
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 const mockItems: ProcurementItem[] = [
 	{
@@ -41,9 +52,9 @@ const mockItems: ProcurementItem[] = [
 const defaultProps = {
 	items: mockItems,
 	sort: null,
-	pageInfo: { currentPage: 1, totalPages: 1, pageSize: 50 },
+	hasNextPage: false,
+	loadMore: () => {},
 	onSort: () => {},
-	onPageChange: () => {},
 };
 
 describe("ProcurementTable", () => {
@@ -58,11 +69,11 @@ describe("ProcurementTable", () => {
 		expect(screen.getAllByRole("row")).toHaveLength(4);
 	});
 
-	test("renders row numbers with page offset", () => {
-		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 2, totalPages: 3, pageSize: 5 }} />);
-		expect(screen.getByText("6")).toBeInTheDocument();
-		expect(screen.getByText("7")).toBeInTheDocument();
-		expect(screen.getByText("8")).toBeInTheDocument();
+	test("renders sequential row numbers starting from 1", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.getByText("1")).toBeInTheDocument();
+		expect(screen.getByText("2")).toBeInTheDocument();
+		expect(screen.getByText("3")).toBeInTheDocument();
 	});
 
 	test("renders item names", () => {
@@ -161,45 +172,58 @@ describe("ProcurementTable", () => {
 		expect(svgs[0].classList.contains("size-3.5")).toBe(true);
 	});
 
-	test("does not render pagination when only one page", () => {
-		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 1, totalPages: 1, pageSize: 50 }} />);
+	test("does not render pagination buttons", () => {
+		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.queryByText(/Страница/)).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Предыдущая страница" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Следующая страница" })).not.toBeInTheDocument();
 	});
 
-	test("renders pagination controls when multiple pages exist", () => {
-		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 1, totalPages: 3, pageSize: 50 }} />);
-		expect(screen.getByText(/Страница 1 из/)).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Предыдущая страница" })).toBeDisabled();
-		expect(screen.getByRole("button", { name: "Следующая страница" })).toBeEnabled();
+	test("renders sentinel element after table body", () => {
+		render(<ProcurementTable {...defaultProps} hasNextPage />);
+		const sentinel = screen.getByTestId("scroll-sentinel");
+		expect(sentinel).toBeInTheDocument();
 	});
 
-	test("disables next button on last page", () => {
-		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 3, totalPages: 3, pageSize: 50 }} />);
-		expect(screen.getByRole("button", { name: "Предыдущая страница" })).toBeEnabled();
-		expect(screen.getByRole("button", { name: "Следующая страница" })).toBeDisabled();
+	test("calls loadMore when sentinel is observed and hasNextPage is true", () => {
+		const loadMore = vi.fn();
+		render(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+
+		// Trigger intersection on the observer created by useIntersectionObserver
+		expect(observers).toHaveLength(1);
+		observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+
+		expect(loadMore).toHaveBeenCalledOnce();
 	});
 
-	test("renders page indicator with correct text", () => {
-		render(<ProcurementTable {...defaultProps} pageInfo={{ currentPage: 2, totalPages: 5, pageSize: 50 }} />);
-		expect(screen.getByText(/Страница 2 из/)).toBeInTheDocument();
+	test("does not call loadMore when hasNextPage is false", () => {
+		const loadMore = vi.fn();
+		render(<ProcurementTable {...defaultProps} hasNextPage={false} loadMore={loadMore} />);
+
+		// Even if sentinel intersects, loadMore should not fire
+		if (observers.length > 0) {
+			observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+		}
+
+		expect(loadMore).not.toHaveBeenCalled();
 	});
 
-	test("calls onPageChange with correct page on prev/next click", async () => {
-		const user = userEvent.setup();
-		const onPageChange = vi.fn();
-		render(
-			<ProcurementTable
-				{...defaultProps}
-				pageInfo={{ currentPage: 2, totalPages: 3, pageSize: 50 }}
-				onPageChange={onPageChange}
-			/>,
-		);
+	test("re-observes sentinel when hasNextPage toggles false → true", () => {
+		const loadMore = vi.fn();
+		const { rerender } = render(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
 
-		await user.click(screen.getByRole("button", { name: "Предыдущая страница" }));
-		expect(onPageChange).toHaveBeenCalledWith(1);
+		expect(observers).toHaveLength(1);
 
-		await user.click(screen.getByRole("button", { name: "Следующая страница" }));
-		expect(onPageChange).toHaveBeenCalledWith(3);
+		// Sentinel unmounts
+		rerender(<ProcurementTable {...defaultProps} hasNextPage={false} loadMore={loadMore} />);
+		expect(observers[0].disconnect).toHaveBeenCalled();
+
+		// Sentinel remounts — should create new observer
+		rerender(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+		expect(observers).toHaveLength(2);
+
+		observers[1].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+		expect(loadMore).toHaveBeenCalledOnce();
 	});
 
 	test("renders scroll container with overflow-auto for horizontal and vertical scrolling", () => {
