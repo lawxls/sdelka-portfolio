@@ -208,6 +208,24 @@ describe("ProcurementTable", () => {
 		expect(loadMore).not.toHaveBeenCalled();
 	});
 
+	test("re-observes sentinel when hasNextPage toggles false → true", () => {
+		const loadMore = vi.fn();
+		const { rerender } = render(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+
+		expect(observers).toHaveLength(1);
+
+		// Sentinel unmounts
+		rerender(<ProcurementTable {...defaultProps} hasNextPage={false} loadMore={loadMore} />);
+		expect(observers[0].disconnect).toHaveBeenCalled();
+
+		// Sentinel remounts — should create new observer
+		rerender(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+		expect(observers).toHaveLength(2);
+
+		observers[1].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+		expect(loadMore).toHaveBeenCalledOnce();
+	});
+
 	test("renders scroll container with overflow-auto for horizontal and vertical scrolling", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		const scrollContainer = screen.getByTestId("table-scroll-container");

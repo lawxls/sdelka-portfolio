@@ -92,9 +92,8 @@ export function ProcurementTable({
 	activeItemId,
 }: ProcurementTableProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
-	const sentinelRef = useRef<HTMLDivElement>(null);
 
-	useIntersectionObserver(sentinelRef, loadMore, {
+	const sentinelRef = useIntersectionObserver(loadMore, {
 		root: scrollContainerRef.current,
 	});
 
