@@ -312,8 +312,18 @@ function FolderNavItem({
 					data-testid={`folder-dot-${folder.id}`}
 				/>
 				<span className="flex-1 truncate text-left">{folder.name}</span>
-				<span className="tabular-nums text-xs text-muted-foreground">{count}</span>
 			</button>
+
+			<span
+				className={cn(
+					"pointer-events-none absolute right-1 top-1/2 -translate-y-1/2",
+					"tabular-nums text-xs text-muted-foreground",
+					"lg:group-hover:invisible lg:group-focus-within:invisible",
+				)}
+				aria-hidden="true"
+			>
+				{count}
+			</span>
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>

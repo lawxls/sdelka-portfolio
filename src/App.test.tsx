@@ -296,8 +296,8 @@ describe("App", () => {
 
 		const sidebar = screen.getByTestId("sidebar");
 		// item-1 is in folder-1 (Металлопрокат) which has 9 items in seed
-		const countBefore = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
-		expect(countBefore.textContent).toContain("9");
+		const folderRow = within(sidebar).getByText("Металлопрокат").closest("[data-testid^='droppable-']") as HTMLElement;
+		expect(folderRow.textContent).toContain("9");
 
 		// Delete item-1
 		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
@@ -305,8 +305,7 @@ describe("App", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
 		// Count should decrease
-		const countAfter = within(sidebar).getByText("Металлопрокат").closest("button") as HTMLElement;
-		expect(countAfter.textContent).toContain("8");
+		expect(folderRow.textContent).toContain("8");
 	});
 
 	test("folder assignment via context menu updates badge", () => {
