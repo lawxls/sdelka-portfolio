@@ -1,3 +1,4 @@
+import type { QueryKey } from "@tanstack/react-query";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { BatchCreateResult } from "./api-client";
@@ -17,14 +18,14 @@ interface ItemQueryParams {
 	folder?: string;
 }
 
-function buildFilterParams(params: ItemQueryParams) {
+function buildFilterParams({ search, filters, folder, sort }: ItemQueryParams) {
 	return {
-		q: params.search || undefined,
-		status: params.filters.status !== "all" ? params.filters.status : undefined,
-		deviation: params.filters.deviation !== "all" ? params.filters.deviation : undefined,
-		folder: params.folder,
-		sort: params.sort?.field,
-		dir: params.sort?.direction,
+		q: search || undefined,
+		status: filters.status !== "all" ? filters.status : undefined,
+		deviation: filters.deviation !== "all" ? filters.deviation : undefined,
+		folder,
+		sort: sort?.field,
+		dir: sort?.direction,
 	};
 }
 
@@ -52,14 +53,7 @@ export function useItems(params: ItemQueryParams) {
 }
 
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
-	const { search, filters, folder } = params;
-
-	const filterParams = {
-		q: search || undefined,
-		status: filters.status !== "all" ? filters.status : undefined,
-		deviation: filters.deviation !== "all" ? filters.deviation : undefined,
-		folder,
-	};
+	const { sort: _sort, ...filterParams } = buildFilterParams({ ...params, sort: null });
 
 	return useQuery({
 		queryKey: ["totals", filterParams],
@@ -73,6 +67,8 @@ type ItemsCache = {
 	pages: Array<{ items: ProcurementItem[]; nextCursor: string | null }>;
 	pageParams: Array<string | undefined>;
 };
+
+type Snapshots = Array<[QueryKey, ItemsCache]>;
 
 function updateItemInPages(
 	cache: ItemsCache,
@@ -104,6 +100,34 @@ function invalidateItemQueries(queryClient: ReturnType<typeof useQueryClient>) {
 	queryClient.invalidateQueries({ queryKey: ["folderStats"] });
 }
 
+/** Snapshot all items query caches, apply an updater, and return snapshots for rollback. */
+async function optimisticItemUpdate(
+	queryClient: ReturnType<typeof useQueryClient>,
+	updater: (key: QueryKey, data: ItemsCache) => ItemsCache,
+): Promise<{ snapshots: Snapshots }> {
+	await queryClient.cancelQueries({ queryKey: ["items"] });
+	const snapshots: Snapshots = [];
+
+	for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+		if (data) {
+			snapshots.push([key, data]);
+			queryClient.setQueryData<ItemsCache>(key, updater(key, data));
+		}
+	}
+
+	return { snapshots };
+}
+
+function rollbackSnapshots(
+	queryClient: ReturnType<typeof useQueryClient>,
+	context: { snapshots: Snapshots } | undefined,
+) {
+	if (!context?.snapshots) return;
+	for (const [key, data] of context.snapshots) {
+		queryClient.setQueryData(key, data);
+	}
+}
+
 // --- Mutation hooks ---
 
 export function useCreateItems() {
@@ -123,28 +147,12 @@ export function useUpdateItem() {
 
 	return useMutation({
 		mutationFn: ({ id, ...data }: { id: string; name?: string }) => apiUpdateItem(id, data),
-		onMutate: async ({ id, ...updates }) => {
-			await queryClient.cancelQueries({ queryKey: ["items"] });
-			const snapshots = new Map<string, ItemsCache>();
-
-			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
-				if (data) {
-					snapshots.set(JSON.stringify(key), data);
-					queryClient.setQueryData<ItemsCache>(
-						key,
-						updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
-					);
-				}
-			}
-
-			return { snapshots };
-		},
+		onMutate: async ({ id, ...updates }) =>
+			optimisticItemUpdate(queryClient, (_key, data) =>
+				updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
+			),
 		onError: (_err, _vars, context) => {
-			if (context?.snapshots) {
-				for (const [key, data] of context.snapshots) {
-					queryClient.setQueryData(JSON.parse(key), data);
-				}
-			}
+			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось обновить закупку");
 		},
 		onSettled: () => invalidateItemQueries(queryClient),
@@ -156,25 +164,9 @@ export function useDeleteItem() {
 
 	return useMutation({
 		mutationFn: (id: string) => apiDeleteItem(id),
-		onMutate: async (id) => {
-			await queryClient.cancelQueries({ queryKey: ["items"] });
-			const snapshots = new Map<string, ItemsCache>();
-
-			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
-				if (data) {
-					snapshots.set(JSON.stringify(key), data);
-					queryClient.setQueryData<ItemsCache>(key, removeItemFromPages(data, id));
-				}
-			}
-
-			return { snapshots };
-		},
+		onMutate: async (id) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
 		onError: (_err, _vars, context) => {
-			if (context?.snapshots) {
-				for (const [key, data] of context.snapshots) {
-					queryClient.setQueryData(JSON.parse(key), data);
-				}
-			}
+			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось удалить закупку");
 		},
 		onSettled: () => invalidateItemQueries(queryClient),
@@ -186,28 +178,10 @@ export function useAssignFolder() {
 
 	return useMutation({
 		mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) => apiUpdateItem(id, { folderId }),
-		onMutate: async ({ id, folderId }) => {
-			await queryClient.cancelQueries({ queryKey: ["items"] });
-			const snapshots = new Map<string, ItemsCache>();
-
-			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
-				if (data) {
-					snapshots.set(JSON.stringify(key), data);
-					queryClient.setQueryData<ItemsCache>(
-						key,
-						updateItemInPages(data, id, (item) => ({ ...item, folderId })),
-					);
-				}
-			}
-
-			return { snapshots };
-		},
+		onMutate: async ({ id, folderId }) =>
+			optimisticItemUpdate(queryClient, (_key, data) => updateItemInPages(data, id, (item) => ({ ...item, folderId }))),
 		onError: (_err, _vars, context) => {
-			if (context?.snapshots) {
-				for (const [key, data] of context.snapshots) {
-					queryClient.setQueryData(JSON.parse(key), data);
-				}
-			}
+			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось переместить закупку");
 		},
 		onSettled: () => invalidateItemQueries(queryClient),

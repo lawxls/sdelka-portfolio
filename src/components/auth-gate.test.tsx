@@ -1,24 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { setToken } from "@/data/auth";
 import { server } from "@/test-msw";
+import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { AuthGate } from "./auth-gate";
-
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
-
-function createTestQueryClient() {
-	return new QueryClient({
-		defaultOptions: { queries: { retry: false } },
-	});
-}
 
 function renderWithProviders(ui: React.ReactElement) {
 	const qc = createTestQueryClient();

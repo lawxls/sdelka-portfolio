@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { delay, HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
+import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
 import { setToken } from "./auth";
 import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
@@ -31,23 +31,10 @@ const MOCK_STATS = [
 	{ folderId: null, itemCount: 20 },
 ];
 
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
-
 let queryClient: QueryClient;
 
-function createWrapper() {
-	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children });
-}
-
 beforeEach(() => {
-	queryClient = new QueryClient({
-		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-	});
+	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	setToken("test-jwt");
 });
@@ -78,7 +65,7 @@ describe("useFolders", () => {
 	it("fetches folder list from API", async () => {
 		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })));
 
-		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.data).toEqual(MOCK_FOLDERS);
@@ -93,14 +80,14 @@ describe("useFolders", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
 	it("returns error state on failure", async () => {
 		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({}, { status: 500 })));
 
-		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.isError).toBe(true);
@@ -112,7 +99,7 @@ describe("useFolderStats", () => {
 	it("fetches and transforms stats to counts format", async () => {
 		server.use(http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })));
 
-		const { result } = renderHook(() => useFolderStats(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useFolderStats(), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.data).toEqual({
@@ -132,7 +119,7 @@ describe("useFolderStats", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useFolderStats(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useFolderStats(), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 });
@@ -150,7 +137,7 @@ describe("useCreateFolder", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
 		);
 
-		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync({ name: "New", color: "red" });
@@ -169,7 +156,7 @@ describe("useCreateFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ name: "New", color: "red" });
@@ -191,7 +178,7 @@ describe("useCreateFolder", () => {
 			http.post("/api/v1/company/folders/", () => HttpResponse.json({ name: ["Already exists."] }, { status: 400 })),
 		);
 
-		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {
@@ -218,7 +205,7 @@ describe("useUpdateFolder", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
 		);
 
-		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync({ id: "f1", name: "Renamed" });
@@ -237,7 +224,7 @@ describe("useUpdateFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ id: "f1", name: "Renamed" });
@@ -259,7 +246,7 @@ describe("useUpdateFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ id: "f1", color: "pink" });
@@ -281,7 +268,7 @@ describe("useUpdateFolder", () => {
 			),
 		);
 
-		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {
@@ -308,7 +295,7 @@ describe("useDeleteFolder", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
 		);
 
-		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync("f1");
@@ -327,7 +314,7 @@ describe("useDeleteFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate("f1");
@@ -346,7 +333,7 @@ describe("useDeleteFolder", () => {
 
 		server.use(http.delete("/api/v1/company/folders/:id/", () => HttpResponse.json({}, { status: 500 })));
 
-		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {

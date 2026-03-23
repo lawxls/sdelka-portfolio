@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
+import { mockHostname } from "@/test-utils";
 import {
 	createFolder,
 	createItemsBatch,
@@ -17,13 +18,6 @@ import {
 	validateCode,
 } from "./api-client";
 import { setToken } from "./auth";
-
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
 
 beforeEach(() => {
 	mockHostname("acme.localhost");

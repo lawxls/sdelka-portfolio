@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { delay, HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
+import { createQueryWrapper, createTestQueryClient, makeItem, mockHostname } from "@/test-utils";
 import { setToken } from "./auth";
 import type { ProcurementItem } from "./types";
 import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
@@ -12,32 +12,7 @@ vi.mock("sonner", () => ({
 	toast: { error: vi.fn() },
 }));
 
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
-
 let queryClient: QueryClient;
-
-function createWrapper() {
-	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children });
-}
-
-function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {
-	return {
-		id,
-		name: `Item ${id}`,
-		status: "searching",
-		annualQuantity: 100,
-		currentPrice: 50,
-		bestPrice: 40,
-		averagePrice: 45,
-		folderId: null,
-		...overrides,
-	};
-}
 
 const DEFAULT_PARAMS = {
 	search: "",
@@ -47,9 +22,7 @@ const DEFAULT_PARAMS = {
 };
 
 beforeEach(() => {
-	queryClient = new QueryClient({
-		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-	});
+	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	setToken("test-jwt");
 });
@@ -65,7 +38,7 @@ describe("useItems", () => {
 
 		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({ items, nextCursor: "cursor-page2" })));
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.items).toHaveLength(25);
@@ -80,7 +53,7 @@ describe("useItems", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
@@ -89,7 +62,7 @@ describe("useItems", () => {
 			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [makeItem("i1")], nextCursor: null })),
 		);
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.items).toHaveLength(1);
@@ -114,7 +87,7 @@ describe("useItems", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.items).toHaveLength(1);
@@ -146,7 +119,7 @@ describe("useItems", () => {
 			folder: "f1",
 		};
 
-		const { result } = renderHook(() => useItems(params), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(params), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.isLoading).toBe(false);
@@ -171,7 +144,7 @@ describe("useItems", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.isLoading).toBe(false);
@@ -186,7 +159,7 @@ describe("useItems", () => {
 	it("returns error state on API failure", async () => {
 		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({}, { status: 500 })));
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.error).toBeTruthy();
@@ -203,7 +176,7 @@ describe("useItems", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.error).toBeTruthy();
@@ -239,7 +212,7 @@ describe("useTotals", () => {
 			folder: "f1",
 		};
 
-		const { result } = renderHook(() => useTotals(params), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useTotals(params), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.data).toBeTruthy();
@@ -266,14 +239,14 @@ describe("useTotals", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
 	it("returns error state on failure", async () => {
 		server.use(http.get("/api/v1/company/items/totals", () => HttpResponse.json({}, { status: 500 })));
 
-		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.isError).toBe(true);
@@ -312,7 +285,7 @@ describe("useUpdateItem", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
 		);
 
-		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync({ id: "i1", name: "Renamed" });
@@ -331,7 +304,7 @@ describe("useUpdateItem", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ id: "i1", name: "Renamed" });
@@ -358,7 +331,7 @@ describe("useUpdateItem", () => {
 
 		server.use(http.patch("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 400 })));
 
-		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {
@@ -391,7 +364,7 @@ describe("useDeleteItem", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
 		);
 
-		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync("i1");
@@ -410,7 +383,7 @@ describe("useDeleteItem", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate("i2");
@@ -432,7 +405,7 @@ describe("useDeleteItem", () => {
 
 		server.use(http.delete("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 500 })));
 
-		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {
@@ -460,7 +433,7 @@ describe("useAssignFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ id: "i1", folderId: "f1" });
@@ -485,7 +458,7 @@ describe("useAssignFolder", () => {
 			}),
 		);
 
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		act(() => {
 			result.current.mutate({ id: "i1", folderId: null });
@@ -510,7 +483,7 @@ describe("useAssignFolder", () => {
 			),
 		);
 
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {
@@ -549,7 +522,7 @@ describe("useCreateItems", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
 		);
 
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			await result.current.mutateAsync([{ name: "Widget A" }]);
@@ -570,7 +543,7 @@ describe("useCreateItems", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
 		);
 
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 
 		let response: unknown;
 		await act(async () => {
@@ -592,7 +565,7 @@ describe("useCreateItems", () => {
 			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
 		);
 
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 
 		let response: unknown;
 		await act(async () => {
@@ -611,7 +584,7 @@ describe("useCreateItems", () => {
 			),
 		);
 
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 
 		await act(async () => {
 			try {

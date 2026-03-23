@@ -5,26 +5,11 @@ import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { Folder, ProcurementItem } from "@/data/types";
+import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { server } from "@/test-msw";
+import { makeItem } from "@/test-utils";
 import App, { DragItemOverlay } from "./App";
-
-// --- Test item fixtures ---
-
-function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {
-	return {
-		id,
-		name: `Item ${id}`,
-		status: "searching",
-		annualQuantity: 100,
-		currentPrice: "50.00" as unknown as number,
-		bestPrice: "40.00" as unknown as number,
-		averagePrice: "45.00" as unknown as number,
-		folderId: null,
-		...overrides,
-	};
-}
 
 const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {

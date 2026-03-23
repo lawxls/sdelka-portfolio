@@ -1,16 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockHostname } from "@/test-utils";
 import { getTenant } from "./tenant";
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
-
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
 
 describe("getTenant", () => {
 	it("extracts subdomain from acme.sdelka.ai", () => {

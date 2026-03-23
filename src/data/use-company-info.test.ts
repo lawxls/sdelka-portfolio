@@ -1,30 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
+import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
 import { setToken } from "./auth";
 import { useCompanyInfo } from "./use-company-info";
-
-function mockHostname(hostname: string) {
-	vi.spyOn(window, "location", "get").mockReturnValue({
-		...window.location,
-		hostname,
-	});
-}
 
 afterEach(() => {
 	localStorage.clear();
 	vi.restoreAllMocks();
 });
-
-function createWrapper() {
-	const qc = new QueryClient({
-		defaultOptions: { queries: { retry: false } },
-	});
-	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: qc, children });
-}
 
 describe("useCompanyInfo", () => {
 	it("fetches company info and returns data", async () => {
@@ -38,7 +23,7 @@ describe("useCompanyInfo", () => {
 		);
 
 		const { result } = renderHook(() => useCompanyInfo(), {
-			wrapper: createWrapper(),
+			wrapper: createQueryWrapper(createTestQueryClient()),
 		});
 
 		await waitFor(() => {
@@ -57,7 +42,7 @@ describe("useCompanyInfo", () => {
 		);
 
 		const { result } = renderHook(() => useCompanyInfo(), {
-			wrapper: createWrapper(),
+			wrapper: createQueryWrapper(createTestQueryClient()),
 		});
 
 		await waitFor(() => {
