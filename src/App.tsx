@@ -26,6 +26,7 @@ import {
 	useUpdateFolder,
 } from "@/data/use-folders";
 import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -104,6 +105,7 @@ function App() {
 	const assignFolderMutation = useAssignFolder();
 	const createItemsMutation = useCreateItems();
 
+	const isMobile = useIsMobile();
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleSearchChange(query: string) {
@@ -230,15 +232,17 @@ function App() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
+							onRowClick={undefined}
 							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
 							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
-							draggable
+							draggable={!isMobile}
 							activeItemId={activeItem?.id}
 							isLoading={itemsLoading}
 							isFetchingNextPage={isFetchingNextPage}
 							error={itemsError}
 							onRetry={() => refetchItems()}
+							isMobile={isMobile}
 						/>
 					</main>
 				</div>

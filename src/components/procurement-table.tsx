@@ -41,6 +41,7 @@ import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ProcurementCard } from "./procurement-card";
 
 const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
@@ -94,6 +95,7 @@ interface ProcurementTableProps {
 	isFetchingNextPage?: boolean;
 	error?: Error | null;
 	onRetry?: () => void;
+	isMobile?: boolean;
 }
 
 export function ProcurementTable({
@@ -113,6 +115,7 @@ export function ProcurementTable({
 	isFetchingNextPage,
 	error,
 	onRetry,
+	isMobile,
 }: ProcurementTableProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +133,88 @@ export function ProcurementTable({
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
+
+	if (isMobile) {
+		return (
+			<div className="flex min-h-0 flex-1 flex-col">
+				<div
+					ref={scrollContainerRef}
+					className="flex-1 overflow-auto touch-manipulation"
+					data-testid="card-scroll-container"
+				>
+					{isLoading && (
+						<div className="flex flex-col gap-3 p-4">
+							{SKELETON_KEYS.map((key) => (
+								<div key={key} data-testid="skeleton-card" className="rounded-lg border bg-background p-4">
+									<div className="flex items-start justify-between">
+										<Skeleton className="h-3 w-6" />
+									</div>
+									<Skeleton className="mt-2 h-4 w-48" />
+									<Skeleton className="mt-1 h-3 w-24" />
+									<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+									</div>
+								</div>
+							))}
+						</div>
+					)}
+					{error && !isLoading && (
+						<div
+							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
+							data-testid="items-error"
+						>
+							<AlertTriangle className="size-8" aria-hidden="true" />
+							<p className="text-sm">Не удалось загрузить данные</p>
+							{onRetry && (
+								<button
+									type="button"
+									className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+									onClick={onRetry}
+								>
+									Повторить
+								</button>
+							)}
+						</div>
+					)}
+					{!isLoading && !error && items.length === 0 && (
+						<div
+							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
+							data-testid="items-empty"
+						>
+							<Inbox className="size-8" aria-hidden="true" />
+							<p className="text-sm">Позиции не найдены</p>
+						</div>
+					)}
+					{!isLoading && !error && items.length > 0 && (
+						<div className="flex flex-col gap-3 p-4">
+							{items.map((item, index) => (
+								<ProcurementCard
+									key={item.id}
+									item={item}
+									folder={item.folderId ? folderMap[item.folderId] : undefined}
+									folders={folders}
+									index={index}
+									onRowClick={onRowClick}
+									onDeleteItem={onDeleteItem}
+									onRenameItem={onRenameItem}
+									onAssignFolder={onAssignFolder}
+								/>
+							))}
+						</div>
+					)}
+					{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
+					{isFetchingNextPage && (
+						<div className="flex justify-center py-4" data-testid="loading-more-spinner">
+							<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	}
 
 	const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
