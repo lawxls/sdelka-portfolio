@@ -35,18 +35,14 @@ import {
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Folder, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
-import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
-import { useInlineEdit } from "@/hooks/use-inline-edit";
+import type { Folder, ProcurementItem, SortField, SortState } from "@/data/types";
+import { getAnnualCost, getDeviation, getOverpayment } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
-	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
-	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
-	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
-};
+import { InlineRenameInput } from "./inline-rename-input";
+import { ProcurementCard, STATUS_CONFIG } from "./procurement-card";
 
 interface SortableColumn {
 	label: string;
@@ -94,6 +90,7 @@ interface ProcurementTableProps {
 	isFetchingNextPage?: boolean;
 	error?: Error | null;
 	onRetry?: () => void;
+	isMobile?: boolean;
 }
 
 export function ProcurementTable({
@@ -113,6 +110,7 @@ export function ProcurementTable({
 	isFetchingNextPage,
 	error,
 	onRetry,
+	isMobile,
 }: ProcurementTableProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -129,7 +127,91 @@ export function ProcurementTable({
 	}, [folders]);
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
+	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
+	const [optimisticNames, setOptimisticNames] = useState<Record<string, string>>({});
 	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
+
+	if (isMobile) {
+		return (
+			<div className="flex min-h-0 flex-1 flex-col">
+				<div
+					ref={scrollContainerRef}
+					className="flex-1 overflow-auto touch-manipulation"
+					data-testid="card-scroll-container"
+				>
+					{isLoading && (
+						<div className="flex flex-col gap-3 p-4">
+							{SKELETON_KEYS.map((key) => (
+								<div key={key} data-testid="skeleton-card" className="rounded-lg border bg-background p-4">
+									<div className="flex items-start justify-between">
+										<Skeleton className="h-3 w-6" />
+									</div>
+									<Skeleton className="mt-2 h-4 w-48" />
+									<Skeleton className="mt-1 h-3 w-24" />
+									<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+										<Skeleton className="h-8 w-full" />
+									</div>
+								</div>
+							))}
+						</div>
+					)}
+					{error && !isLoading && (
+						<div
+							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
+							data-testid="items-error"
+						>
+							<AlertTriangle className="size-8" aria-hidden="true" />
+							<p className="text-sm">Не удалось загрузить данные</p>
+							{onRetry && (
+								<button
+									type="button"
+									className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+									onClick={onRetry}
+								>
+									Повторить
+								</button>
+							)}
+						</div>
+					)}
+					{!isLoading && !error && items.length === 0 && (
+						<div
+							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
+							data-testid="items-empty"
+						>
+							<Inbox className="size-8" aria-hidden="true" />
+							<p className="text-sm">Позиции не найдены</p>
+						</div>
+					)}
+					{!isLoading && !error && items.length > 0 && (
+						<div className="flex flex-col gap-3 p-4">
+							{items.map((item, index) => (
+								<ProcurementCard
+									key={item.id}
+									item={item}
+									folder={item.folderId ? folderMap[item.folderId] : undefined}
+									folders={folders}
+									index={index}
+									onRowClick={onRowClick}
+									onDeleteItem={onDeleteItem}
+									onRenameItem={onRenameItem}
+									onAssignFolder={onAssignFolder}
+								/>
+							))}
+						</div>
+					)}
+					{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
+					{isFetchingNextPage && (
+						<div className="flex justify-center py-4" data-testid="loading-more-spinner">
+							<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	}
 
 	const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
 	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
@@ -239,12 +321,13 @@ export function ProcurementTable({
 								const folder = item.folderId ? folderMap[item.folderId] : undefined;
 								const rowCls = onRowClick ? "cursor-pointer group" : "group";
 								const isEditing = editingItemId === item.id;
-
+								const displayName = optimisticNames[item.id] ?? item.name;
 								const nameCell = isEditing ? (
 									<TableCell className={`font-medium ${stickyNameCell}`}>
 										<InlineRenameInput
 											defaultValue={item.name}
 											onSave={(name) => {
+												setOptimisticNames((prev) => ({ ...prev, [item.id]: name }));
 												onRenameItem?.(item.id, name);
 												setEditingItemId(null);
 											}}
@@ -255,7 +338,7 @@ export function ProcurementTable({
 									<TableCell className={`font-medium ${stickyNameCell}`}>
 										<div>
 											<div className="flex items-center gap-2">
-												{item.name}
+												{displayName}
 												{folder && (
 													<div
 														className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
@@ -331,7 +414,7 @@ export function ProcurementTable({
 								return (
 									<ContextMenu key={item.id}>
 										<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-										<ContextMenuContent>
+										<ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
 											{onAssignFolder && folders && (
 												<ContextMenuSub>
 													<ContextMenuSubTrigger>
@@ -367,7 +450,12 @@ export function ProcurementTable({
 												</ContextMenuSub>
 											)}
 											{onRenameItem && (
-												<ContextMenuItem onSelect={() => setEditingItemId(item.id)}>
+												<ContextMenuItem
+													onSelect={() => {
+														willEditRef.current = true;
+														setEditingItemId(item.id);
+													}}
+												>
 													<Pencil className="size-3.5" />
 													Переименовать
 												</ContextMenuItem>
@@ -450,36 +538,5 @@ function DraggableRow({
 		>
 			{children}
 		</TableRow>
-	);
-}
-
-function InlineRenameInput({
-	defaultValue,
-	onSave,
-	onCancel,
-}: {
-	defaultValue: string;
-	onSave: (name: string) => void;
-	onCancel: () => void;
-}) {
-	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
-		onSave,
-		onCancel,
-		selectOnMount: true,
-		deferFocus: true,
-	});
-
-	return (
-		<input
-			ref={inputRef}
-			type="text"
-			className="w-full bg-transparent text-sm font-medium outline-none"
-			defaultValue={defaultValue}
-			spellCheck={false}
-			autoComplete="off"
-			aria-label="Название закупки"
-			onKeyDown={handleKeyDown}
-			onBlur={handleBlur}
-		/>
 	);
 }

@@ -22,6 +22,8 @@ function makeProps(overrides: Partial<FolderSidebarProps> = {}): FolderSidebarPr
 		folders: mockFolders,
 		counts: mockCounts,
 		activeFolder: undefined,
+		open: true,
+		onOpenChange: vi.fn(),
 		onFolderSelect: vi.fn(),
 		onCreateFolder: vi.fn(),
 		onRenameFolder: vi.fn(),
@@ -149,50 +151,42 @@ describe("FolderSidebar", () => {
 });
 
 describe("FolderSidebar collapse/expand", () => {
-	test("collapse button hides sidebar content", async () => {
-		render(<FolderSidebar {...makeProps()} />);
-		expect(screen.getByText("Все закупки")).toBeInTheDocument();
+	test("collapse button calls onOpenChange(false)", async () => {
+		const onOpenChange = vi.fn();
+		render(<FolderSidebar {...makeProps({ onOpenChange })} />);
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
+
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	test("when closed, shows expand button", () => {
+		render(<FolderSidebar {...makeProps({ open: false })} />);
 
 		expect(screen.queryByText("Все закупки")).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Открыть боковую панель" })).toBeInTheDocument();
 	});
 
-	test("expand button shows sidebar content", async () => {
-		localStorage.setItem("sidebar-open", "false");
-		render(<FolderSidebar {...makeProps()} />);
-
-		expect(screen.queryByText("Все закупки")).not.toBeInTheDocument();
+	test("expand button calls onOpenChange(true)", async () => {
+		const onOpenChange = vi.fn();
+		render(<FolderSidebar {...makeProps({ open: false, onOpenChange })} />);
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Открыть боковую панель" }));
 
-		expect(screen.getByText("Все закупки")).toBeInTheDocument();
+		expect(onOpenChange).toHaveBeenCalledWith(true);
 	});
 
-	test("persists collapsed state to localStorage", async () => {
+	test("persists collapsed state to localStorage on desktop", async () => {
 		render(<FolderSidebar {...makeProps()} />);
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
 
 		expect(localStorage.getItem("sidebar-open")).toBe("false");
 	});
-
-	test("reads collapsed state from localStorage on mount", () => {
-		localStorage.setItem("sidebar-open", "false");
-		render(<FolderSidebar {...makeProps()} />);
-
-		expect(screen.queryByText("Все закупки")).not.toBeInTheDocument();
-	});
-
-	test("starts open by default when localStorage is empty", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-	});
 });
 
 describe("FolderSidebar mobile", () => {
-	function mockMobile() {
+	function mockNonDesktop() {
 		vi.spyOn(window, "matchMedia").mockImplementation(
 			(query: string) =>
 				({
@@ -208,38 +202,34 @@ describe("FolderSidebar mobile", () => {
 		);
 	}
 
-	test("starts closed on mobile regardless of localStorage", () => {
-		mockMobile();
-		localStorage.setItem("sidebar-open", "true");
-
-		render(<FolderSidebar {...makeProps()} />);
-
-		expect(screen.queryByText("Все закупки")).not.toBeInTheDocument();
-		vi.restoreAllMocks();
-	});
-
-	test("opens as overlay on mobile", async () => {
-		mockMobile();
-		render(<FolderSidebar {...makeProps()} />);
-
-		await userEvent.setup().click(screen.getByRole("button", { name: "Открыть боковую панель" }));
+	test("renders as overlay when open and not desktop", () => {
+		mockNonDesktop();
+		render(<FolderSidebar {...makeProps({ open: true })} />);
 
 		expect(screen.getByTestId("sidebar-overlay")).toBeInTheDocument();
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
 		vi.restoreAllMocks();
 	});
 
-	test("closes sidebar on folder selection on mobile", async () => {
-		mockMobile();
-		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onFolderSelect })} />);
+	test("calls onOpenChange(false) on folder selection when not desktop", async () => {
+		mockNonDesktop();
+		const onOpenChange = vi.fn();
+		render(<FolderSidebar {...makeProps({ open: true, onOpenChange })} />);
 
-		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: "Открыть боковую панель" }));
-		await user.click(screen.getByText("Металлопрокат"));
+		await userEvent.setup().click(screen.getByText("Металлопрокат"));
 
-		expect(onFolderSelect).toHaveBeenCalledWith("folder-1");
-		expect(screen.queryByTestId("sidebar-overlay")).not.toBeInTheDocument();
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+		vi.restoreAllMocks();
+	});
+
+	test("does not persist to localStorage when not desktop", async () => {
+		mockNonDesktop();
+		const onOpenChange = vi.fn();
+		render(<FolderSidebar {...makeProps({ open: true, onOpenChange })} />);
+
+		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
+
+		expect(localStorage.getItem("sidebar-open")).toBeNull();
 		vi.restoreAllMocks();
 	});
 });

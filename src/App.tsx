@@ -1,13 +1,15 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { PanelLeft } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
-import { FolderSidebar } from "@/components/folder-sidebar";
+import { DESKTOP_QUERY, FolderSidebar, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
+import { Button } from "@/components/ui/button";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -26,6 +28,7 @@ import {
 	useUpdateFolder,
 } from "@/data/use-folders";
 import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -104,6 +107,11 @@ function App() {
 	const assignFolderMutation = useAssignFolder();
 	const createItemsMutation = useCreateItems();
 
+	const isMobile = useIsMobile();
+	const [sidebarOpen, setSidebarOpen] = useState(() => {
+		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
+		return localStorage.getItem(LS_SIDEBAR_KEY) !== "false";
+	});
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleSearchChange(query: string) {
@@ -185,6 +193,10 @@ function App() {
 		});
 	}
 
+	function handleSidebarOpenChange(next: boolean) {
+		setSidebarOpen(next);
+	}
+
 	function handleFolderSelect(folderId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -197,13 +209,24 @@ function App() {
 	return (
 		<DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 			<div className="flex h-svh flex-col bg-background text-foreground">
-				<header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 py-2">
-					<h1 className="text-lg tracking-tight whitespace-nowrap">Ваши закупки</h1>
+				<header className="z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						className="shrink-0 md:hidden"
+						onClick={() => handleSidebarOpenChange(true)}
+						aria-label="Открыть боковую панель"
+					>
+						<PanelLeft className="size-4" />
+					</Button>
+					<h1 className="hidden text-lg tracking-tight whitespace-nowrap md:block">Ваши закупки</h1>
 					<Toolbar
 						defaultSearch={search}
 						onSearchChange={handleSearchChange}
 						filters={filters}
 						onFiltersChange={handleFiltersChange}
+						sort={sort}
+						onSort={handleSort}
 						onAddPositions={() => setDrawerOpen(true)}
 					/>
 				</header>
@@ -214,6 +237,8 @@ function App() {
 						counts={counts}
 						activeFolder={folder}
 						isLoading={foldersLoading || statsLoading}
+						open={sidebarOpen}
+						onOpenChange={handleSidebarOpenChange}
 						onFolderSelect={handleFolderSelect}
 						onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
 						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
@@ -231,17 +256,18 @@ function App() {
 							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
 							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
-							draggable
+							draggable={!isMobile}
 							activeItemId={activeItem?.id}
 							isLoading={itemsLoading}
 							isFetchingNextPage={isFetchingNextPage}
 							error={itemsError}
 							onRetry={() => refetchItems()}
+							isMobile={isMobile}
 						/>
 					</main>
 				</div>
 
-				<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
+				<footer className="z-30 shrink-0 border-t border-border bg-background px-lg py-md">
 					<SummaryPanel totals={totals} isLoading={totalsLoading} />
 				</footer>
 			</div>

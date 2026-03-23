@@ -483,6 +483,102 @@ describe("ProcurementTable context menu", () => {
 	});
 });
 
+describe("ProcurementTable responsive card/table switch", () => {
+	test("renders cards instead of table when isMobile is true", () => {
+		render(
+			<ProcurementTable
+				{...defaultProps}
+				isMobile
+				onDeleteItem={() => {}}
+				onRenameItem={() => {}}
+				onAssignFolder={() => {}}
+				folders={testFolders}
+			/>,
+		);
+		// No table element
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+		// Cards render with item names
+		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
+		expect(screen.getByText("Труба стальная")).toBeInTheDocument();
+		expect(screen.getByText("Цемент М500")).toBeInTheDocument();
+	});
+
+	test("renders table when isMobile is false", () => {
+		render(<ProcurementTable {...defaultProps} isMobile={false} />);
+		expect(screen.getByRole("table")).toBeInTheDocument();
+	});
+
+	test("renders table when isMobile is omitted (default)", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.getByRole("table")).toBeInTheDocument();
+	});
+
+	test("card mode shows card-shaped skeletons when isLoading", () => {
+		render(<ProcurementTable {...defaultProps} items={[]} isMobile isLoading />);
+		const skeletons = screen.getAllByTestId("skeleton-card");
+		expect(skeletons.length).toBeGreaterThanOrEqual(4);
+		// No table skeleton rows
+		expect(screen.queryByTestId("skeleton-row")).not.toBeInTheDocument();
+	});
+
+	test("card mode shows error state with retry", async () => {
+		const user = userEvent.setup();
+		const onRetry = vi.fn();
+		render(<ProcurementTable {...defaultProps} items={[]} isMobile error={new Error("fail")} onRetry={onRetry} />);
+
+		expect(screen.getByTestId("items-error")).toBeInTheDocument();
+		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
+		await user.click(screen.getByText("Повторить"));
+		expect(onRetry).toHaveBeenCalledOnce();
+	});
+
+	test("card mode shows empty state", () => {
+		render(<ProcurementTable {...defaultProps} items={[]} isMobile />);
+		expect(screen.getByTestId("items-empty")).toBeInTheDocument();
+		expect(screen.getByText("Позиции не найдены")).toBeInTheDocument();
+	});
+
+	test("card mode renders infinite scroll sentinel when hasNextPage", () => {
+		render(<ProcurementTable {...defaultProps} isMobile hasNextPage />);
+		expect(screen.getByTestId("scroll-sentinel")).toBeInTheDocument();
+	});
+
+	test("card mode calls loadMore when sentinel intersects", () => {
+		const loadMore = vi.fn();
+		render(<ProcurementTable {...defaultProps} isMobile hasNextPage loadMore={loadMore} />);
+
+		expect(observers).toHaveLength(1);
+		observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+		expect(loadMore).toHaveBeenCalledOnce();
+	});
+
+	test("card mode shows spinner when isFetchingNextPage", () => {
+		render(<ProcurementTable {...defaultProps} isMobile isFetchingNextPage />);
+		expect(screen.getByTestId("loading-more-spinner")).toBeInTheDocument();
+	});
+
+	test("card mode does not have draggable attributes", () => {
+		render(
+			<DndContext>
+				<ProcurementTable
+					{...defaultProps}
+					isMobile
+					draggable
+					onDeleteItem={() => {}}
+					onRenameItem={() => {}}
+					onAssignFolder={() => {}}
+					folders={testFolders}
+				/>
+			</DndContext>,
+		);
+		// Cards should not have aria-roledescription="draggable"
+		const cards = screen.getAllByRole("button");
+		for (const card of cards) {
+			expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
+		}
+	});
+});
+
 describe("ProcurementTable drag-and-drop", () => {
 	test("rows have draggable aria-roledescription when draggable", () => {
 		render(

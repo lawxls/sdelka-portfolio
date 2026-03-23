@@ -34,11 +34,12 @@ import type { Folder } from "@/data/types";
 import { FOLDER_COLORS } from "@/data/types";
 import { nextUnusedColor } from "@/data/use-folders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
-const LS_SIDEBAR_KEY = "sidebar-open";
-const DESKTOP_QUERY = "(min-width: 1024px)";
+export const LS_SIDEBAR_KEY = "sidebar-open";
+export const DESKTOP_QUERY = "(min-width: 1024px)";
 
 function navItemClassName(active: boolean, isOver = false, extra?: string) {
 	return cn(
@@ -70,6 +71,8 @@ export interface FolderSidebarProps {
 	counts: Record<string, number>;
 	activeFolder: string | undefined;
 	isLoading?: boolean;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
 	onFolderSelect: (folder: string | undefined) => void;
 	onCreateFolder: (name: string) => void;
 	onRenameFolder: (id: string, name: string) => void;
@@ -82,6 +85,8 @@ export function FolderSidebar({
 	counts,
 	activeFolder,
 	isLoading,
+	open,
+	onOpenChange,
 	onFolderSelect,
 	onCreateFolder,
 	onRenameFolder,
@@ -92,24 +97,17 @@ export function FolderSidebar({
 	const [isCreating, setIsCreating] = useState(false);
 	const [editingId, setEditingId] = useState<string | null>(null);
 
-	const [open, setOpen] = useState(() => {
-		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
-		return localStorage.getItem(LS_SIDEBAR_KEY) !== "false";
-	});
-
 	function toggle() {
-		setOpen((prev) => {
-			const next = !prev;
-			if (window.matchMedia(DESKTOP_QUERY).matches) {
-				localStorage.setItem(LS_SIDEBAR_KEY, String(next));
-			}
-			return next;
-		});
+		const next = !open;
+		if (window.matchMedia(DESKTOP_QUERY).matches) {
+			localStorage.setItem(LS_SIDEBAR_KEY, String(next));
+		}
+		onOpenChange(next);
 	}
 
 	function selectFolder(folder: string | undefined) {
 		onFolderSelect(folder);
-		if (!isDesktop) setOpen(false);
+		if (!isDesktop) onOpenChange(false);
 	}
 
 	function handleCreate(name: string) {
@@ -126,7 +124,7 @@ export function FolderSidebar({
 
 	if (!open) {
 		return (
-			<div className="flex shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar p-2">
+			<div className="hidden shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar p-2 md:flex">
 				<Button variant="ghost" size="icon-sm" onClick={toggle} aria-label="Открыть боковую панель">
 					<PanelLeft className="size-4" />
 				</Button>
@@ -318,11 +316,12 @@ function FolderNavItem({
 	onDelete: () => void;
 }) {
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 	const { setNodeRef, isOver } = useDroppable({ id: `folder-drop-${folder.id}` });
 
 	return (
 		<div className="group relative" ref={setNodeRef} data-testid={`droppable-${folder.id}`}>
-			<button type="button" className={navItemClassName(active, isOver, "pr-7")} onClick={onClick}>
+			<button type="button" className={navItemClassName(active, isOver, "pr-12 lg:pr-7")} onClick={onClick}>
 				<span
 					className="size-2.5 shrink-0 rounded-full"
 					style={{ backgroundColor: `var(--folder-${folder.color})` }}
@@ -334,8 +333,8 @@ function FolderNavItem({
 
 			<span
 				className={cn(
-					"pointer-events-none absolute right-1 top-1/2 -translate-y-1/2",
-					"tabular-nums text-xs text-muted-foreground",
+					"pointer-events-none absolute top-1/2 -translate-y-1/2",
+					"right-7 tabular-nums text-xs text-muted-foreground lg:right-1",
 					"lg:group-hover:invisible lg:group-focus-within:invisible",
 				)}
 				aria-hidden="true"
@@ -358,8 +357,13 @@ function FolderNavItem({
 						<EllipsisVertical className="size-3.5" />
 					</button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" side="right" className="min-w-40">
-					<DropdownMenuItem onSelect={onRename}>
+				<DropdownMenuContent align="end" side="right" className="min-w-40" onCloseAutoFocus={onCloseAutoFocus}>
+					<DropdownMenuItem
+						onSelect={() => {
+							willEditRef.current = true;
+							onRename();
+						}}
+					>
 						<Pencil className="size-3.5" />
 						Переименовать
 					</DropdownMenuItem>
