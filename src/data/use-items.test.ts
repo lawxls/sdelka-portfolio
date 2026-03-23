@@ -256,12 +256,9 @@ describe("useTotals", () => {
 
 // --- Helper: seed items into infinite query cache ---
 
-function seedItems(items: ProcurementItem[]) {
+function seedItems(items: ProcurementItem[], folder?: string) {
 	queryClient.setQueryData(
-		[
-			"items",
-			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
-		],
+		["items", { q: undefined, status: undefined, deviation: undefined, folder, sort: undefined, dir: undefined }],
 		{
 			pages: [{ items, nextCursor: null }],
 			pageParams: [undefined],
@@ -470,6 +467,58 @@ describe("useAssignFolder", () => {
 				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
 			]);
 			expect(data?.pages[0].items[0].folderId).toBeNull();
+		});
+	});
+
+	it("removes item from folder-filtered cache when reassigned to another folder", async () => {
+		seedItems([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f1" })], "f1");
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json(makeItem("i1", { folderId: "f2" }));
+			}),
+		);
+
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
+
+		act(() => {
+			result.current.mutate({ id: "i1", folderId: "f2" });
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: "f1", sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items).toHaveLength(1);
+			expect(data?.pages[0].items[0].id).toBe("i2");
+		});
+	});
+
+	it("removes item from 'none' cache when assigned to a folder", async () => {
+		seedItems([makeItem("i1", { folderId: null }), makeItem("i2", { folderId: null })], "none");
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json(makeItem("i1", { folderId: "f1" }));
+			}),
+		);
+
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
+
+		act(() => {
+			result.current.mutate({ id: "i1", folderId: "f1" });
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: "none", sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items).toHaveLength(1);
+			expect(data?.pages[0].items[0].id).toBe("i2");
 		});
 	});
 

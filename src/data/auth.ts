@@ -10,6 +10,7 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
 	localStorage.removeItem(LS_KEY);
+	window.dispatchEvent(new Event("auth:cleared"));
 }
 
 export function hasToken(): boolean {

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { setToken } from "@/data/auth";
+import { clearToken, setToken } from "@/data/auth";
 import { server } from "@/test-msw";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { AuthGate } from "./auth-gate";
@@ -142,6 +142,56 @@ describe("AuthGate", () => {
 		for (const cell of screen.getAllByRole("textbox")) {
 			expect(cell).toHaveValue("");
 		}
+	});
+
+	test("preserves token on non-auth API failure (5xx)", async () => {
+		mockHostname("acme.localhost");
+		setToken("valid-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ detail: "Internal error" }, { status: 500 });
+			}),
+		);
+
+		renderWithProviders(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		expect(localStorage.getItem("auth-token")).toBe("valid-jwt");
+	});
+
+	test("re-locks app when a runtime 401 clears the token", async () => {
+		mockHostname("acme.localhost");
+		setToken("valid-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ name: "Acme Corp" });
+			}),
+		);
+
+		renderWithProviders(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("App Content")).toBeInTheDocument();
+		});
+
+		clearToken();
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
 	});
 
 	test("modal cannot be dismissed via Escape key", async () => {

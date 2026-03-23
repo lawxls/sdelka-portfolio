@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AccessCodeInput } from "@/components/access-code-input";
 import { validateCode as apiValidateCode, fetchCompanyInfo } from "@/data/api-client";
-import { clearToken, hasToken, setToken } from "@/data/auth";
+import { hasToken, setToken } from "@/data/auth";
 import { getTenant } from "@/data/tenant";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
@@ -24,20 +24,24 @@ export function AuthGate({ children }: AuthGateProps) {
 		if (hasToken()) {
 			fetchCompanyInfo()
 				.then(() => setAuthed(true))
-				.catch(() => {
-					clearToken();
-					setAuthed(false);
-				})
+				.catch(() => setAuthed(false))
 				.finally(() => setValidating(false));
 		}
 
+		function handleTokenCleared() {
+			setAuthed(false);
+		}
 		function revalidate() {
 			if (document.visibilityState === "visible" && !hasToken()) {
 				setAuthed(false);
 			}
 		}
+		window.addEventListener("auth:cleared", handleTokenCleared);
 		document.addEventListener("visibilitychange", revalidate);
-		return () => document.removeEventListener("visibilitychange", revalidate);
+		return () => {
+			window.removeEventListener("auth:cleared", handleTokenCleared);
+			document.removeEventListener("visibilitychange", revalidate);
+		};
 	});
 
 	if (!tenant) {

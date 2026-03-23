@@ -179,7 +179,14 @@ export function useAssignFolder() {
 	return useMutation({
 		mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) => apiUpdateItem(id, { folderId }),
 		onMutate: async ({ id, folderId }) =>
-			optimisticItemUpdate(queryClient, (_key, data) => updateItemInPages(data, id, (item) => ({ ...item, folderId }))),
+			optimisticItemUpdate(queryClient, (key, data) => {
+				const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;
+				if (cacheFolder !== undefined) {
+					const matches = cacheFolder === "none" ? folderId === null : cacheFolder === folderId;
+					if (!matches) return removeItemFromPages(data, id);
+				}
+				return updateItemInPages(data, id, (item) => ({ ...item, folderId }));
+			}),
 		onError: (_err, _vars, context) => {
 			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось переместить закупку");
