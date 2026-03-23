@@ -3,7 +3,6 @@ Sdelka portfolio — React 19 + Vite 8 + TypeScript + Tailwind v4 SPA.
 ## Project map
 
 - `src/` — app source (components, hooks, assets)
-- `scripts/` — automation scripts (ralph.sh)
 - `public/` — static assets
 
 ## Dependencies
@@ -37,6 +36,7 @@ Avoid `useEffect` in components:
 3. **Event handlers, not effects** — user-triggered work goes in handlers
 4. **`useMountEffect` for one-time external sync** — wrap `useEffect(cb, [])` in a named hook. Valid for DOM integration, third-party widgets, browser API subscriptions
 5. **Reset with `key`** — `<Component key={id} />` instead of resetting state in an effect
+6. **Use `useEffectReducer`** (`use-effect-reducer`) instead of `useReducer`.
 
 Smell tests (don't write the effect):
 - State mirrors other state/props
@@ -129,10 +129,5 @@ Make the plan concise. Sacrifice grammar for the sake of concision.
 
 <important if="you need to automate browser interactions or test in a browser">
 
-Use `agent-browser` for web automation. Use `agent-browser` skill. Run `agent-browser --help` for all commands.
-
-1. `agent-browser open <url>` — navigate to page
-2. `agent-browser snapshot -i` — get interactive elements with refs (@e1, @e2)
-3. `agent-browser click @e1` / `fill @e2 "text"` — interact using refs
-4. Re-snapshot after page changes
+Use `agent-browser` for web automation. Use `agent-browser` skill.
 </important>

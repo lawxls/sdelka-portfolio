@@ -1,3 +1,4 @@
 {
-	"ignore": ["src/components/ui/*.tsx"]
+	"ignore": ["src/components/ui/*.tsx"],
+	"ignoreDependencies": ["use-effect-reducer"]
 }
