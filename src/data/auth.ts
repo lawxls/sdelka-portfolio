@@ -1,22 +1,18 @@
-const LS_KEY = "auth-timestamp";
-const TTL_MS = 24 * 60 * 60 * 1000;
-const ACCESS_CODE = "Sd3lk";
+const LS_KEY = "auth-token";
 
-export function isAuthenticated(): boolean {
-	const stored = localStorage.getItem(LS_KEY);
-	if (!stored) return false;
-	const timestamp = Number(stored);
-	return Date.now() - timestamp < TTL_MS;
+export function getToken(): string | null {
+	return localStorage.getItem(LS_KEY);
 }
 
-export function setAuthenticated(): void {
-	localStorage.setItem(LS_KEY, String(Date.now()));
+export function setToken(token: string): void {
+	localStorage.setItem(LS_KEY, token);
 }
 
-export function clearAuth(): void {
+export function clearToken(): void {
 	localStorage.removeItem(LS_KEY);
+	window.dispatchEvent(new Event("auth:cleared"));
 }
 
-export function validateCode(code: string): boolean {
-	return code === ACCESS_CODE;
+export function hasToken(): boolean {
+	return getToken() !== null;
 }

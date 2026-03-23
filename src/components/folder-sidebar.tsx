@@ -29,6 +29,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Folder } from "@/data/types";
 import { FOLDER_COLORS } from "@/data/types";
 import { nextUnusedColor } from "@/data/use-folders";
@@ -68,9 +69,10 @@ export interface FolderSidebarProps {
 	folders: Folder[];
 	counts: Record<string, number>;
 	activeFolder: string | undefined;
+	isLoading?: boolean;
 	onFolderSelect: (folder: string | undefined) => void;
-	onCreateFolder: (name: string) => Folder | null;
-	onRenameFolder: (id: string, name: string) => boolean;
+	onCreateFolder: (name: string) => void;
+	onRenameFolder: (id: string, name: string) => void;
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
 }
@@ -79,6 +81,7 @@ export function FolderSidebar({
 	folders,
 	counts,
 	activeFolder,
+	isLoading,
 	onFolderSelect,
 	onCreateFolder,
 	onRenameFolder,
@@ -110,9 +113,8 @@ export function FolderSidebar({
 	}
 
 	function handleCreate(name: string) {
-		const created = onCreateFolder(name);
+		onCreateFolder(name);
 		setIsCreating(false);
-		if (created) onFolderSelect(created.id);
 	}
 
 	function handleDelete(id: string) {
@@ -162,43 +164,59 @@ export function FolderSidebar({
 					/>
 				</div>
 
-				{(folders.length > 0 || isCreating) && <div className="my-2 border-t border-sidebar-border" />}
+				{isLoading ? (
+					<>
+						<div className="my-2 border-t border-sidebar-border" />
+						<div className="space-y-1 px-2" data-testid="folder-skeletons">
+							{["skel-a", "skel-b", "skel-c"].map((id) => (
+								<div key={id} className="flex items-center gap-2 py-1.5">
+									<Skeleton className="size-2.5 rounded-full" />
+									<Skeleton className="h-4 flex-1" />
+								</div>
+							))}
+						</div>
+					</>
+				) : (
+					<>
+						{(folders.length > 0 || isCreating) && <div className="my-2 border-t border-sidebar-border" />}
 
-				<div className="space-y-0.5">
-					{folders.map((folder) =>
-						editingId === folder.id ? (
-							<InlineFolderRow
-								key={folder.id}
-								color={folder.color}
-								defaultValue={folder.name}
-								onSave={(name) => {
-									onRenameFolder(folder.id, name);
-									setEditingId(null);
-								}}
-								onCancel={() => setEditingId(null)}
-							/>
-						) : (
-							<FolderNavItem
-								key={folder.id}
-								folder={folder}
-								count={counts[folder.id] ?? 0}
-								active={activeFolder === folder.id}
-								onClick={() => selectFolder(folder.id)}
-								onRename={() => setEditingId(folder.id)}
-								onRecolor={(color) => onRecolorFolder(folder.id, color)}
-								onDelete={() => handleDelete(folder.id)}
-							/>
-						),
-					)}
-					{isCreating && (
-						<InlineFolderRow
-							color={nextUnusedColor(folders)}
-							dotTestId="creating-folder-dot"
-							onSave={handleCreate}
-							onCancel={() => setIsCreating(false)}
-						/>
-					)}
-				</div>
+						<div className="space-y-0.5">
+							{folders.map((folder) =>
+								editingId === folder.id ? (
+									<InlineFolderRow
+										key={folder.id}
+										color={folder.color}
+										defaultValue={folder.name}
+										onSave={(name) => {
+											onRenameFolder(folder.id, name);
+											setEditingId(null);
+										}}
+										onCancel={() => setEditingId(null)}
+									/>
+								) : (
+									<FolderNavItem
+										key={folder.id}
+										folder={folder}
+										count={counts[folder.id] ?? 0}
+										active={activeFolder === folder.id}
+										onClick={() => selectFolder(folder.id)}
+										onRename={() => setEditingId(folder.id)}
+										onRecolor={(color) => onRecolorFolder(folder.id, color)}
+										onDelete={() => handleDelete(folder.id)}
+									/>
+								),
+							)}
+							{isCreating && (
+								<InlineFolderRow
+									color={nextUnusedColor(folders)}
+									dotTestId="creating-folder-dot"
+									onSave={handleCreate}
+									onCancel={() => setIsCreating(false)}
+								/>
+							)}
+						</div>
+					</>
+				)}
 			</nav>
 
 			{/* Footer */}

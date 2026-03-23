@@ -1,18 +1,31 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
-import { mockProcurementItems } from "@/data/mock-data";
-import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
-import { useCustomItems } from "@/data/use-custom-items";
-import { useFolders } from "@/data/use-folders";
-import { useItemOverrides } from "@/data/use-item-overrides";
-import { useProcurementData } from "@/data/use-procurement-data";
+import type {
+	DeviationFilter,
+	FilterState,
+	NewItemInput,
+	ProcurementItem,
+	SortField,
+	SortState,
+	StatusFilter,
+} from "@/data/types";
+import {
+	nextUnusedColor,
+	useCreateFolder,
+	useDeleteFolder,
+	useFolderStats,
+	useFolders,
+	useUpdateFolder,
+} from "@/data/use-folders";
+import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -65,27 +78,33 @@ function App() {
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
 
-	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
-	const { items: customItems, addItems } = useCustomItems();
-	const effectiveItems = useMemo(
-		() => applyOverrides([...customItems, ...mockProcurementItems]),
-		[applyOverrides, customItems],
-	);
+	// Server-backed item hooks
+	const {
+		items,
+		hasNextPage,
+		loadMore,
+		isLoading: itemsLoading,
+		isFetchingNextPage,
+		error: itemsError,
+		refetch: refetchItems,
+	} = useItems({ search, filters, sort, folder });
 
-	const { folders, counts, applyFolders, assignItem, createFolder, renameFolder, recolorFolder, deleteFolder } =
-		useFolders(effectiveItems);
-	const itemsWithFolders = useMemo(() => applyFolders(effectiveItems), [applyFolders, effectiveItems]);
+	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder });
+
+	// Server-backed folder hooks
+	const { data: folders = [], isLoading: foldersLoading } = useFolders();
+	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats();
+	const createFolderMutation = useCreateFolder();
+	const updateFolderMutation = useUpdateFolder();
+	const deleteFolderMutation = useDeleteFolder();
+
+	// Item mutation hooks
+	const updateItemMutation = useUpdateItem();
+	const deleteItemMutation = useDeleteItem();
+	const assignFolderMutation = useAssignFolder();
+	const createItemsMutation = useCreateItems();
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
-
-	const { items, totals, hasNextPage, loadMore } = useProcurementData({
-		items: itemsWithFolders,
-		search,
-		filters,
-		sort,
-		batchSize: 25,
-		folder,
-	});
 
 	function handleSearchChange(query: string) {
 		setSearchParams(
@@ -139,7 +158,7 @@ function App() {
 	);
 
 	function handleDragStart(event: DragStartEvent) {
-		const item = itemsWithFolders.find((i) => i.id === event.active.id);
+		const item = items.find((i) => i.id === event.active.id);
 		setActiveItem(item ?? null);
 	}
 
@@ -149,11 +168,21 @@ function App() {
 		const itemId = String(event.active.id);
 		const targetId = String(event.over.id);
 		if (targetId === "none") {
-			assignItem(itemId, null);
+			assignFolderMutation.mutate({ id: itemId, folderId: null });
 		} else if (targetId.startsWith("folder-drop-")) {
 			const folderId = targetId.replace("folder-drop-", "");
-			assignItem(itemId, folderId);
+			assignFolderMutation.mutate({ id: itemId, folderId });
 		}
+	}
+
+	function handleCreateItems(items: NewItemInput[]) {
+		createItemsMutation.mutate(items, {
+			onSuccess: (data) => {
+				if (data.isAsync) {
+					toast.info("Позиции обрабатываются");
+				}
+			},
+		});
 	}
 
 	function handleFolderSelect(folderId: string | undefined) {
@@ -184,11 +213,12 @@ function App() {
 						folders={folders}
 						counts={counts}
 						activeFolder={folder}
+						isLoading={foldersLoading || statsLoading}
 						onFolderSelect={handleFolderSelect}
-						onCreateFolder={createFolder}
-						onRenameFolder={renameFolder}
-						onRecolorFolder={recolorFolder}
-						onDeleteFolder={deleteFolder}
+						onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
+						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
+						onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
+						onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
 					/>
 					<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
 						<ProcurementTable
@@ -198,17 +228,21 @@ function App() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
-							onDeleteItem={deleteItem}
-							onRenameItem={renameItem}
-							onAssignFolder={assignItem}
+							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
+							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
+							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
 							draggable
 							activeItemId={activeItem?.id}
+							isLoading={itemsLoading}
+							isFetchingNextPage={isFetchingNextPage}
+							error={itemsError}
+							onRetry={() => refetchItems()}
 						/>
 					</main>
 				</div>
 
 				<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
-					<SummaryPanel totals={totals} />
+					<SummaryPanel totals={totals} isLoading={totalsLoading} />
 				</footer>
 			</div>
 
@@ -217,7 +251,7 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
-			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={addItems} />
+			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 		</DndContext>
 	);
 }

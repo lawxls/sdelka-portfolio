@@ -19,6 +19,7 @@ import type {
 	DeliveryType,
 	Frequency,
 	LegalEntityMode,
+	NewItemInput,
 	PaymentMethod,
 	PaymentType,
 	ProcurementType,
@@ -41,7 +42,6 @@ import {
 	UNLOADING_LABELS,
 	UNLOADING_TYPES,
 } from "@/data/types";
-import type { NewItemInput } from "@/data/use-custom-items";
 
 interface PositionRow {
 	key: string;

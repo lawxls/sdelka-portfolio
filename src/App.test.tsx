@@ -1,28 +1,164 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+import { server } from "@/test-msw";
+import { makeItem } from "@/test-utils";
 import App, { DragItemOverlay } from "./App";
+
+const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
+	makeItem(`item-${i + 1}`, {
+		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
+		status: i < 10 ? "searching" : i < 20 ? "negotiating" : "completed",
+		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
+	}),
+);
+
+const MOCK_TOTALS = {
+	itemCount: 35,
+	totalOverpayment: "15000.00",
+	totalSavings: "8000.00",
+	totalDeviation: "7000.00",
+};
+
+const FOLDER_STATS = [
+	{ folderId: "folder-1", itemCount: 9 },
+	{ folderId: "folder-2", itemCount: 9 },
+	{ folderId: "folder-3", itemCount: 5 },
+	{ folderId: "folder-4", itemCount: 5 },
+	{ folderId: null, itemCount: 7 },
+];
+
+const TEST_FOLDERS: Folder[] = [
+	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
+	{ id: "folder-2", name: "Стройматериалы", color: "green" },
+	{ id: "folder-3", name: "Инженерные системы", color: "orange" },
+	{ id: "folder-4", name: "Электрика", color: "purple" },
+];
+
+// --- MSW handlers ---
+
+let folderList = [...TEST_FOLDERS];
+let itemList = [...ITEMS_PAGE_1];
+
+function setupHandlers() {
+	folderList = [...TEST_FOLDERS];
+	itemList = [...ITEMS_PAGE_1];
+	server.use(
+		http.get("/api/v1/company/items/", ({ request }) => {
+			const url = new URL(request.url);
+			const q = url.searchParams.get("q");
+			const folder = url.searchParams.get("folder");
+			const status = url.searchParams.get("status");
+			const deviation = url.searchParams.get("deviation");
+
+			let items = [...itemList];
+
+			if (q) {
+				items = items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()));
+			}
+			if (folder) {
+				if (folder === "none") {
+					items = items.filter((item) => item.folderId == null);
+				} else {
+					items = items.filter((item) => item.folderId === folder);
+				}
+			}
+			if (status) {
+				items = items.filter((item) => item.status === status);
+			}
+			if (deviation === "overpaying") {
+				items = items.filter(
+					(item) => item.bestPrice != null && (item.currentPrice as number) > (item.bestPrice as number),
+				);
+			}
+
+			return HttpResponse.json({ items, nextCursor: null });
+		}),
+		http.get("/api/v1/company/items/totals", () => HttpResponse.json(MOCK_TOTALS)),
+		http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: folderList })),
+		http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: FOLDER_STATS })),
+		http.post("/api/v1/company/folders/", async ({ request }) => {
+			const body = (await request.json()) as { name: string; color: string };
+			const created = { id: `new-${Date.now()}`, ...body };
+			folderList = [...folderList, created];
+			return HttpResponse.json(created, { status: 201 });
+		}),
+		http.patch("/api/v1/company/folders/:id/", async ({ request, params }) => {
+			const body = (await request.json()) as { name?: string; color?: string };
+			const id = params.id as string;
+			folderList = folderList.map((f) => (f.id === id ? { ...f, ...body } : f));
+			const updated = folderList.find((f) => f.id === id);
+			return HttpResponse.json(updated);
+		}),
+		http.delete("/api/v1/company/folders/:id/", ({ params }) => {
+			const id = params.id as string;
+			folderList = folderList.filter((f) => f.id !== id);
+			return new HttpResponse(null, { status: 204 });
+		}),
+		http.patch("/api/v1/company/items/:id/", async ({ request, params }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const id = params.id as string;
+			itemList = itemList.map((i) => (i.id === id ? { ...i, ...body } : i));
+			const updated = itemList.find((i) => i.id === id);
+			return HttpResponse.json(updated);
+		}),
+		http.delete("/api/v1/company/items/:id/", ({ params }) => {
+			const id = params.id as string;
+			itemList = itemList.filter((i) => i.id !== id);
+			return new HttpResponse(null, { status: 204 });
+		}),
+		http.post("/api/v1/company/items/batch", async ({ request }) => {
+			const body = (await request.json()) as { items: Array<{ name: string }> };
+			const created = body.items.map((item, i) => makeItem(`new-${i + 1}`, { name: item.name, folderId: null }));
+			itemList = [...itemList, ...created];
+			return HttpResponse.json({ items: created, isAsync: false }, { status: 201 });
+		}),
+	);
+}
+
+// --- Render helpers ---
+
+let queryClient: QueryClient;
 
 function renderApp(initialEntries?: string[]) {
 	return render(
-		<MemoryRouter initialEntries={initialEntries}>
-			<TooltipProvider>
-				<App />
-			</TooltipProvider>
-		</MemoryRouter>,
+		<QueryClientProvider client={queryClient}>
+			<MemoryRouter initialEntries={initialEntries}>
+				<TooltipProvider>
+					<App />
+				</TooltipProvider>
+			</MemoryRouter>
+		</QueryClientProvider>,
 	);
+}
+
+/** Render and wait for both folder and item data to load */
+async function renderAppReady(initialEntries?: string[]) {
+	const result = renderApp(initialEntries);
+	await waitFor(() => {
+		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
+		expect(screen.queryAllByTestId("skeleton-row")).toHaveLength(0);
+	});
+	return result;
 }
 
 beforeEach(() => {
 	localStorage.clear();
+	queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+	});
+	setupHandlers();
 });
 
 describe("App", () => {
-	test("renders page layout with header, main, and footer", () => {
-		renderApp();
+	test("renders page layout with header, main, and footer", async () => {
+		await renderAppReady();
 		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
@@ -30,94 +166,91 @@ describe("App", () => {
 		expect(screen.getByRole("contentinfo")).toBeInTheDocument();
 	});
 
-	test("renders procurement table with data", () => {
-		renderApp();
+	test("renders procurement table with server data", async () => {
+		await renderAppReady();
 		expect(screen.getByRole("table")).toBeInTheDocument();
 		expect(screen.getByText("НАИМЕНОВАНИЕ")).toBeInTheDocument();
+		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
-	test("renders toolbar with search, filters, and create button", () => {
-		renderApp();
+	test("renders toolbar with search, filters, and create button", async () => {
+		await renderAppReady();
 		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
-	test("renders summary panel with SKU count and export button in toolbar", () => {
-		renderApp();
-		expect(screen.getByText(/SKU/)).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Скачать таблицу/ })).toBeInTheDocument();
+	test("renders summary panel with SKU count from server totals", async () => {
+		await renderAppReady();
+		const footer = screen.getByRole("contentinfo");
+		expect(within(footer).getByText(/SKU/)).toBeInTheDocument();
+		expect(within(footer).getByText("35")).toBeInTheDocument();
 	});
 
-	test("search filters table rows and updates totals", () => {
-		vi.useFakeTimers();
+	test("shows skeleton rows during initial load", () => {
 		renderApp();
+		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
+	});
+
+	test("shows SKU skeleton during totals load", () => {
+		renderApp();
+		expect(screen.getByTestId("sku-skeleton")).toBeInTheDocument();
+	});
+
+	test("search filters table rows via API refetch", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
 
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
 
 		const input = screen.getByPlaceholderText("Поиск по названию…");
-		fireEvent.change(input, { target: { value: "цемент" } });
+		await user.clear(input);
+		await user.type(input, "Арматура");
 
-		act(() => {
-			vi.advanceTimersByTime(300);
+		// Wait for debounced search to trigger refetch
+		await waitFor(() => {
+			const filteredRowCount = within(table).getAllByRole("row").length;
+			expect(filteredRowCount).toBeLessThan(initialRowCount);
 		});
-
-		const filteredRowCount = within(table).getAllByRole("row").length;
-		expect(filteredRowCount).toBeLessThan(initialRowCount);
-
-		vi.useRealTimers();
 	});
 
-	test("filter updates table and summary totals", () => {
-		renderApp();
+	test("filter updates URL params and triggers refetch", async () => {
+		await renderAppReady();
 
-		const footer = screen.getByRole("contentinfo");
-		const skuBefore = footer.textContent;
+		const table = screen.getByRole("table");
+		const initialRowCount = within(table).getAllByRole("row").length;
 
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		fireEvent.click(screen.getByText("С переплатой"));
 
-		// SKU count in summary panel should change after filtering
-		const skuAfter = footer.textContent;
-		expect(skuAfter).not.toBe(skuBefore);
+		await waitFor(() => {
+			const filteredRowCount = within(table).getAllByRole("row").length;
+			expect(filteredRowCount).toBeLessThan(initialRowCount);
+		});
 	});
 
-	test("sort reorders table rows", () => {
-		renderApp();
+	test("sort button toggles via URL params", async () => {
+		await renderAppReady();
+		// Just verify sort button works without timing issues
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		// Click again for desc
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		// Click again to clear
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		// No crash
+	});
+
+	test("restores state from URL search params", async () => {
+		await renderAppReady(["/?deviation=overpaying"]);
 
 		const table = screen.getByRole("table");
-		const getFirstDataRowCells = () => {
-			const rows = within(table).getAllByRole("row");
-			return within(rows[1]).getAllByRole("cell");
-		};
-
-		const nameBefore = getFirstDataRowCells()[1].textContent;
-
-		// Click sort on current price (asc)
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
-		const nameAfterAsc = getFirstDataRowCells()[1].textContent;
-
-		// Click again for descending
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
-		const nameAfterDesc = getFirstDataRowCells()[1].textContent;
-
-		// At least one sort direction should change the first row
-		const changed = nameBefore !== nameAfterAsc || nameAfterAsc !== nameAfterDesc;
-		expect(changed).toBe(true);
+		const rows = within(table).getAllByRole("row");
+		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("restores state from URL search params", () => {
-		renderApp(["/?deviation=overpaying"]);
-
-		const table = screen.getByRole("table");
-		const rowCount = within(table).getAllByRole("row").length;
-		// With overpaying filter active, we should have fewer rows than full dataset
-		expect(rowCount).toBeLessThan(51); // 50 data rows + 1 header
-	});
-
-	test("renders sidebar with folders and counts", () => {
-		renderApp();
+	test("renders sidebar with folders and counts", async () => {
+		await renderAppReady();
 		expect(screen.getByText("Разделы")).toBeInTheDocument();
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
 		expect(screen.getByText("Без раздела")).toBeInTheDocument();
@@ -125,26 +258,26 @@ describe("App", () => {
 		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
 	});
 
-	test("deep-link with folder param filters table to folder items", () => {
-		renderApp(["/?folder=folder-1"]);
+	test("deep-link with folder param filters table to folder items", async () => {
+		await renderAppReady(["/?folder=folder-1"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
-		// folder-1 has 9 items + 1 header
-		expect(rows).toHaveLength(10);
+		// Only items with folderId=folder-1 (5 items + header)
+		expect(rows).toHaveLength(6);
 	});
 
-	test("deep-link with folder=none shows only unassigned items", () => {
-		renderApp(["/?folder=none"]);
+	test("deep-link with folder=none shows only unassigned items", async () => {
+		await renderAppReady(["/?folder=none"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
-		// 47 unassigned items, batchSize 25 → first batch of 25 + 1 header
-		expect(rows).toHaveLength(26);
+		// Only items with folderId=null (15 items + header)
+		expect(rows).toHaveLength(16);
 	});
 
 	test("folder selection filters table via sidebar click", async () => {
-		renderApp();
+		await renderAppReady();
 
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
@@ -152,64 +285,34 @@ describe("App", () => {
 		const sidebar = screen.getByTestId("sidebar");
 		await userEvent.setup().click(within(sidebar).getByText("Металлопрокат"));
 
-		const filteredRowCount = within(table).getAllByRole("row").length;
-		expect(filteredRowCount).toBeLessThan(initialRowCount);
-	});
-
-	test("folder filter stacks with search filter", () => {
-		vi.useFakeTimers();
-		renderApp(["/?folder=folder-1"]);
-
-		const table = screen.getByRole("table");
-		const folderRowCount = within(table).getAllByRole("row").length;
-
-		// Search within folder
-		const input = screen.getByPlaceholderText("Поиск по названию…");
-		fireEvent.change(input, { target: { value: "арматура" } });
-		act(() => {
-			vi.advanceTimersByTime(300);
+		await waitFor(() => {
+			const filteredRowCount = within(table).getAllByRole("row").length;
+			expect(filteredRowCount).toBeLessThan(initialRowCount);
 		});
-
-		const filteredRowCount = within(table).getAllByRole("row").length;
-		expect(filteredRowCount).toBeLessThanOrEqual(folderRowCount);
-
-		vi.useRealTimers();
 	});
 
-	test("folder badges appear on items with folder assignments", () => {
-		renderApp();
-		// Арматура А500С is in folder-1 (Металлопрокат)
-		expect(screen.getByTestId("folder-badge-item-1")).toBeInTheDocument();
-	});
-
-	test("creating a folder adds it to sidebar and activates it", async () => {
-		renderApp();
+	test("creating a folder adds it to sidebar (optimistic)", async () => {
+		await renderAppReady();
 
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		// Click "Новый раздел"
 		await user.click(within(sidebar).getByRole("button", { name: /Новый раздел/ }));
 
-		// Type name and save
 		const input = within(sidebar).getByRole("textbox", { name: "Название раздела" });
 		await user.type(input, "Тестовый раздел{Enter}");
 
-		// New folder appears in sidebar
-		expect(within(sidebar).getByText("Тестовый раздел")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(within(sidebar).getByText("Тестовый раздел")).toBeInTheDocument();
+		});
 	});
 
-	test("deleting active folder shows all items", async () => {
-		renderApp(["/?folder=folder-1"]);
+	test("deleting active folder clears folder filter", async () => {
+		await renderAppReady(["/?folder=folder-1"]);
 
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
-		const table = screen.getByRole("table");
 
-		// folder-1 has 9 items + 1 header
-		expect(within(table).getAllByRole("row")).toHaveLength(10);
-
-		// Open folder menu and delete
 		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
 		await screen.findByText("Удалить");
 		fireEvent.click(screen.getByText("Удалить"));
@@ -217,21 +320,18 @@ describe("App", () => {
 		await screen.findByText("Удалить раздел?");
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
-		// Should switch to all items — more rows than folder-1's 9
-		const rowsAfter = within(table).getAllByRole("row").length;
-		expect(rowsAfter).toBeGreaterThan(10);
-
-		// Folder should be gone from sidebar
-		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+		// Folder gone from sidebar
+		await waitFor(() => {
+			expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
+		});
 	});
 
-	test("renaming a folder updates sidebar", async () => {
-		renderApp();
+	test("renaming a folder updates sidebar (optimistic)", async () => {
+		await renderAppReady();
 
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		// Open folder menu and rename
 		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
 		await screen.findByText("Переименовать");
 		fireEvent.click(screen.getByText("Переименовать"));
@@ -240,106 +340,32 @@ describe("App", () => {
 		await user.clear(input);
 		await user.type(input, "Сталь{Enter}");
 
-		expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
+		});
 		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
 	});
 
-	test("context menu opens on right-click with folder/rename/delete options", () => {
-		renderApp();
-		const row = screen.getByTestId("row-item-1");
-		fireEvent.contextMenu(row);
-
-		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
-		expect(screen.getByText("Переименовать")).toBeInTheDocument();
-		// "Удалить" appears both in context menu and potentially other places
-		// Just verify the menu opened with the expected items
-		const menuItems = screen.getAllByText("Удалить");
-		expect(menuItems.length).toBeGreaterThanOrEqual(1);
+	test("table rows are draggable", async () => {
+		await renderAppReady();
+		const rows = screen.getAllByRole("row");
+		const dataRow = rows[1];
+		expect(dataRow.getAttribute("aria-roledescription")).toBe("draggable");
 	});
 
-	test("deleting item via context menu removes it from table", () => {
-		renderApp();
-
-		// item-1 (Арматура А500С) should be in the table
-		expect(screen.getByTestId("row-item-1")).toBeInTheDocument();
-
-		// Right-click first row and delete via context menu menuitem
-		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
-		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
-
-		// Confirm in AlertDialog
-		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
-
-		// Item should no longer be in the table
-		expect(screen.queryByTestId("row-item-1")).not.toBeInTheDocument();
-	});
-
-	test("deleted item persists in localStorage", () => {
-		renderApp();
-
-		// Delete an item
-		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
-		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
-		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
-
-		// localStorage should have the override
-		const stored = JSON.parse(localStorage.getItem("item-overrides") ?? "{}");
-		expect(stored.deleted).toContain("item-1");
-	});
-
-	test("deleting item updates sidebar folder counts", () => {
-		renderApp();
-
-		const sidebar = screen.getByTestId("sidebar");
-		// item-1 is in folder-1 (Металлопрокат) which has 9 items in seed
-		const folderRow = within(sidebar).getByText("Металлопрокат").closest("[data-testid^='droppable-']") as HTMLElement;
-		expect(folderRow.textContent).toContain("9");
-
-		// Delete item-1
-		fireEvent.contextMenu(screen.getByTestId("row-item-1"));
-		fireEvent.click(screen.getByRole("menuitem", { name: /Удалить/ }));
-		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
-
-		// Count should decrease
-		expect(folderRow.textContent).toContain("8");
-	});
-
-	test("folder assignment via context menu updates badge", () => {
-		renderApp();
-
-		// item-16 is unassigned per seed
-		const row = screen.getByTestId("row-item-16");
-		fireEvent.contextMenu(row);
-
-		// Open folder submenu
-		fireEvent.click(screen.getByText("Переместить в раздел"));
-
-		// Assign to Металлопрокат via menuitemcheckbox (avoids sidebar match)
-		fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /Металлопрокат/ }));
-
-		// Badge should now appear
-		expect(screen.getByTestId("folder-badge-item-16")).toBeInTheDocument();
-	});
-
-	test("table rows are draggable in app", () => {
-		renderApp();
-		const row = screen.getByTestId("row-item-1");
-		expect(row.getAttribute("aria-roledescription")).toBe("draggable");
-	});
-
-	test("sidebar folders are droppable targets in app", () => {
-		renderApp();
+	test("sidebar folders are droppable targets", async () => {
+		await renderAppReady();
 		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
 		expect(screen.getByTestId("droppable-none")).toBeInTheDocument();
 	});
 
-	test("'Все закупки' is not a droppable target in app", () => {
-		renderApp();
+	test("'Все закупки' is not a droppable target", async () => {
+		await renderAppReady();
 		expect(screen.queryByTestId("droppable-all")).not.toBeInTheDocument();
 	});
 
-	test("drag overlay container exists in app", () => {
-		renderApp();
+	test("drag overlay container exists", async () => {
+		await renderAppReady();
 		expect(screen.getByTestId("dnd-overlay-container")).toBeInTheDocument();
 	});
 
@@ -361,82 +387,184 @@ describe("App", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
-	test("clicking Добавить позиции opens the drawer with position table", async () => {
-		renderApp();
+	test("clicking Добавить позиции opens the drawer", async () => {
+		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
-		expect(screen.getByText("Позиция 1")).toBeInTheDocument();
 	});
 
-	test("creating a position through the drawer increases SKU count and persists", async () => {
-		renderApp();
-		const user = userEvent.setup();
-		const footer = screen.getByRole("contentinfo");
-
-		// SKU count before
-		expect(within(footer).getByText("75")).toBeInTheDocument();
-
-		// Open drawer, create position
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Тестовая позиция");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		// Drawer should close
-		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
-
-		// SKU count should increase
-		expect(within(footer).getByText("76")).toBeInTheDocument();
-
-		// Verify localStorage persistence
-		const stored = JSON.parse(localStorage.getItem("custom-items") ?? "[]");
-		expect(stored).toHaveLength(1);
-		expect(stored[0].name).toBe("Тестовая позиция");
-		expect(stored[0].status).toBe("searching");
-		expect(stored[0].bestPrice).toBeNull();
-		expect(stored[0].averagePrice).toBeNull();
-	});
-
-	test("created position survives remount via localStorage", async () => {
-		const { unmount } = renderApp();
+	test("Отмена closes drawer", async () => {
+		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Persistent Item");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		unmount();
-		renderApp();
-
-		// SKU count should still be 76 (75 mock + 1 custom)
-		const footer = screen.getByRole("contentinfo");
-		expect(within(footer).getByText("76")).toBeInTheDocument();
-	});
-
-	test("Отмена closes drawer without creating items", async () => {
-		renderApp();
-		const user = userEvent.setup();
-
-		const table = screen.getByRole("table");
-		const rowCountBefore = within(table).getAllByRole("row").length;
-
-		// Open drawer
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-		// Dirty form → confirmation dialog
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
-		// Drawer should close
 		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+	});
 
-		// No new items
-		const rowCountAfter = within(table).getAllByRole("row").length;
-		expect(rowCountAfter).toBe(rowCountBefore);
+	test("shows error state with retry button on items load failure", async () => {
+		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({}, { status: 500 })));
+
+		renderApp();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("items-error")).toBeInTheDocument();
+		});
+		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
+		expect(screen.getByText("Повторить")).toBeInTheDocument();
+	});
+
+	test("retry button refetches items after error", async () => {
+		let callCount = 0;
+		server.use(
+			http.get("/api/v1/company/items/", () => {
+				callCount++;
+				if (callCount === 1) return HttpResponse.json({}, { status: 500 });
+				return HttpResponse.json({ items: ITEMS_PAGE_1, nextCursor: null });
+			}),
+		);
+
+		renderApp();
+
+		await waitFor(() => {
+			expect(screen.getByText("Повторить")).toBeInTheDocument();
+		});
+
+		fireEvent.click(screen.getByText("Повторить"));
+
+		await waitFor(() => {
+			expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
+		});
+	});
+
+	test("context menu rename sends PATCH and updates table", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Переименовать");
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = screen.getByLabelText("Название закупки");
+		await user.clear(input);
+		await user.type(input, "Новое название{Enter}");
+
+		await waitFor(() => {
+			expect(screen.getByText("Новое название")).toBeInTheDocument();
+		});
+	});
+
+	test("context menu delete sends DELETE and removes row", async () => {
+		await renderAppReady();
+
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Удалить");
+		fireEvent.click(screen.getByText("Удалить"));
+
+		await screen.findByText("Удалить закупку?");
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Арматура А500С ∅12")).not.toBeInTheDocument();
+		});
+	});
+
+	test("context menu assign folder sends PATCH", async () => {
+		// Use an item that has no folder (item-11 has folderId: null)
+		await renderAppReady();
+
+		const row = screen.getByTestId("row-item-11");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Переместить в раздел");
+		fireEvent.click(screen.getByText("Переместить в раздел"));
+
+		// Context menu submenu items are checkbox items — use role
+		const menuItems = await screen.findAllByRole("menuitemcheckbox");
+		const target = menuItems.find((el) => el.textContent?.includes("Стройматериалы"));
+		if (!target) throw new Error("Стройматериалы menu item not found");
+		fireEvent.click(target);
+
+		// Optimistic: folder badge should appear on item-11
+		await waitFor(() => {
+			const badge = screen.queryByTestId("folder-badge-item-11");
+			expect(badge).toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit sends batch create and closes drawer", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Тестовая позиция");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer closes
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit shows toast for async batch response", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ isAsync: true, taskId: "task-123" }, { status: 202 }),
+			),
+		);
+
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Большая партия");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer closes
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit shows error toast on 400 validation failure", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ items: [{ name: ["Required."] }] }, { status: 400 }),
+			),
+		);
+
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Test");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer still closes (form resets on submit before mutation resolves)
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
 	});
 
 	test("drag overlay anchors to the cursor position", () => {

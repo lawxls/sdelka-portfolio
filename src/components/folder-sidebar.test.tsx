@@ -23,8 +23,8 @@ function makeProps(overrides: Partial<FolderSidebarProps> = {}): FolderSidebarPr
 		counts: mockCounts,
 		activeFolder: undefined,
 		onFolderSelect: vi.fn(),
-		onCreateFolder: vi.fn(() => ({ id: "new-folder", name: "test", color: "red" })),
-		onRenameFolder: vi.fn(() => true),
+		onCreateFolder: vi.fn(),
+		onRenameFolder: vi.fn(),
 		onRecolorFolder: vi.fn(),
 		onDeleteFolder: vi.fn(),
 		...overrides,
@@ -261,16 +261,14 @@ describe("FolderSidebar inline creation", () => {
 	});
 
 	test("Enter saves non-empty name and calls onCreateFolder", async () => {
-		const onCreateFolder = vi.fn(() => ({ id: "new-1", name: "Тест", color: "red" }));
-		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onCreateFolder, onFolderSelect })} />);
+		const onCreateFolder = vi.fn();
+		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
 
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: /Новый раздел/ }));
 		await user.type(screen.getByRole("textbox", { name: "Название раздела" }), "Тест{Enter}");
 
 		expect(onCreateFolder).toHaveBeenCalledWith("Тест");
-		expect(onFolderSelect).toHaveBeenCalledWith("new-1");
 	});
 
 	test("Esc cancels creation without calling onCreateFolder", async () => {
@@ -286,7 +284,7 @@ describe("FolderSidebar inline creation", () => {
 	});
 
 	test("blur saves non-empty name", async () => {
-		const onCreateFolder = vi.fn(() => ({ id: "new-1", name: "Тест", color: "red" }));
+		const onCreateFolder = vi.fn();
 		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
 
 		const user = userEvent.setup();
@@ -378,7 +376,7 @@ describe("FolderSidebar rename", () => {
 	});
 
 	test("Enter saves renamed folder", async () => {
-		const onRenameFolder = vi.fn(() => true);
+		const onRenameFolder = vi.fn();
 		render(<FolderSidebar {...makeProps({ onRenameFolder })} />);
 
 		await openFolderMenu("Металлопрокат");
@@ -515,5 +513,29 @@ describe("FolderSidebar drag-and-drop targets", () => {
 		);
 		const droppable = screen.getByTestId("droppable-folder-1");
 		expect(droppable).toBeInTheDocument();
+	});
+});
+
+describe("FolderSidebar loading state", () => {
+	test("shows skeleton placeholders when isLoading is true", () => {
+		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		expect(screen.getByTestId("folder-skeletons")).toBeInTheDocument();
+	});
+
+	test("does not show folders when loading", () => {
+		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		expect(screen.queryByText("Металлопрокат")).not.toBeInTheDocument();
+	});
+
+	test("still shows system items when loading", () => {
+		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		expect(screen.getByText("Все закупки")).toBeInTheDocument();
+		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+	});
+
+	test("does not show skeletons when loaded", () => {
+		render(<FolderSidebar {...makeProps({ isLoading: false })} />);
+		expect(screen.queryByTestId("folder-skeletons")).not.toBeInTheDocument();
+		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
 	});
 });

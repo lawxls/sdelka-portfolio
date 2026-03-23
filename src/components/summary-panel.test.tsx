@@ -20,4 +20,15 @@ describe("SummaryPanel", () => {
 		render(<SummaryPanel totals={mockTotals} />);
 		expect(screen.getByText(/SKU/)).toBeInTheDocument();
 	});
+
+	test("renders skeleton when isLoading is true", () => {
+		render(<SummaryPanel isLoading />);
+		expect(screen.getByTestId("sku-skeleton")).toBeInTheDocument();
+		expect(screen.queryByText("50")).not.toBeInTheDocument();
+	});
+
+	test("renders 0 when no totals provided and not loading", () => {
+		render(<SummaryPanel />);
+		expect(screen.getByText("0")).toBeInTheDocument();
+	});
 });

@@ -127,21 +127,24 @@ export interface Totals {
 	itemCount: number;
 }
 
-export interface ProcurementDataParams {
-	items?: ProcurementItem[];
-	search: string;
-	filters: FilterState;
-	sort: SortState | null;
-	batchSize: number;
-	folder?: string;
-}
-
-export interface ProcurementDataResult {
-	items: ProcurementItem[];
-	totalItems: number;
-	totals: Totals;
-	hasNextPage: boolean;
-	loadMore: () => void;
+export interface NewItemInput {
+	name: string;
+	description?: string;
+	unit?: Unit;
+	annualQuantity?: number;
+	currentPrice?: number;
+	procurementType?: ProcurementType;
+	frequency?: Frequency;
+	legalEntityMode?: LegalEntityMode;
+	legalEntityCompany?: string;
+	paymentType?: PaymentType;
+	paymentDeferralDays?: number;
+	vatIncluded?: boolean;
+	paymentMethod?: PaymentMethod;
+	deliveryType?: DeliveryType;
+	deliveryAddress?: string;
+	unloading?: UnloadingType;
+	analoguesAllowed?: boolean;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

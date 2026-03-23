@@ -1,8 +1,17 @@
-import { act, render, screen } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { clearAuth, setAuthenticated } from "@/data/auth";
+import { clearToken, setToken } from "@/data/auth";
+import { server } from "@/test-msw";
+import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { AuthGate } from "./auth-gate";
+
+function renderWithProviders(ui: React.ReactElement) {
+	const qc = createTestQueryClient();
+	return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
 
 afterEach(() => {
 	localStorage.clear();
@@ -10,30 +19,88 @@ afterEach(() => {
 });
 
 describe("AuthGate", () => {
-	test("renders the code modal when not authenticated", () => {
-		render(
+	test("shows 'Company not found' when getTenant() returns null", () => {
+		mockHostname("localhost");
+		renderWithProviders(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+		expect(screen.getByText("Компания не найдена")).toBeInTheDocument();
+		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
+		expect(screen.queryByText("Код доступа")).not.toBeInTheDocument();
+	});
+
+	test("shows code input when no JWT token", () => {
+		mockHostname("acme.localhost");
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,
 		);
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
+		expect(screen.getByText("Код доступа")).toBeInTheDocument();
 		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
 	});
 
-	test("renders children when authenticated", () => {
-		setAuthenticated();
-		render(
+	test("validates token on load and shows children when valid", async () => {
+		mockHostname("acme.localhost");
+		setToken("valid-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ name: "Acme Corp" });
+			}),
+		);
+
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,
 		);
+
+		await waitFor(() => {
+			expect(screen.getByText("App Content")).toBeInTheDocument();
+		});
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(screen.getByText("App Content")).toBeInTheDocument();
 	});
 
-	test("after correct code entry, modal disappears and children render", async () => {
+	test("shows code input when token validation returns 401", async () => {
+		mockHostname("acme.localhost");
+		setToken("expired-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ detail: "Invalid credentials." }, { status: 401 });
+			}),
+		);
+
+		renderWithProviders(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
+	});
+
+	test("correct code entry stores JWT and shows children", async () => {
+		mockHostname("acme.localhost");
 		const user = userEvent.setup();
-		render(
+
+		server.use(
+			http.post("/api/v1/company/validate-code", () => {
+				return HttpResponse.json({ token: "new-jwt-token" });
+			}),
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ name: "Acme Corp" });
+			}),
+		);
+
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,
@@ -43,13 +110,23 @@ describe("AuthGate", () => {
 		await user.click(cells[0]);
 		await user.paste("Sd3lk");
 
-		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		expect(screen.getByText("App Content")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByText("App Content")).toBeInTheDocument();
+		});
+		expect(localStorage.getItem("auth-token")).toBe("new-jwt-token");
 	});
 
-	test("after wrong code entry, error message appears and inputs clear", async () => {
+	test("wrong code shows error and clears inputs", async () => {
+		mockHostname("acme.localhost");
 		const user = userEvent.setup();
-		render(
+
+		server.use(
+			http.post("/api/v1/company/validate-code", () => {
+				return HttpResponse.json({ detail: "Invalid credentials." }, { status: 401 });
+			}),
+		);
+
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,
@@ -59,37 +136,68 @@ describe("AuthGate", () => {
 		await user.click(cells[0]);
 		await user.paste("WRONG");
 
-		expect(screen.getByText("Неверный код доступа")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByText("Неверный код доступа")).toBeInTheDocument();
+		});
 		for (const cell of screen.getAllByRole("textbox")) {
 			expect(cell).toHaveValue("");
 		}
 	});
 
-	test("revalidates auth on visibility change and shows modal when expired", () => {
-		setAuthenticated();
-		render(
+	test("preserves token on non-auth API failure (5xx)", async () => {
+		mockHostname("acme.localhost");
+		setToken("valid-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ detail: "Internal error" }, { status: 500 });
+			}),
+		);
+
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,
 		);
-		expect(screen.getByText("App Content")).toBeInTheDocument();
 
-		// Expire the session
-		clearAuth();
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		expect(localStorage.getItem("auth-token")).toBe("valid-jwt");
+	});
 
-		// Simulate tab becoming visible again
-		Object.defineProperty(document, "visibilityState", { value: "visible", writable: true });
-		act(() => {
-			document.dispatchEvent(new Event("visibilitychange"));
+	test("re-locks app when a runtime 401 clears the token", async () => {
+		mockHostname("acme.localhost");
+		setToken("valid-jwt");
+
+		server.use(
+			http.get("/api/v1/company/info/", () => {
+				return HttpResponse.json({ name: "Acme Corp" });
+			}),
+		);
+
+		renderWithProviders(
+			<AuthGate>
+				<div>App Content</div>
+			</AuthGate>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("App Content")).toBeInTheDocument();
 		});
 
-		expect(screen.getByRole("dialog")).toBeInTheDocument();
+		clearToken();
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
 		expect(screen.queryByText("App Content")).not.toBeInTheDocument();
 	});
 
 	test("modal cannot be dismissed via Escape key", async () => {
+		mockHostname("acme.localhost");
 		const user = userEvent.setup();
-		render(
+		renderWithProviders(
 			<AuthGate>
 				<div>App Content</div>
 			</AuthGate>,

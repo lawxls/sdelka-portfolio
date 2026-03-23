@@ -1,12 +1,14 @@
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Totals } from "@/data/types";
 import { LogoIcon } from "./logo-icon";
 
 interface SummaryPanelProps {
-	totals: Totals;
+	totals?: Totals;
+	isLoading?: boolean;
 }
 
-export function SummaryPanel({ totals }: SummaryPanelProps) {
+export function SummaryPanel({ totals, isLoading }: SummaryPanelProps) {
 	return (
 		<div className="flex items-center justify-between">
 			<div className="flex items-center gap-1.5">
@@ -17,7 +19,11 @@ export function SummaryPanel({ totals }: SummaryPanelProps) {
 			</div>
 			<div className="text-sm">
 				<span className="text-muted-foreground">SKU:{"\u00A0"}</span>
-				<span className="font-medium tabular-nums">{totals.itemCount}</span>
+				{isLoading ? (
+					<Skeleton className="inline-block h-4 w-8 align-middle" data-testid="sku-skeleton" />
+				) : (
+					<span className="font-medium tabular-nums">{totals?.itemCount ?? 0}</span>
+				)}
 			</div>
 		</div>
 	);
