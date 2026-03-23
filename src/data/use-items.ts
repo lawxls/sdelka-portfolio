@@ -1,7 +1,15 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { deleteItem as apiDeleteItem, updateItem as apiUpdateItem, fetchItems, fetchTotals } from "./api-client";
+import type { BatchCreateResult } from "./api-client";
+import {
+	deleteItem as apiDeleteItem,
+	updateItem as apiUpdateItem,
+	createItemsBatch,
+	fetchItems,
+	fetchTotals,
+} from "./api-client";
 import type { FilterState, ProcurementItem, SortState } from "./types";
+import type { NewItemInput } from "./use-custom-items";
 
 interface ItemQueryParams {
 	search: string;
@@ -98,6 +106,18 @@ function invalidateItemQueries(queryClient: ReturnType<typeof useQueryClient>) {
 }
 
 // --- Mutation hooks ---
+
+export function useCreateItems() {
+	const queryClient = useQueryClient();
+
+	return useMutation<BatchCreateResult, Error, NewItemInput[]>({
+		mutationFn: (items) => createItemsBatch(items),
+		onSuccess: () => invalidateItemQueries(queryClient),
+		onError: () => {
+			toast.error("Не удалось создать закупки");
+		},
+	});
+}
 
 export function useUpdateItem() {
 	const queryClient = useQueryClient();

@@ -1,6 +1,7 @@
 import { clearToken, getToken } from "./auth";
 import { getTenant } from "./tenant";
 import type { Folder, ProcurementItem, Totals } from "./types";
+import type { NewItemInput } from "./use-custom-items";
 
 const BASE = "/api/v1/company";
 
@@ -158,6 +159,20 @@ export async function updateItem(
 
 export async function deleteItem(id: string): Promise<void> {
 	return request(`/items/${id}/`, { method: "DELETE" });
+}
+
+export interface BatchCreateResult {
+	items?: ProcurementItem[];
+	isAsync: boolean;
+	taskId?: string;
+}
+
+export async function createItemsBatch(items: NewItemInput[]): Promise<BatchCreateResult> {
+	return request("/items/batch", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ items }),
+	});
 }
 
 export async function fetchItems(params: FetchItemsParams): Promise<{

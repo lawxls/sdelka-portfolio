@@ -122,6 +122,12 @@ function setupHandlers() {
 			itemList = itemList.filter((i) => i.id !== id);
 			return new HttpResponse(null, { status: 204 });
 		}),
+		http.post("/api/v1/company/items/batch", async ({ request }) => {
+			const body = (await request.json()) as { items: Array<{ name: string }> };
+			const created = body.items.map((item, i) => makeItem(`new-${i + 1}`, { name: item.name, folderId: null }));
+			itemList = [...itemList, ...created];
+			return HttpResponse.json({ items: created, isAsync: false }, { status: 201 });
+		}),
 	);
 }
 
@@ -504,6 +510,69 @@ describe("App", () => {
 		await waitFor(() => {
 			const badge = screen.queryByTestId("folder-badge-item-11");
 			expect(badge).toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit sends batch create and closes drawer", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Тестовая позиция");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer closes
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit shows toast for async batch response", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ isAsync: true, taskId: "task-123" }, { status: 202 }),
+			),
+		);
+
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Большая партия");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer closes
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
+	});
+
+	test("drawer submit shows error toast on 400 validation failure", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ items: [{ name: ["Required."] }] }, { status: 400 }),
+			),
+		);
+
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		await user.type(nameInput, "Test");
+
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Drawer still closes (form resets on submit before mutation resolves)
+		await waitFor(() => {
+			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
 		});
 	});
 

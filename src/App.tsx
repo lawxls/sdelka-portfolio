@@ -2,12 +2,14 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
 import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
+import type { NewItemInput } from "@/data/use-custom-items";
 import {
 	nextUnusedColor,
 	useCreateFolder,
@@ -16,7 +18,7 @@ import {
 	useFolders,
 	useUpdateFolder,
 } from "@/data/use-folders";
-import { useAssignFolder, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -93,6 +95,7 @@ function App() {
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
 	const assignFolderMutation = useAssignFolder();
+	const createItemsMutation = useCreateItems();
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -165,6 +168,16 @@ function App() {
 		}
 	}
 
+	function handleCreateItems(items: NewItemInput[]) {
+		createItemsMutation.mutate(items, {
+			onSuccess: (data) => {
+				if (data.isAsync) {
+					toast.info("Позиции обрабатываются");
+				}
+			},
+		});
+	}
+
 	function handleFolderSelect(folderId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -231,8 +244,7 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
-			{/* onSubmit: temporary no-op — wired to batch create API in #75 */}
-			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={() => {}} />
+			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 		</DndContext>
 	);
 }

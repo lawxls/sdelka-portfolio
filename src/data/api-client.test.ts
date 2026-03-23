@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import {
 	createFolder,
+	createItemsBatch,
 	deleteFolder,
 	deleteItem,
 	fetchCompanyInfo,
@@ -411,6 +412,71 @@ describe("deleteItem", () => {
 		const result = await deleteItem("i1");
 		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
+	});
+});
+
+describe("createItemsBatch", () => {
+	it("sends POST /api/v1/company/items/batch with items array and parses decimals", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.post("/api/v1/company/items/batch", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json(
+					{
+						items: [
+							{
+								id: "new-1",
+								name: "Widget A",
+								status: "searching",
+								annualQuantity: 100,
+								currentPrice: "50.00",
+								bestPrice: null,
+								averagePrice: null,
+								folderId: null,
+								unit: "шт",
+							},
+						],
+						isAsync: false,
+					},
+					{ status: 201 },
+				);
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await createItemsBatch([{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }]);
+
+		expect(capturedBody).toEqual({ items: [{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }] });
+		expect(result.isAsync).toBe(false);
+		expect(result.items?.[0].currentPrice).toBe(50);
+		expect(result.items?.[0].name).toBe("Widget A");
+	});
+
+	it("returns async response for large batches", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () => {
+				return HttpResponse.json({ isAsync: true, taskId: "task-uuid-123" }, { status: 202 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await createItemsBatch([{ name: "Item" }]);
+
+		expect(result.isAsync).toBe(true);
+		expect(result.taskId).toBe("task-uuid-123");
+		expect(result.items).toBeUndefined();
+	});
+
+	it("throws on 400 validation error", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () => {
+				return HttpResponse.json({ items: [{ name: ["This field is required."] }] }, { status: 400 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		await expect(createItemsBatch([{ name: "" }])).rejects.toThrow();
 	});
 });
 

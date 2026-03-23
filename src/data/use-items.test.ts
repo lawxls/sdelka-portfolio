@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { setToken } from "./auth";
 import type { ProcurementItem } from "./types";
-import { useAssignFolder, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
+import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn() },
@@ -523,6 +523,102 @@ describe("useAssignFolder", () => {
 			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
 		]);
 		expect(data?.pages[0].items[0].folderId).toBeNull();
+		expect(toast.error).toHaveBeenCalled();
+	});
+});
+
+describe("useCreateItems", () => {
+	it("sends items to POST /items/batch and invalidates queries on sync response", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.post("/api/v1/company/items/batch", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json(
+					{
+						items: [makeItem("new-1", { name: "Widget A" })],
+						isAsync: false,
+					},
+					{ status: 201 },
+				);
+			}),
+			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
+			http.get("/api/v1/company/items/totals", () =>
+				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
+			),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
+		);
+
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync([{ name: "Widget A" }]);
+		});
+
+		expect(capturedBody).toEqual({ items: [{ name: "Widget A" }] });
+	});
+
+	it("returns isAsync false for sync response", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ items: [makeItem("new-1")], isAsync: false }, { status: 201 }),
+			),
+			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
+			http.get("/api/v1/company/items/totals", () =>
+				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
+			),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
+		);
+
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+
+		let response: unknown;
+		await act(async () => {
+			response = await result.current.mutateAsync([{ name: "Item" }]);
+		});
+
+		expect((response as { isAsync: boolean }).isAsync).toBe(false);
+	});
+
+	it("returns isAsync true for async response (>=100 items)", async () => {
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ isAsync: true, taskId: "task-123" }, { status: 202 }),
+			),
+			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
+			http.get("/api/v1/company/items/totals", () =>
+				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
+			),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
+		);
+
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+
+		let response: unknown;
+		await act(async () => {
+			response = await result.current.mutateAsync([{ name: "Item" }]);
+		});
+
+		expect((response as { isAsync: boolean }).isAsync).toBe(true);
+	});
+
+	it("shows error toast on 400 validation failure", async () => {
+		const { toast } = await import("sonner");
+
+		server.use(
+			http.post("/api/v1/company/items/batch", () =>
+				HttpResponse.json({ items: [{ name: ["This field is required."] }] }, { status: 400 }),
+			),
+		);
+
+		const { result } = renderHook(() => useCreateItems(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync([{ name: "" }]);
+			} catch {}
+		});
+
 		expect(toast.error).toHaveBeenCalled();
 	});
 });
