@@ -185,22 +185,32 @@ describe("Toolbar responsive", () => {
 		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
 	});
 
-	test("clicking search icon expands and hides icon button", () => {
+	test("clicking search icon expands and shows close button", () => {
 		renderToolbar();
 		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
 		expect(screen.queryByRole("button", { name: "Поиск" })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Закрыть поиск" })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 	});
 
-	test("blur on expanded search collapses it", () => {
+	test("close button collapses expanded search", () => {
 		renderToolbar();
 		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
-		fireEvent.blur(screen.getByPlaceholderText("Поиск по названию…"));
+		fireEvent.click(screen.getByRole("button", { name: "Закрыть поиск" }));
 		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Закрыть поиск" })).not.toBeInTheDocument();
 	});
 
-	test("icon-only add button renders for mobile", () => {
-		renderToolbar();
-		expect(screen.getByRole("button", { name: "Добавить" })).toBeInTheDocument();
+	test("close button flushes pending search", () => {
+		vi.useFakeTimers();
+		const onSearchChange = vi.fn();
+		renderToolbar({ onSearchChange });
+
+		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
+		fireEvent.change(screen.getByPlaceholderText("Поиск по названию…"), { target: { value: "бетон" } });
+		fireEvent.click(screen.getByRole("button", { name: "Закрыть поиск" }));
+
+		expect(onSearchChange).toHaveBeenCalledWith("бетон");
+		vi.useRealTimers();
 	});
 });
