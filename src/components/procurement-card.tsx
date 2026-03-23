@@ -34,10 +34,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Folder, ProcurementItem, ProcurementStatus } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
-import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { InlineRenameInput } from "./inline-rename-input";
 
-const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
+export const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
 	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
@@ -74,7 +75,7 @@ export function ProcurementCard({
 	const overpayment = getOverpayment(item);
 	const dev = formatDeviation(deviation);
 	const [isEditing, setIsEditing] = useState(false);
-	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	const values: Record<string, string> = {
 		annualCost: formatCurrency(getAnnualCost(item)),
@@ -109,12 +110,15 @@ export function ProcurementCard({
 
 	const card = (
 		<article
-			className={`rounded-lg border bg-background p-4${onRowClick ? " cursor-pointer active:bg-muted/50 transition-colors" : ""}`}
+			className={cn(
+				"rounded-lg border bg-background p-4",
+				onRowClick && "cursor-pointer active:bg-muted/50 transition-colors",
+			)}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
 			tabIndex={onRowClick ? 0 : undefined}
 			role={onRowClick ? "button" : undefined}
-			data-testid={hasActions ? `card-${item.id}` : undefined}
+			data-testid={`card-${item.id}`}
 		>
 			<div className="flex items-start justify-between">
 				<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
@@ -172,7 +176,7 @@ export function ProcurementCard({
 							{onDeleteItem && (
 								<>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem variant="destructive" onSelect={() => setDeletingItem(item)}>
+									<DropdownMenuItem variant="destructive" onSelect={() => setIsDeleting(true)}>
 										<Trash2 className="size-3.5" />
 										Удалить
 									</DropdownMenuItem>
@@ -198,7 +202,7 @@ export function ProcurementCard({
 					</div>
 				)}
 			</div>
-			<span className={`mt-0.5 inline-flex items-center gap-1.5 text-xs ${STATUS_CONFIG[item.status].className}`}>
+			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
 				{item.status === "searching" && <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />}
 				{item.status === "negotiating" && (
 					<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
@@ -227,20 +231,20 @@ export function ProcurementCard({
 				</div>
 			</dl>
 
-			{deletingItem && (
-				<AlertDialog open onOpenChange={(open) => !open && setDeletingItem(null)}>
+			{isDeleting && (
+				<AlertDialog open onOpenChange={(open) => !open && setIsDeleting(false)}>
 					<AlertDialogContent size="sm">
 						<AlertDialogHeader>
 							<AlertDialogTitle>Удалить закупку?</AlertDialogTitle>
-							<AlertDialogDescription>«{deletingItem.name}» будет удалена.</AlertDialogDescription>
+							<AlertDialogDescription>«{item.name}» будет удалена.</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel onClick={() => setDeletingItem(null)}>Отмена</AlertDialogCancel>
+							<AlertDialogCancel onClick={() => setIsDeleting(false)}>Отмена</AlertDialogCancel>
 							<AlertDialogAction
 								variant="destructive"
 								onClick={() => {
-									onDeleteItem?.(deletingItem.id);
-									setDeletingItem(null);
+									onDeleteItem?.(item.id);
+									setIsDeleting(false);
 								}}
 							>
 								Удалить
@@ -299,7 +303,7 @@ export function ProcurementCard({
 				{onDeleteItem && (
 					<>
 						<ContextMenuSeparator />
-						<ContextMenuItem variant="destructive" onSelect={() => setDeletingItem(item)}>
+						<ContextMenuItem variant="destructive" onSelect={() => setIsDeleting(true)}>
 							<Trash2 className="size-3.5" />
 							Удалить
 						</ContextMenuItem>
@@ -307,36 +311,5 @@ export function ProcurementCard({
 				)}
 			</ContextMenuContent>
 		</ContextMenu>
-	);
-}
-
-function InlineRenameInput({
-	defaultValue,
-	onSave,
-	onCancel,
-}: {
-	defaultValue: string;
-	onSave: (name: string) => void;
-	onCancel: () => void;
-}) {
-	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
-		onSave,
-		onCancel,
-		selectOnMount: true,
-		deferFocus: true,
-	});
-
-	return (
-		<input
-			ref={inputRef}
-			type="text"
-			className="w-full bg-transparent text-sm font-medium outline-none"
-			defaultValue={defaultValue}
-			spellCheck={false}
-			autoComplete="off"
-			aria-label="Название закупки"
-			onKeyDown={handleKeyDown}
-			onBlur={handleBlur}
-		/>
 	);
 }

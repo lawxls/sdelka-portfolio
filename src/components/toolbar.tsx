@@ -93,7 +93,6 @@ export function Toolbar({
 
 	return (
 		<div className="relative flex items-center gap-2">
-			{/* Search icon — mobile only, hidden when expanded */}
 			{!searchExpanded && (
 				<Button
 					type="button"
@@ -107,7 +106,6 @@ export function Toolbar({
 				</Button>
 			)}
 
-			{/* Search input — always on desktop, expandable overlay on mobile */}
 			<div
 				className={cn(
 					"relative",
@@ -133,7 +131,6 @@ export function Toolbar({
 				/>
 			</div>
 
-			{/* Sort popover — mobile only */}
 			<Popover>
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -179,7 +176,6 @@ export function Toolbar({
 				</PopoverContent>
 			</Popover>
 
-			{/* Filter popover */}
 			<Popover>
 				<Tooltip>
 					<TooltipTrigger asChild>
@@ -229,7 +225,6 @@ export function Toolbar({
 				</PopoverContent>
 			</Popover>
 
-			{/* Download */}
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={() => {}}>
@@ -241,7 +236,6 @@ export function Toolbar({
 
 			<ThemeToggle />
 
-			{/* Add button — desktop (full text) */}
 			<Button
 				type="button"
 				size="sm"
@@ -252,7 +246,6 @@ export function Toolbar({
 				Добавить позиции
 			</Button>
 
-			{/* Add button — mobile (icon only) */}
 			<Button
 				type="button"
 				size="icon-sm"

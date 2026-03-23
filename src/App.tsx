@@ -232,7 +232,6 @@ function App() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
-							onRowClick={undefined}
 							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
 							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}

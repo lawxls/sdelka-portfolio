@@ -35,19 +35,13 @@ import {
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Folder, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
-import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
-import { useInlineEdit } from "@/hooks/use-inline-edit";
+import type { Folder, ProcurementItem, SortField, SortState } from "@/data/types";
+import { getAnnualCost, getDeviation, getOverpayment } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ProcurementCard } from "./procurement-card";
-
-const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
-	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
-	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
-	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
-};
+import { InlineRenameInput } from "./inline-rename-input";
+import { ProcurementCard, STATUS_CONFIG } from "./procurement-card";
 
 interface SortableColumn {
 	label: string;
@@ -535,36 +529,5 @@ function DraggableRow({
 		>
 			{children}
 		</TableRow>
-	);
-}
-
-function InlineRenameInput({
-	defaultValue,
-	onSave,
-	onCancel,
-}: {
-	defaultValue: string;
-	onSave: (name: string) => void;
-	onCancel: () => void;
-}) {
-	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
-		onSave,
-		onCancel,
-		selectOnMount: true,
-		deferFocus: true,
-	});
-
-	return (
-		<input
-			ref={inputRef}
-			type="text"
-			className="w-full bg-transparent text-sm font-medium outline-none"
-			defaultValue={defaultValue}
-			spellCheck={false}
-			autoComplete="off"
-			aria-label="Название закупки"
-			onKeyDown={handleKeyDown}
-			onBlur={handleBlur}
-		/>
 	);
 }
