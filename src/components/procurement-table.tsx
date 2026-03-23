@@ -216,6 +216,19 @@ export function ProcurementTable({
 								</TableCell>
 							</TableRow>
 						)}
+						{!isLoading && !error && items.length === 0 && (
+							<TableRow>
+								<TableCell colSpan={8} className="h-48">
+									<div
+										className="flex flex-col items-center justify-center gap-3 text-muted-foreground"
+										data-testid="items-empty"
+									>
+										<Inbox className="size-8" aria-hidden="true" />
+										<p className="text-sm">Позиции не найдены</p>
+									</div>
+								</TableCell>
+							</TableRow>
+						)}
 						{!isLoading &&
 							!error &&
 							items.map((item, index) => {
