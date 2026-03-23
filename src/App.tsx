@@ -197,8 +197,8 @@ function App() {
 	return (
 		<DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 			<div className="flex h-svh flex-col bg-background text-foreground">
-				<header className="z-30 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 py-2">
-					<h1 className="text-lg tracking-tight whitespace-nowrap">Ваши закупки</h1>
+				<header className="z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
+					<h1 className="hidden text-lg tracking-tight whitespace-nowrap md:block">Ваши закупки</h1>
 					<Toolbar
 						defaultSearch={search}
 						onSearchChange={handleSearchChange}
@@ -241,7 +241,7 @@ function App() {
 					</main>
 				</div>
 
-				<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
+				<footer className="z-30 shrink-0 border-t border-border bg-background px-lg py-md">
 					<SummaryPanel totals={totals} isLoading={totalsLoading} />
 				</footer>
 			</div>

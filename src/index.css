@@ -103,6 +103,15 @@
 @theme inline {
 	--font-heading: var(--font-sans);
 	--font-sans: "Inter Variable", sans-serif;
+	/* Fluid heading sizes: scale between 320px and 768px viewports */
+	--text-lg: clamp(1rem, 0.911rem + 0.45vw, 1.125rem);
+	--text-xl: clamp(1.125rem, 1.036rem + 0.45vw, 1.25rem);
+	--text-2xl: clamp(1.25rem, 1.071rem + 0.89vw, 1.5rem);
+	/* Fluid spacing tokens: scale between 320px and 768px viewports */
+	--spacing-sm: clamp(0.375rem, 0.286rem + 0.45vw, 0.5rem);
+	--spacing-md: clamp(0.5rem, 0.321rem + 0.89vw, 0.75rem);
+	--spacing-lg: clamp(0.75rem, 0.571rem + 0.89vw, 1rem);
+	--spacing-xl: clamp(1rem, 0.643rem + 1.79vw, 1.5rem);
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
