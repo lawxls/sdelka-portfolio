@@ -1,4 +1,4 @@
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -450,14 +450,10 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 							))}
 						</div>
 
-						<div className="mt-3 flex gap-2">
+						<div className="mt-3">
 							<Button type="button" variant="outline" size="sm" onClick={handleAddRow}>
 								<Plus aria-hidden="true" />
 								Добавить позицию
-							</Button>
-							<Button type="button" variant="outline" size="sm" disabled>
-								<Upload aria-hidden="true" />
-								Загрузить из файла
 							</Button>
 						</div>
 

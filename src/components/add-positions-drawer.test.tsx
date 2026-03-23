@@ -132,13 +132,6 @@ describe("AddPositionsDrawer", () => {
 		expect(nameInputs[0]).toHaveValue("");
 	});
 
-	test("Загрузить из файла button is visible but disabled", () => {
-		renderDrawer();
-		const btn = screen.getByRole("button", { name: /Загрузить из файла/ });
-		expect(btn).toBeInTheDocument();
-		expect(btn).toBeDisabled();
-	});
-
 	test("submit with valid name calls onSubmit and closes", async () => {
 		const onSubmit = vi.fn();
 		const onOpenChange = vi.fn();

@@ -387,11 +387,23 @@ describe("App", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
-	test("clicking Добавить позиции opens the drawer", async () => {
+	test("clicking Добавить позиции opens choice dialog", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
+	});
+
+	test("clicking Вручную in dialog opens the drawer", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
@@ -402,6 +414,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
@@ -509,6 +522,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Тестовая позиция");
@@ -532,6 +546,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Большая партия");
@@ -555,6 +570,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Test");
