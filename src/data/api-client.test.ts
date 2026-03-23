@@ -1,7 +1,16 @@
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
-import { fetchCompanyInfo, parseDecimals, validateCode } from "./api-client";
+import {
+	createFolder,
+	deleteFolder,
+	fetchCompanyInfo,
+	fetchFolderStats,
+	fetchFolders,
+	parseDecimals,
+	updateFolder,
+	validateCode,
+} from "./api-client";
 import { setToken } from "./auth";
 
 function mockHostname(hostname: string) {
@@ -144,5 +153,109 @@ describe("fetchCompanyInfo", () => {
 		setToken("expired-token");
 		await expect(fetchCompanyInfo()).rejects.toThrow();
 		expect(localStorage.getItem("auth-token")).toBeNull();
+	});
+});
+
+describe("fetchFolders", () => {
+	it("sends GET /api/v1/company/folders/ with auth headers", async () => {
+		let capturedHeaders: Headers | undefined;
+		const folders = [{ id: "f1", name: "Test", color: "blue" }];
+
+		server.use(
+			http.get("/api/v1/company/folders/", ({ request }) => {
+				capturedHeaders = request.headers;
+				return HttpResponse.json({ folders });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await fetchFolders();
+		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
+		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
+		expect(result).toEqual({ folders });
+	});
+});
+
+describe("fetchFolderStats", () => {
+	it("sends GET /api/v1/company/folders/stats with auth headers", async () => {
+		const stats = [
+			{ folderId: "f1", itemCount: 10 },
+			{ folderId: null, itemCount: 5 },
+		];
+
+		server.use(
+			http.get("/api/v1/company/folders/stats", () => {
+				return HttpResponse.json({ stats });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await fetchFolderStats();
+		expect(result).toEqual({ stats });
+	});
+});
+
+describe("createFolder", () => {
+	it("sends POST /api/v1/company/folders/ with name and color", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.post("/api/v1/company/folders/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ id: "new-id", name: "Test", color: "blue" }, { status: 201 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await createFolder({ name: "Test", color: "blue" });
+		expect(capturedBody).toEqual({ name: "Test", color: "blue" });
+		expect(result).toEqual({ id: "new-id", name: "Test", color: "blue" });
+	});
+
+	it("throws on 400 (duplicate name)", async () => {
+		server.use(
+			http.post("/api/v1/company/folders/", () => {
+				return HttpResponse.json({ name: ["Folder with this name already exists."] }, { status: 400 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		await expect(createFolder({ name: "Dup", color: "red" })).rejects.toThrow();
+	});
+});
+
+describe("updateFolder", () => {
+	it("sends PATCH /api/v1/company/folders/:id/ with partial data", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/company/folders/:id/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await updateFolder("f1", { name: "Renamed" });
+		expect(capturedBody).toEqual({ name: "Renamed" });
+		expect(result).toEqual({ id: "f1", name: "Renamed", color: "blue" });
+	});
+});
+
+describe("deleteFolder", () => {
+	it("sends DELETE /api/v1/company/folders/:id/ and returns void", async () => {
+		let capturedMethod: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/company/folders/:id/", ({ request }) => {
+				capturedMethod = request.method;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await deleteFolder("f1");
+		expect(capturedMethod).toBe("DELETE");
+		expect(result).toBeUndefined();
 	});
 });

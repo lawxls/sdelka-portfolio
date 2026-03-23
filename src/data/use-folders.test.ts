@@ -1,328 +1,361 @@
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { mockProcurementItems, SEED_FOLDER_ASSIGNMENTS, SEED_FOLDERS } from "./mock-data";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { delay, HttpResponse, http } from "msw";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test-msw";
+import { setToken } from "./auth";
+import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
-import { useFolders } from "./use-folders";
+import {
+	nextUnusedColor,
+	useCreateFolder,
+	useDeleteFolder,
+	useFolderStats,
+	useFolders,
+	useUpdateFolder,
+} from "./use-folders";
 
-const LS_FOLDERS_KEY = "folders";
-const LS_ASSIGNMENTS_KEY = "folder-assignments";
+vi.mock("sonner", () => ({
+	toast: { error: vi.fn() },
+}));
 
-function readStoredFolders() {
-	return JSON.parse(localStorage.getItem(LS_FOLDERS_KEY) ?? "null");
+const MOCK_FOLDERS: Folder[] = [
+	{ id: "f1", name: "Металлопрокат", color: "blue" },
+	{ id: "f2", name: "Стройматериалы", color: "green" },
+];
+
+const MOCK_STATS = [
+	{ folderId: "f1", itemCount: 10 },
+	{ folderId: "f2", itemCount: 5 },
+	{ folderId: null, itemCount: 20 },
+];
+
+function mockHostname(hostname: string) {
+	vi.spyOn(window, "location", "get").mockReturnValue({
+		...window.location,
+		hostname,
+	});
 }
 
-function readStoredAssignments() {
-	return JSON.parse(localStorage.getItem(LS_ASSIGNMENTS_KEY) ?? "null");
+let queryClient: QueryClient;
+
+function createWrapper() {
+	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children });
 }
+
+beforeEach(() => {
+	queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+	});
+	mockHostname("acme.localhost");
+	setToken("test-jwt");
+});
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
+});
+
+describe("nextUnusedColor", () => {
+	it("returns first color when no folders exist", () => {
+		expect(nextUnusedColor([])).toBe(FOLDER_COLORS[0]);
+	});
+
+	it("returns first unused color from palette", () => {
+		const folders = [{ id: "1", name: "A", color: "red" }];
+		expect(nextUnusedColor(folders)).toBe("orange");
+	});
+
+	it("cycles when all colors are used", () => {
+		const folders = FOLDER_COLORS.map((color, i) => ({ id: `${i}`, name: `F${i}`, color }));
+		const result = nextUnusedColor(folders);
+		expect(FOLDER_COLORS).toContain(result);
+	});
 });
 
 describe("useFolders", () => {
-	describe("seed fallback", () => {
-		it("returns seed folders when localStorage is empty", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			expect(result.current.folders).toEqual(SEED_FOLDERS);
-		});
+	it("fetches folder list from API", async () => {
+		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })));
 
-		it("returns seed assignments when localStorage is empty", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const items = result.current.applyFolders(mockProcurementItems);
-			const assigned = items.filter((i) => i.folderId != null);
-			expect(assigned.length).toBe(Object.keys(SEED_FOLDER_ASSIGNMENTS).length);
+		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+
+		await waitFor(() => {
+			expect(result.current.data).toEqual(MOCK_FOLDERS);
 		});
 	});
 
-	describe("localStorage persistence", () => {
-		it("reads folders from localStorage", () => {
-			const custom = [{ id: "f1", name: "Custom", color: "red" }];
-			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify(custom));
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			expect(result.current.folders).toEqual(custom);
-		});
+	it("returns loading state initially", () => {
+		server.use(
+			http.get("/api/v1/company/folders/", async () => {
+				await delay(1000);
+				return HttpResponse.json({ folders: MOCK_FOLDERS });
+			}),
+		);
 
-		it("reads assignments from localStorage", () => {
-			localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify({ "item-1": "f1" }));
-			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify([{ id: "f1", name: "X", color: "red" }]));
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const items = result.current.applyFolders(mockProcurementItems);
-			expect(items.find((i) => i.id === "item-1")?.folderId).toBe("f1");
-		});
+		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+		expect(result.current.isLoading).toBe(true);
+	});
 
-		it("persists folders to localStorage on create", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.createFolder("Новая");
+	it("returns error state on failure", async () => {
+		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({}, { status: 500 })));
+
+		const { result } = renderHook(() => useFolders(), { wrapper: createWrapper() });
+
+		await waitFor(() => {
+			expect(result.current.isError).toBe(true);
+		});
+	});
+});
+
+describe("useFolderStats", () => {
+	it("fetches and transforms stats to counts format", async () => {
+		server.use(http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })));
+
+		const { result } = renderHook(() => useFolderStats(), { wrapper: createWrapper() });
+
+		await waitFor(() => {
+			expect(result.current.data).toEqual({
+				all: 35,
+				none: 20,
+				f1: 10,
+				f2: 5,
 			});
-			const stored = readStoredFolders();
-			expect(stored).toHaveLength(SEED_FOLDERS.length + 1);
-			expect(stored.at(-1).name).toBe("Новая");
-		});
-
-		it("persists assignments to localStorage on assign", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.assignItem("item-70", "folder-1");
-			});
-			const stored = readStoredAssignments();
-			expect(stored["item-70"]).toBe("folder-1");
 		});
 	});
 
-	describe("createFolder", () => {
-		it("adds a folder with auto-assigned color", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.createFolder("Тест");
-			});
-			const created = result.current.folders.find((f) => f.name === "Тест");
-			expect(created).toBeDefined();
-			expect(FOLDER_COLORS).toContain(created?.color);
+	it("returns loading state initially", () => {
+		server.use(
+			http.get("/api/v1/company/folders/stats", async () => {
+				await delay(1000);
+				return HttpResponse.json({ stats: MOCK_STATS });
+			}),
+		);
+
+		const { result } = renderHook(() => useFolderStats(), { wrapper: createWrapper() });
+		expect(result.current.isLoading).toBe(true);
+	});
+});
+
+describe("useCreateFolder", () => {
+	it("sends POST with name and color", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.post("/api/v1/company/folders/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ id: "new-id", name: "New", color: "red" }, { status: 201 });
+			}),
+			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
+		);
+
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync({ name: "New", color: "red" });
 		});
 
-		it("auto-assigns next unused color from palette", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			// Seed uses blue, green, orange, purple. Next unused should be red, yellow, pink, or teal.
-			const seedColors = new Set(SEED_FOLDERS.map((f) => f.color));
-			act(() => {
-				result.current.createFolder("Авто-цвет");
-			});
-			const created = result.current.folders.find((f) => f.name === "Авто-цвет");
-			expect(created).toBeDefined();
-			expect(seedColors.has(created?.color ?? "")).toBe(false);
+		expect(capturedBody).toEqual({ name: "New", color: "red" });
+	});
+
+	it("optimistically adds folder to cache before server responds", async () => {
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.post("/api/v1/company/folders/", async () => {
+				await delay(5000);
+				return HttpResponse.json({ id: "new-id", name: "New", color: "red" }, { status: 201 });
+			}),
+		);
+
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ name: "New", color: "red" });
 		});
 
-		it("cycles colors when all are used", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			// Create enough folders to exhaust palette
-			const toCreate = FOLDER_COLORS.length - SEED_FOLDERS.length + 1;
-			act(() => {
-				for (let i = 0; i < toCreate; i++) {
-					result.current.createFolder(`Раздел ${i}`);
-				}
-			});
-			const lastCreated = result.current.folders.at(-1);
-			expect(FOLDER_COLORS).toContain(lastCreated?.color);
-		});
-
-		it("returns null for duplicate name", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const countBefore = result.current.folders.length;
-			act(() => {
-				result.current.createFolder(SEED_FOLDERS[0].name);
-			});
-			// Folder count unchanged = creation was rejected
-			expect(result.current.folders.length).toBe(countBefore);
-		});
-
-		it("duplicate check is case-insensitive", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const countBefore = result.current.folders.length;
-			act(() => {
-				result.current.createFolder(SEED_FOLDERS[0].name.toUpperCase());
-			});
-			expect(result.current.folders.length).toBe(countBefore);
-		});
-
-		it("generates unique id via crypto.randomUUID", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.createFolder("А");
-			});
-			act(() => {
-				result.current.createFolder("Б");
-			});
-			const a = result.current.folders.find((f) => f.name === "А");
-			const b = result.current.folders.find((f) => f.name === "Б");
-			expect(a?.id).toBeDefined();
-			expect(b?.id).toBeDefined();
-			expect(a?.id).not.toBe(b?.id);
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			expect(data?.folders).toHaveLength(3);
+			expect(data?.folders[2].name).toBe("New");
+			expect(data?.folders[2].color).toBe("red");
 		});
 	});
 
-	describe("renameFolder", () => {
-		it("renames a folder", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.renameFolder(SEED_FOLDERS[0].id, "Новое имя");
-			});
-			expect(result.current.folders.find((f) => f.id === SEED_FOLDERS[0].id)?.name).toBe("Новое имя");
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.post("/api/v1/company/folders/", () => HttpResponse.json({ name: ["Already exists."] }, { status: 400 })),
+		);
+
+		const { result } = renderHook(() => useCreateFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ name: "Dup", color: "red" });
+			} catch {}
 		});
 
-		it("returns false for duplicate name", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.renameFolder(SEED_FOLDERS[0].id, SEED_FOLDERS[1].name);
-			});
-			// Name unchanged = rename was rejected
-			expect(result.current.folders.find((f) => f.id === SEED_FOLDERS[0].id)?.name).toBe(SEED_FOLDERS[0].name);
+		const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+		expect(data?.folders).toHaveLength(2);
+		expect(toast.error).toHaveBeenCalled();
+	});
+});
+
+describe("useUpdateFolder", () => {
+	it("sends PATCH with partial data", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/company/folders/:id/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
+			}),
+			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
+		);
+
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync({ id: "f1", name: "Renamed" });
 		});
 
-		it("allows renaming to same name (own name)", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.renameFolder(SEED_FOLDERS[0].id, SEED_FOLDERS[0].name);
-			});
-			expect(result.current.folders.find((f) => f.id === SEED_FOLDERS[0].id)?.name).toBe(SEED_FOLDERS[0].name);
+		expect(capturedBody).toEqual({ name: "Renamed" });
+	});
+
+	it("optimistically updates folder in cache", async () => {
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.patch("/api/v1/company/folders/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
+			}),
+		);
+
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ id: "f1", name: "Renamed" });
 		});
 
-		it("persists rename to localStorage", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.renameFolder(SEED_FOLDERS[0].id, "Renamed");
-			});
-			const stored = readStoredFolders();
-			expect(stored.find((f: { id: string }) => f.id === SEED_FOLDERS[0].id).name).toBe("Renamed");
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			expect(data?.folders.find((f) => f.id === "f1")?.name).toBe("Renamed");
 		});
 	});
 
-	describe("recolorFolder", () => {
-		it("changes folder color", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.recolorFolder(SEED_FOLDERS[0].id, "pink");
-			});
-			expect(result.current.folders.find((f) => f.id === SEED_FOLDERS[0].id)?.color).toBe("pink");
+	it("optimistically recolors folder in cache", async () => {
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.patch("/api/v1/company/folders/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json({ id: "f1", name: "Металлопрокат", color: "pink" });
+			}),
+		);
+
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ id: "f1", color: "pink" });
 		});
 
-		it("persists recolor to localStorage", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.recolorFolder(SEED_FOLDERS[0].id, "teal");
-			});
-			const stored = readStoredFolders();
-			expect(stored.find((f: { id: string }) => f.id === SEED_FOLDERS[0].id).color).toBe("teal");
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			expect(data?.folders.find((f) => f.id === "f1")?.color).toBe("pink");
 		});
 	});
 
-	describe("deleteFolder", () => {
-		it("removes the folder", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.deleteFolder(SEED_FOLDERS[0].id);
-			});
-			expect(result.current.folders.find((f) => f.id === SEED_FOLDERS[0].id)).toBeUndefined();
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.patch("/api/v1/company/folders/:id/", () =>
+				HttpResponse.json({ name: ["Already exists."] }, { status: 400 }),
+			),
+		);
+
+		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "f1", name: "Стройматериалы" });
+			} catch {}
 		});
 
-		it("unassigns items from deleted folder", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.deleteFolder(SEED_FOLDERS[0].id);
-			});
-			const items = result.current.applyFolders(mockProcurementItems);
-			// item-1 was in folder-1 (seed)
-			expect(items.find((i) => i.id === "item-1")?.folderId).toBeNull();
+		const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+		expect(data?.folders.find((f) => f.id === "f1")?.name).toBe("Металлопрокат");
+		expect(toast.error).toHaveBeenCalled();
+	});
+});
+
+describe("useDeleteFolder", () => {
+	it("sends DELETE request", async () => {
+		let capturedId: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/company/folders/:id/", ({ params }) => {
+				capturedId = params.id as string;
+				return new HttpResponse(null, { status: 204 });
+			}),
+			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
+		);
+
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync("f1");
 		});
 
-		it("persists deletion to localStorage", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.deleteFolder(SEED_FOLDERS[0].id);
-			});
-			const stored = readStoredFolders();
-			expect(stored.find((f: { id: string }) => f.id === SEED_FOLDERS[0].id)).toBeUndefined();
+		expect(capturedId).toBe("f1");
+	});
+
+	it("optimistically removes folder from cache", async () => {
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(
+			http.delete("/api/v1/company/folders/:id/", async () => {
+				await delay(5000);
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate("f1");
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			expect(data?.folders).toHaveLength(1);
+			expect(data?.folders[0].id).toBe("f2");
 		});
 	});
 
-	describe("assignItem", () => {
-		it("assigns item to folder", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.assignItem("item-70", "folder-2");
-			});
-			const items = result.current.applyFolders(mockProcurementItems);
-			expect(items.find((i) => i.id === "item-70")?.folderId).toBe("folder-2");
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+
+		server.use(http.delete("/api/v1/company/folders/:id/", () => HttpResponse.json({}, { status: 500 })));
+
+		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync("f1");
+			} catch {}
 		});
 
-		it("unassigns item when folderId is null", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			// item-1 starts assigned to folder-1 via seed
-			act(() => {
-				result.current.assignItem("item-1", null);
-			});
-			const items = result.current.applyFolders(mockProcurementItems);
-			expect(items.find((i) => i.id === "item-1")?.folderId).toBeNull();
-		});
-	});
-
-	describe("applyFolders", () => {
-		it("sets folderId on items based on assignments", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const items = result.current.applyFolders(mockProcurementItems);
-			expect(items.find((i) => i.id === "item-1")?.folderId).toBe("folder-1");
-			expect(items.find((i) => i.id === "item-8")?.folderId).toBe("folder-2");
-		});
-
-		it("leaves unassigned items with folderId null", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const items = result.current.applyFolders(mockProcurementItems);
-			const unassignedIds = mockProcurementItems.filter((i) => !(i.id in SEED_FOLDER_ASSIGNMENTS)).map((i) => i.id);
-			for (const id of unassignedIds) {
-				expect(items.find((i) => i.id === id)?.folderId).toBeNull();
-			}
-		});
-
-		it("does not mutate original items", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const original = mockProcurementItems[0].folderId;
-			result.current.applyFolders(mockProcurementItems);
-			expect(mockProcurementItems[0].folderId).toBe(original);
-		});
-	});
-
-	describe("counts", () => {
-		it("computes counts per folder from all items", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const counts = result.current.counts;
-			// folder-1 has 9 items in seed
-			expect(counts["folder-1"]).toBe(9);
-		});
-
-		it("includes total count", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			expect(result.current.counts.all).toBe(mockProcurementItems.length);
-		});
-
-		it("includes unassigned count", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const assignedCount = Object.keys(SEED_FOLDER_ASSIGNMENTS).length;
-			expect(result.current.counts.none).toBe(mockProcurementItems.length - assignedCount);
-		});
-
-		it("updates counts after assignment", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const before = result.current.counts["folder-1"];
-			act(() => {
-				result.current.assignItem("item-70", "folder-1");
-			});
-			expect(result.current.counts["folder-1"]).toBe(before + 1);
-		});
-
-		it("updates counts after folder deletion", () => {
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			const folder1Count = result.current.counts["folder-1"];
-			const noneBefore = result.current.counts.none;
-			act(() => {
-				result.current.deleteFolder("folder-1");
-			});
-			expect(result.current.counts["folder-1"]).toBeUndefined();
-			expect(result.current.counts.none).toBe(noneBefore + folder1Count);
-		});
-	});
-
-	describe("auto-color assignment", () => {
-		it("assigns first unused color from FOLDER_COLORS order", () => {
-			localStorage.clear();
-			// Start fresh with no folders
-			localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify([]));
-			localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify({}));
-			const { result } = renderHook(() => useFolders(mockProcurementItems));
-			act(() => {
-				result.current.createFolder("Первая");
-			});
-			const created = result.current.folders.find((f) => f.name === "Первая");
-			expect(created?.color).toBe(FOLDER_COLORS[0]);
-		});
+		const data = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+		expect(data?.folders).toHaveLength(2);
+		expect(toast.error).toHaveBeenCalled();
 	});
 });

@@ -1,104 +1,159 @@
-import { useCallback, useMemo, useState } from "react";
-import { SEED_FOLDER_ASSIGNMENTS, SEED_FOLDERS } from "./mock-data";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import {
+	createFolder as apiCreateFolder,
+	deleteFolder as apiDeleteFolder,
+	updateFolder as apiUpdateFolder,
+	fetchFolderStats,
+	fetchFolders,
+} from "./api-client";
+import { SEED_FOLDER_ASSIGNMENTS } from "./mock-data";
 import type { Folder, ProcurementItem } from "./types";
 import { FOLDER_COLORS } from "./types";
-
-const LS_FOLDERS_KEY = "folders";
-const LS_ASSIGNMENTS_KEY = "folder-assignments";
-
-function readFolders(): Folder[] {
-	const stored = localStorage.getItem(LS_FOLDERS_KEY);
-	return stored ? JSON.parse(stored) : SEED_FOLDERS;
-}
-
-function readAssignments(): Record<string, string> {
-	const stored = localStorage.getItem(LS_ASSIGNMENTS_KEY);
-	return stored ? JSON.parse(stored) : SEED_FOLDER_ASSIGNMENTS;
-}
-
-function persistFolders(folders: Folder[]) {
-	localStorage.setItem(LS_FOLDERS_KEY, JSON.stringify(folders));
-}
-
-function persistAssignments(assignments: Record<string, string>) {
-	localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify(assignments));
-}
 
 export function nextUnusedColor(folders: Folder[]): string {
 	const used = new Set(folders.map((f) => f.color));
 	for (const color of FOLDER_COLORS) {
 		if (!used.has(color)) return color;
 	}
-	// All colors used — cycle from the start
 	return FOLDER_COLORS[folders.length % FOLDER_COLORS.length];
 }
 
-export interface UseFoldersResult {
-	folders: Folder[];
-	counts: Record<string, number>;
-	createFolder: (name: string) => Folder | null;
-	renameFolder: (id: string, name: string) => boolean;
-	recolorFolder: (id: string, color: string) => void;
-	deleteFolder: (id: string) => void;
-	assignItem: (itemId: string, folderId: string | null) => void;
-	applyFolders: (items: ProcurementItem[]) => ProcurementItem[];
+// --- Query hooks ---
+
+export function useFolders() {
+	return useQuery({
+		queryKey: ["folders"],
+		queryFn: fetchFolders,
+		select: (data) => data.folders,
+	});
 }
 
-export function useFolders(allItems: ProcurementItem[]): UseFoldersResult {
-	const [folders, setFolders] = useState<Folder[]>(readFolders);
+export function useFolderStats() {
+	return useQuery({
+		queryKey: ["folderStats"],
+		queryFn: fetchFolderStats,
+		select: (data) => {
+			const counts: Record<string, number> = {};
+			let total = 0;
+			for (const stat of data.stats) {
+				if (stat.folderId === null) {
+					counts.none = stat.itemCount;
+				} else {
+					counts[stat.folderId] = stat.itemCount;
+				}
+				total += stat.itemCount;
+			}
+			counts.all = total;
+			return counts;
+		},
+	});
+}
+
+// --- Mutation hooks ---
+
+export function useCreateFolder() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: { name: string; color: string }) => apiCreateFolder(data),
+		onMutate: async (newFolder) => {
+			await queryClient.cancelQueries({ queryKey: ["folders"] });
+			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+
+			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
+				folders: [...(old?.folders ?? []), { id: `temp-${Date.now()}`, ...newFolder }],
+			}));
+
+			return { previous };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(["folders"], context.previous);
+			}
+			toast.error("Не удалось создать раздел");
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["folders"] });
+			queryClient.invalidateQueries({ queryKey: ["folderStats"] });
+		},
+	});
+}
+
+export function useUpdateFolder() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, ...data }: { id: string; name?: string; color?: string }) => apiUpdateFolder(id, data),
+		onMutate: async ({ id, ...updates }) => {
+			await queryClient.cancelQueries({ queryKey: ["folders"] });
+			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+
+			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
+				folders: (old?.folders ?? []).map((f) => (f.id === id ? { ...f, ...updates } : f)),
+			}));
+
+			return { previous };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(["folders"], context.previous);
+			}
+			toast.error("Не удалось обновить раздел");
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["folders"] });
+			queryClient.invalidateQueries({ queryKey: ["folderStats"] });
+		},
+	});
+}
+
+export function useDeleteFolder() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => apiDeleteFolder(id),
+		onMutate: async (id) => {
+			await queryClient.cancelQueries({ queryKey: ["folders"] });
+			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+
+			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
+				folders: (old?.folders ?? []).filter((f) => f.id !== id),
+			}));
+
+			return { previous };
+		},
+		onError: (_err, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(["folders"], context.previous);
+			}
+			toast.error("Не удалось удалить раздел");
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["folders"] });
+			queryClient.invalidateQueries({ queryKey: ["folderStats"] });
+			queryClient.invalidateQueries({ queryKey: ["items"] });
+		},
+	});
+}
+
+// --- Temporary backward compatibility (removed in #74/#76) ---
+
+const LS_ASSIGNMENTS_KEY = "folder-assignments";
+
+function readAssignments(): Record<string, string> {
+	const stored = localStorage.getItem(LS_ASSIGNMENTS_KEY);
+	return stored ? JSON.parse(stored) : SEED_FOLDER_ASSIGNMENTS;
+}
+
+function persistAssignments(assignments: Record<string, string>) {
+	localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify(assignments));
+}
+
+/** @deprecated Temporary — replaced by item mutations in #74 */
+export function useFolderAssignments() {
 	const [assignments, setAssignments] = useState<Record<string, string>>(readAssignments);
-
-	const createFolder = useCallback((name: string): Folder | null => {
-		let created: Folder | null = null;
-		setFolders((prev) => {
-			const lower = name.toLowerCase();
-			if (prev.some((f) => f.name.toLowerCase() === lower)) return prev;
-			const folder: Folder = {
-				id: crypto.randomUUID(),
-				name,
-				color: nextUnusedColor(prev),
-			};
-			const next = [...prev, folder];
-			persistFolders(next);
-			created = folder;
-			return next;
-		});
-		return created;
-	}, []);
-
-	const renameFolder = useCallback((id: string, name: string): boolean => {
-		let success = false;
-		setFolders((prev) => {
-			const lower = name.toLowerCase();
-			if (prev.some((f) => f.id !== id && f.name.toLowerCase() === lower)) return prev;
-			const next = prev.map((f) => (f.id === id ? { ...f, name } : f));
-			persistFolders(next);
-			success = true;
-			return next;
-		});
-		return success;
-	}, []);
-
-	const recolorFolder = useCallback((id: string, color: string) => {
-		setFolders((prev) => {
-			const next = prev.map((f) => (f.id === id ? { ...f, color } : f));
-			persistFolders(next);
-			return next;
-		});
-	}, []);
-
-	const deleteFolder = useCallback((id: string) => {
-		setFolders((prev) => {
-			const next = prev.filter((f) => f.id !== id);
-			persistFolders(next);
-			return next;
-		});
-		setAssignments((prev) => {
-			const next = Object.fromEntries(Object.entries(prev).filter(([, fid]) => fid !== id));
-			persistAssignments(next);
-			return next;
-		});
-	}, []);
 
 	const assignItem = useCallback((itemId: string, folderId: string | null) => {
 		setAssignments((prev) => {
@@ -123,29 +178,5 @@ export function useFolders(allItems: ProcurementItem[]): UseFoldersResult {
 		[assignments],
 	);
 
-	const counts = useMemo(() => {
-		const result: Record<string, number> = { all: allItems.length };
-		let unassigned = 0;
-		for (const item of allItems) {
-			const folderId = assignments[item.id];
-			if (folderId) {
-				result[folderId] = (result[folderId] ?? 0) + 1;
-			} else {
-				unassigned++;
-			}
-		}
-		result.none = unassigned;
-		return result;
-	}, [allItems, assignments]);
-
-	return {
-		folders,
-		counts,
-		createFolder,
-		renameFolder,
-		recolorFolder,
-		deleteFolder,
-		assignItem,
-		applyFolders,
-	};
+	return { assignItem, applyFolders };
 }

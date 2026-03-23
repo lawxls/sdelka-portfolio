@@ -10,7 +10,15 @@ import { Toolbar } from "@/components/toolbar";
 import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
 import { useCustomItems } from "@/data/use-custom-items";
-import { useFolders } from "@/data/use-folders";
+import {
+	nextUnusedColor,
+	useCreateFolder,
+	useDeleteFolder,
+	useFolderAssignments,
+	useFolderStats,
+	useFolders,
+	useUpdateFolder,
+} from "@/data/use-folders";
 import { useItemOverrides } from "@/data/use-item-overrides";
 import { useProcurementData } from "@/data/use-procurement-data";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
@@ -72,8 +80,15 @@ function App() {
 		[applyOverrides, customItems],
 	);
 
-	const { folders, counts, applyFolders, assignItem, createFolder, renameFolder, recolorFolder, deleteFolder } =
-		useFolders(effectiveItems);
+	// Server-backed folder hooks
+	const { data: folders = [], isLoading: foldersLoading } = useFolders();
+	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats();
+	const createFolderMutation = useCreateFolder();
+	const updateFolderMutation = useUpdateFolder();
+	const deleteFolderMutation = useDeleteFolder();
+
+	// Temporary: localStorage-based folder assignments (replaced by item mutations in #74)
+	const { assignItem, applyFolders } = useFolderAssignments();
 	const itemsWithFolders = useMemo(() => applyFolders(effectiveItems), [applyFolders, effectiveItems]);
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -184,11 +199,12 @@ function App() {
 						folders={folders}
 						counts={counts}
 						activeFolder={folder}
+						isLoading={foldersLoading || statsLoading}
 						onFolderSelect={handleFolderSelect}
-						onCreateFolder={createFolder}
-						onRenameFolder={renameFolder}
-						onRecolorFolder={recolorFolder}
-						onDeleteFolder={deleteFolder}
+						onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
+						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
+						onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
+						onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
 					/>
 					<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
 						<ProcurementTable

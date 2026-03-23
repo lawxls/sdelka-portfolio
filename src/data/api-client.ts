@@ -1,5 +1,6 @@
 import { clearToken, getToken } from "./auth";
 import { getTenant } from "./tenant";
+import type { Folder } from "./types";
 
 const BASE = "/api/v1/company";
 
@@ -88,4 +89,36 @@ export async function validateCode(code: string): Promise<{ token: string }> {
 
 export async function fetchCompanyInfo(): Promise<{ name: string }> {
 	return request("/info/");
+}
+
+// --- Folders ---
+
+export async function fetchFolders(): Promise<{ folders: Folder[] }> {
+	return request("/folders/");
+}
+
+export async function fetchFolderStats(): Promise<{
+	stats: Array<{ folderId: string | null; itemCount: number }>;
+}> {
+	return request("/folders/stats");
+}
+
+export async function createFolder(data: { name: string; color: string }): Promise<Folder> {
+	return request("/folders/", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateFolder(id: string, data: { name?: string; color?: string }): Promise<Folder> {
+	return request(`/folders/${id}/`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+	return request(`/folders/${id}/`, { method: "DELETE" });
 }
