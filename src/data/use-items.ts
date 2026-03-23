@@ -8,8 +8,7 @@ import {
 	fetchItems,
 	fetchTotals,
 } from "./api-client";
-import type { FilterState, ProcurementItem, SortState } from "./types";
-import type { NewItemInput } from "./use-custom-items";
+import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
 
 interface ItemQueryParams {
 	search: string;

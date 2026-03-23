@@ -5,8 +5,7 @@ import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SEED_FOLDERS } from "@/data/mock-data";
-import type { ProcurementItem } from "@/data/types";
+import type { Folder, ProcurementItem } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { server } from "@/test-msw";
 import App, { DragItemOverlay } from "./App";
@@ -50,13 +49,20 @@ const FOLDER_STATS = [
 	{ folderId: null, itemCount: 7 },
 ];
 
+const TEST_FOLDERS: Folder[] = [
+	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
+	{ id: "folder-2", name: "Стройматериалы", color: "green" },
+	{ id: "folder-3", name: "Инженерные системы", color: "orange" },
+	{ id: "folder-4", name: "Электрика", color: "purple" },
+];
+
 // --- MSW handlers ---
 
-let folderList = [...SEED_FOLDERS];
+let folderList = [...TEST_FOLDERS];
 let itemList = [...ITEMS_PAGE_1];
 
 function setupHandlers() {
-	folderList = [...SEED_FOLDERS];
+	folderList = [...TEST_FOLDERS];
 	itemList = [...ITEMS_PAGE_1];
 	server.use(
 		http.get("/api/v1/company/items/", ({ request }) => {

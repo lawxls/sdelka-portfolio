@@ -8,8 +8,15 @@ import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
-import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
-import type { NewItemInput } from "@/data/use-custom-items";
+import type {
+	DeviationFilter,
+	FilterState,
+	NewItemInput,
+	ProcurementItem,
+	SortField,
+	SortState,
+	StatusFilter,
+} from "@/data/types";
 import {
 	nextUnusedColor,
 	useCreateFolder,

@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import type { NewItemInput } from "@/data/use-custom-items";
+import type { NewItemInput } from "@/data/types";
 import { AddPositionsDrawer } from "./add-positions-drawer";
 
 function renderDrawer(

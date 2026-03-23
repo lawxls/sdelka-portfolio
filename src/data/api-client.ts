@@ -1,7 +1,6 @@
 import { clearToken, getToken } from "./auth";
 import { getTenant } from "./tenant";
-import type { Folder, ProcurementItem, Totals } from "./types";
-import type { NewItemInput } from "./use-custom-items";
+import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
 const BASE = "/api/v1/company";
 
