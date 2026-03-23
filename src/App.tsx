@@ -1,15 +1,13 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
-import { mockProcurementItems } from "@/data/mock-data";
 import type { DeviationFilter, FilterState, ProcurementItem, SortField, SortState, StatusFilter } from "@/data/types";
-import { useCustomItems } from "@/data/use-custom-items";
 import {
 	nextUnusedColor,
 	useCreateFolder,
@@ -19,8 +17,7 @@ import {
 	useFolders,
 	useUpdateFolder,
 } from "@/data/use-folders";
-import { useItemOverrides } from "@/data/use-item-overrides";
-import { useProcurementData } from "@/data/use-procurement-data";
+import { useItems, useTotals } from "@/data/use-items";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -73,12 +70,18 @@ function App() {
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
 
-	const { applyOverrides, deleteItem, renameItem } = useItemOverrides();
-	const { items: customItems, addItems } = useCustomItems();
-	const effectiveItems = useMemo(
-		() => applyOverrides([...customItems, ...mockProcurementItems]),
-		[applyOverrides, customItems],
-	);
+	// Server-backed item hooks
+	const {
+		items,
+		hasNextPage,
+		loadMore,
+		isLoading: itemsLoading,
+		isFetchingNextPage,
+		error: itemsError,
+		refetch: refetchItems,
+	} = useItems({ search, filters, sort, folder });
+
+	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder });
 
 	// Server-backed folder hooks
 	const { data: folders = [], isLoading: foldersLoading } = useFolders();
@@ -87,20 +90,10 @@ function App() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
-	// Temporary: localStorage-based folder assignments (replaced by item mutations in #74)
-	const { assignItem, applyFolders } = useFolderAssignments();
-	const itemsWithFolders = useMemo(() => applyFolders(effectiveItems), [applyFolders, effectiveItems]);
+	// Temporary: localStorage-based folder assignments for drag-drop (replaced by item mutations in #74)
+	const { assignItem } = useFolderAssignments();
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
-
-	const { items, totals, hasNextPage, loadMore } = useProcurementData({
-		items: itemsWithFolders,
-		search,
-		filters,
-		sort,
-		batchSize: 25,
-		folder,
-	});
 
 	function handleSearchChange(query: string) {
 		setSearchParams(
@@ -154,7 +147,7 @@ function App() {
 	);
 
 	function handleDragStart(event: DragStartEvent) {
-		const item = itemsWithFolders.find((i) => i.id === event.active.id);
+		const item = items.find((i) => i.id === event.active.id);
 		setActiveItem(item ?? null);
 	}
 
@@ -214,17 +207,19 @@ function App() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
-							onDeleteItem={deleteItem}
-							onRenameItem={renameItem}
 							onAssignFolder={assignItem}
 							draggable
 							activeItemId={activeItem?.id}
+							isLoading={itemsLoading}
+							isFetchingNextPage={isFetchingNextPage}
+							error={itemsError}
+							onRetry={() => refetchItems()}
 						/>
 					</main>
 				</div>
 
 				<footer className="z-30 shrink-0 border-t border-border bg-background px-4 py-3">
-					<SummaryPanel totals={totals} />
+					<SummaryPanel totals={totals} isLoading={totalsLoading} />
 				</footer>
 			</div>
 
@@ -233,7 +228,8 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
-			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={addItems} />
+			{/* onSubmit: temporary no-op — wired to batch create API in #75 */}
+			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={() => {}} />
 		</DndContext>
 	);
 }

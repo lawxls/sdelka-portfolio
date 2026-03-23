@@ -1,6 +1,6 @@
 import { clearToken, getToken } from "./auth";
 import { getTenant } from "./tenant";
-import type { Folder } from "./types";
+import type { Folder, ProcurementItem, Totals } from "./types";
 
 const BASE = "/api/v1/company";
 
@@ -121,4 +121,44 @@ export async function updateFolder(id: string, data: { name?: string; color?: st
 
 export async function deleteFolder(id: string): Promise<void> {
 	return request(`/folders/${id}/`, { method: "DELETE" });
+}
+
+// --- Items ---
+
+function buildQuery(params: { [key: string]: string | number | undefined }): string {
+	const sp = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		if (value != null && value !== "") sp.set(key, String(value));
+	}
+	const qs = sp.toString();
+	return qs ? `?${qs}` : "";
+}
+
+export interface FetchItemsParams {
+	q?: string;
+	status?: string;
+	deviation?: string;
+	folder?: string;
+	sort?: string;
+	dir?: string;
+	cursor?: string;
+	limit?: number;
+}
+
+export async function fetchItems(params: FetchItemsParams): Promise<{
+	items: ProcurementItem[];
+	nextCursor: string | null;
+}> {
+	return request(`/items/${buildQuery(params as Record<string, string | number | undefined>)}`);
+}
+
+export interface FetchTotalsParams {
+	q?: string;
+	status?: string;
+	deviation?: string;
+	folder?: string;
+}
+
+export async function fetchTotals(params: FetchTotalsParams): Promise<Totals> {
+	return request(`/items/totals${buildQuery(params as Record<string, string | number | undefined>)}`);
 }

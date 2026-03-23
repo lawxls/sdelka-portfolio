@@ -260,6 +260,53 @@ describe("ProcurementTable", () => {
 	});
 });
 
+describe("ProcurementTable loading states", () => {
+	test("renders skeleton rows when isLoading is true", () => {
+		render(<ProcurementTable {...defaultProps} items={[]} isLoading />);
+		const skeletonRows = screen.getAllByTestId("skeleton-row");
+		expect(skeletonRows).toHaveLength(6);
+	});
+
+	test("does not render data rows when isLoading is true", () => {
+		render(<ProcurementTable {...defaultProps} isLoading />);
+		// Only header row + 6 skeleton rows
+		expect(screen.queryByText("Арматура А500")).not.toBeInTheDocument();
+	});
+
+	test("renders spinner when isFetchingNextPage is true", () => {
+		render(<ProcurementTable {...defaultProps} isFetchingNextPage />);
+		expect(screen.getByTestId("loading-more-spinner")).toBeInTheDocument();
+	});
+
+	test("does not render spinner when isFetchingNextPage is false", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.queryByTestId("loading-more-spinner")).not.toBeInTheDocument();
+	});
+});
+
+describe("ProcurementTable error state", () => {
+	test("renders error state with retry button on query failure", () => {
+		render(<ProcurementTable {...defaultProps} items={[]} error={new Error("Network error")} onRetry={() => {}} />);
+		expect(screen.getByTestId("items-error")).toBeInTheDocument();
+		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
+		expect(screen.getByText("Повторить")).toBeInTheDocument();
+	});
+
+	test("clicking retry button calls onRetry", async () => {
+		const user = userEvent.setup();
+		const onRetry = vi.fn();
+		render(<ProcurementTable {...defaultProps} items={[]} error={new Error("fail")} onRetry={onRetry} />);
+
+		await user.click(screen.getByText("Повторить"));
+		expect(onRetry).toHaveBeenCalledOnce();
+	});
+
+	test("does not render error state when no error", () => {
+		render(<ProcurementTable {...defaultProps} />);
+		expect(screen.queryByTestId("items-error")).not.toBeInTheDocument();
+	});
+});
+
 const testFolders: Folder[] = [
 	{ id: "f-1", name: "Металлопрокат", color: "blue" },
 	{ id: "f-2", name: "Стройматериалы", color: "green" },

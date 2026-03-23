@@ -1,5 +1,16 @@
 import { useDraggable } from "@dnd-kit/core";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, FolderInput, Inbox, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import {
+	AlertTriangle,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	Check,
+	FolderInput,
+	Inbox,
+	LoaderCircle,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -22,6 +33,7 @@ import {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Folder, ProcurementItem, ProcurementStatus, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
@@ -53,6 +65,9 @@ const ANALYSIS_COLUMNS: SortableColumn[] = [
 	{ label: "ПЕРЕПЛАТА\u00A0(₽)", field: "overpayment" },
 ];
 
+const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
+const SKELETON_COL_KEYS = ["sc-1", "sc-2", "sc-3", "sc-4", "sc-5", "sc-6"] as const;
+
 function SortIcon({ field, sort }: { field: SortField; sort: SortState | null }) {
 	if (sort?.field !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" aria-hidden="true" />;
 	return sort.direction === "asc" ? (
@@ -75,6 +90,10 @@ interface ProcurementTableProps {
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	draggable?: boolean;
 	activeItemId?: string | null;
+	isLoading?: boolean;
+	isFetchingNextPage?: boolean;
+	error?: Error | null;
+	onRetry?: () => void;
 }
 
 export function ProcurementTable({
@@ -90,6 +109,10 @@ export function ProcurementTable({
 	onAssignFolder,
 	draggable,
 	activeItemId,
+	isLoading,
+	isFetchingNextPage,
+	error,
+	onRetry,
 }: ProcurementTableProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -154,163 +177,209 @@ export function ProcurementTable({
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{items.map((item, index) => {
-							const deviation = getDeviation(item);
-							const overpayment = getOverpayment(item);
-							const dev = formatDeviation(deviation);
-							const status = STATUS_CONFIG[item.status];
-							const folder = item.folderId ? folderMap[item.folderId] : undefined;
-							const rowCls = onRowClick ? "cursor-pointer group" : "group";
-							const isEditing = editingItemId === item.id;
-
-							const nameCell = isEditing ? (
-								<TableCell className={`font-medium ${stickyNameCell}`}>
-									<InlineRenameInput
-										defaultValue={item.name}
-										onSave={(name) => {
-											onRenameItem?.(item.id, name);
-											setEditingItemId(null);
-										}}
-										onCancel={() => setEditingItemId(null)}
-									/>
-								</TableCell>
-							) : (
-								<TableCell className={`font-medium ${stickyNameCell}`}>
-									<div>
-										<div className="flex items-center gap-2">
-											{item.name}
-											{folder && (
-												<div
-													className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
-													data-testid={`folder-badge-${item.id}`}
-												>
-													<span
-														className="size-2 shrink-0 rounded-full"
-														style={{
-															backgroundColor: `var(--folder-${folder.color})`,
-														}}
-														aria-hidden="true"
-													/>
-													<span className="text-xs text-muted-foreground">{folder.name}</span>
-												</div>
-											)}
-										</div>
-										<div className="mt-0.5">
-											<span
-												className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
+						{isLoading &&
+							SKELETON_KEYS.map((key) => (
+								<TableRow key={key} data-testid="skeleton-row">
+									<TableCell className="text-right">
+										<Skeleton className="ml-auto h-4 w-6" />
+									</TableCell>
+									<TableCell className={stickyNameCell}>
+										<Skeleton className="h-4 w-48" />
+										<Skeleton className="mt-1 h-3 w-24" />
+									</TableCell>
+									{SKELETON_COL_KEYS.map((ck) => (
+										<TableCell key={ck} className="text-right">
+											<Skeleton className="ml-auto h-4 w-16" />
+										</TableCell>
+									))}
+								</TableRow>
+							))}
+						{error && !isLoading && (
+							<TableRow>
+								<TableCell colSpan={8} className="h-48">
+									<div
+										className="flex flex-col items-center justify-center gap-3 text-muted-foreground"
+										data-testid="items-error"
+									>
+										<AlertTriangle className="size-8" aria-hidden="true" />
+										<p className="text-sm">Не удалось загрузить данные</p>
+										{onRetry && (
+											<button
+												type="button"
+												className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+												onClick={onRetry}
 											>
-												{item.status === "searching" && (
-													<LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
-												)}
-												{item.status === "negotiating" && (
-													<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-												)}
-												{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
-												{status.label}
-											</span>
-										</div>
+												Повторить
+											</button>
+										)}
 									</div>
 								</TableCell>
-							);
+							</TableRow>
+						)}
+						{!isLoading &&
+							!error &&
+							items.map((item, index) => {
+								const deviation = getDeviation(item);
+								const overpayment = getOverpayment(item);
+								const dev = formatDeviation(deviation);
+								const status = STATUS_CONFIG[item.status];
+								const folder = item.folderId ? folderMap[item.folderId] : undefined;
+								const rowCls = onRowClick ? "cursor-pointer group" : "group";
+								const isEditing = editingItemId === item.id;
 
-							const isDragActive = activeItemId === item.id;
-							const rowClassName = cn(
-								rowCls,
-								item.status === "searching" && "negotiating-stripe",
-								isDragActive && "dragging-row",
-							);
-							const rowProps = {
-								className: rowClassName,
-								onClick: onRowClick ? () => onRowClick(item) : undefined,
-								"data-testid": hasContextMenu ? `row-${item.id}` : undefined,
-							};
-							const rowChildren = (
-								<>
-									<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
-									{nameCell}
-									<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
-									<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
-									<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
-									<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
-									<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
-									<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
-										{formatCurrency(overpayment)}
+								const nameCell = isEditing ? (
+									<TableCell className={`font-medium ${stickyNameCell}`}>
+										<InlineRenameInput
+											defaultValue={item.name}
+											onSave={(name) => {
+												onRenameItem?.(item.id, name);
+												setEditingItemId(null);
+											}}
+											onCancel={() => setEditingItemId(null)}
+										/>
 									</TableCell>
-								</>
-							);
-
-							const row = draggable ? (
-								<DraggableRow key={item.id} id={item.id} {...rowProps}>
-									{rowChildren}
-								</DraggableRow>
-							) : (
-								<TableRow key={item.id} {...rowProps}>
-									{rowChildren}
-								</TableRow>
-							);
-
-							if (!hasContextMenu) return row;
-
-							return (
-								<ContextMenu key={item.id}>
-									<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-									<ContextMenuContent>
-										{onAssignFolder && folders && (
-											<ContextMenuSub>
-												<ContextMenuSubTrigger>
-													<FolderInput className="size-3.5" />
-													Переместить в раздел
-												</ContextMenuSubTrigger>
-												<ContextMenuSubContent>
-													{folders.map((f) => (
-														<ContextMenuCheckboxItem
-															key={f.id}
-															checked={item.folderId === f.id}
-															onCheckedChange={() => onAssignFolder(item.id, f.id)}
-														>
-															<span
-																className="size-2 shrink-0 rounded-full"
-																style={{
-																	backgroundColor: `var(--folder-${f.color})`,
-																}}
-																aria-hidden="true"
-															/>
-															{f.name}
-														</ContextMenuCheckboxItem>
-													))}
-													<ContextMenuSeparator />
-													<ContextMenuCheckboxItem
-														checked={item.folderId == null}
-														onCheckedChange={() => onAssignFolder(item.id, null)}
+								) : (
+									<TableCell className={`font-medium ${stickyNameCell}`}>
+										<div>
+											<div className="flex items-center gap-2">
+												{item.name}
+												{folder && (
+													<div
+														className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+														data-testid={`folder-badge-${item.id}`}
 													>
-														<Inbox className="size-3.5" />
-														Без раздела
-													</ContextMenuCheckboxItem>
-												</ContextMenuSubContent>
-											</ContextMenuSub>
-										)}
-										{onRenameItem && (
-											<ContextMenuItem onSelect={() => setEditingItemId(item.id)}>
-												<Pencil className="size-3.5" />
-												Переименовать
-											</ContextMenuItem>
-										)}
-										{onDeleteItem && (
-											<>
-												<ContextMenuSeparator />
-												<ContextMenuItem variant="destructive" onSelect={() => setDeletingItem(item)}>
-													<Trash2 className="size-3.5" />
-													Удалить
+														<span
+															className="size-2 shrink-0 rounded-full"
+															style={{
+																backgroundColor: `var(--folder-${folder.color})`,
+															}}
+															aria-hidden="true"
+														/>
+														<span className="text-xs text-muted-foreground">{folder.name}</span>
+													</div>
+												)}
+											</div>
+											<div className="mt-0.5">
+												<span
+													className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
+												>
+													{item.status === "searching" && (
+														<LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
+													)}
+													{item.status === "negotiating" && (
+														<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+													)}
+													{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
+													{status.label}
+												</span>
+											</div>
+										</div>
+									</TableCell>
+								);
+
+								const isDragActive = activeItemId === item.id;
+								const rowClassName = cn(
+									rowCls,
+									item.status === "searching" && "negotiating-stripe",
+									isDragActive && "dragging-row",
+								);
+								const rowProps = {
+									className: rowClassName,
+									onClick: onRowClick ? () => onRowClick(item) : undefined,
+									"data-testid": hasContextMenu ? `row-${item.id}` : undefined,
+								};
+								const rowChildren = (
+									<>
+										<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
+										{nameCell}
+										<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
+										<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
+										<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
+											{formatCurrency(overpayment)}
+										</TableCell>
+									</>
+								);
+
+								const row = draggable ? (
+									<DraggableRow key={item.id} id={item.id} {...rowProps}>
+										{rowChildren}
+									</DraggableRow>
+								) : (
+									<TableRow key={item.id} {...rowProps}>
+										{rowChildren}
+									</TableRow>
+								);
+
+								if (!hasContextMenu) return row;
+
+								return (
+									<ContextMenu key={item.id}>
+										<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+										<ContextMenuContent>
+											{onAssignFolder && folders && (
+												<ContextMenuSub>
+													<ContextMenuSubTrigger>
+														<FolderInput className="size-3.5" />
+														Переместить в раздел
+													</ContextMenuSubTrigger>
+													<ContextMenuSubContent>
+														{folders.map((f) => (
+															<ContextMenuCheckboxItem
+																key={f.id}
+																checked={item.folderId === f.id}
+																onCheckedChange={() => onAssignFolder(item.id, f.id)}
+															>
+																<span
+																	className="size-2 shrink-0 rounded-full"
+																	style={{
+																		backgroundColor: `var(--folder-${f.color})`,
+																	}}
+																	aria-hidden="true"
+																/>
+																{f.name}
+															</ContextMenuCheckboxItem>
+														))}
+														<ContextMenuSeparator />
+														<ContextMenuCheckboxItem
+															checked={item.folderId == null}
+															onCheckedChange={() => onAssignFolder(item.id, null)}
+														>
+															<Inbox className="size-3.5" />
+															Без раздела
+														</ContextMenuCheckboxItem>
+													</ContextMenuSubContent>
+												</ContextMenuSub>
+											)}
+											{onRenameItem && (
+												<ContextMenuItem onSelect={() => setEditingItemId(item.id)}>
+													<Pencil className="size-3.5" />
+													Переименовать
 												</ContextMenuItem>
-											</>
-										)}
-									</ContextMenuContent>
-								</ContextMenu>
-							);
-						})}
+											)}
+											{onDeleteItem && (
+												<>
+													<ContextMenuSeparator />
+													<ContextMenuItem variant="destructive" onSelect={() => setDeletingItem(item)}>
+														<Trash2 className="size-3.5" />
+														Удалить
+													</ContextMenuItem>
+												</>
+											)}
+										</ContextMenuContent>
+									</ContextMenu>
+								);
+							})}
 					</TableBody>
 				</Table>
 				{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
+				{isFetchingNextPage && (
+					<div className="flex justify-center py-4" data-testid="loading-more-spinner">
+						<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
+					</div>
+				)}
 			</div>
 
 			{deletingItem && (

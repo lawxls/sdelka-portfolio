@@ -7,6 +7,8 @@ import {
 	fetchCompanyInfo,
 	fetchFolderStats,
 	fetchFolders,
+	fetchItems,
+	fetchTotals,
 	parseDecimals,
 	updateFolder,
 	validateCode,
@@ -257,5 +259,114 @@ describe("deleteFolder", () => {
 		const result = await deleteFolder("f1");
 		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
+	});
+});
+
+describe("fetchItems", () => {
+	it("sends GET /api/v1/company/items/ with query params and auth headers", async () => {
+		let capturedHeaders: Headers | undefined;
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/", ({ request }) => {
+				capturedHeaders = request.headers;
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					items: [
+						{
+							id: "i1",
+							name: "Widget",
+							status: "searching",
+							annualQuantity: 100,
+							currentPrice: "50.00",
+							bestPrice: "40.00",
+							averagePrice: "45.00",
+							folderId: null,
+							unit: "шт",
+						},
+					],
+					nextCursor: "abc123",
+				});
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await fetchItems({ q: "Widget", status: "searching", sort: "currentPrice", dir: "asc", limit: 25 });
+
+		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
+		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("Widget");
+		expect(url.searchParams.get("status")).toBe("searching");
+		expect(url.searchParams.get("sort")).toBe("currentPrice");
+		expect(url.searchParams.get("dir")).toBe("asc");
+		expect(url.searchParams.get("limit")).toBe("25");
+		expect(result.items[0].currentPrice).toBe(50);
+		expect(result.items[0].bestPrice).toBe(40);
+		expect(result.nextCursor).toBe("abc123");
+	});
+
+	it("omits undefined params from query string", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ items: [], nextCursor: null });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		await fetchItems({});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.toString()).toBe("");
+	});
+
+	it("sends cursor param for pagination", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ items: [], nextCursor: null });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		await fetchItems({ cursor: "eyJvcyI6MjV9" });
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("cursor")).toBe("eyJvcyI6MjV9");
+	});
+});
+
+describe("fetchTotals", () => {
+	it("sends GET /api/v1/company/items/totals with filter params and parses decimals", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/totals", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					itemCount: 42,
+					totalOverpayment: "15000.00",
+					totalSavings: "8000.00",
+					totalDeviation: "120.50",
+				});
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await fetchTotals({ q: "test", deviation: "overpaying", folder: "f1" });
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("test");
+		expect(url.searchParams.get("deviation")).toBe("overpaying");
+		expect(url.searchParams.get("folder")).toBe("f1");
+		expect(result.totalOverpayment).toBe(15000);
+		expect(result.totalSavings).toBe(8000);
+		expect(result.totalDeviation).toBe(120.5);
+		expect(result.itemCount).toBe(42);
 	});
 });
