@@ -204,6 +204,8 @@ function App() {
 						onSearchChange={handleSearchChange}
 						filters={filters}
 						onFiltersChange={handleFiltersChange}
+						sort={sort}
+						onSort={handleSort}
 						onAddPositions={() => setDrawerOpen(true)}
 					/>
 				</header>

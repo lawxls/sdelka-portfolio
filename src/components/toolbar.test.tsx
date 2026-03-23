@@ -1,18 +1,26 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { FilterState } from "@/data/types";
+import type { FilterState, SortState } from "@/data/types";
 import { Toolbar } from "./toolbar";
 
 const defaultFilters: FilterState = { deviation: "all", status: "all" };
 
 function renderToolbar(
-	overrides: Partial<{ filters: FilterState; onSearchChange: () => void; onFiltersChange: () => void }> = {},
+	overrides: Partial<{
+		filters: FilterState;
+		sort: SortState | null;
+		onSearchChange: () => void;
+		onFiltersChange: () => void;
+		onSort: () => void;
+	}> = {},
 ) {
 	const props = {
 		onSearchChange: overrides.onSearchChange ?? vi.fn(),
 		filters: overrides.filters ?? defaultFilters,
 		onFiltersChange: overrides.onFiltersChange ?? vi.fn(),
+		sort: overrides.sort ?? null,
+		onSort: overrides.onSort ?? vi.fn(),
 	};
 	return {
 		...render(
@@ -121,5 +129,78 @@ describe("Toolbar", () => {
 	test("renders create procurement button", () => {
 		renderToolbar();
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
+	});
+});
+
+describe("SortPopover", () => {
+	test("sort button renders", () => {
+		renderToolbar();
+		expect(screen.getByRole("button", { name: "Сортировка" })).toBeInTheDocument();
+	});
+
+	test("sort popover shows all sort fields on click", () => {
+		renderToolbar();
+		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
+		expect(screen.getByText("Стоимость в год")).toBeInTheDocument();
+		expect(screen.getByText("Текущая цена")).toBeInTheDocument();
+		expect(screen.getByText("Лучшая цена")).toBeInTheDocument();
+		expect(screen.getByText("Средняя цена")).toBeInTheDocument();
+		expect(screen.getByText("Отклонение (%)")).toBeInTheDocument();
+		expect(screen.getByText("Переплата (₽)")).toBeInTheDocument();
+	});
+
+	test("clicking sort field calls onSort with correct field", () => {
+		const onSort = vi.fn();
+		renderToolbar({ onSort });
+		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
+		fireEvent.click(screen.getByText("Текущая цена"));
+		expect(onSort).toHaveBeenCalledWith("currentPrice");
+	});
+
+	test("active sort field is visually indicated", () => {
+		renderToolbar({ sort: { field: "deviation", direction: "asc" } });
+		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
+		const activeBtn = screen.getByText("Отклонение (%)").closest("button");
+		expect(activeBtn?.className).toContain("font-medium");
+	});
+
+	test("sort button shows active indicator dot when sort is set", () => {
+		renderToolbar({ sort: { field: "currentPrice", direction: "asc" } });
+		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
+		const dot = sortBtn.querySelector(".bg-primary");
+		expect(dot).toBeInTheDocument();
+	});
+
+	test("no active indicator dot when sort is null", () => {
+		renderToolbar({ sort: null });
+		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
+		const dot = sortBtn.querySelector(".bg-primary");
+		expect(dot).not.toBeInTheDocument();
+	});
+});
+
+describe("Toolbar responsive", () => {
+	test("search icon button renders for mobile collapse", () => {
+		renderToolbar();
+		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
+	});
+
+	test("clicking search icon expands and hides icon button", () => {
+		renderToolbar();
+		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
+		expect(screen.queryByRole("button", { name: "Поиск" })).not.toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+	});
+
+	test("blur on expanded search collapses it", () => {
+		renderToolbar();
+		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
+		fireEvent.blur(screen.getByPlaceholderText("Поиск по названию…"));
+		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
+	});
+
+	test("icon-only add button renders for mobile", () => {
+		renderToolbar();
+		expect(screen.getByRole("button", { name: "Добавить" })).toBeInTheDocument();
 	});
 });
