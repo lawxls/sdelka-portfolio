@@ -1,63 +1,51 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearAuth, isAuthenticated, setAuthenticated, validateCode } from "./auth";
+import { afterEach, describe, expect, it } from "vitest";
+import { clearToken, getToken, hasToken, setToken } from "./auth";
 
 afterEach(() => {
 	localStorage.clear();
-	vi.restoreAllMocks();
 });
 
-describe("isAuthenticated", () => {
-	it("returns false when no stored data exists", () => {
-		expect(isAuthenticated()).toBe(false);
+describe("getToken", () => {
+	it("returns null when no token stored", () => {
+		expect(getToken()).toBeNull();
 	});
 
-	it("returns true after setAuthenticated is called", () => {
-		setAuthenticated();
-		expect(isAuthenticated()).toBe(true);
-	});
-
-	it("returns false after 24h TTL expires", () => {
-		setAuthenticated();
-		expect(isAuthenticated()).toBe(true);
-
-		// Advance time past 24 hours
-		const over24h = 24 * 60 * 60 * 1000 + 1;
-		vi.spyOn(Date, "now").mockReturnValue(Date.now() + over24h);
-
-		expect(isAuthenticated()).toBe(false);
-	});
-
-	it("returns true just before 24h TTL expires", () => {
-		setAuthenticated();
-
-		const just_under_24h = 24 * 60 * 60 * 1000 - 1000;
-		vi.spyOn(Date, "now").mockReturnValue(Date.now() + just_under_24h);
-
-		expect(isAuthenticated()).toBe(true);
+	it("returns the stored JWT", () => {
+		localStorage.setItem("auth-token", "eyJ.test.jwt");
+		expect(getToken()).toBe("eyJ.test.jwt");
 	});
 });
 
-describe("clearAuth", () => {
-	it("removes authentication", () => {
-		setAuthenticated();
-		expect(isAuthenticated()).toBe(true);
-
-		clearAuth();
-		expect(isAuthenticated()).toBe(false);
+describe("setToken", () => {
+	it("stores the JWT in localStorage", () => {
+		setToken("eyJ.new.jwt");
+		expect(localStorage.getItem("auth-token")).toBe("eyJ.new.jwt");
 	});
 });
 
-describe("validateCode", () => {
-	it("returns true for the correct code", () => {
-		expect(validateCode("Sd3lk")).toBe(true);
+describe("clearToken", () => {
+	it("removes the token from localStorage", () => {
+		setToken("eyJ.test.jwt");
+		expect(getToken()).toBe("eyJ.test.jwt");
+
+		clearToken();
+		expect(getToken()).toBeNull();
+	});
+});
+
+describe("hasToken", () => {
+	it("returns false when no token stored", () => {
+		expect(hasToken()).toBe(false);
 	});
 
-	it("returns false for an incorrect code", () => {
-		expect(validateCode("wrong")).toBe(false);
+	it("returns true when a token is stored", () => {
+		setToken("eyJ.test.jwt");
+		expect(hasToken()).toBe(true);
 	});
 
-	it("is case-sensitive", () => {
-		expect(validateCode("sd3lk")).toBe(false);
-		expect(validateCode("SD3LK")).toBe(false);
+	it("returns false after clearToken", () => {
+		setToken("eyJ.test.jwt");
+		clearToken();
+		expect(hasToken()).toBe(false);
 	});
 });

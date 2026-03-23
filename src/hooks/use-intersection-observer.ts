@@ -14,7 +14,6 @@ export function useIntersectionObserver(
 	const rootMargin = options?.rootMargin;
 	const threshold = options?.threshold;
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: callbackRef is a stable ref
 	useEffect(() => {
 		if (!target) return;
 

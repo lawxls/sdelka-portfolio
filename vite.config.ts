@@ -10,6 +10,11 @@ export default defineConfig({
 			"@": `${import.meta.dirname}/src`,
 		},
 	},
+	server: {
+		proxy: {
+			"/api": "http://localhost:8000",
+		},
+	},
 	test: {
 		globals: true,
 		environment: "jsdom",

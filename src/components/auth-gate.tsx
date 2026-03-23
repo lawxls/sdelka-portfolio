@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { AccessCodeInput } from "@/components/access-code-input";
-import { isAuthenticated, setAuthenticated, validateCode } from "@/data/auth";
+import { validateCode as apiValidateCode, fetchCompanyInfo } from "@/data/api-client";
+import { clearToken, hasToken, setToken } from "@/data/auth";
+import { getTenant } from "@/data/tenant";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
@@ -9,14 +11,28 @@ interface AuthGateProps {
 }
 
 export function AuthGate({ children }: AuthGateProps) {
-	const [authed, setAuthed] = useState(isAuthenticated);
+	const tenant = getTenant();
+	const [authed, setAuthed] = useState(false);
+	const [validating, setValidating] = useState(() => hasToken());
 	const [error, setError] = useState(false);
 	const [shake, setShake] = useState(false);
 	const [inputKey, setInputKey] = useState(0);
 
 	useMountEffect(() => {
+		if (!tenant) return;
+
+		if (hasToken()) {
+			fetchCompanyInfo()
+				.then(() => setAuthed(true))
+				.catch(() => {
+					clearToken();
+					setAuthed(false);
+				})
+				.finally(() => setValidating(false));
+		}
+
 		function revalidate() {
-			if (document.visibilityState === "visible" && !isAuthenticated()) {
+			if (document.visibilityState === "visible" && !hasToken()) {
 				setAuthed(false);
 			}
 		}
@@ -24,15 +40,32 @@ export function AuthGate({ children }: AuthGateProps) {
 		return () => document.removeEventListener("visibilitychange", revalidate);
 	});
 
+	if (!tenant) {
+		return (
+			<div className="flex h-svh items-center justify-center bg-background text-foreground">
+				<div className="text-center">
+					<h1 className="text-xl font-semibold">Компания не найдена</h1>
+					<p className="mt-2 text-sm text-muted-foreground">Проверьте правильность адреса</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (validating) {
+		return null;
+	}
+
 	if (authed) {
 		return <>{children}</>;
 	}
 
-	function handleComplete(code: string) {
-		if (validateCode(code)) {
-			setAuthenticated();
+	async function handleComplete(code: string) {
+		try {
+			const { token } = await apiValidateCode(code);
+			setToken(token);
+			setError(false);
 			setAuthed(true);
-		} else {
+		} catch {
 			setError(true);
 			setShake(true);
 			setInputKey((k) => k + 1);
