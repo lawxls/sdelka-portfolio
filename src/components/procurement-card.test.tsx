@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
 import { ProcurementCard } from "./procurement-card";
 
@@ -103,5 +104,176 @@ describe("ProcurementCard", () => {
 		expect(screen.getByText("40 ₽")).toBeInTheDocument(); // best price
 		expect(screen.getByText(/25,0/)).toBeInTheDocument(); // deviation %
 		expect(screen.getByText("1 000 ₽")).toBeInTheDocument(); // overpayment
+	});
+});
+
+const testFolders: Folder[] = [
+	{ id: "f-1", name: "Металлопрокат", color: "blue" },
+	{ id: "f-2", name: "Стройматериалы", color: "green" },
+];
+
+describe("ProcurementCard actions", () => {
+	it("renders ⋮ button when action callbacks are provided", () => {
+		const item = makeItem("1");
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onDeleteItem={vi.fn()}
+				onRenameItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		expect(screen.getByRole("button", { name: "Действия" })).toBeInTheDocument();
+	});
+
+	it("does not render ⋮ button when no action callbacks", () => {
+		const item = makeItem("1");
+		render(<ProcurementCard item={item} index={0} />);
+
+		expect(screen.queryByRole("button", { name: "Действия" })).not.toBeInTheDocument();
+	});
+
+	it("dropdown menu opens on ⋮ click with rename, delete, move-to-folder", async () => {
+		const user = userEvent.setup();
+		const item = makeItem("1");
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onDeleteItem={vi.fn()}
+				onRenameItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+
+		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		expect(screen.getByText("Удалить")).toBeInTheDocument();
+	});
+
+	it("context menu opens on right-click with rename, delete, move-to-folder", () => {
+		const item = makeItem("1");
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onDeleteItem={vi.fn()}
+				onRenameItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		fireEvent.contextMenu(screen.getByTestId("card-1"));
+
+		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
+		expect(screen.getByText("Переименовать")).toBeInTheDocument();
+		expect(screen.getByText("Удалить")).toBeInTheDocument();
+	});
+
+	it("clicking delete opens AlertDialog, confirming calls onDeleteItem", async () => {
+		const user = userEvent.setup();
+		const onDeleteItem = vi.fn();
+		const item = makeItem("1", { name: "Арматура А500" });
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onDeleteItem={onDeleteItem}
+				onRenameItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+		await user.click(screen.getByText("Удалить"));
+
+		// AlertDialog should be open
+		expect(screen.getByText("Удалить закупку?")).toBeInTheDocument();
+		const dialog = screen.getByRole("alertdialog");
+		expect(within(dialog).getByText(/Арматура А500/)).toBeInTheDocument();
+
+		// Confirm
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+		expect(onDeleteItem).toHaveBeenCalledWith("1");
+	});
+
+	it("cancelling delete does not call onDeleteItem", async () => {
+		const user = userEvent.setup();
+		const onDeleteItem = vi.fn();
+		const item = makeItem("1");
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onDeleteItem={onDeleteItem}
+				onRenameItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+		await user.click(screen.getByText("Удалить"));
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(onDeleteItem).not.toHaveBeenCalled();
+	});
+
+	it("rename via context menu shows inline input, Enter saves with onRenameItem", async () => {
+		const user = userEvent.setup();
+		const onRenameItem = vi.fn();
+		const item = makeItem("1", { name: "Арматура А500" });
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onRenameItem={onRenameItem}
+				onDeleteItem={vi.fn()}
+				onAssignFolder={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		fireEvent.contextMenu(screen.getByTestId("card-1"));
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = await screen.findByRole("textbox", { name: "Название закупки" });
+		expect(input).toBeInTheDocument();
+		await user.clear(input);
+		await user.type(input, "Новое имя{Enter}");
+
+		expect(onRenameItem).toHaveBeenCalledWith("1", "Новое имя");
+	});
+
+	it("folder submenu shows folders and clicking one calls onAssignFolder", async () => {
+		const user = userEvent.setup();
+		const onAssignFolder = vi.fn();
+		const item = makeItem("1", { folderId: "f-1" });
+		render(
+			<ProcurementCard
+				item={item}
+				index={0}
+				onAssignFolder={onAssignFolder}
+				onDeleteItem={vi.fn()}
+				onRenameItem={vi.fn()}
+				folders={testFolders}
+			/>,
+		);
+
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+		// Open folder submenu
+		fireEvent.click(screen.getByText("Переместить в раздел"));
+
+		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
+		expect(screen.getByText("Стройматериалы")).toBeInTheDocument();
+		expect(screen.getByText("Без раздела")).toBeInTheDocument();
 	});
 });
