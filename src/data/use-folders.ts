@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import {
 	createFolder as apiCreateFolder,
@@ -8,8 +7,7 @@ import {
 	fetchFolderStats,
 	fetchFolders,
 } from "./api-client";
-import { SEED_FOLDER_ASSIGNMENTS } from "./mock-data";
-import type { Folder, ProcurementItem } from "./types";
+import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
 
 export function nextUnusedColor(folders: Folder[]): string {
@@ -136,47 +134,4 @@ export function useDeleteFolder() {
 			queryClient.invalidateQueries({ queryKey: ["items"] });
 		},
 	});
-}
-
-// --- Temporary backward compatibility (removed in #74/#76) ---
-
-const LS_ASSIGNMENTS_KEY = "folder-assignments";
-
-function readAssignments(): Record<string, string> {
-	const stored = localStorage.getItem(LS_ASSIGNMENTS_KEY);
-	return stored ? JSON.parse(stored) : SEED_FOLDER_ASSIGNMENTS;
-}
-
-function persistAssignments(assignments: Record<string, string>) {
-	localStorage.setItem(LS_ASSIGNMENTS_KEY, JSON.stringify(assignments));
-}
-
-/** @deprecated Temporary — replaced by item mutations in #74 */
-export function useFolderAssignments() {
-	const [assignments, setAssignments] = useState<Record<string, string>>(readAssignments);
-
-	const assignItem = useCallback((itemId: string, folderId: string | null) => {
-		setAssignments((prev) => {
-			const next = { ...prev };
-			if (folderId == null) {
-				delete next[itemId];
-			} else {
-				next[itemId] = folderId;
-			}
-			persistAssignments(next);
-			return next;
-		});
-	}, []);
-
-	const applyFolders = useCallback(
-		(items: ProcurementItem[]): ProcurementItem[] => {
-			return items.map((item) => {
-				const folderId = assignments[item.id] ?? null;
-				return folderId === item.folderId ? item : { ...item, folderId };
-			});
-		},
-		[assignments],
-	);
-
-	return { assignItem, applyFolders };
 }

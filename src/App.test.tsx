@@ -53,9 +53,11 @@ const FOLDER_STATS = [
 // --- MSW handlers ---
 
 let folderList = [...SEED_FOLDERS];
+let itemList = [...ITEMS_PAGE_1];
 
 function setupHandlers() {
 	folderList = [...SEED_FOLDERS];
+	itemList = [...ITEMS_PAGE_1];
 	server.use(
 		http.get("/api/v1/company/items/", ({ request }) => {
 			const url = new URL(request.url);
@@ -64,7 +66,7 @@ function setupHandlers() {
 			const status = url.searchParams.get("status");
 			const deviation = url.searchParams.get("deviation");
 
-			let items = [...ITEMS_PAGE_1];
+			let items = [...itemList];
 
 			if (q) {
 				items = items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()));
@@ -106,6 +108,18 @@ function setupHandlers() {
 		http.delete("/api/v1/company/folders/:id/", ({ params }) => {
 			const id = params.id as string;
 			folderList = folderList.filter((f) => f.id !== id);
+			return new HttpResponse(null, { status: 204 });
+		}),
+		http.patch("/api/v1/company/items/:id/", async ({ request, params }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const id = params.id as string;
+			itemList = itemList.map((i) => (i.id === id ? { ...i, ...body } : i));
+			const updated = itemList.find((i) => i.id === id);
+			return HttpResponse.json(updated);
+		}),
+		http.delete("/api/v1/company/items/:id/", ({ params }) => {
+			const id = params.id as string;
+			itemList = itemList.filter((i) => i.id !== id);
 			return new HttpResponse(null, { status: 204 });
 		}),
 	);
@@ -431,6 +445,65 @@ describe("App", () => {
 
 		await waitFor(() => {
 			expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
+		});
+	});
+
+	test("context menu rename sends PATCH and updates table", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Переименовать");
+		fireEvent.click(screen.getByText("Переименовать"));
+
+		const input = screen.getByLabelText("Название закупки");
+		await user.clear(input);
+		await user.type(input, "Новое название{Enter}");
+
+		await waitFor(() => {
+			expect(screen.getByText("Новое название")).toBeInTheDocument();
+		});
+	});
+
+	test("context menu delete sends DELETE and removes row", async () => {
+		await renderAppReady();
+
+		const row = screen.getByTestId("row-item-1");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Удалить");
+		fireEvent.click(screen.getByText("Удалить"));
+
+		await screen.findByText("Удалить закупку?");
+		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Арматура А500С ∅12")).not.toBeInTheDocument();
+		});
+	});
+
+	test("context menu assign folder sends PATCH", async () => {
+		// Use an item that has no folder (item-11 has folderId: null)
+		await renderAppReady();
+
+		const row = screen.getByTestId("row-item-11");
+		fireEvent.contextMenu(row);
+
+		await screen.findByText("Переместить в раздел");
+		fireEvent.click(screen.getByText("Переместить в раздел"));
+
+		// Context menu submenu items are checkbox items — use role
+		const menuItems = await screen.findAllByRole("menuitemcheckbox");
+		const target = menuItems.find((el) => el.textContent?.includes("Стройматериалы"));
+		if (!target) throw new Error("Стройматериалы menu item not found");
+		fireEvent.click(target);
+
+		// Optimistic: folder badge should appear on item-11
+		await waitFor(() => {
+			const badge = screen.queryByTestId("folder-badge-item-11");
+			expect(badge).toBeInTheDocument();
 		});
 	});
 

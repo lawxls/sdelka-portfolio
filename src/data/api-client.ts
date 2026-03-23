@@ -145,6 +145,21 @@ export interface FetchItemsParams {
 	limit?: number;
 }
 
+export async function updateItem(
+	id: string,
+	data: { name?: string; folderId?: string | null },
+): Promise<ProcurementItem> {
+	return request(`/items/${id}/`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteItem(id: string): Promise<void> {
+	return request(`/items/${id}/`, { method: "DELETE" });
+}
+
 export async function fetchItems(params: FetchItemsParams): Promise<{
 	items: ProcurementItem[];
 	nextCursor: string | null;

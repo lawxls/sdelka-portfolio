@@ -1,12 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { delay, HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { setToken } from "./auth";
 import type { ProcurementItem } from "./types";
-import { useItems, useTotals } from "./use-items";
+import { useAssignFolder, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
+
+vi.mock("sonner", () => ({
+	toast: { error: vi.fn() },
+}));
 
 function mockHostname(hostname: string) {
 	vi.spyOn(window, "location", "get").mockReturnValue({
@@ -274,5 +278,251 @@ describe("useTotals", () => {
 		await waitFor(() => {
 			expect(result.current.isError).toBe(true);
 		});
+	});
+});
+
+// --- Helper: seed items into infinite query cache ---
+
+function seedItems(items: ProcurementItem[]) {
+	queryClient.setQueryData(
+		[
+			"items",
+			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+		],
+		{
+			pages: [{ items, nextCursor: null }],
+			pageParams: [undefined],
+		},
+	);
+}
+
+describe("useUpdateItem", () => {
+	it("sends PATCH with partial data", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json(makeItem("i1", { name: "Renamed" }));
+			}),
+			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
+			http.get("/api/v1/company/items/totals", () =>
+				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
+			),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
+		);
+
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync({ id: "i1", name: "Renamed" });
+		});
+
+		expect(capturedBody).toEqual({ name: "Renamed" });
+	});
+
+	it("optimistically renames item in cache", async () => {
+		seedItems([makeItem("i1", { name: "Old" }), makeItem("i2")]);
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json(makeItem("i1", { name: "Renamed" }));
+			}),
+		);
+
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ id: "i1", name: "Renamed" });
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items.find((i) => i.id === "i1")?.name).toBe("Renamed");
+		});
+		// Other items unchanged
+		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+			"items",
+			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+		]);
+		expect(data?.pages[0].items.find((i) => i.id === "i2")?.name).toBe("Item i2");
+	});
+
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		seedItems([makeItem("i1", { name: "Original" })]);
+
+		server.use(http.patch("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 400 })));
+
+		const { result } = renderHook(() => useUpdateItem(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "i1", name: "Bad" });
+			} catch {}
+		});
+
+		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+			"items",
+			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+		]);
+		expect(data?.pages[0].items[0].name).toBe("Original");
+		expect(toast.error).toHaveBeenCalled();
+	});
+});
+
+describe("useDeleteItem", () => {
+	it("sends DELETE request", async () => {
+		let capturedId: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/company/items/:id/", ({ params }) => {
+				capturedId = params.id as string;
+				return new HttpResponse(null, { status: 204 });
+			}),
+			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
+			http.get("/api/v1/company/items/totals", () =>
+				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
+			),
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
+		);
+
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			await result.current.mutateAsync("i1");
+		});
+
+		expect(capturedId).toBe("i1");
+	});
+
+	it("optimistically removes item from cache", async () => {
+		seedItems([makeItem("i1"), makeItem("i2"), makeItem("i3")]);
+
+		server.use(
+			http.delete("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate("i2");
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items).toHaveLength(2);
+			expect(data?.pages[0].items.map((i) => i.id)).toEqual(["i1", "i3"]);
+		});
+	});
+
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		seedItems([makeItem("i1"), makeItem("i2")]);
+
+		server.use(http.delete("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 500 })));
+
+		const { result } = renderHook(() => useDeleteItem(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync("i1");
+			} catch {}
+		});
+
+		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+			"items",
+			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+		]);
+		expect(data?.pages[0].items).toHaveLength(2);
+		expect(toast.error).toHaveBeenCalled();
+	});
+});
+
+describe("useAssignFolder", () => {
+	it("optimistically assigns folder to item", async () => {
+		seedItems([makeItem("i1", { folderId: null })]);
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json(makeItem("i1", { folderId: "f1" }));
+			}),
+		);
+
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ id: "i1", folderId: "f1" });
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items[0].folderId).toBe("f1");
+		});
+	});
+
+	it("optimistically unassigns folder (folderId: null)", async () => {
+		seedItems([makeItem("i1", { folderId: "f1" })]);
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async () => {
+				await delay(5000);
+				return HttpResponse.json(makeItem("i1", { folderId: null }));
+			}),
+		);
+
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+
+		act(() => {
+			result.current.mutate({ id: "i1", folderId: null });
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+				"items",
+				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+			]);
+			expect(data?.pages[0].items[0].folderId).toBeNull();
+		});
+	});
+
+	it("rolls back on error and shows toast", async () => {
+		const { toast } = await import("sonner");
+		seedItems([makeItem("i1", { folderId: null })]);
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", () =>
+				HttpResponse.json({ folderId: ["Invalid folder."] }, { status: 400 }),
+			),
+		);
+
+		const { result } = renderHook(() => useAssignFolder(), { wrapper: createWrapper() });
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "i1", folderId: "bad-id" });
+			} catch {}
+		});
+
+		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
+			"items",
+			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
+		]);
+		expect(data?.pages[0].items[0].folderId).toBeNull();
+		expect(toast.error).toHaveBeenCalled();
 	});
 });

@@ -4,6 +4,7 @@ import { server } from "@/test-msw";
 import {
 	createFolder,
 	deleteFolder,
+	deleteItem,
 	fetchCompanyInfo,
 	fetchFolderStats,
 	fetchFolders,
@@ -11,6 +12,7 @@ import {
 	fetchTotals,
 	parseDecimals,
 	updateFolder,
+	updateItem,
 	validateCode,
 } from "./api-client";
 import { setToken } from "./auth";
@@ -338,6 +340,77 @@ describe("fetchItems", () => {
 
 		const url = new URL(capturedUrl as string);
 		expect(url.searchParams.get("cursor")).toBe("eyJvcyI6MjV9");
+	});
+});
+
+describe("updateItem", () => {
+	it("sends PATCH /api/v1/company/items/:id/ with partial data and parses decimals", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({
+					id: "i1",
+					name: "Renamed",
+					status: "searching",
+					annualQuantity: 100,
+					currentPrice: "50.00",
+					bestPrice: "40.00",
+					averagePrice: "45.00",
+					folderId: null,
+				});
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await updateItem("i1", { name: "Renamed" });
+		expect(capturedBody).toEqual({ name: "Renamed" });
+		expect(result.name).toBe("Renamed");
+		expect(result.currentPrice).toBe(50);
+		expect(result.bestPrice).toBe(40);
+	});
+
+	it("sends folderId for folder assignment", async () => {
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({
+					id: "i1",
+					name: "Item",
+					status: "searching",
+					annualQuantity: 100,
+					currentPrice: "50.00",
+					bestPrice: null,
+					averagePrice: null,
+					folderId: "f1",
+				});
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		await updateItem("i1", { folderId: "f1" });
+		expect(capturedBody).toEqual({ folderId: "f1" });
+	});
+});
+
+describe("deleteItem", () => {
+	it("sends DELETE /api/v1/company/items/:id/ and returns void", async () => {
+		let capturedMethod: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/company/items/:id/", ({ request }) => {
+				capturedMethod = request.method;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		setToken("eyJ.test.jwt");
+		const result = await deleteItem("i1");
+		expect(capturedMethod).toBe("DELETE");
+		expect(result).toBeUndefined();
 	});
 });
 

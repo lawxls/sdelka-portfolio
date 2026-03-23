@@ -12,12 +12,11 @@ import {
 	nextUnusedColor,
 	useCreateFolder,
 	useDeleteFolder,
-	useFolderAssignments,
 	useFolderStats,
 	useFolders,
 	useUpdateFolder,
 } from "@/data/use-folders";
-import { useItems, useTotals } from "@/data/use-items";
+import { useAssignFolder, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -90,8 +89,10 @@ function App() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
-	// Temporary: localStorage-based folder assignments for drag-drop (replaced by item mutations in #74)
-	const { assignItem } = useFolderAssignments();
+	// Item mutation hooks
+	const updateItemMutation = useUpdateItem();
+	const deleteItemMutation = useDeleteItem();
+	const assignFolderMutation = useAssignFolder();
 
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -157,10 +158,10 @@ function App() {
 		const itemId = String(event.active.id);
 		const targetId = String(event.over.id);
 		if (targetId === "none") {
-			assignItem(itemId, null);
+			assignFolderMutation.mutate({ id: itemId, folderId: null });
 		} else if (targetId.startsWith("folder-drop-")) {
 			const folderId = targetId.replace("folder-drop-", "");
-			assignItem(itemId, folderId);
+			assignFolderMutation.mutate({ id: itemId, folderId });
 		}
 	}
 
@@ -207,7 +208,9 @@ function App() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
-							onAssignFolder={assignItem}
+							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
+							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
+							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
 							draggable
 							activeItemId={activeItem?.id}
 							isLoading={itemsLoading}
