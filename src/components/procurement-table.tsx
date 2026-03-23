@@ -38,6 +38,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Folder, ProcurementItem, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
@@ -126,6 +127,8 @@ export function ProcurementTable({
 	}, [folders]);
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
+	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
+	const [optimisticNames, setOptimisticNames] = useState<Record<string, string>>({});
 	const [deletingItem, setDeletingItem] = useState<ProcurementItem | null>(null);
 
 	if (isMobile) {
@@ -318,12 +321,13 @@ export function ProcurementTable({
 								const folder = item.folderId ? folderMap[item.folderId] : undefined;
 								const rowCls = onRowClick ? "cursor-pointer group" : "group";
 								const isEditing = editingItemId === item.id;
-
+								const displayName = optimisticNames[item.id] ?? item.name;
 								const nameCell = isEditing ? (
 									<TableCell className={`font-medium ${stickyNameCell}`}>
 										<InlineRenameInput
 											defaultValue={item.name}
 											onSave={(name) => {
+												setOptimisticNames((prev) => ({ ...prev, [item.id]: name }));
 												onRenameItem?.(item.id, name);
 												setEditingItemId(null);
 											}}
@@ -334,7 +338,7 @@ export function ProcurementTable({
 									<TableCell className={`font-medium ${stickyNameCell}`}>
 										<div>
 											<div className="flex items-center gap-2">
-												{item.name}
+												{displayName}
 												{folder && (
 													<div
 														className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
@@ -410,7 +414,7 @@ export function ProcurementTable({
 								return (
 									<ContextMenu key={item.id}>
 										<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-										<ContextMenuContent>
+										<ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
 											{onAssignFolder && folders && (
 												<ContextMenuSub>
 													<ContextMenuSubTrigger>
@@ -446,7 +450,12 @@ export function ProcurementTable({
 												</ContextMenuSub>
 											)}
 											{onRenameItem && (
-												<ContextMenuItem onSelect={() => setEditingItemId(item.id)}>
+												<ContextMenuItem
+													onSelect={() => {
+														willEditRef.current = true;
+														setEditingItemId(item.id);
+													}}
+												>
 													<Pencil className="size-3.5" />
 													Переименовать
 												</ContextMenuItem>

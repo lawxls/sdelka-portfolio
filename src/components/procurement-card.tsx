@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Folder, ProcurementItem, ProcurementStatus } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
+import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
@@ -76,6 +77,8 @@ export function ProcurementCard({
 	const dev = formatDeviation(deviation);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [optimisticName, setOptimisticName] = useState<string>();
+	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 
 	const values: Record<string, string> = {
 		annualCost: formatCurrency(getAnnualCost(item)),
@@ -95,17 +98,20 @@ export function ProcurementCard({
 
 	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder);
 
+	const displayName = optimisticName ?? item.name;
+
 	const nameContent = isEditing ? (
 		<InlineRenameInput
 			defaultValue={item.name}
 			onSave={(name) => {
+				setOptimisticName(name);
 				onRenameItem?.(item.id, name);
 				setIsEditing(false);
 			}}
 			onCancel={() => setIsEditing(false)}
 		/>
 	) : (
-		<span className="font-medium text-sm">{item.name}</span>
+		<span className="font-medium text-sm">{displayName}</span>
 	);
 
 	const card = (
@@ -121,7 +127,22 @@ export function ProcurementCard({
 			data-testid={`card-${item.id}`}
 		>
 			<div className="flex items-start justify-between">
-				<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+				<div className="flex items-center gap-1.5">
+					<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+					{folder && !isEditing && (
+						<div
+							className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+							data-testid={`folder-badge-${item.id}`}
+						>
+							<span
+								className="size-2 shrink-0 rounded-full"
+								style={{ backgroundColor: `var(--folder-${folder.color})` }}
+								aria-hidden="true"
+							/>
+							<span className="text-xs text-muted-foreground">{folder.name}</span>
+						</div>
+					)}
+				</div>
 				{hasActions && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -134,7 +155,18 @@ export function ProcurementCard({
 								<Ellipsis className="size-4" />
 							</button>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
+						<DropdownMenuContent className="min-w-56" align="end" onCloseAutoFocus={onCloseAutoFocus}>
+							{onRenameItem && (
+								<DropdownMenuItem
+									onSelect={() => {
+										willEditRef.current = true;
+										setIsEditing(true);
+									}}
+								>
+									<Pencil className="size-3.5" />
+									Переименовать
+								</DropdownMenuItem>
+							)}
 							{onAssignFolder && folders && (
 								<DropdownMenuSub>
 									<DropdownMenuSubTrigger>
@@ -167,12 +199,6 @@ export function ProcurementCard({
 									</DropdownMenuSubContent>
 								</DropdownMenuSub>
 							)}
-							{onRenameItem && (
-								<DropdownMenuItem onSelect={() => setIsEditing(true)}>
-									<Pencil className="size-3.5" />
-									Переименовать
-								</DropdownMenuItem>
-							)}
 							{onDeleteItem && (
 								<>
 									<DropdownMenuSeparator />
@@ -186,22 +212,7 @@ export function ProcurementCard({
 					</DropdownMenu>
 				)}
 			</div>
-			<div className="mt-1 flex items-center gap-2">
-				{nameContent}
-				{folder && !isEditing && (
-					<div
-						className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
-						data-testid={`folder-badge-${item.id}`}
-					>
-						<span
-							className="size-2 shrink-0 rounded-full"
-							style={{ backgroundColor: `var(--folder-${folder.color})` }}
-							aria-hidden="true"
-						/>
-						<span className="text-xs text-muted-foreground">{folder.name}</span>
-					</div>
-				)}
-			</div>
+			<div className="mt-1">{nameContent}</div>
 			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
 				{item.status === "searching" && <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />}
 				{item.status === "negotiating" && (
@@ -261,7 +272,18 @@ export function ProcurementCard({
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
-			<ContextMenuContent>
+			<ContextMenuContent className="min-w-56" onCloseAutoFocus={onCloseAutoFocus}>
+				{onRenameItem && (
+					<ContextMenuItem
+						onSelect={() => {
+							willEditRef.current = true;
+							setIsEditing(true);
+						}}
+					>
+						<Pencil className="size-3.5" />
+						Переименовать
+					</ContextMenuItem>
+				)}
 				{onAssignFolder && folders && (
 					<ContextMenuSub>
 						<ContextMenuSubTrigger>
@@ -293,12 +315,6 @@ export function ProcurementCard({
 							</ContextMenuCheckboxItem>
 						</ContextMenuSubContent>
 					</ContextMenuSub>
-				)}
-				{onRenameItem && (
-					<ContextMenuItem onSelect={() => setIsEditing(true)}>
-						<Pencil className="size-3.5" />
-						Переименовать
-					</ContextMenuItem>
 				)}
 				{onDeleteItem && (
 					<>

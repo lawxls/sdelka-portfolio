@@ -145,18 +145,41 @@ export function useCreateItems() {
 export function useUpdateItem() {
 	const queryClient = useQueryClient();
 
-	return useMutation({
+	const mutation = useMutation({
 		mutationFn: ({ id, ...data }: { id: string; name?: string }) => apiUpdateItem(id, data),
 		onMutate: async ({ id, ...updates }) =>
 			optimisticItemUpdate(queryClient, (_key, data) =>
 				updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
 			),
+		onSuccess: (serverItem) => {
+			for (const [key] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+				queryClient.setQueryData<ItemsCache>(key, (old) =>
+					old ? updateItemInPages(old, serverItem.id, () => serverItem) : old,
+				);
+			}
+		},
 		onError: (_err, _vars, context) => {
 			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось обновить закупку");
 		},
-		onSettled: () => invalidateItemQueries(queryClient),
 	});
+
+	return {
+		...mutation,
+		/** mutate with synchronous cache update so the old name never flashes. */
+		mutate(vars: { id: string; name?: string; folderId?: string | null }) {
+			const { id, ...updates } = vars;
+			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+				if (data) {
+					queryClient.setQueryData<ItemsCache>(
+						key,
+						updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
+					);
+				}
+			}
+			mutation.mutate(vars);
+		},
+	};
 }
 
 export function useDeleteItem() {
