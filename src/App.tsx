@@ -1,13 +1,15 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { PanelLeft } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
-import { FolderSidebar } from "@/components/folder-sidebar";
+import { DESKTOP_QUERY, FolderSidebar, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { SummaryPanel } from "@/components/summary-panel";
 import { Toolbar } from "@/components/toolbar";
+import { Button } from "@/components/ui/button";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -106,6 +108,10 @@ function App() {
 	const createItemsMutation = useCreateItems();
 
 	const isMobile = useIsMobile();
+	const [sidebarOpen, setSidebarOpen] = useState(() => {
+		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
+		return localStorage.getItem(LS_SIDEBAR_KEY) !== "false";
+	});
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleSearchChange(query: string) {
@@ -187,6 +193,10 @@ function App() {
 		});
 	}
 
+	function handleSidebarOpenChange(next: boolean) {
+		setSidebarOpen(next);
+	}
+
 	function handleFolderSelect(folderId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -200,6 +210,15 @@ function App() {
 		<DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
 			<div className="flex h-svh flex-col bg-background text-foreground">
 				<header className="z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						className="shrink-0 md:hidden"
+						onClick={() => handleSidebarOpenChange(true)}
+						aria-label="Открыть боковую панель"
+					>
+						<PanelLeft className="size-4" />
+					</Button>
 					<h1 className="hidden text-lg tracking-tight whitespace-nowrap md:block">Ваши закупки</h1>
 					<Toolbar
 						defaultSearch={search}
@@ -218,6 +237,8 @@ function App() {
 						counts={counts}
 						activeFolder={folder}
 						isLoading={foldersLoading || statsLoading}
+						open={sidebarOpen}
+						onOpenChange={handleSidebarOpenChange}
 						onFolderSelect={handleFolderSelect}
 						onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
 						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
