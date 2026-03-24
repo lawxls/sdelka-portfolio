@@ -83,7 +83,7 @@ describe("AddPositionsDialog", () => {
 		expect(screen.queryByTestId("dropzone")).not.toBeInTheDocument();
 	});
 
-	test("after loading completes, stub preview is shown", async () => {
+	test("after loading completes, import preview is shown with items", async () => {
 		const fakeItems: NewItemInput[] = [{ name: "Item 1" }, { name: "Item 2" }];
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 
@@ -96,9 +96,32 @@ describe("AddPositionsDialog", () => {
 		fireEvent.drop(zone, { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
 
 		await waitFor(() => {
-			expect(screen.getByText(/Предпросмотр/)).toBeInTheDocument();
+			expect(screen.getByText("Item 1")).toBeInTheDocument();
 		});
+		expect(screen.getByText("Item 2")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Импортировать/ })).toBeInTheDocument();
 		expect(screen.queryByText("Обработка файла…")).not.toBeInTheDocument();
+	});
+
+	test("back from preview returns to upload step", async () => {
+		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
+
+		renderDialog();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		const zone = screen.getByTestId("dropzone");
+		fireEvent.drop(zone, { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+
+		await waitFor(() => {
+			expect(screen.getByText("Item 1")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+
+		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
+		expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
 	});
 
 	test("back button on upload step returns to choice", async () => {

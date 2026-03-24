@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { parseFile } from "@/data/mock-file-parser";
 import type { NewItemInput } from "@/data/types";
 import { FileDropzone } from "./file-dropzone";
+import { ImportPreview } from "./import-preview";
 
 type Step = "choice" | "upload" | "loading" | "preview";
 
@@ -112,9 +113,17 @@ export function AddPositionsDialog({ open, onOpenChange, onManual }: AddPosition
 					</div>
 				)}
 				{step === "preview" && (
-					<div className="py-8 text-center text-sm text-muted-foreground">
-						Предпросмотр будет добавлен в следующем обновлении
-					</div>
+					<ImportPreview
+						items={_parsedItems}
+						onBack={() => {
+							setParsedItems([]);
+							setStep("upload");
+						}}
+						onImport={() => {
+							// Will be wired to createItemsBatch in #91
+							onOpenChange(false);
+						}}
+					/>
 				)}
 			</DialogContent>
 		</Dialog>
