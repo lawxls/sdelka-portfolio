@@ -1,4 +1,4 @@
-import { Check, Ellipsis, FolderInput, Inbox, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import { Check, Clock, Ellipsis, FolderInput, Inbox, LoaderCircle, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
 	AlertDialog,
@@ -26,10 +26,8 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Folder, ProcurementItem, ProcurementStatus } from "@/data/types";
@@ -38,8 +36,10 @@ import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
+import { TruncatedName } from "./truncated-name";
 
 export const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
+	awaiting_analytics: { label: STATUS_LABELS.awaiting_analytics, className: "text-violet-600 dark:text-violet-400" },
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
 	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
@@ -57,7 +57,7 @@ interface ProcurementCardProps {
 }
 
 const FIELDS: { label: string; key: string }[] = [
-	{ label: "Стоимость в\u00A0год", key: "annualCost" },
+	{ label: "Бюджет в\u00A0год", key: "annualCost" },
 	{ label: "Текущая цена", key: "currentPrice" },
 	{ label: "Лучшая цена", key: "bestPrice" },
 ];
@@ -111,7 +111,7 @@ export function ProcurementCard({
 			onCancel={() => setIsEditing(false)}
 		/>
 	) : (
-		<span className="font-medium text-sm">{displayName}</span>
+		<TruncatedName name={displayName} className="font-medium text-sm" />
 	);
 
 	const card = (
@@ -168,36 +168,34 @@ export function ProcurementCard({
 								</DropdownMenuItem>
 							)}
 							{onAssignFolder && folders && (
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger>
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuLabel className="flex items-center gap-1.5">
 										<FolderInput className="size-3.5" />
 										Переместить в раздел
-									</DropdownMenuSubTrigger>
-									<DropdownMenuSubContent>
-										{folders.map((f) => (
-											<DropdownMenuCheckboxItem
-												key={f.id}
-												checked={item.folderId === f.id}
-												onCheckedChange={() => onAssignFolder(item.id, f.id)}
-											>
-												<span
-													className="size-2 shrink-0 rounded-full"
-													style={{ backgroundColor: `var(--folder-${f.color})` }}
-													aria-hidden="true"
-												/>
-												{f.name}
-											</DropdownMenuCheckboxItem>
-										))}
-										<DropdownMenuSeparator />
+									</DropdownMenuLabel>
+									{folders.map((f) => (
 										<DropdownMenuCheckboxItem
-											checked={item.folderId == null}
-											onCheckedChange={() => onAssignFolder(item.id, null)}
+											key={f.id}
+											checked={item.folderId === f.id}
+											onCheckedChange={() => onAssignFolder(item.id, f.id)}
 										>
-											<Inbox className="size-3.5" />
-											Без раздела
+											<span
+												className="size-2 shrink-0 rounded-full"
+												style={{ backgroundColor: `var(--folder-${f.color})` }}
+												aria-hidden="true"
+											/>
+											{f.name}
 										</DropdownMenuCheckboxItem>
-									</DropdownMenuSubContent>
-								</DropdownMenuSub>
+									))}
+									<DropdownMenuCheckboxItem
+										checked={item.folderId == null}
+										onCheckedChange={() => onAssignFolder(item.id, null)}
+									>
+										<Inbox className="size-3.5" />
+										Без раздела
+									</DropdownMenuCheckboxItem>
+								</>
 							)}
 							{onDeleteItem && (
 								<>
@@ -214,6 +212,7 @@ export function ProcurementCard({
 			</div>
 			<div className="mt-1">{nameContent}</div>
 			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
+				{item.status === "awaiting_analytics" && <Clock className="size-3" aria-hidden="true" />}
 				{item.status === "searching" && <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />}
 				{item.status === "negotiating" && (
 					<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />

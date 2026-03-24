@@ -250,6 +250,13 @@ describe("FolderSidebar inline creation", () => {
 		expect(input).toHaveAttribute("autocomplete", "off");
 	});
 
+	test("inline input has maxLength=12", async () => {
+		render(<FolderSidebar {...makeProps()} />);
+		await userEvent.setup().click(screen.getByRole("button", { name: /Новый раздел/ }));
+		const input = screen.getByRole("textbox", { name: "Название раздела" });
+		expect(input).toHaveAttribute("maxlength", "13");
+	});
+
 	test("Enter saves non-empty name and calls onCreateFolder", async () => {
 		const onCreateFolder = vi.fn();
 		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);

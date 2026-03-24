@@ -5,6 +5,7 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	Check,
+	Clock,
 	FolderInput,
 	Inbox,
 	LoaderCircle,
@@ -43,6 +44,7 @@ import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
 import { ProcurementCard, STATUS_CONFIG } from "./procurement-card";
+import { TruncatedName } from "./truncated-name";
 
 interface SortableColumn {
 	label: string;
@@ -50,7 +52,7 @@ interface SortableColumn {
 }
 
 const INPUT_COLUMNS: SortableColumn[] = [
-	{ label: "СТОИМОСТЬ В\u00A0ГОД", field: "annualCost" },
+	{ label: "БЮДЖЕТ В\u00A0ГОД", field: "annualCost" },
 	{ label: "ТЕКУЩАЯ ЦЕНА (ед.)", field: "currentPrice" },
 ];
 
@@ -214,15 +216,15 @@ export function ProcurementTable({
 	}
 
 	const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
-	const stickyNameHead = "sticky top-0 left-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
-	const stickyNameCell = "sticky left-0 z-10 transition-colors bg-inherit";
+	const stickyNameHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] w-[1%]";
+	const stickyNameCell = "transition-colors w-[1%]";
 	const analysisHead =
 		"sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] text-highlight-foreground";
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div
 				ref={scrollContainerRef}
-				className="flex-1 overflow-auto touch-manipulation"
+				className="flex flex-1 flex-col overflow-auto touch-manipulation"
 				data-testid="table-scroll-container"
 			>
 				<Table>
@@ -298,19 +300,6 @@ export function ProcurementTable({
 								</TableCell>
 							</TableRow>
 						)}
-						{!isLoading && !error && items.length === 0 && (
-							<TableRow>
-								<TableCell colSpan={8} className="h-48">
-									<div
-										className="flex flex-col items-center justify-center gap-3 text-muted-foreground"
-										data-testid="items-empty"
-									>
-										<Inbox className="size-8" aria-hidden="true" />
-										<p className="text-sm">Позиции не найдены</p>
-									</div>
-								</TableCell>
-							</TableRow>
-						)}
 						{!isLoading &&
 							!error &&
 							items.map((item, index) => {
@@ -338,10 +327,10 @@ export function ProcurementTable({
 									<TableCell className={`font-medium ${stickyNameCell}`}>
 										<div>
 											<div className="flex items-center gap-2">
-												{displayName}
+												<TruncatedName name={displayName} />
 												{folder && (
 													<div
-														className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 														data-testid={`folder-badge-${item.id}`}
 													>
 														<span
@@ -359,6 +348,7 @@ export function ProcurementTable({
 												<span
 													className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
 												>
+													{item.status === "awaiting_analytics" && <Clock className="size-3" aria-hidden="true" />}
 													{item.status === "searching" && (
 														<LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
 													)}
@@ -415,6 +405,17 @@ export function ProcurementTable({
 									<ContextMenu key={item.id}>
 										<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
 										<ContextMenuContent onCloseAutoFocus={onCloseAutoFocus}>
+											{onRenameItem && (
+												<ContextMenuItem
+													onSelect={() => {
+														willEditRef.current = true;
+														setEditingItemId(item.id);
+													}}
+												>
+													<Pencil className="size-3.5" />
+													Переименовать
+												</ContextMenuItem>
+											)}
 											{onAssignFolder && folders && (
 												<ContextMenuSub>
 													<ContextMenuSubTrigger>
@@ -449,17 +450,6 @@ export function ProcurementTable({
 													</ContextMenuSubContent>
 												</ContextMenuSub>
 											)}
-											{onRenameItem && (
-												<ContextMenuItem
-													onSelect={() => {
-														willEditRef.current = true;
-														setEditingItemId(item.id);
-													}}
-												>
-													<Pencil className="size-3.5" />
-													Переименовать
-												</ContextMenuItem>
-											)}
 											{onDeleteItem && (
 												<>
 													<ContextMenuSeparator />
@@ -475,6 +465,15 @@ export function ProcurementTable({
 							})}
 					</TableBody>
 				</Table>
+				{!isLoading && !error && items.length === 0 && (
+					<div
+						className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground"
+						data-testid="items-empty"
+					>
+						<Inbox className="size-8" aria-hidden="true" />
+						<p className="text-sm">Позиции не найдены</p>
+					</div>
+				)}
 				{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
 				{isFetchingNextPage && (
 					<div className="flex justify-center py-4" data-testid="loading-more-spinner">

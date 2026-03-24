@@ -67,6 +67,7 @@ describe("Toolbar", () => {
 		expect(screen.getByText("Все")).toBeInTheDocument();
 		expect(screen.getByText("С переплатой")).toBeInTheDocument();
 		expect(screen.getByText("С экономией")).toBeInTheDocument();
+		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(screen.getByText("Переговоры завершены")).toBeInTheDocument();
@@ -141,7 +142,7 @@ describe("SortPopover", () => {
 	test("sort popover shows all sort fields on click", () => {
 		renderToolbar();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
-		expect(screen.getByText("Стоимость в год")).toBeInTheDocument();
+		expect(screen.getByText("Бюджет в год")).toBeInTheDocument();
 		expect(screen.getByText("Текущая цена")).toBeInTheDocument();
 		expect(screen.getByText("Лучшая цена")).toBeInTheDocument();
 		expect(screen.getByText("Средняя цена")).toBeInTheDocument();

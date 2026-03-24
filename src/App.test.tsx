@@ -15,7 +15,7 @@ import App, { DragItemOverlay } from "./App";
 const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
-		status: i < 10 ? "searching" : i < 20 ? "negotiating" : "completed",
+		status: i < 5 ? "awaiting_analytics" : i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
 		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
 	}),
 );
@@ -301,10 +301,10 @@ describe("App", () => {
 		await user.click(within(sidebar).getByRole("button", { name: /Новый раздел/ }));
 
 		const input = within(sidebar).getByRole("textbox", { name: "Название раздела" });
-		await user.type(input, "Тестовый раздел{Enter}");
+		await user.type(input, "Тест раздел{Enter}");
 
 		await waitFor(() => {
-			expect(within(sidebar).getByText("Тестовый раздел")).toBeInTheDocument();
+			expect(within(sidebar).getByText("Тест раздел")).toBeInTheDocument();
 		});
 	});
 

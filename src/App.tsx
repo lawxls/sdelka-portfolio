@@ -1,5 +1,13 @@
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
-import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+	DndContext,
+	DragOverlay,
+	PointerSensor,
+	pointerWithin,
+	TouchSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
 import { PanelLeft } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
@@ -57,7 +65,7 @@ function parseDeviation(params: URLSearchParams): DeviationFilter {
 
 function parseStatus(params: URLSearchParams): StatusFilter {
 	const v = params.get("status");
-	return v === "searching" || v === "negotiating" || v === "completed" ? v : "all";
+	return v === "awaiting_analytics" || v === "searching" || v === "negotiating" || v === "completed" ? v : "all";
 }
 
 export function DragItemOverlay({ item }: { item: ProcurementItem }) {
@@ -211,8 +219,13 @@ function App() {
 	}
 
 	return (
-		<DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-			<div className="flex h-svh flex-col bg-background text-foreground">
+		<DndContext
+			sensors={sensors}
+			collisionDetection={pointerWithin}
+			onDragStart={handleDragStart}
+			onDragEnd={handleDragEnd}
+		>
+			<div className="flex h-svh flex-col overflow-hidden bg-background text-foreground">
 				<header className="z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
 					<Button
 						variant="ghost"
@@ -235,7 +248,7 @@ function App() {
 					/>
 				</header>
 
-				<div className="flex min-h-0 flex-1">
+				<div className="flex min-h-0 min-w-0 flex-1">
 					<FolderSidebar
 						folders={folders}
 						counts={counts}
@@ -249,7 +262,7 @@ function App() {
 						onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
 						onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
 					/>
-					<main className="flex min-h-0 flex-1 flex-col bg-muted/50">
+					<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
 						<ProcurementTable
 							items={items}
 							folders={folders}

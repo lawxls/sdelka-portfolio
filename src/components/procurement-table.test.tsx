@@ -47,6 +47,16 @@ const mockItems: ProcurementItem[] = [
 		averagePrice: null,
 		folderId: null,
 	},
+	{
+		id: "4",
+		name: "Пружинный блок TFK",
+		status: "awaiting_analytics",
+		annualQuantity: 10000,
+		currentPrice: 1850,
+		bestPrice: null,
+		averagePrice: null,
+		folderId: null,
+	},
 ];
 
 const defaultProps = {
@@ -65,8 +75,8 @@ describe("ProcurementTable", () => {
 
 	test("renders correct number of data rows", () => {
 		render(<ProcurementTable {...defaultProps} />);
-		// 1 header row + 3 data rows
-		expect(screen.getAllByRole("row")).toHaveLength(4);
+		// 1 header row + 4 data rows
+		expect(screen.getAllByRole("row")).toHaveLength(5);
 	});
 
 	test("renders sequential row numbers starting from 1", () => {
@@ -87,12 +97,14 @@ describe("ProcurementTable", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
+		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
 		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
+		expect(screen.getByText("Ожидание аналитики").className).toContain("text-violet-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
@@ -243,20 +255,16 @@ describe("ProcurementTable", () => {
 		}
 	});
 
-	test("name column header has sticky left-0 class for horizontal pinning", () => {
+	test("name column header is not horizontally pinned", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		const nameHeader = screen.getByText("НАИМЕНОВАНИЕ").closest("[data-slot='table-head']");
-		expect(nameHeader?.className).toContain("sticky");
-		expect(nameHeader?.className).toContain("left-0");
-		expect(nameHeader?.className).toContain("z-30");
+		expect(nameHeader?.className).not.toContain("left-0");
 	});
 
-	test("name column body cells have sticky left-0 class", () => {
+	test("name column body cells are not horizontally pinned", () => {
 		render(<ProcurementTable {...defaultProps} />);
 		const nameCell = screen.getByText("Арматура А500").closest("[data-slot='table-cell']");
-		expect(nameCell?.className).toContain("sticky");
-		expect(nameCell?.className).toContain("left-0");
-		expect(nameCell?.className).toContain("bg-inherit");
+		expect(nameCell?.className).not.toContain("left-0");
 	});
 });
 
@@ -576,6 +584,37 @@ describe("ProcurementTable responsive card/table switch", () => {
 		for (const card of cards) {
 			expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
 		}
+	});
+});
+
+describe("ProcurementTable name truncation", () => {
+	const longName = "Пена монтажная профессиональная зимняя морозостойкая";
+
+	test("truncates names longer than 32 characters with ellipsis", () => {
+		const items = [{ ...mockItems[0], name: longName }];
+		render(<ProcurementTable {...defaultProps} items={items} />);
+
+		expect(screen.getByText(`${longName.slice(0, 40)}…`)).toBeInTheDocument();
+		expect(screen.queryByText(longName)).not.toBeInTheDocument();
+	});
+
+	test("shows full name in tooltip for truncated names", async () => {
+		const user = userEvent.setup();
+		const items = [{ ...mockItems[0], name: longName }];
+		render(<ProcurementTable {...defaultProps} items={items} />);
+
+		const truncated = screen.getByText(`${longName.slice(0, 40)}…`);
+		await user.hover(truncated);
+
+		expect(await screen.findByRole("tooltip")).toHaveTextContent(longName);
+	});
+
+	test("does not truncate names within 32 characters", () => {
+		render(<ProcurementTable {...defaultProps} />);
+
+		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
+		// No tooltip trigger wrapper needed
+		expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 	});
 });
 

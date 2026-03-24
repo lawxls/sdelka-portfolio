@@ -61,9 +61,16 @@ describe("ProcurementCard", () => {
 	});
 
 	it("renders status icon and color for each status variant", () => {
+		const awaitingAnalytics = makeItem("s0", { status: "awaiting_analytics" });
 		const searching = makeItem("s1", { status: "searching" });
 		const negotiating = makeItem("s2", { status: "negotiating" });
 		const completed = makeItem("s3", { status: "completed" });
+
+		const { unmount: u0 } = render(<ProcurementCard item={awaitingAnalytics} index={0} />);
+		const awaitStatus = screen.getByText("Ожидание аналитики");
+		expect(awaitStatus.className).toContain("text-violet-600");
+		expect(awaitStatus.querySelector("svg")).toBeTruthy();
+		u0();
 
 		const { unmount: u1 } = render(<ProcurementCard item={searching} index={0} />);
 		const searchStatus = screen.getByText("Ищем поставщиков");
@@ -104,6 +111,37 @@ describe("ProcurementCard", () => {
 		expect(screen.getByText("40 ₽")).toBeInTheDocument(); // best price
 		expect(screen.getByText(/25,0/)).toBeInTheDocument(); // deviation %
 		expect(screen.getByText("1 000 ₽")).toBeInTheDocument(); // overpayment
+	});
+});
+
+describe("ProcurementCard name truncation", () => {
+	const longName = "Пена монтажная профессиональная зимняя морозостойкая";
+
+	it("truncates names longer than 32 characters with ellipsis", () => {
+		const item = makeItem("1", { name: longName });
+		render(<ProcurementCard item={item} index={0} />);
+
+		expect(screen.getByText(`${longName.slice(0, 40)}…`)).toBeInTheDocument();
+		expect(screen.queryByText(longName)).not.toBeInTheDocument();
+	});
+
+	it("shows full name in tooltip for truncated names", async () => {
+		const user = userEvent.setup();
+		const item = makeItem("1", { name: longName });
+		render(<ProcurementCard item={item} index={0} />);
+
+		const truncated = screen.getByText(`${longName.slice(0, 40)}…`);
+		await user.hover(truncated);
+
+		expect(await screen.findByRole("tooltip")).toHaveTextContent(longName);
+	});
+
+	it("does not truncate names within 32 characters", () => {
+		const item = makeItem("1", { name: "Болты М8" });
+		render(<ProcurementCard item={item} index={0} />);
+
+		expect(screen.getByText("Болты М8")).toBeInTheDocument();
+		expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 	});
 });
 

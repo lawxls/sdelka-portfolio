@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Folder } from "@/data/types";
-import { FOLDER_COLORS } from "@/data/types";
+import { FOLDER_COLORS, FOLDER_NAME_MAX_LENGTH } from "@/data/types";
 import { nextUnusedColor } from "@/data/use-folders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
@@ -452,6 +452,7 @@ function InlineFolderRow({
 				type="text"
 				className="h-5 flex-1 bg-transparent text-sm outline-none"
 				defaultValue={defaultValue}
+				maxLength={FOLDER_NAME_MAX_LENGTH}
 				aria-label="Название раздела"
 				spellCheck={false}
 				autoComplete="off"
