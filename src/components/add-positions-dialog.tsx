@@ -1,5 +1,6 @@
 import { ArrowLeft, Download, FileUp, Loader2, PenLine } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -59,6 +60,11 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 	const [parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
 	const [showCloseWarning, setShowCloseWarning] = useState(false);
 
+	function resetDialog() {
+		setStep("choice");
+		setParsedItems([]);
+	}
+
 	function handleManual() {
 		onOpenChange(false);
 		onManual();
@@ -70,31 +76,34 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 			return;
 		}
 		if (!next) {
-			setStep("choice");
-			setParsedItems([]);
+			resetDialog();
 		}
 		onOpenChange(next);
 	}
 
 	function handleConfirmClose() {
 		setShowCloseWarning(false);
-		setStep("choice");
-		setParsedItems([]);
+		resetDialog();
 		onOpenChange(false);
 	}
 
 	function handleFile(file: File) {
 		setStep("loading");
-		parseFile(file).then((items) => {
-			setParsedItems(items);
-			setStep("preview");
-		});
+		parseFile(file).then(
+			(items) => {
+				setParsedItems(items);
+				setStep("preview");
+			},
+			() => {
+				setStep("upload");
+				toast.error("Не удалось обработать файл");
+			},
+		);
 	}
 
 	function handleImport() {
 		onImport(parsedItems);
-		setStep("choice");
-		setParsedItems([]);
+		resetDialog();
 		onOpenChange(false);
 	}
 

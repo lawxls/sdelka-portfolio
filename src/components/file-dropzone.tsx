@@ -63,6 +63,7 @@ export function FileDropzone({ onFile }: FileDropzoneProps) {
 				accept=".xlsx,.csv,.xls"
 				className="hidden"
 				data-testid="dropzone-input"
+				aria-label="Загрузить файл"
 				onChange={handleChange}
 			/>
 		</button>

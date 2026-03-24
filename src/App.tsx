@@ -185,11 +185,13 @@ function App() {
 		}
 	}
 
-	function handleCreateItems(items: NewItemInput[]) {
+	function handleCreateItems(items: NewItemInput[], successMsg?: string) {
 		createItemsMutation.mutate(items, {
 			onSuccess: (data) => {
 				if (data.isAsync) {
 					toast.info("Позиции обрабатываются");
+				} else if (successMsg) {
+					toast.success(successMsg);
 				}
 			},
 		});
@@ -283,17 +285,7 @@ function App() {
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
 				onManual={() => setDrawerOpen(true)}
-				onImport={(items) => {
-					createItemsMutation.mutate(items, {
-						onSuccess: (data) => {
-							if (data.isAsync) {
-								toast.info("Позиции обрабатываются");
-							} else {
-								toast.success("Позиции импортированы");
-							}
-						},
-					});
-				}}
+				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
 			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 		</DndContext>
