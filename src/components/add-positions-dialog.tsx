@@ -1,5 +1,12 @@
-import { FileUp, PenLine } from "lucide-react";
+import { ArrowLeft, Download, FileUp, Loader2, PenLine } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { parseFile } from "@/data/mock-file-parser";
+import type { NewItemInput } from "@/data/types";
+import { FileDropzone } from "./file-dropzone";
+
+type Step = "choice" | "upload" | "loading" | "preview";
 
 interface AddPositionsDialogProps {
 	open: boolean;
@@ -36,27 +43,79 @@ function ChoiceCard({
 }
 
 export function AddPositionsDialog({ open, onOpenChange, onManual }: AddPositionsDialogProps) {
+	const [step, setStep] = useState<Step>("choice");
+	const [_parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
+
 	function handleManual() {
 		onOpenChange(false);
 		onManual();
 	}
 
+	function handleOpenChange(next: boolean) {
+		if (!next) {
+			setStep("choice");
+			setParsedItems([]);
+		}
+		onOpenChange(next);
+	}
+
+	function handleFile(file: File) {
+		setStep("loading");
+		parseFile(file).then((items) => {
+			setParsedItems(items);
+			setStep("preview");
+		});
+	}
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="sm:max-w-4xl max-h-[85vh] max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:h-svh max-sm:max-h-none">
 				<DialogHeader>
 					<DialogTitle>Добавить позиции</DialogTitle>
 					<DialogDescription className="sr-only">Выберите способ добавления позиций</DialogDescription>
 				</DialogHeader>
-				<div className="flex flex-col gap-4 sm:flex-row">
-					<ChoiceCard
-						icon={PenLine}
-						title="Вручную"
-						description="Заполните данные для каждой позиции"
-						onClick={handleManual}
-					/>
-					<ChoiceCard icon={FileUp} title="Из файла" description="Загрузите файл с позициями" onClick={() => {}} />
-				</div>
+				{step === "choice" && (
+					<div className="flex flex-col gap-4 sm:flex-row">
+						<ChoiceCard
+							icon={PenLine}
+							title="Вручную"
+							description="Заполните данные для каждой позиции"
+							onClick={handleManual}
+						/>
+						<ChoiceCard
+							icon={FileUp}
+							title="Из файла"
+							description="Загрузите файл с позициями"
+							onClick={() => setStep("upload")}
+						/>
+					</div>
+				)}
+				{step === "upload" && (
+					<div className="flex flex-col gap-4">
+						<FileDropzone onFile={handleFile} />
+						<div className="flex items-center justify-between">
+							<Button variant="ghost" onClick={() => setStep("choice")}>
+								<ArrowLeft className="size-4" aria-hidden="true" />
+								Назад
+							</Button>
+							<Button variant="ghost" onClick={() => {}}>
+								<Download className="size-4" aria-hidden="true" />
+								Скачать шаблон
+							</Button>
+						</div>
+					</div>
+				)}
+				{step === "loading" && (
+					<div className="flex flex-col items-center justify-center gap-3 py-12">
+						<Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
+						<p className="text-sm text-muted-foreground">Обработка файла…</p>
+					</div>
+				)}
+				{step === "preview" && (
+					<div className="py-8 text-center text-sm text-muted-foreground">
+						Предпросмотр будет добавлен в следующем обновлении
+					</div>
+				)}
 			</DialogContent>
 		</Dialog>
 	);
