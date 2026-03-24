@@ -39,25 +39,22 @@ describe("ImportItemCard", () => {
 		expect(screen.getByText("6 800 ₽")).toBeInTheDocument();
 	});
 
-	test("renders procurement type and frequency for regular items", () => {
+	test("renders frequency when frequencyCount and frequencyPeriod present", () => {
 		renderCard({
 			name: "Арматура",
-			procurementType: "regular",
-			frequency: "monthly",
+			frequencyCount: 3,
+			frequencyPeriod: "month",
 		});
-		expect(screen.getByText("Тип закупки")).toBeInTheDocument();
-		expect(screen.getByText("Регулярная")).toBeInTheDocument();
-		expect(screen.getByText("Периодичность")).toBeInTheDocument();
-		expect(screen.getByText("Ежемесячно")).toBeInTheDocument();
+		expect(screen.getByText("Частота закупок")).toBeInTheDocument();
+		expect(screen.getByText("3 раз / Месяц")).toBeInTheDocument();
 	});
 
-	test("does not render frequency for one-time procurement", () => {
+	test("does not render frequency when only count is set", () => {
 		renderCard({
 			name: "Доска",
-			procurementType: "one-time",
+			frequencyCount: 1,
 		});
-		expect(screen.getByText("Разовая")).toBeInTheDocument();
-		expect(screen.queryByText("Периодичность")).not.toBeInTheDocument();
+		expect(screen.queryByText("Частота закупок")).not.toBeInTheDocument();
 	});
 
 	test("renders delivery section when deliveryType present", () => {
@@ -77,27 +74,22 @@ describe("ImportItemCard", () => {
 			name: "Плитка",
 			paymentType: "deferred",
 			paymentDeferralDays: 30,
-			vatIncluded: true,
 			paymentMethod: "bank_transfer",
 		});
 		expect(screen.getByText("Оплата")).toBeInTheDocument();
 		expect(screen.getByText("Отсрочка")).toBeInTheDocument();
 		expect(screen.getByText("Отсрочка (дн.)")).toBeInTheDocument();
 		expect(screen.getByText("30")).toBeInTheDocument();
-		expect(screen.getByText("С НДС")).toBeInTheDocument();
 		expect(screen.getByText("Р/С")).toBeInTheDocument();
 	});
 
-	test("renders legal entity section when legalEntityMode present", () => {
+	test("renders hide company info when set", () => {
 		renderCard({
 			name: "Подвес",
-			legalEntityMode: "company",
-			legalEntityCompany: "ООО СтройКом",
+			hideCompanyInfo: true,
 		});
-		expect(screen.getByText("Юр. лицо")).toBeInTheDocument();
-		// "Компания" appears as both value (Режим) and label (company field)
-		expect(screen.getAllByText("Компания").length).toBeGreaterThanOrEqual(1);
-		expect(screen.getByText("ООО СтройКом")).toBeInTheDocument();
+		expect(screen.getByText("Компания")).toBeInTheDocument();
+		expect(screen.getByText("Информация скрыта")).toBeInTheDocument();
 	});
 
 	test("renders unloading and analogues when present", () => {
@@ -112,12 +104,30 @@ describe("ImportItemCard", () => {
 		expect(screen.getByText("Допускаются")).toBeInTheDocument();
 	});
 
+	test("renders additional info when present", () => {
+		renderCard({
+			name: "Товар",
+			additionalInfo: "Особые условия хранения",
+		});
+		expect(screen.getByText("Дополнительная информация")).toBeInTheDocument();
+		expect(screen.getByText("Особые условия хранения")).toBeInTheDocument();
+	});
+
+	test("renders price monitoring period when present", () => {
+		renderCard({
+			name: "Товар",
+			priceMonitoringPeriod: "quarter",
+		});
+		expect(screen.getByText("Мониторинг цен")).toBeInTheDocument();
+		expect(screen.getByText("Квартал")).toBeInTheDocument();
+	});
+
 	test("omits sections with no data", () => {
 		renderCard({ name: "Только имя" });
 		expect(screen.queryByText("Количество")).not.toBeInTheDocument();
 		expect(screen.queryByText("Доставка")).not.toBeInTheDocument();
 		expect(screen.queryByText("Оплата")).not.toBeInTheDocument();
-		expect(screen.queryByText("Юр. лицо")).not.toBeInTheDocument();
+		expect(screen.queryByText("Компания")).not.toBeInTheDocument();
 		expect(screen.queryByText("Разгрузка")).not.toBeInTheDocument();
 		expect(screen.queryByText("Аналоги")).not.toBeInTheDocument();
 	});

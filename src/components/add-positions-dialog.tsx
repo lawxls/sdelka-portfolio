@@ -110,7 +110,7 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 	return (
 		<>
 			<Dialog open={open} onOpenChange={handleOpenChange}>
-				<DialogContent className="sm:max-w-4xl max-h-[85vh] max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:h-svh max-sm:max-h-none">
+				<DialogContent className="sm:max-w-4xl max-h-[85vh]">
 					<DialogHeader>
 						<DialogTitle>Добавить позиции</DialogTitle>
 						<DialogDescription className="sr-only">Выберите способ добавления позиций</DialogDescription>

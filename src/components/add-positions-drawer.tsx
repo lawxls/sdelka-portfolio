@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -11,37 +11,37 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import type {
 	DeliveryType,
-	Frequency,
-	LegalEntityMode,
+	FrequencyPeriod,
 	NewItemInput,
 	PaymentMethod,
 	PaymentType,
-	ProcurementType,
+	PriceMonitoringPeriod,
 	UnloadingType,
 } from "@/data/types";
 import {
 	DELIVERY_TYPE_LABELS,
 	DELIVERY_TYPES,
-	FREQUENCIES,
-	FREQUENCY_LABELS,
-	LEGAL_ENTITY_LABELS,
-	LEGAL_ENTITY_MODES,
+	FREQUENCY_PERIOD_LABELS,
+	FREQUENCY_PERIODS,
 	PAYMENT_METHOD_LABELS,
 	PAYMENT_METHODS,
 	PAYMENT_TYPE_LABELS,
 	PAYMENT_TYPES,
-	PROCUREMENT_TYPE_LABELS,
-	PROCUREMENT_TYPES,
+	PRICE_MONITORING_PERIOD_LABELS,
+	PRICE_MONITORING_PERIODS,
 	UNITS,
 	UNLOADING_LABELS,
 	UNLOADING_TYPES,
 } from "@/data/types";
+import { formatFileSize } from "@/lib/format";
 
 interface PositionRow {
 	key: string;
@@ -70,16 +70,13 @@ interface AddPositionsDrawerProps {
 	onSubmit: (items: NewItemInput[]) => void;
 }
 
-const MOCK_COMPANIES = ["ООО «Сделка»"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25 MB
 
 interface DeliveryState {
-	legalEntityEnabled: boolean;
-	legalEntityMode: LegalEntityMode;
-	legalEntityCompany: string;
 	paymentEnabled: boolean;
 	paymentType: PaymentType;
 	paymentDeferralDays: string;
-	vatIncluded: boolean;
 	paymentMethod: PaymentMethod;
 	deliveryEnabled: boolean;
 	deliveryType: DeliveryType;
@@ -88,17 +85,18 @@ interface DeliveryState {
 	unloading: UnloadingType;
 	analoguesEnabled: boolean;
 	analoguesAllowed: boolean;
+	additionalInfoEnabled: boolean;
+	additionalInfo: string;
+	filesEnabled: boolean;
+	monitoringEnabled: boolean;
+	monitoringPeriod: PriceMonitoringPeriod;
 }
 
 function createDefaultDelivery(): DeliveryState {
 	return {
-		legalEntityEnabled: false,
-		legalEntityMode: "incognito",
-		legalEntityCompany: "",
 		paymentEnabled: false,
 		paymentType: "prepayment",
 		paymentDeferralDays: "",
-		vatIncluded: true,
 		paymentMethod: "bank_transfer",
 		deliveryEnabled: false,
 		deliveryType: "warehouse",
@@ -107,6 +105,11 @@ function createDefaultDelivery(): DeliveryState {
 		unloading: "supplier",
 		analoguesEnabled: false,
 		analoguesAllowed: true,
+		additionalInfoEnabled: false,
+		additionalInfo: "",
+		filesEnabled: false,
+		monitoringEnabled: false,
+		monitoringPeriod: "quarter",
 	};
 }
 
@@ -166,41 +169,56 @@ function DeliverySection({
 
 export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
 	const [positions, setPositions] = useState<PositionRow[]>(() => [createEmptyRow()]);
-	const [procurementType, setProcurementType] = useState<ProcurementType>("one-time");
-	const [frequency, setFrequency] = useState<Frequency>("monthly");
+	const [frequencyEnabled, setFrequencyEnabled] = useState(false);
+	const [frequencyCount, setFrequencyCount] = useState("1");
+	const [frequencyPeriod, setFrequencyPeriod] = useState<FrequencyPeriod>("month");
+	const [hideCompanyInfo, setHideCompanyInfo] = useState(false);
 	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
+	const [files, setFiles] = useState<File[]>([]);
 	const [showConfirm, setShowConfirm] = useState(false);
 	const pendingFocusKey = useRef<string | null>(null);
 	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const isDirty =
 		positions.some((p) => p.name || p.description || p.quantity || p.unit || p.price) ||
-		procurementType !== "one-time" ||
-		delivery.legalEntityEnabled ||
+		frequencyEnabled ||
+		hideCompanyInfo ||
 		delivery.paymentEnabled ||
 		delivery.deliveryEnabled ||
 		delivery.unloadingEnabled ||
-		delivery.analoguesEnabled;
+		delivery.analoguesEnabled ||
+		delivery.additionalInfoEnabled ||
+		delivery.filesEnabled ||
+		delivery.monitoringEnabled;
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
-		setProcurementType("one-time");
-		setFrequency("monthly");
+		setFrequencyEnabled(false);
+		setFrequencyCount("1");
+		setFrequencyPeriod("month");
+		setHideCompanyInfo(false);
 		setDelivery(createDefaultDelivery());
+		setFiles([]);
 	}
 
 	function updateDelivery<K extends keyof DeliveryState>(field: K, value: DeliveryState[K]) {
 		setDelivery((prev) => ({ ...prev, [field]: value }));
 	}
 
-	function buildDeliveryFields(): Partial<NewItemInput> {
+	function buildSharedFields(): Partial<NewItemInput> {
 		const fields: Partial<NewItemInput> = {};
 
-		if (delivery.legalEntityEnabled) {
-			fields.legalEntityMode = delivery.legalEntityMode;
-			if (delivery.legalEntityMode === "company" && delivery.legalEntityCompany) {
-				fields.legalEntityCompany = delivery.legalEntityCompany;
+		if (frequencyEnabled) {
+			const count = Number(frequencyCount);
+			if (count >= 1) {
+				fields.frequencyCount = count;
+				fields.frequencyPeriod = frequencyPeriod;
 			}
+		}
+
+		if (hideCompanyInfo) {
+			fields.hideCompanyInfo = true;
 		}
 
 		if (delivery.paymentEnabled) {
@@ -208,7 +226,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			if (delivery.paymentType === "deferred" && delivery.paymentDeferralDays) {
 				fields.paymentDeferralDays = Number(delivery.paymentDeferralDays);
 			}
-			fields.vatIncluded = delivery.vatIncluded;
 			fields.paymentMethod = delivery.paymentMethod;
 		}
 
@@ -225,6 +242,14 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 		if (delivery.analoguesEnabled) {
 			fields.analoguesAllowed = delivery.analoguesAllowed;
+		}
+
+		if (delivery.additionalInfoEnabled && delivery.additionalInfo.trim()) {
+			fields.additionalInfo = delivery.additionalInfo.trim();
+		}
+
+		if (delivery.monitoringEnabled) {
+			fields.priceMonitoringPeriod = delivery.monitoringPeriod;
 		}
 
 		return fields;
@@ -252,7 +277,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	function handleSubmit() {
 		if (!validatePositions()) return;
 
-		const deliveryFields = buildDeliveryFields();
+		const deliveryFields = buildSharedFields();
 
 		const items: NewItemInput[] = positions.map((p) => ({
 			name: p.name.trim(),
@@ -260,8 +285,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			unit: (p.unit || undefined) as NewItemInput["unit"],
 			annualQuantity: p.quantity ? Number(p.quantity) : undefined,
 			currentPrice: p.price ? Number(p.price) : undefined,
-			procurementType,
-			frequency: procurementType === "regular" ? frequency : undefined,
 			...deliveryFields,
 		}));
 
@@ -325,6 +348,28 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		});
 	}
 
+	function handleFilesAdd(newFiles: FileList | null) {
+		if (!newFiles) return;
+		const currentTotal = files.reduce((sum, f) => sum + f.size, 0);
+		const toAdd: File[] = [];
+		let runningTotal = currentTotal;
+
+		for (const file of newFiles) {
+			if (file.size > MAX_FILE_SIZE) continue;
+			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
+			toAdd.push(file);
+			runningTotal += file.size;
+		}
+
+		if (toAdd.length > 0) {
+			setFiles((prev) => [...prev, ...toAdd]);
+		}
+	}
+
+	function handleFileRemove(index: number) {
+		setFiles((prev) => prev.filter((_, i) => i !== index));
+	}
+
 	return (
 		<>
 			<Sheet open={open} onOpenChange={handleOpenChange}>
@@ -335,29 +380,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 					</SheetHeader>
 
 					<div className="flex-1 overflow-y-auto px-4">
-						<div className="mb-4 flex flex-wrap items-center gap-3">
-							<SegmentedControl
-								options={PROCUREMENT_TYPES}
-								labels={PROCUREMENT_TYPE_LABELS}
-								value={procurementType}
-								onChange={setProcurementType}
-							/>
-							{procurementType === "regular" && (
-								<Select value={frequency} onValueChange={(v) => setFrequency(v as Frequency)}>
-									<SelectTrigger aria-label="Периодичность">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{FREQUENCIES.map((f) => (
-											<SelectItem key={f} value={f}>
-												{FREQUENCY_LABELS[f]}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
-						</div>
-
 						<div className="flex flex-col gap-3">
 							{positions.map((pos, i) => (
 								<div key={pos.key} data-testid={`position-row-${i}`} className="rounded-lg border border-border p-3">
@@ -438,7 +460,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 												type="number"
 												inputMode="numeric"
 												min={0}
-												placeholder="Моя цена"
+												placeholder="Моя цена (без НДС)"
 												value={pos.price}
 												onChange={(e) => updatePosition(pos.key, "price", e.target.value)}
 												autoComplete="off"
@@ -457,36 +479,35 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 							</Button>
 						</div>
 
-						{/* Delivery conditions */}
-						<div className="mt-4">
-							<DeliverySection
-								label="Юридическое лицо"
-								enabled={delivery.legalEntityEnabled}
-								onToggle={(v) => updateDelivery("legalEntityEnabled", v)}
-							>
-								<SegmentedControl
-									options={LEGAL_ENTITY_MODES}
-									labels={LEGAL_ENTITY_LABELS}
-									value={delivery.legalEntityMode}
-									onChange={(v) => updateDelivery("legalEntityMode", v)}
+						<p className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+							Указанные условия будут применены ко всем позициям
+						</p>
+						<div className="mt-3">
+							<DeliverySection label="Частота закупок" enabled={frequencyEnabled} onToggle={setFrequencyEnabled}>
+								<Input
+									type="number"
+									inputMode="numeric"
+									min={1}
+									placeholder="1"
+									value={frequencyCount}
+									onChange={(e) => setFrequencyCount(e.target.value)}
+									aria-label="Количество"
+									className="w-20"
+									autoComplete="off"
 								/>
-								{delivery.legalEntityMode === "company" && (
-									<Select
-										value={delivery.legalEntityCompany || undefined}
-										onValueChange={(v) => updateDelivery("legalEntityCompany", v)}
-									>
-										<SelectTrigger aria-label="Компания">
-											<SelectValue placeholder="Выберите компанию…" />
-										</SelectTrigger>
-										<SelectContent>
-											{MOCK_COMPANIES.map((c) => (
-												<SelectItem key={c} value={c}>
-													{c}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								)}
+								<span className="text-sm text-muted-foreground">раз(а) в</span>
+								<Select value={frequencyPeriod} onValueChange={(v) => setFrequencyPeriod(v as FrequencyPeriod)}>
+									<SelectTrigger aria-label="Период">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{FREQUENCY_PERIODS.map((p) => (
+											<SelectItem key={p} value={p}>
+												{FREQUENCY_PERIOD_LABELS[p]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</DeliverySection>
 
 							<DeliverySection
@@ -516,12 +537,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 										<span className="text-sm text-muted-foreground">дн.</span>
 									</div>
 								)}
-								<SegmentedControl
-									options={["vat-yes", "vat-no"] as const}
-									labels={{ "vat-yes": "С НДС", "vat-no": "Без НДС" }}
-									value={delivery.vatIncluded ? "vat-yes" : "vat-no"}
-									onChange={(v) => updateDelivery("vatIncluded", v === "vat-yes")}
-								/>
 								<SegmentedControl
 									options={PAYMENT_METHODS}
 									labels={PAYMENT_METHOD_LABELS}
@@ -578,6 +593,105 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									onChange={(v) => updateDelivery("analoguesAllowed", v === "allowed")}
 								/>
 							</DeliverySection>
+
+							<DeliverySection
+								label="Дополнительная информация"
+								enabled={delivery.additionalInfoEnabled}
+								onToggle={(v) => updateDelivery("additionalInfoEnabled", v)}
+							>
+								<Textarea
+									placeholder="Введите дополнительную информацию…"
+									value={delivery.additionalInfo}
+									onChange={(e) => updateDelivery("additionalInfo", e.target.value)}
+									className="w-full"
+									rows={3}
+								/>
+							</DeliverySection>
+
+							<DeliverySection
+								label="Дополнительные файлы"
+								enabled={delivery.filesEnabled}
+								onToggle={(v) => updateDelivery("filesEnabled", v)}
+							>
+								<div className="flex w-full flex-col gap-2">
+									<button
+										type="button"
+										className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary"
+										onClick={() => fileInputRef.current?.click()}
+										onDragOver={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+										}}
+										onDrop={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											handleFilesAdd(e.dataTransfer.files);
+										}}
+									>
+										<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
+										<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
+									</button>
+									<input
+										ref={fileInputRef}
+										type="file"
+										multiple
+										className="hidden"
+										onChange={(e) => {
+											handleFilesAdd(e.target.files);
+											e.target.value = "";
+										}}
+									/>
+									{files.length > 0 && (
+										<ul className="flex flex-col gap-1">
+											{files.map((file, i) => (
+												<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
+													<span className="min-w-0 flex-1 truncate">{file.name}</span>
+													<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+													<Button
+														type="button"
+														variant="ghost"
+														size="icon-xs"
+														onClick={() => handleFileRemove(i)}
+														aria-label={`Удалить ${file.name}`}
+													>
+														<X aria-hidden="true" />
+													</Button>
+												</li>
+											))}
+										</ul>
+									)}
+								</div>
+							</DeliverySection>
+
+							<DeliverySection
+								label="Периодичность мониторинга цен"
+								enabled={delivery.monitoringEnabled}
+								onToggle={(v) => updateDelivery("monitoringEnabled", v)}
+							>
+								<Select
+									value={delivery.monitoringPeriod}
+									onValueChange={(v) => updateDelivery("monitoringPeriod", v as PriceMonitoringPeriod)}
+								>
+									<SelectTrigger aria-label="Период мониторинга">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{PRICE_MONITORING_PERIODS.map((p) => (
+											<SelectItem key={p} value={p}>
+												{PRICE_MONITORING_PERIOD_LABELS[p]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</DeliverySection>
+
+							<div className="border-t border-border py-3">
+								{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally */}
+								<label className="flex items-center gap-2">
+									<Checkbox checked={hideCompanyInfo} onCheckedChange={(v) => setHideCompanyInfo(v === true)} />
+									<span className="text-sm font-medium">Скрыть информацию о компании в запросе</span>
+								</label>
+							</div>
 						</div>
 					</div>
 

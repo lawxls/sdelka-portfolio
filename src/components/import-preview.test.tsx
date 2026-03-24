@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { act } from "react";
 import { describe, expect, test, vi } from "vitest";
 import type { NewItemInput } from "@/data/types";
+import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
 import { ImportPreview } from "./import-preview";
 
 function makeItems(count: number): NewItemInput[] {
@@ -16,74 +18,74 @@ function renderPreview(
 	}> = {},
 ) {
 	const props = {
-		items: overrides.items ?? makeItems(23),
+		items: overrides.items ?? makeItems(50),
 		onBack: overrides.onBack ?? vi.fn(),
 		onImport: overrides.onImport ?? vi.fn(),
 	};
 	return { ...render(<ImportPreview {...props} />), ...props };
 }
 
+function triggerIntersection(observers: ObserverRecord[]) {
+	const latest = observers[observers.length - 1];
+	act(() => {
+		latest.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+	});
+}
+
 describe("ImportPreview", () => {
-	test("renders first 10 items on first page", () => {
-		renderPreview({ items: makeItems(23) });
+	let observers: ObserverRecord[];
+
+	test("renders first 20 items initially", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(50) });
 		expect(screen.getByText("Item 1")).toBeInTheDocument();
-		expect(screen.getByText("Item 10")).toBeInTheDocument();
-		expect(screen.queryByText("Item 11")).not.toBeInTheDocument();
-	});
-
-	test("shows page counter with correct range and total", () => {
-		renderPreview({ items: makeItems(23) });
-		expect(screen.getByText("Позиция 1–10 из 23")).toBeInTheDocument();
-	});
-
-	test("next button navigates to second page", async () => {
-		renderPreview({ items: makeItems(23) });
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Следующая страница/ }));
-
-		expect(screen.getByText("Item 11")).toBeInTheDocument();
 		expect(screen.getByText("Item 20")).toBeInTheDocument();
-		expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
-		expect(screen.getByText("Позиция 11–20 из 23")).toBeInTheDocument();
+		expect(screen.queryByText("Item 21")).not.toBeInTheDocument();
 	});
 
-	test("prev button is disabled on first page", () => {
-		renderPreview({ items: makeItems(23) });
-		expect(screen.getByRole("button", { name: /Предыдущая страница/ })).toBeDisabled();
+	test("shows count info for large lists", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(50) });
+		expect(screen.getByText("Показано 20 из 50")).toBeInTheDocument();
 	});
 
-	test("next button is disabled on last page", async () => {
-		renderPreview({ items: makeItems(23) });
-		const user = userEvent.setup();
+	test("loads more items when sentinel intersects", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(50) });
 
-		await user.click(screen.getByRole("button", { name: /Следующая страница/ }));
-		await user.click(screen.getByRole("button", { name: /Следующая страница/ }));
+		triggerIntersection(observers);
 
-		// Page 3: items 21-23
-		expect(screen.getByText("Item 21")).toBeInTheDocument();
-		expect(screen.getByText("Item 23")).toBeInTheDocument();
-		expect(screen.getByText("Позиция 21–23 из 23")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Следующая страница/ })).toBeDisabled();
+		expect(screen.getByText("Item 40")).toBeInTheDocument();
+		expect(screen.getByText("Показано 40 из 50")).toBeInTheDocument();
 	});
 
-	test("prev navigates back", async () => {
-		renderPreview({ items: makeItems(23) });
-		const user = userEvent.setup();
+	test("loads all remaining items on last batch", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(50) });
 
-		await user.click(screen.getByRole("button", { name: /Следующая страница/ }));
-		await user.click(screen.getByRole("button", { name: /Предыдущая страница/ }));
+		triggerIntersection(observers);
+		triggerIntersection(observers);
 
+		expect(screen.getByText("Item 50")).toBeInTheDocument();
+		expect(screen.getByText("Показано 50 из 50")).toBeInTheDocument();
+	});
+
+	test("shows simple count when all items fit in one batch", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(5) });
 		expect(screen.getByText("Item 1")).toBeInTheDocument();
-		expect(screen.getByText("Позиция 1–10 из 23")).toBeInTheDocument();
+		expect(screen.getByText("Item 5")).toBeInTheDocument();
+		expect(screen.getByText("5 позиций")).toBeInTheDocument();
 	});
 
-	test("import button shows item count", () => {
-		renderPreview({ items: makeItems(23) });
-		expect(screen.getByRole("button", { name: /Импортировать 23 позиц/ })).toBeInTheDocument();
+	test("import button shows total item count", () => {
+		observers = installMockIntersectionObserver();
+		renderPreview({ items: makeItems(50) });
+		expect(screen.getByRole("button", { name: /Импортировать 50 позиц/ })).toBeInTheDocument();
 	});
 
 	test("import button calls onImport", async () => {
+		observers = installMockIntersectionObserver();
 		const onImport = vi.fn();
 		renderPreview({ items: makeItems(5), onImport });
 		const user = userEvent.setup();
@@ -94,6 +96,7 @@ describe("ImportPreview", () => {
 	});
 
 	test("back button calls onBack", async () => {
+		observers = installMockIntersectionObserver();
 		const onBack = vi.fn();
 		renderPreview({ items: makeItems(5), onBack });
 		const user = userEvent.setup();
@@ -101,14 +104,5 @@ describe("ImportPreview", () => {
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
 		expect(onBack).toHaveBeenCalledOnce();
-	});
-
-	test("all items fit on one page when <= 10", () => {
-		renderPreview({ items: makeItems(5) });
-		expect(screen.getByText("Item 1")).toBeInTheDocument();
-		expect(screen.getByText("Item 5")).toBeInTheDocument();
-		expect(screen.getByText("Позиция 1–5 из 5")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Предыдущая страница/ })).toBeDisabled();
-		expect(screen.getByRole("button", { name: /Следующая страница/ })).toBeDisabled();
 	});
 });
