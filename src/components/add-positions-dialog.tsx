@@ -1,5 +1,15 @@
 import { ArrowLeft, Download, FileUp, Loader2, PenLine } from "lucide-react";
 import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseFile } from "@/data/mock-file-parser";
@@ -13,6 +23,7 @@ interface AddPositionsDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onManual: () => void;
+	onImport: (items: NewItemInput[]) => void;
 }
 
 function ChoiceCard({
@@ -43,9 +54,10 @@ function ChoiceCard({
 	);
 }
 
-export function AddPositionsDialog({ open, onOpenChange, onManual }: AddPositionsDialogProps) {
+export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: AddPositionsDialogProps) {
 	const [step, setStep] = useState<Step>("choice");
-	const [_parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
+	const [parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
+	const [showCloseWarning, setShowCloseWarning] = useState(false);
 
 	function handleManual() {
 		onOpenChange(false);
@@ -53,11 +65,22 @@ export function AddPositionsDialog({ open, onOpenChange, onManual }: AddPosition
 	}
 
 	function handleOpenChange(next: boolean) {
+		if (!next && step === "preview") {
+			setShowCloseWarning(true);
+			return;
+		}
 		if (!next) {
 			setStep("choice");
 			setParsedItems([]);
 		}
 		onOpenChange(next);
+	}
+
+	function handleConfirmClose() {
+		setShowCloseWarning(false);
+		setStep("choice");
+		setParsedItems([]);
+		onOpenChange(false);
 	}
 
 	function handleFile(file: File) {
@@ -68,64 +91,85 @@ export function AddPositionsDialog({ open, onOpenChange, onManual }: AddPosition
 		});
 	}
 
+	function handleImport() {
+		onImport(parsedItems);
+		setStep("choice");
+		setParsedItems([]);
+		onOpenChange(false);
+	}
+
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="sm:max-w-4xl max-h-[85vh] max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:h-svh max-sm:max-h-none">
-				<DialogHeader>
-					<DialogTitle>Добавить позиции</DialogTitle>
-					<DialogDescription className="sr-only">Выберите способ добавления позиций</DialogDescription>
-				</DialogHeader>
-				{step === "choice" && (
-					<div className="flex flex-col gap-4 sm:flex-row">
-						<ChoiceCard
-							icon={PenLine}
-							title="Вручную"
-							description="Заполните данные для каждой позиции"
-							onClick={handleManual}
-						/>
-						<ChoiceCard
-							icon={FileUp}
-							title="Из файла"
-							description="Загрузите файл с позициями"
-							onClick={() => setStep("upload")}
-						/>
-					</div>
-				)}
-				{step === "upload" && (
-					<div className="flex flex-col gap-4">
-						<FileDropzone onFile={handleFile} />
-						<div className="flex items-center justify-between">
-							<Button variant="ghost" onClick={() => setStep("choice")}>
-								<ArrowLeft className="size-4" aria-hidden="true" />
-								Назад
-							</Button>
-							<Button variant="ghost" onClick={() => {}}>
-								<Download className="size-4" aria-hidden="true" />
-								Скачать шаблон
-							</Button>
+		<>
+			<Dialog open={open} onOpenChange={handleOpenChange}>
+				<DialogContent className="sm:max-w-4xl max-h-[85vh] max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:h-svh max-sm:max-h-none">
+					<DialogHeader>
+						<DialogTitle>Добавить позиции</DialogTitle>
+						<DialogDescription className="sr-only">Выберите способ добавления позиций</DialogDescription>
+					</DialogHeader>
+					{step === "choice" && (
+						<div className="flex flex-col gap-4 sm:flex-row">
+							<ChoiceCard
+								icon={PenLine}
+								title="Вручную"
+								description="Заполните данные для каждой позиции"
+								onClick={handleManual}
+							/>
+							<ChoiceCard
+								icon={FileUp}
+								title="Из файла"
+								description="Загрузите файл с позициями"
+								onClick={() => setStep("upload")}
+							/>
 						</div>
-					</div>
-				)}
-				{step === "loading" && (
-					<div className="flex flex-col items-center justify-center gap-3 py-12">
-						<Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
-						<p className="text-sm text-muted-foreground">Обработка файла…</p>
-					</div>
-				)}
-				{step === "preview" && (
-					<ImportPreview
-						items={_parsedItems}
-						onBack={() => {
-							setParsedItems([]);
-							setStep("upload");
-						}}
-						onImport={() => {
-							// Will be wired to createItemsBatch in #91
-							onOpenChange(false);
-						}}
-					/>
-				)}
-			</DialogContent>
-		</Dialog>
+					)}
+					{step === "upload" && (
+						<div className="flex flex-col gap-4">
+							<FileDropzone onFile={handleFile} />
+							<div className="flex items-center justify-between">
+								<Button variant="ghost" onClick={() => setStep("choice")}>
+									<ArrowLeft className="size-4" aria-hidden="true" />
+									Назад
+								</Button>
+								<Button variant="ghost" onClick={() => {}}>
+									<Download className="size-4" aria-hidden="true" />
+									Скачать шаблон
+								</Button>
+							</div>
+						</div>
+					)}
+					{step === "loading" && (
+						<div className="flex flex-col items-center justify-center gap-3 py-12">
+							<Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
+							<p className="text-sm text-muted-foreground">Обработка файла…</p>
+						</div>
+					)}
+					{step === "preview" && (
+						<ImportPreview
+							items={parsedItems}
+							onBack={() => {
+								setParsedItems([]);
+								setStep("upload");
+							}}
+							onImport={handleImport}
+						/>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			<AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Закрыть?</AlertDialogTitle>
+						<AlertDialogDescription>Загруженные данные будут потеряны.</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Продолжить</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleConfirmClose}>
+							Закрыть
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }

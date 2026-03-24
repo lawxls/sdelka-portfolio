@@ -279,7 +279,22 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
-			<AddPositionsDialog open={dialogOpen} onOpenChange={setDialogOpen} onManual={() => setDrawerOpen(true)} />
+			<AddPositionsDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				onManual={() => setDrawerOpen(true)}
+				onImport={(items) => {
+					createItemsMutation.mutate(items, {
+						onSuccess: (data) => {
+							if (data.isAsync) {
+								toast.info("Позиции обрабатываются");
+							} else {
+								toast.success("Позиции импортированы");
+							}
+						},
+					});
+				}}
+			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 		</DndContext>
 	);

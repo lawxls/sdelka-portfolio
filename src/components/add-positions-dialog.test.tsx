@@ -10,12 +10,14 @@ function renderDialog(
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
 		onManual: () => void;
+		onImport: (items: NewItemInput[]) => void;
 	}> = {},
 ) {
 	const props = {
 		open: overrides.open ?? true,
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
 		onManual: overrides.onManual ?? vi.fn(),
+		onImport: overrides.onImport ?? vi.fn(),
 	};
 	return { ...render(<AddPositionsDialog {...props} />), ...props };
 }
@@ -122,6 +124,99 @@ describe("AddPositionsDialog", () => {
 
 		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
 		expect(screen.queryByText("Item 1")).not.toBeInTheDocument();
+	});
+
+	test("clicking Импортировать calls onImport with parsed items and closes dialog", async () => {
+		const fakeItems: NewItemInput[] = [{ name: "Item 1" }, { name: "Item 2" }];
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
+		const onImport = vi.fn();
+		const onOpenChange = vi.fn();
+		renderDialog({ onImport, onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+		await waitFor(() => expect(screen.getByText("Item 1")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: /Импортировать/ }));
+
+		expect(onImport).toHaveBeenCalledWith(fakeItems);
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	test("closing dialog on preview step shows close warning", async () => {
+		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
+		const onOpenChange = vi.fn();
+		renderDialog({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+		await waitFor(() => expect(screen.getByText("Item 1")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: "Close" }));
+
+		expect(screen.getByText("Загруженные данные будут потеряны.")).toBeInTheDocument();
+		expect(onOpenChange).not.toHaveBeenCalled();
+	});
+
+	test("confirming close warning closes the dialog", async () => {
+		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
+		const onOpenChange = vi.fn();
+		renderDialog({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+		await waitFor(() => expect(screen.getByText("Item 1")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: "Close" }));
+		await user.click(screen.getByRole("button", { name: "Закрыть" }));
+
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+
+	test("cancelling close warning keeps dialog open on preview", async () => {
+		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
+		const onOpenChange = vi.fn();
+		renderDialog({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+		await waitFor(() => expect(screen.getByText("Item 1")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: "Close" }));
+		await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+		expect(screen.getByText("Item 1")).toBeInTheDocument();
+		expect(onOpenChange).not.toHaveBeenCalled();
+	});
+
+	test("closing dialog on choice step closes silently", async () => {
+		const onOpenChange = vi.fn();
+		renderDialog({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Close" }));
+
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+		expect(screen.queryByText("Загруженные данные будут потеряны.")).not.toBeInTheDocument();
+	});
+
+	test("closing dialog on upload step closes silently", async () => {
+		const onOpenChange = vi.fn();
+		renderDialog({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		await user.click(screen.getByRole("button", { name: "Close" }));
+
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+		expect(screen.queryByText("Загруженные данные будут потеряны.")).not.toBeInTheDocument();
 	});
 
 	test("back button on upload step returns to choice", async () => {
