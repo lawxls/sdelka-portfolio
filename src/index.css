@@ -216,6 +216,11 @@ tbody > tr.dragging-row > [data-slot="table-cell"]:nth-child(2) {
 	-webkit-mask-image: linear-gradient(to left, black 20%, transparent 65%);
 }
 
+@utility scrollbar-thin {
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-border) transparent;
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;

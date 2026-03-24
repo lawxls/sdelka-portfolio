@@ -1,6 +1,7 @@
-export type ProcurementStatus = "searching" | "negotiating" | "completed";
+export type ProcurementStatus = "awaiting_analytics" | "searching" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<ProcurementStatus, string> = {
+	awaiting_analytics: "Ожидание аналитики",
 	searching: "Ищем поставщиков",
 	negotiating: "Ведём переговоры",
 	completed: "Переговоры завершены",
@@ -9,12 +10,28 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
-export type LegalEntityMode = "incognito" | "company";
+export type FrequencyPeriod = "week" | "month" | "quarter" | "half_year" | "year";
 
-export const LEGAL_ENTITY_LABELS: Record<LegalEntityMode, string> = {
-	incognito: "Инкогнито",
-	company: "Компания",
+export const FREQUENCY_PERIOD_LABELS: Record<FrequencyPeriod, string> = {
+	week: "Неделя",
+	month: "Месяц",
+	quarter: "Квартал",
+	half_year: "Полгода",
+	year: "Год",
 };
+
+export const FREQUENCY_PERIODS = Object.keys(FREQUENCY_PERIOD_LABELS) as FrequencyPeriod[];
+
+export type PriceMonitoringPeriod = "quarter" | "half_year" | "year" | "on_demand";
+
+export const PRICE_MONITORING_PERIOD_LABELS: Record<PriceMonitoringPeriod, string> = {
+	quarter: "Квартал",
+	half_year: "Полгода",
+	year: "Год",
+	on_demand: "По запросу",
+};
+
+export const PRICE_MONITORING_PERIODS = Object.keys(PRICE_MONITORING_PERIOD_LABELS) as PriceMonitoringPeriod[];
 
 export type PaymentType = "prepayment" | "deferred";
 
@@ -44,28 +61,6 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 	self: "Своими силами",
 };
 
-export type ProcurementType = "one-time" | "regular";
-
-export const PROCUREMENT_TYPE_LABELS: Record<ProcurementType, string> = {
-	"one-time": "Разовая",
-	regular: "Регулярная",
-};
-
-export type Frequency = "weekly" | "biweekly" | "monthly" | "quarterly" | "biannual" | "on-demand";
-
-export const FREQUENCY_LABELS: Record<Frequency, string> = {
-	weekly: "Еженедельно",
-	biweekly: "Раз в 2 недели",
-	monthly: "Ежемесячно",
-	quarterly: "Ежеквартально",
-	biannual: "Раз в полгода",
-	"on-demand": "По требованию",
-};
-
-export const FREQUENCIES = Object.keys(FREQUENCY_LABELS) as Frequency[];
-
-export const PROCUREMENT_TYPES = Object.keys(PROCUREMENT_TYPE_LABELS) as ProcurementType[];
-export const LEGAL_ENTITY_MODES = Object.keys(LEGAL_ENTITY_LABELS) as LegalEntityMode[];
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 export const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
@@ -82,18 +77,18 @@ export interface ProcurementItem {
 	folderId: string | null;
 	description?: string;
 	unit?: Unit;
-	procurementType?: ProcurementType;
-	frequency?: Frequency;
-	legalEntityMode?: LegalEntityMode;
-	legalEntityCompany?: string;
+	frequencyCount?: number;
+	frequencyPeriod?: FrequencyPeriod;
+	hideCompanyInfo?: boolean;
 	paymentType?: PaymentType;
 	paymentDeferralDays?: number;
-	vatIncluded?: boolean;
 	paymentMethod?: PaymentMethod;
 	deliveryType?: DeliveryType;
 	deliveryAddress?: string;
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
+	additionalInfo?: string;
+	priceMonitoringPeriod?: PriceMonitoringPeriod;
 }
 
 export interface Folder {
@@ -101,6 +96,9 @@ export interface Folder {
 	name: string;
 	color: string;
 }
+
+export const FOLDER_NAME_MAX_LENGTH = 13;
+export const ITEM_NAME_DISPLAY_MAX_LENGTH = 40;
 
 export const FOLDER_COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "teal"] as const;
 
@@ -133,18 +131,18 @@ export interface NewItemInput {
 	unit?: Unit;
 	annualQuantity?: number;
 	currentPrice?: number;
-	procurementType?: ProcurementType;
-	frequency?: Frequency;
-	legalEntityMode?: LegalEntityMode;
-	legalEntityCompany?: string;
+	frequencyCount?: number;
+	frequencyPeriod?: FrequencyPeriod;
+	hideCompanyInfo?: boolean;
 	paymentType?: PaymentType;
 	paymentDeferralDays?: number;
-	vatIncluded?: boolean;
 	paymentMethod?: PaymentMethod;
 	deliveryType?: DeliveryType;
 	deliveryAddress?: string;
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
+	additionalInfo?: string;
+	priceMonitoringPeriod?: PriceMonitoringPeriod;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

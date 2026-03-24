@@ -30,3 +30,9 @@ export function formatDeviation(value: number | null | undefined): { text: strin
 	const triangle = value > 0 ? "\u25B2\u2009" : value < 0 ? "\u25BC\u2009" : "";
 	return { text: `${triangle}${formatPercent(value)}`, className: signClassName(value) };
 }
+
+export function formatFileSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} Б`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+}
