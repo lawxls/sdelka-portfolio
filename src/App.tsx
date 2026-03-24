@@ -4,6 +4,7 @@ import { PanelLeft } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { DESKTOP_QUERY, FolderSidebar, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
@@ -112,6 +113,7 @@ function App() {
 		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
 		return localStorage.getItem(LS_SIDEBAR_KEY) !== "false";
 	});
+	const [dialogOpen, setDialogOpen] = useState(false);
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleSearchChange(query: string) {
@@ -183,11 +185,13 @@ function App() {
 		}
 	}
 
-	function handleCreateItems(items: NewItemInput[]) {
+	function handleCreateItems(items: NewItemInput[], successMsg?: string) {
 		createItemsMutation.mutate(items, {
 			onSuccess: (data) => {
 				if (data.isAsync) {
 					toast.info("Позиции обрабатываются");
+				} else if (successMsg) {
+					toast.success(successMsg);
 				}
 			},
 		});
@@ -227,7 +231,7 @@ function App() {
 						onFiltersChange={handleFiltersChange}
 						sort={sort}
 						onSort={handleSort}
-						onAddPositions={() => setDrawerOpen(true)}
+						onAddPositions={() => setDialogOpen(true)}
 					/>
 				</header>
 
@@ -277,6 +281,12 @@ function App() {
 			</DragOverlay>
 			<div data-testid="dnd-overlay-container" aria-hidden="true" />
 
+			<AddPositionsDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				onManual={() => setDrawerOpen(true)}
+				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
+			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 		</DndContext>
 	);

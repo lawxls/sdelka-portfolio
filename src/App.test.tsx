@@ -3,8 +3,9 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import * as mockParser from "@/data/mock-file-parser";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { server } from "@/test-msw";
@@ -387,11 +388,23 @@ describe("App", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
-	test("clicking Добавить позиции opens the drawer", async () => {
+	test("clicking Добавить позиции opens choice dialog", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+
+		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
+	});
+
+	test("clicking Вручную in dialog opens the drawer", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
@@ -402,6 +415,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
@@ -509,6 +523,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Тестовая позиция");
@@ -532,6 +547,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Большая партия");
@@ -555,6 +571,7 @@ describe("App", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
 		await user.type(nameInput, "Test");
@@ -564,6 +581,27 @@ describe("App", () => {
 		// Drawer still closes (form resets on submit before mutation resolves)
 		await waitFor(() => {
 			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		});
+	});
+
+	test("file import via dialog calls createItemsBatch and closes dialog", async () => {
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue([{ name: "Import 1" }, { name: "Import 2" }]);
+
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Из файла/ }));
+		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
+		await waitFor(() => expect(screen.getByText("Import 1")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: /Импортировать/ }));
+
+		// Dialog closes (dialog title gone)
+		await waitFor(() => {
+			expect(
+				screen.queryByText("Добавить позиции", { selector: "[data-slot='dialog-title']" }),
+			).not.toBeInTheDocument();
 		});
 	});
 
