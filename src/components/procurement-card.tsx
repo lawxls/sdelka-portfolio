@@ -1,4 +1,15 @@
-import { Check, Clock, Ellipsis, FolderInput, Inbox, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	Check,
+	Clock,
+	Ellipsis,
+	FolderInput,
+	Inbox,
+	LoaderCircle,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import {
 	AlertDialog,
@@ -54,6 +65,8 @@ interface ProcurementCardProps {
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
+	onArchiveItem?: (id: string, isArchived: boolean) => void;
+	isArchiveView?: boolean;
 }
 
 const FIELDS: { label: string; key: string }[] = [
@@ -71,6 +84,8 @@ export function ProcurementCard({
 	onDeleteItem,
 	onRenameItem,
 	onAssignFolder,
+	onArchiveItem,
+	isArchiveView,
 }: ProcurementCardProps) {
 	const deviation = getDeviation(item);
 	const overpayment = getOverpayment(item);
@@ -96,7 +111,7 @@ export function ProcurementCard({
 			}
 		: undefined;
 
-	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder);
+	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
 
 	const displayName = optimisticName ?? item.name;
 
@@ -129,7 +144,7 @@ export function ProcurementCard({
 			<div className="flex items-start justify-between">
 				<div className="flex items-center gap-1.5">
 					<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
-					{folder && !isEditing && (
+					{folder && !isEditing && !isArchiveView && (
 						<div
 							className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 							data-testid={`folder-badge-${item.id}`}
@@ -167,7 +182,7 @@ export function ProcurementCard({
 									Переименовать
 								</DropdownMenuItem>
 							)}
-							{onAssignFolder && folders && (
+							{onAssignFolder && folders && !isArchiveView && (
 								<>
 									<DropdownMenuSeparator />
 									<DropdownMenuLabel className="flex items-center gap-1.5">
@@ -195,6 +210,24 @@ export function ProcurementCard({
 										<Inbox className="size-3.5" />
 										Без раздела
 									</DropdownMenuCheckboxItem>
+									{onArchiveItem && (
+										<>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem onSelect={() => onArchiveItem(item.id, true)}>
+												<Archive className="size-3.5" />
+												Архив
+											</DropdownMenuItem>
+										</>
+									)}
+								</>
+							)}
+							{onArchiveItem && isArchiveView && (
+								<>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem onSelect={() => onArchiveItem(item.id, false)}>
+										<ArchiveRestore className="size-3.5" />
+										Восстановить из архива
+									</DropdownMenuItem>
 								</>
 							)}
 							{onDeleteItem && (
@@ -283,7 +316,7 @@ export function ProcurementCard({
 						Переименовать
 					</ContextMenuItem>
 				)}
-				{onAssignFolder && folders && (
+				{onAssignFolder && folders && !isArchiveView && (
 					<ContextMenuSub>
 						<ContextMenuSubTrigger>
 							<FolderInput className="size-3.5" />
@@ -312,8 +345,23 @@ export function ProcurementCard({
 								<Inbox className="size-3.5" />
 								Без раздела
 							</ContextMenuCheckboxItem>
+							{onArchiveItem && (
+								<>
+									<ContextMenuSeparator />
+									<ContextMenuItem onSelect={() => onArchiveItem(item.id, true)}>
+										<Archive className="size-3.5" />
+										Архив
+									</ContextMenuItem>
+								</>
+							)}
 						</ContextMenuSubContent>
 					</ContextMenuSub>
+				)}
+				{onArchiveItem && isArchiveView && (
+					<ContextMenuItem onSelect={() => onArchiveItem(item.id, false)}>
+						<ArchiveRestore className="size-3.5" />
+						Восстановить из архива
+					</ContextMenuItem>
 				)}
 				{onDeleteItem && (
 					<>

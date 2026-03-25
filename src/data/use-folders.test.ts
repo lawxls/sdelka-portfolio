@@ -97,7 +97,9 @@ describe("useFolders", () => {
 
 describe("useFolderStats", () => {
 	it("fetches and transforms stats to counts format", async () => {
-		server.use(http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })));
+		server.use(
+			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS, archiveCount: 3 })),
+		);
 
 		const { result } = renderHook(() => useFolderStats(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -107,6 +109,7 @@ describe("useFolderStats", () => {
 				none: 20,
 				f1: 10,
 				f2: 5,
+				archive: 3,
 			});
 		});
 	});

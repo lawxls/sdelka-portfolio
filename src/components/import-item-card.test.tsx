@@ -45,8 +45,8 @@ describe("ImportItemCard", () => {
 			frequencyCount: 3,
 			frequencyPeriod: "month",
 		});
-		expect(screen.getByText("Частота закупок")).toBeInTheDocument();
-		expect(screen.getByText("3 раз / Месяц")).toBeInTheDocument();
+		expect(screen.getByText("Частота поставок")).toBeInTheDocument();
+		expect(screen.getByText("3 раз(а) в Месяц")).toBeInTheDocument();
 	});
 
 	test("does not render frequency when only count is set", () => {
@@ -54,7 +54,7 @@ describe("ImportItemCard", () => {
 			name: "Доска",
 			frequencyCount: 1,
 		});
-		expect(screen.queryByText("Частота закупок")).not.toBeInTheDocument();
+		expect(screen.queryByText("Частота поставок")).not.toBeInTheDocument();
 	});
 
 	test("renders delivery section when deliveryType present", () => {

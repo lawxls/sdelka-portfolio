@@ -36,7 +36,17 @@ import {
 	useFolders,
 	useUpdateFolder,
 } from "@/data/use-folders";
-import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import {
+	buildFilterParams,
+	useArchiveItem,
+	useAssignFolder,
+	useCreateItems,
+	useDeleteItem,
+	useExportItems,
+	useItems,
+	useTotals,
+	useUpdateItem,
+} from "@/data/use-items";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
@@ -114,8 +124,11 @@ function App() {
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
 	const assignFolderMutation = useAssignFolder();
+	const archiveItemMutation = useArchiveItem();
 	const createItemsMutation = useCreateItems();
+	const exportItemsMutation = useExportItems();
 
+	const isArchiveView = folder === "archive";
 	const isMobile = useIsMobile();
 	const [sidebarOpen, setSidebarOpen] = useState(() => {
 		if (!window.matchMedia(DESKTOP_QUERY).matches) return false;
@@ -123,6 +136,10 @@ function App() {
 	});
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [drawerOpen, setDrawerOpen] = useState(false);
+
+	function handleExport() {
+		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort }));
+	}
 
 	function handleSearchChange(query: string) {
 		setSearchParams(
@@ -185,11 +202,13 @@ function App() {
 		if (!event.over) return;
 		const itemId = String(event.active.id);
 		const targetId = String(event.over.id);
-		if (targetId === "none") {
-			assignFolderMutation.mutate({ id: itemId, folderId: null });
+		if (targetId === "archive") {
+			archiveItemMutation.mutate({ id: itemId, isArchived: true });
+		} else if (targetId === "none") {
+			assignFolderMutation.mutate({ id: itemId, folderId: null, ...(isArchiveView && { isArchived: false }) });
 		} else if (targetId.startsWith("folder-drop-")) {
 			const folderId = targetId.replace("folder-drop-", "");
-			assignFolderMutation.mutate({ id: itemId, folderId });
+			assignFolderMutation.mutate({ id: itemId, folderId, ...(isArchiveView && { isArchived: false }) });
 		}
 	}
 
@@ -245,6 +264,7 @@ function App() {
 						sort={sort}
 						onSort={handleSort}
 						onAddPositions={() => setDialogOpen(true)}
+						onExport={handleExport}
 					/>
 				</header>
 
@@ -273,6 +293,8 @@ function App() {
 							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
 							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
+							onArchiveItem={(id, isArchived) => archiveItemMutation.mutate({ id, isArchived })}
+							isArchiveView={isArchiveView}
 							draggable={!isMobile}
 							activeItemId={activeItem?.id}
 							isLoading={itemsLoading}

@@ -18,6 +18,7 @@ interface ToolbarProps {
 	sort: SortState | null;
 	onSort: (field: SortField) => void;
 	onAddPositions?: () => void;
+	onExport?: () => void;
 }
 
 const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
@@ -57,6 +58,7 @@ export function Toolbar({
 	sort,
 	onSort,
 	onAddPositions,
+	onExport,
 }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -241,7 +243,7 @@ export function Toolbar({
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={() => {}}>
+						<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={onExport}>
 							<Download aria-hidden="true" />
 						</Button>
 					</TooltipTrigger>

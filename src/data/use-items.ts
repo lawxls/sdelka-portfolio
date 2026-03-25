@@ -1,11 +1,12 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { BatchCreateResult } from "./api-client";
+import type { BatchCreateResult, FetchItemsParams } from "./api-client";
 import {
 	deleteItem as apiDeleteItem,
 	updateItem as apiUpdateItem,
 	createItemsBatch,
+	exportItems,
 	fetchItems,
 	fetchTotals,
 } from "./api-client";
@@ -18,7 +19,7 @@ interface ItemQueryParams {
 	folder?: string;
 }
 
-function buildFilterParams({ search, filters, folder, sort }: ItemQueryParams) {
+export function buildFilterParams({ search, filters, folder, sort }: ItemQueryParams) {
 	return {
 		q: search || undefined,
 		status: filters.status !== "all" ? filters.status : undefined,
@@ -196,11 +197,43 @@ export function useDeleteItem() {
 	});
 }
 
+export function useArchiveItem() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => apiUpdateItem(id, { isArchived }),
+		onMutate: async ({ id }) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
+		onError: (_err, _vars, context) => {
+			rollbackSnapshots(queryClient, context);
+			toast.error("Не удалось переместить закупку");
+		},
+		onSettled: () => invalidateItemQueries(queryClient),
+	});
+}
+
+export function useExportItems() {
+	return useMutation({
+		mutationFn: (params: Omit<FetchItemsParams, "cursor" | "limit">) => exportItems(params),
+		onSuccess: ({ blob, filename }) => {
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = filename;
+			a.click();
+			URL.revokeObjectURL(url);
+		},
+		onError: () => {
+			toast.error("Не удалось скачать таблицу");
+		},
+	});
+}
+
 export function useAssignFolder() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) => apiUpdateItem(id, { folderId }),
+		mutationFn: ({ id, folderId, isArchived }: { id: string; folderId: string | null; isArchived?: boolean }) =>
+			apiUpdateItem(id, { folderId, ...(isArchived !== undefined && { isArchived }) }),
 		onMutate: async ({ id, folderId }) =>
 			optimisticItemUpdate(queryClient, (key, data) => {
 				const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;

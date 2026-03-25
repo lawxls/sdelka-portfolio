@@ -1,6 +1,8 @@
 import { useDraggable } from "@dnd-kit/core";
 import {
 	AlertTriangle,
+	Archive,
+	ArchiveRestore,
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
@@ -86,6 +88,8 @@ interface ProcurementTableProps {
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
+	onArchiveItem?: (id: string, isArchived: boolean) => void;
+	isArchiveView?: boolean;
 	draggable?: boolean;
 	activeItemId?: string | null;
 	isLoading?: boolean;
@@ -106,6 +110,8 @@ export function ProcurementTable({
 	onDeleteItem,
 	onRenameItem,
 	onAssignFolder,
+	onArchiveItem,
+	isArchiveView,
 	draggable,
 	activeItemId,
 	isLoading,
@@ -127,7 +133,7 @@ export function ProcurementTable({
 		}
 		return map;
 	}, [folders]);
-	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder);
+	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 	const [optimisticNames, setOptimisticNames] = useState<Record<string, string>>({});
@@ -200,6 +206,8 @@ export function ProcurementTable({
 									onDeleteItem={onDeleteItem}
 									onRenameItem={onRenameItem}
 									onAssignFolder={onAssignFolder}
+									onArchiveItem={onArchiveItem}
+									isArchiveView={isArchiveView}
 								/>
 							))}
 						</div>
@@ -325,10 +333,10 @@ export function ProcurementTable({
 									</TableCell>
 								) : (
 									<TableCell className={`font-medium ${stickyNameCell}`}>
-										<div>
-											<div className="flex items-center gap-2">
-												<TruncatedName name={displayName} />
-												{folder && (
+										<div className="max-w-[350px]">
+											<div className="flex items-center gap-2 min-w-0">
+												<TruncatedName name={displayName} className="truncate" />
+												{folder && !isArchiveView && (
 													<div
 														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 														data-testid={`folder-badge-${item.id}`}
@@ -416,7 +424,7 @@ export function ProcurementTable({
 													Переименовать
 												</ContextMenuItem>
 											)}
-											{onAssignFolder && folders && (
+											{onAssignFolder && folders && !isArchiveView && (
 												<ContextMenuSub>
 													<ContextMenuSubTrigger>
 														<FolderInput className="size-3.5" />
@@ -447,8 +455,23 @@ export function ProcurementTable({
 															<Inbox className="size-3.5" />
 															Без раздела
 														</ContextMenuCheckboxItem>
+														{onArchiveItem && (
+															<>
+																<ContextMenuSeparator />
+																<ContextMenuItem onSelect={() => onArchiveItem(item.id, true)}>
+																	<Archive className="size-3.5" />
+																	Архив
+																</ContextMenuItem>
+															</>
+														)}
 													</ContextMenuSubContent>
 												</ContextMenuSub>
+											)}
+											{onArchiveItem && isArchiveView && (
+												<ContextMenuItem onSelect={() => onArchiveItem(item.id, false)}>
+													<ArchiveRestore className="size-3.5" />
+													Восстановить из архива
+												</ContextMenuItem>
 											)}
 											{onDeleteItem && (
 												<>

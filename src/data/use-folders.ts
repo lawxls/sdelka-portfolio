@@ -44,6 +44,7 @@ export function useFolderStats() {
 				total += stat.itemCount;
 			}
 			counts.all = total;
+			counts.archive = data.archiveCount ?? 0;
 			return counts;
 		},
 	});

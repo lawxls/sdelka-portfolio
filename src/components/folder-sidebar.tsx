@@ -1,5 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import {
+	Archive,
 	Check,
 	ChevronLeft,
 	EllipsisVertical,
@@ -133,7 +134,7 @@ export function FolderSidebar({
 	}
 
 	const sidebarContent = (
-		<aside className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground" data-testid="sidebar">
+		<aside className="flex h-full w-52 flex-col bg-sidebar text-sidebar-foreground" data-testid="sidebar">
 			{/* Header */}
 			<div className="flex shrink-0 items-center justify-between border-b border-sidebar-border px-3 py-2">
 				<h2 className="text-sm font-semibold">Разделы</h2>
@@ -159,6 +160,14 @@ export function FolderSidebar({
 						count={counts.none ?? 0}
 						active={activeFolder === "none"}
 						onClick={() => selectFolder("none")}
+					/>
+					<DroppableNavItem
+						droppableId="archive"
+						icon={<Archive className="size-4" />}
+						label="Архив"
+						count={counts.archive ?? 0}
+						active={activeFolder === "archive"}
+						onClick={() => selectFolder("archive")}
 					/>
 				</div>
 
@@ -240,7 +249,7 @@ export function FolderSidebar({
 	return (
 		<div className="fixed inset-0 z-40" data-testid="sidebar-overlay">
 			<div className="absolute inset-0 bg-black/50" onClick={toggle} aria-hidden="true" />
-			<div className="relative z-10 h-full w-64 shadow-lg">{sidebarContent}</div>
+			<div className="relative z-10 h-full w-52 shadow-lg">{sidebarContent}</div>
 		</div>
 	);
 }

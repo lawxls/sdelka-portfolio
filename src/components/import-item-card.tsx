@@ -56,8 +56,8 @@ export function ImportItemCard({ item, index }: ImportItemCardProps) {
 						{item.currentPrice != null && <Field label="Цена" value={formatCurrency(item.currentPrice)} />}
 						{hasFrequency && (
 							<Field
-								label="Частота закупок"
-								value={`${item.frequencyCount} раз / ${item.frequencyPeriod ? FREQUENCY_PERIOD_LABELS[item.frequencyPeriod] : ""}`}
+								label="Частота поставок"
+								value={`${item.frequencyCount} раз(а) в ${item.frequencyPeriod ? FREQUENCY_PERIOD_LABELS[item.frequencyPeriod] : ""}`}
 							/>
 						)}
 					</dl>

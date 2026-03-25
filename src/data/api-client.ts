@@ -45,28 +45,30 @@ class ApiError extends Error {
 	}
 }
 
-async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
-	const tenant = getTenant();
-	const headers = new Headers(options.headers);
-	headers.set("X-Tenant", tenant ?? "");
-
-	if (!options.skipAuth) {
+function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {
+	const headers = new Headers(existing);
+	headers.set("X-Tenant", getTenant() ?? "");
+	if (!skipAuth) {
 		const token = getToken();
-		if (token) {
-			headers.set("Authorization", `Bearer ${token}`);
-		}
+		if (token) headers.set("Authorization", `Bearer ${token}`);
 	}
+	return headers;
+}
 
-	const response = await fetch(`${BASE}${path}`, { ...options, headers });
-
+async function ensureOk(response: Response): Promise<void> {
 	if (response.status === 401) {
 		clearToken();
 		throw new ApiError(401, await response.json().catch(() => null));
 	}
-
 	if (!response.ok) {
 		throw new ApiError(response.status, await response.json().catch(() => null));
 	}
+}
+
+async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
+	const headers = buildAuthHeaders(options.headers, options.skipAuth);
+	const response = await fetch(`${BASE}${path}`, { ...options, headers });
+	await ensureOk(response);
 
 	if (response.status === 204) return undefined as T;
 
@@ -99,6 +101,7 @@ export async function fetchFolders(): Promise<{ folders: Folder[] }> {
 
 export async function fetchFolderStats(): Promise<{
 	stats: Array<{ folderId: string | null; itemCount: number }>;
+	archiveCount: number;
 }> {
 	return request("/folders/stats");
 }
@@ -147,7 +150,7 @@ export interface FetchItemsParams {
 
 export async function updateItem(
 	id: string,
-	data: { name?: string; folderId?: string | null },
+	data: { name?: string; folderId?: string | null; isArchived?: boolean },
 ): Promise<ProcurementItem> {
 	return request(`/items/${id}/`, {
 		method: "PATCH",
@@ -172,6 +175,26 @@ export async function createItemsBatch(items: NewItemInput[]): Promise<BatchCrea
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ items }),
 	});
+}
+
+export interface ExportResult {
+	blob: Blob;
+	filename: string;
+}
+
+export async function exportItems(params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
+	const headers = buildAuthHeaders();
+	const response = await fetch(
+		`${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`,
+		{ headers },
+	);
+	await ensureOk(response);
+
+	const disposition = response.headers.get("Content-Disposition") ?? "";
+	const filenameMatch = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)"?/i);
+	const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : "items.xlsx";
+
+	return { blob: await response.blob(), filename };
 }
 
 export async function fetchItems(params: FetchItemsParams): Promise<{
