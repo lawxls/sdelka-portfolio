@@ -19,15 +19,14 @@ function renderDrawer(
 	return { ...render(<AddPositionsDrawer {...props} />), ...props };
 }
 
-// Switch indices after reorder:
-// 0: Частота закупок
-// 1: Условия оплаты
-// 2: Доставка
-// 3: Разгрузка
-// 4: Аналоги
-// 5: Дополнительная информация
-// 6: Дополнительные файлы
-// 7: Периодичность мониторинга цен
+const ALWAYS_INCLUDED_DEFAULTS = {
+	frequencyCount: 1,
+	frequencyPeriod: "month",
+	paymentType: "prepayment",
+	paymentMethod: "bank_transfer",
+	deliveryType: "warehouse",
+	priceMonitoringPeriod: "quarter",
+};
 
 describe("AddPositionsDrawer", () => {
 	test("renders header, footer, and position form when open", () => {
@@ -37,8 +36,8 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Создать позиции" })).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Название позиции")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Описание")).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Количество")).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Моя цена (без НДС)")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Количество в год")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Цена без НДС")).toBeInTheDocument();
 	});
 
 	test("does not render when closed", () => {
@@ -54,11 +53,14 @@ describe("AddPositionsDrawer", () => {
 		expect(nameInputs[0]).toHaveFocus();
 	});
 
-	test("unit dropdown contains all predefined units", () => {
+	test("unit dropdown contains all predefined units", async () => {
 		renderDrawer();
-		const select = screen.getByLabelText("Единица измерения");
-		const options = within(select as HTMLElement).getAllByRole("option");
-		expect(options).toHaveLength(11);
+		const user = userEvent.setup();
+		await user.click(screen.getByLabelText("Единица измерения"));
+
+		const listbox = await screen.findByRole("listbox");
+		const options = within(listbox).getAllByRole("option");
+		expect(options).toHaveLength(10);
 		expect(options.map((o) => o.textContent)).toContain("шт");
 		expect(options.map((o) => o.textContent)).toContain("кг");
 		expect(options.map((o) => o.textContent)).toContain("м²");
@@ -133,7 +135,97 @@ describe("AddPositionsDrawer", () => {
 		expect(nameInputs[0]).toHaveValue("");
 	});
 
-	test("submit with valid name calls onSubmit and closes", async () => {
+	// --- Section group headers ---
+
+	test("renders section group headers", () => {
+		renderDrawer();
+		expect(screen.getByText("Условия поставки")).toBeInTheDocument();
+		expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
+		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+	});
+
+	// --- All sections always visible ---
+
+	test("no toggle switches in the form", () => {
+		renderDrawer();
+		expect(screen.queryAllByRole("switch")).toHaveLength(0);
+	});
+
+	test("frequency fields are always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Частота поставок")).toBeInTheDocument();
+		expect(screen.getByLabelText("Количество")).toBeInTheDocument();
+		expect(screen.getByLabelText("Период")).toBeInTheDocument();
+	});
+
+	test("payment controls are always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Условия оплаты")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Р/С" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Наличные" })).toBeInTheDocument();
+	});
+
+	test("delivery controls are always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Доставка")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "До склада" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Самовывоз" })).toBeInTheDocument();
+	});
+
+	test("unloading controls visible with neither selected by default", () => {
+		renderDrawer();
+		expect(screen.getByText("Разгрузка")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("button", { name: "Своими силами" })).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("analogues controls visible with neither selected by default", () => {
+		renderDrawer();
+		expect(screen.getByText("Аналоги")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Допускаются" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("button", { name: "Не допускаются" })).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("clicking active option deselects it", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const btn = screen.getByRole("button", { name: "Допускаются" });
+		await user.click(btn);
+		expect(btn).toHaveAttribute("aria-pressed", "true");
+		await user.click(btn);
+		expect(btn).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("monitoring dropdown is always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Периодичность мониторинга цен")).toBeInTheDocument();
+		expect(screen.getByLabelText("Период мониторинга")).toBeInTheDocument();
+	});
+
+	test("comment textarea is always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Комментарий")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Введите комментарий…")).toBeInTheDocument();
+	});
+
+	test("file dropzone is always visible", () => {
+		renderDrawer();
+		expect(screen.getByText("Приложить файлы")).toBeInTheDocument();
+		expect(screen.getByText(/Перетащите файлы сюда/)).toBeInTheDocument();
+	});
+
+	test("hide company checkbox is visible and unchecked by default", () => {
+		renderDrawer();
+		expect(screen.getByText("Скрыть информацию о компании в запросе")).toBeInTheDocument();
+		expect(screen.getByRole("checkbox")).not.toBeChecked();
+	});
+
+	// --- Submit ---
+
+	test("submit with valid name calls onSubmit with defaults and closes", async () => {
 		const onSubmit = vi.fn();
 		const onOpenChange = vi.fn();
 		renderDrawer({ onSubmit, onOpenChange });
@@ -142,7 +234,12 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура А500С");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([{ name: "Арматура А500С" }]);
+		expect(onSubmit).toHaveBeenCalledWith([
+			{
+				name: "Арматура А500С",
+				...ALWAYS_INCLUDED_DEFAULTS,
+			},
+		]);
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 	});
 
@@ -153,11 +250,12 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Цемент М500");
 		await user.type(screen.getByPlaceholderText("Описание"), "Портландцемент");
-		await user.type(screen.getByPlaceholderText("Количество"), "120");
+		await user.type(screen.getByPlaceholderText("Количество в год"), "120");
 
-		await user.selectOptions(screen.getByLabelText("Единица измерения"), "т");
+		await user.click(screen.getByLabelText("Единица измерения"));
+		await user.click(await screen.findByRole("option", { name: "т" }));
 
-		await user.type(screen.getByPlaceholderText("Моя цена (без НДС)"), "5500");
+		await user.type(screen.getByPlaceholderText("Цена без НДС"), "5500");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
@@ -168,6 +266,7 @@ describe("AddPositionsDrawer", () => {
 				unit: "т",
 				annualQuantity: 120,
 				currentPrice: 5500,
+				...ALWAYS_INCLUDED_DEFAULTS,
 			},
 		]);
 	});
@@ -186,7 +285,10 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([{ name: "Арматура" }, { name: "Цемент" }]);
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({ name: "Арматура" }),
+			expect.objectContaining({ name: "Цемент" }),
+		]);
 	});
 
 	test("submit with empty name shows validation error", async () => {
@@ -238,48 +340,33 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit).toHaveBeenCalled();
 	});
 
-	// --- Частота закупок ---
+	// --- Payment ---
 
-	test("frequency toggle off by default, fields hidden", () => {
-		renderDrawer();
-		expect(screen.getByText("Частота закупок")).toBeInTheDocument();
-		const switches = screen.getAllByRole("switch");
-		expect(switches[0]).toHaveAttribute("aria-checked", "false");
-		expect(screen.queryByLabelText("Количество")).not.toBeInTheDocument();
-	});
-
-	test("toggling frequency on shows count and period fields", async () => {
+	test("deferral days only shown when Отсрочка selected", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[0]);
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 
-		expect(screen.getByLabelText("Количество")).toBeInTheDocument();
-		expect(screen.getByLabelText("Период")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
+		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
 	});
 
-	test("submit with frequency enabled includes frequencyCount and frequencyPeriod", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
+	// --- Delivery ---
+
+	test("delivery address only shown when До склада selected", async () => {
+		renderDrawer();
 		const user = userEvent.setup();
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[0]);
+		expect(screen.getByPlaceholderText("Адрес доставки")).toBeInTheDocument();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([
-			expect.objectContaining({
-				name: "Item",
-				frequencyCount: 1,
-				frequencyPeriod: "month",
-			}),
-		]);
+		await user.click(screen.getByRole("button", { name: "Самовывоз" }));
+		expect(screen.queryByPlaceholderText("Адрес доставки")).not.toBeInTheDocument();
 	});
 
-	test("submit with frequency disabled omits frequency fields", async () => {
+	// --- Unloading ---
+
+	test("unloading omitted from submit when nothing selected", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -287,18 +374,60 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		const item = onSubmit.mock.calls[0][0][0];
-		expect(item.frequencyCount).toBeUndefined();
-		expect(item.frequencyPeriod).toBeUndefined();
+		expect(onSubmit.mock.calls[0][0][0].unloading).toBeUndefined();
 	});
 
-	// --- Скрыть информацию о компании ---
+	test("unloading included in submit when selected", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
 
-	test("hide company checkbox is visible and unchecked by default", () => {
-		renderDrawer();
-		expect(screen.getByText("Скрыть информацию о компании в запросе")).toBeInTheDocument();
-		expect(screen.getByRole("checkbox")).not.toBeChecked();
+		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ unloading: "supplier" })]);
 	});
+
+	// --- Analogues ---
+
+	test("analogues omitted from submit when nothing selected", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit.mock.calls[0][0][0].analoguesAllowed).toBeUndefined();
+	});
+
+	test("analogues included in submit when selected", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ analoguesAllowed: false })]);
+	});
+
+	// --- Monitoring ---
+
+	test("monitoring always included in submit with default", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ priceMonitoringPeriod: "quarter" })]);
+	});
+
+	// --- Hide company ---
 
 	test("checking hide company includes hideCompanyInfo in submit", async () => {
 		const onSubmit = vi.fn();
@@ -309,143 +438,17 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([
-			expect.objectContaining({
-				hideCompanyInfo: true,
-			}),
-		]);
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ hideCompanyInfo: true })]);
 	});
 
-	// --- Delivery conditions ---
+	// --- Comment ---
 
-	test("all 8 toggle sections are visible with toggles off by default", () => {
-		renderDrawer();
-		const sections = [
-			"Частота закупок",
-			"Условия оплаты",
-			"Доставка",
-			"Разгрузка",
-			"Аналоги",
-			"Дополнительная информация",
-			"Дополнительные файлы",
-			"Периодичность мониторинга цен",
-		];
-		for (const label of sections) {
-			expect(screen.getByText(label)).toBeInTheDocument();
-		}
-		const switches = screen.getAllByRole("switch");
-		expect(switches).toHaveLength(8);
-		for (const sw of switches) {
-			expect(sw).toHaveAttribute("aria-checked", "false");
-		}
-	});
-
-	test("toggling Условия оплаты on shows payment controls without VAT", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[1]);
-
-		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Р/С" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Наличные" })).toBeInTheDocument();
-		// VAT controls should NOT be present
-		expect(screen.queryByRole("button", { name: "С НДС" })).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "Без НДС" })).not.toBeInTheDocument();
-	});
-
-	test("deferral days only shown when Отсрочка selected", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[1]);
-
-		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
-		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
-	});
-
-	test("toggling Доставка on shows delivery controls", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[2]);
-
-		expect(screen.getByRole("button", { name: "До склада" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Самовывоз" })).toBeInTheDocument();
-	});
-
-	test("delivery address only shown when До склада selected", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[2]);
-
-		expect(screen.getByPlaceholderText("Адрес доставки")).toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Самовывоз" }));
-		expect(screen.queryByPlaceholderText("Адрес доставки")).not.toBeInTheDocument();
-	});
-
-	test("toggling Разгрузка on shows unloading controls", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[3]);
-
-		expect(screen.getByRole("button", { name: "Силами поставщика" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Своими силами" })).toBeInTheDocument();
-	});
-
-	test("toggling Аналоги on shows analogues controls", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[4]);
-
-		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Не допускаются" })).toBeInTheDocument();
-	});
-
-	test("toggling a section off hides controls", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[4]); // Аналоги on
-		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
-		await user.click(switches[4]); // Аналоги off
-		expect(screen.queryByRole("button", { name: "Допускаются" })).not.toBeInTheDocument();
-	});
-
-	// --- Дополнительная информация ---
-
-	test("toggling Дополнительная информация on shows textarea", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[5]);
-
-		expect(screen.getByPlaceholderText("Введите дополнительную информацию…")).toBeInTheDocument();
-	});
-
-	test("submit with additional info enabled includes additionalInfo", async () => {
+	test("submit with comment includes additionalInfo", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[5]);
-		await user.type(screen.getByPlaceholderText("Введите дополнительную информацию…"), "Особые условия");
+		await user.type(screen.getByPlaceholderText("Введите комментарий…"), "Особые условия");
 
 		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
@@ -453,74 +456,9 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ additionalInfo: "Особые условия" })]);
 	});
 
-	// --- Дополнительные файлы ---
-
-	test("toggling Дополнительные файлы on shows dropzone", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[6]);
-
-		expect(screen.getByText(/Перетащите файлы сюда/)).toBeInTheDocument();
-	});
-
-	// --- Периодичность мониторинга цен ---
-
-	test("toggling Периодичность мониторинга on shows dropdown", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[7]);
-
-		expect(screen.getByLabelText("Период мониторинга")).toBeInTheDocument();
-	});
-
-	test("submit with monitoring enabled includes priceMonitoringPeriod", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[7]);
-
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ priceMonitoringPeriod: "quarter" })]);
-	});
-
 	// --- Submit with delivery conditions ---
 
-	test("submit includes delivery conditions from enabled sections", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-		const user = userEvent.setup();
-
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Test");
-
-		const switches = screen.getAllByRole("switch");
-
-		// Toggle Доставка
-		await user.click(switches[2]);
-
-		// Toggle Аналоги → не допускаются
-		await user.click(switches[4]);
-		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
-
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([
-			expect.objectContaining({
-				name: "Test",
-				deliveryType: "warehouse",
-				analoguesAllowed: false,
-			}),
-		]);
-	});
-
-	test("submit omits delivery fields from toggled-off sections", async () => {
+	test("submit includes all always-present fields", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -529,25 +467,27 @@ describe("AddPositionsDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		const item = onSubmit.mock.calls[0][0][0];
-		expect(item.paymentType).toBeUndefined();
-		expect(item.deliveryType).toBeUndefined();
+		expect(item.paymentType).toBe("prepayment");
+		expect(item.paymentMethod).toBe("bank_transfer");
+		expect(item.deliveryType).toBe("warehouse");
+		expect(item.frequencyCount).toBe(1);
+		expect(item.frequencyPeriod).toBe("month");
+		expect(item.priceMonitoringPeriod).toBe("quarter");
+		// Toggle-gated fields omitted when off
 		expect(item.unloading).toBeUndefined();
 		expect(item.analoguesAllowed).toBeUndefined();
-		expect(item.frequencyCount).toBeUndefined();
 		expect(item.hideCompanyInfo).toBeUndefined();
 		expect(item.additionalInfo).toBeUndefined();
-		expect(item.priceMonitoringPeriod).toBeUndefined();
 	});
 
-	test("delivery conditions applied to all positions on submit", async () => {
+	test("shared conditions applied to all positions on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[3]); // Разгрузка
+		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
@@ -561,37 +501,23 @@ describe("AddPositionsDrawer", () => {
 		expect(items[1].unloading).toBe("supplier");
 	});
 
-	test("delivery conditions reset after submit", async () => {
+	test("form values reset to defaults after submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[4]); // Аналоги
-		expect(screen.getByRole("button", { name: "Допускаются" })).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Своими силами" }));
+		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
 
 		await user.type(screen.getByPlaceholderText("Название позиции"), "X");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		const resetSwitches = screen.getAllByRole("switch");
-		for (const sw of resetSwitches) {
-			expect(sw).toHaveAttribute("aria-checked", "false");
-		}
-	});
-
-	test("frequency toggle resets after submit", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[0]); // Частота
-
-		await user.type(screen.getByPlaceholderText("Название позиции"), "X");
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		// After reset, frequency switch should be off
-		expect(screen.getAllByRole("switch")[0]).toHaveAttribute("aria-checked", "false");
+		// After reset, nothing selected
+		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("button", { name: "Своими силами" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("button", { name: "Допускаются" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("button", { name: "Не допускаются" })).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("checkbox")).not.toBeChecked();
 	});
 
 	// --- Validation & unsaved changes ---
@@ -683,18 +609,6 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 
-	test("dirty detection: frequency toggle triggers confirmation", async () => {
-		const onOpenChange = vi.fn();
-		renderDrawer({ onOpenChange });
-		const user = userEvent.setup();
-
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[0]); // Частота
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
-	});
-
 	test("dirty detection: hide company checkbox triggers confirmation", async () => {
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
@@ -706,13 +620,34 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 
-	test("dirty detection: delivery section toggled on triggers confirmation", async () => {
+	test("dirty detection: delivery address typed triggers confirmation", async () => {
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		const switches = screen.getAllByRole("switch");
-		await user.click(switches[2]); // Доставка
+		await user.type(screen.getByPlaceholderText("Адрес доставки"), "ул. Ленина 1");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("dirty detection: selecting analogues triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Допускаются" }));
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("dirty detection: selecting unloading triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();

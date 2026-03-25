@@ -44,6 +44,20 @@ globalThis.IntersectionObserver = class {
 	disconnect() {}
 } as unknown as typeof IntersectionObserver;
 
+// DOM stubs required by Radix Select in jsdom
+if (!HTMLElement.prototype.hasPointerCapture) {
+	HTMLElement.prototype.hasPointerCapture = () => false;
+}
+if (!HTMLElement.prototype.setPointerCapture) {
+	HTMLElement.prototype.setPointerCapture = () => {};
+}
+if (!HTMLElement.prototype.releasePointerCapture) {
+	HTMLElement.prototype.releasePointerCapture = () => {};
+}
+if (!Element.prototype.scrollIntoView) {
+	Element.prototype.scrollIntoView = () => {};
+}
+
 // matchMedia mock for responsive hooks (defaults to desktop: min-width 1024px matches)
 Object.defineProperty(window, "matchMedia", {
 	writable: true,

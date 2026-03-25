@@ -31,6 +31,15 @@ export function formatDeviation(value: number | null | undefined): { text: strin
 	return { text: `${triangle}${formatPercent(value)}`, className: signClassName(value) };
 }
 
+const integerFormatter = new Intl.NumberFormat("ru-RU");
+
+/** Format a raw digit string as a grouped integer (e.g. "1234567" → "1 234 567"). */
+export function formatGroupedInteger(raw: string): string {
+	const digits = raw.replace(/\D/g, "");
+	if (!digits) return "";
+	return integerFormatter.format(Number(digits));
+}
+
 export function formatFileSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} Б`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
