@@ -221,6 +221,39 @@ describe("Routing", () => {
 		const rows = within(table).getAllByRole("row");
 		expect(rows.length).toBeGreaterThan(1);
 	});
+
+	test("mobile bottom nav renders in layout", () => {
+		renderApp();
+		expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
+	});
+
+	test("mobile header renders avatar button", () => {
+		renderApp();
+		const header = screen.getByTestId("mobile-header");
+		expect(within(header).getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
+	});
+
+	test("mobile header avatar opens dropdown with 3 items", async () => {
+		renderApp();
+		const user = userEvent.setup();
+		const header = screen.getByTestId("mobile-header");
+		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
+
+		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
+	});
+
+	test("mobile bottom nav navigates between sections", async () => {
+		renderApp();
+		const user = userEvent.setup();
+		const nav = screen.getByTestId("mobile-bottom-nav");
+		await user.click(within(nav).getByRole("link", { name: "Аналитика" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
+		});
+	});
 });
 
 // ---- Procurement page tests ----
