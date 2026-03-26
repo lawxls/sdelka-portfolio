@@ -175,27 +175,30 @@ describe("Routing", () => {
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
-	test("/analytics renders stub page", async () => {
+	test("/analytics renders placeholder page with icon", async () => {
 		renderApp(["/analytics"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
-	test("/companies renders stub page", async () => {
+	test("/companies renders placeholder page with icon", async () => {
 		renderApp(["/companies"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
-	test("/tasks renders stub page", async () => {
+	test("/tasks renders placeholder page with icon", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
