@@ -178,7 +178,7 @@ describe("Routing", () => {
 	test("/analytics renders stub page", async () => {
 		renderApp(["/analytics"]);
 		await waitFor(() => {
-			expect(screen.getByText("Аналитика")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
 		});
 	});
@@ -186,7 +186,7 @@ describe("Routing", () => {
 	test("/companies renders stub page", async () => {
 		renderApp(["/companies"]);
 		await waitFor(() => {
-			expect(screen.getByText("Компании")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
 		});
 	});
@@ -194,7 +194,7 @@ describe("Routing", () => {
 	test("/tasks renders stub page", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
-			expect(screen.getByText("Задачи")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 			expect(screen.getByText("В разработке")).toBeInTheDocument();
 		});
 	});
@@ -207,7 +207,7 @@ describe("Routing", () => {
 	test("FolderSidebar does not render on /analytics", async () => {
 		renderApp(["/analytics"]);
 		await waitFor(() => {
-			expect(screen.getByText("Аналитика")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
 		});
 		expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
 	});
