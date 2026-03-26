@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppSidebar } from "./app-sidebar";
@@ -83,5 +83,53 @@ describe("AppSidebar", () => {
 		const tooltips = await screen.findAllByText("Закупки");
 		// At least one tooltip content element (could also be the span inside the button)
 		expect(tooltips.length).toBeGreaterThanOrEqual(1);
+	});
+});
+
+describe("User avatar dropdown", () => {
+	beforeEach(() => {
+		localStorage.clear();
+	});
+
+	test("avatar button renders at bottom of sidebar", () => {
+		renderSidebar();
+		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
+	});
+
+	test("clicking avatar opens dropdown with 3 items", async () => {
+		renderSidebar();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
+	});
+
+	test("logout clears auth token from localStorage", async () => {
+		localStorage.setItem("auth-token", "test-token");
+		renderSidebar();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+		await user.click(screen.getByRole("menuitem", { name: "Выйти" }));
+
+		expect(localStorage.getItem("auth-token")).toBeNull();
+	});
+
+	test("logout dispatches auth:cleared event", async () => {
+		localStorage.setItem("auth-token", "test-token");
+		const handler = vi.fn();
+		window.addEventListener("auth:cleared", handler);
+
+		renderSidebar();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+		await user.click(screen.getByRole("menuitem", { name: "Выйти" }));
+
+		expect(handler).toHaveBeenCalledTimes(1);
+		window.removeEventListener("auth:cleared", handler);
 	});
 });

@@ -1,14 +1,23 @@
-import { Building2, Layers, LayoutDashboard, ListTodo } from "lucide-react";
+import { Building2, CircleUser, Layers, LayoutDashboard, ListTodo, LogOut, Settings, User } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { LogoIcon } from "@/components/logo-icon";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { clearToken } from "@/data/auth";
 
 const NAV_ITEMS = [
 	{ path: "/analytics", label: "Аналитика", icon: LayoutDashboard },
@@ -51,6 +60,34 @@ export function AppSidebar() {
 					})}
 				</SidebarMenu>
 			</SidebarContent>
+			<SidebarFooter className="items-center pb-3">
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<button
+							type="button"
+							aria-label="Меню пользователя"
+							className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+						>
+							<CircleUser className="size-7" />
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent side="right" align="end" className="w-48">
+						<DropdownMenuItem disabled>
+							<User />
+							Мой профиль
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled>
+							<Settings />
+							Настройки
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem variant="destructive" onSelect={clearToken}>
+							<LogOut />
+							Выйти
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</SidebarFooter>
 		</Sidebar>
 	);
 }
