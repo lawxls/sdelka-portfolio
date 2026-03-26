@@ -1,4 +1,4 @@
 {
-	"ignore": ["src/components/ui/*.tsx"],
+	"ignore": ["src/components/ui/*.tsx", "src/components/logo-icon.tsx"],
 	"ignoreDependencies": ["use-effect-reducer"]
 }
