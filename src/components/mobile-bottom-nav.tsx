@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { NAV_ITEMS } from "@/lib/nav-items";
+import { cn } from "@/lib/utils";
 
 export function MobileBottomNav() {
 	const { pathname } = useLocation();
@@ -17,9 +18,10 @@ export function MobileBottomNav() {
 						key={path}
 						to={path}
 						aria-label={label}
-						className={`flex flex-col items-center gap-0.5 px-3 py-2 text-xs touch-manipulation ${
-							active ? "text-primary" : "text-muted-foreground"
-						}`}
+						className={cn(
+							"flex flex-col items-center gap-0.5 px-3 py-2 text-xs touch-manipulation",
+							active ? "text-primary" : "text-muted-foreground",
+						)}
 					>
 						<Icon className="size-6" />
 						<span aria-hidden="true">{label}</span>

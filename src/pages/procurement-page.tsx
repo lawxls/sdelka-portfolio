@@ -220,10 +220,6 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleSidebarOpenChange(next: boolean) {
-		setSidebarOpen(next);
-	}
-
 	function handleFolderSelect(folderId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -246,7 +242,7 @@ export function ProcurementPage() {
 						variant="ghost"
 						size="icon-sm"
 						className="shrink-0 md:hidden"
-						onClick={() => handleSidebarOpenChange(true)}
+						onClick={() => setSidebarOpen(true)}
 						aria-label="Открыть боковую панель"
 					>
 						<PanelLeft className="size-4" />
@@ -271,7 +267,7 @@ export function ProcurementPage() {
 						activeFolder={folder}
 						isLoading={foldersLoading || statsLoading}
 						open={sidebarOpen}
-						onOpenChange={handleSidebarOpenChange}
+						onOpenChange={setSidebarOpen}
 						onFolderSelect={handleFolderSelect}
 						onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
 						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
