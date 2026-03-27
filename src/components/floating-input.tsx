@@ -10,6 +10,8 @@ interface FloatingInputProps {
 	onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 	error?: string | null;
 	autoComplete?: string;
+	prefix?: string;
+	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
 export function FloatingInput({
@@ -20,6 +22,8 @@ export function FloatingInput({
 	onChange,
 	error,
 	autoComplete,
+	prefix,
+	inputMode,
 }: FloatingInputProps) {
 	const isPassword = type === "password";
 	const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +31,11 @@ export function FloatingInput({
 
 	return (
 		<div className="relative">
+			{prefix && (
+				<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+					{prefix}
+				</span>
+			)}
 			<input
 				id={name}
 				name={name}
@@ -35,13 +44,15 @@ export function FloatingInput({
 				onChange={onChange}
 				placeholder=" "
 				autoComplete={autoComplete}
+				inputMode={inputMode}
 				spellCheck={false}
 				aria-invalid={error ? true : undefined}
 				className={cn(
-					"peer h-12 w-full rounded-lg border bg-transparent px-3 pt-4 pb-1 text-sm outline-none transition-colors",
+					"peer h-12 w-full rounded-lg border bg-transparent pt-4 pb-1 text-sm outline-none transition-colors",
 					"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
 					"aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
 					"dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+					prefix ? "pl-9 pr-3" : "px-3",
 					isPassword ? "pr-10" : "",
 					error ? "border-destructive" : "border-input",
 				)}
@@ -49,9 +60,10 @@ export function FloatingInput({
 			<label
 				htmlFor={name}
 				className={cn(
-					"pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all",
+					"pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all",
 					"peer-focus-visible:top-2.5 peer-focus-visible:translate-y-0 peer-focus-visible:text-xs peer-focus-visible:text-foreground",
 					"peer-[:not(:placeholder-shown)]:top-2.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs",
+					prefix ? "left-9" : "left-3",
 				)}
 			>
 				{label}

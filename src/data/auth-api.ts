@@ -51,6 +51,43 @@ export async function login(email: string, password: string): Promise<LoginRespo
 	});
 }
 
+export interface VerifyInvitationCodeResponse {
+	valid: boolean;
+}
+
+export async function verifyInvitationCode(code: string): Promise<VerifyInvitationCodeResponse> {
+	return authRequest("/verify-invitation-code", {
+		method: "POST",
+		body: JSON.stringify({ code }),
+	});
+}
+
+export interface CheckEmailResponse {
+	exists: boolean;
+}
+
+export async function checkEmail(email: string): Promise<CheckEmailResponse> {
+	return authRequest("/check-email", {
+		method: "POST",
+		body: JSON.stringify({ email }),
+	});
+}
+
+export interface RegisterData {
+	email: string;
+	password: string;
+	first_name: string;
+	phone: string;
+	invitation_code: string;
+}
+
+export async function register(data: RegisterData): Promise<LoginResponse> {
+	return authRequest("/register", {
+		method: "POST",
+		body: JSON.stringify(data),
+	});
+}
+
 export async function logout(): Promise<void> {
 	const refresh = getRefreshToken();
 	return authRequest("/logout", {

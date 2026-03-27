@@ -6,6 +6,7 @@ import { NAV_ITEMS } from "@/lib/nav-items";
 import { LoginPage } from "@/pages/login-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
+import { RegisterPage } from "@/pages/register-page";
 
 const PLACEHOLDER_ROUTES = NAV_ITEMS.filter((item) => item.path !== "/procurement");
 
@@ -20,6 +21,7 @@ function App() {
 			{/* Auth routes (public) */}
 			<Route element={<AuthLayout />}>
 				<Route path="/login" element={<LoginPage />} />
+				<Route path="/register" element={<RegisterPage />} />
 			</Route>
 
 			{/* App routes (protected) */}

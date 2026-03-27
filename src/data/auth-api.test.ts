@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
-import { login, logout, parseApiError } from "./auth-api";
+import { checkEmail, login, logout, parseApiError, register, verifyInvitationCode } from "./auth-api";
 
 afterEach(() => {
 	localStorage.clear();
@@ -88,6 +88,118 @@ describe("parseApiError", () => {
 		expect(result).toEqual({
 			fieldErrors: { email: "Bad" },
 			detail: "Error",
+		});
+	});
+});
+
+describe("verifyInvitationCode", () => {
+	test("sends POST with code and returns validity", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/verify-invitation-code", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ valid: true });
+			}),
+		);
+
+		const result = await verifyInvitationCode("ABC12");
+		expect(capturedBody).toEqual({ code: "ABC12" });
+		expect(result).toEqual({ valid: true });
+	});
+
+	test("returns valid false for invalid code", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/verify-invitation-code", () => {
+				return HttpResponse.json({ valid: false });
+			}),
+		);
+
+		const result = await verifyInvitationCode("WRONG");
+		expect(result).toEqual({ valid: false });
+	});
+});
+
+describe("checkEmail", () => {
+	test("sends POST with email and returns exists status", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/check-email", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ exists: false });
+			}),
+		);
+
+		const result = await checkEmail("new@user.com");
+		expect(capturedBody).toEqual({ email: "new@user.com" });
+		expect(result).toEqual({ exists: false });
+	});
+
+	test("returns exists true for taken email", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/check-email", () => {
+				return HttpResponse.json({ exists: true });
+			}),
+		);
+
+		const result = await checkEmail("taken@user.com");
+		expect(result).toEqual({ exists: true });
+	});
+});
+
+describe("register", () => {
+	test("sends POST with registration data and returns tokens", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/register", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json(
+					{ access: "a-token", refresh: "r-token", user: { email: "new@user.com" } },
+					{ status: 201 },
+				);
+			}),
+		);
+
+		const result = await register({
+			email: "new@user.com",
+			password: "securePass1",
+			first_name: "Иван",
+			phone: "+71234567890",
+			invitation_code: "ABC12",
+		});
+		expect(capturedBody).toEqual({
+			email: "new@user.com",
+			password: "securePass1",
+			first_name: "Иван",
+			phone: "+71234567890",
+			invitation_code: "ABC12",
+		});
+		expect(result).toEqual({ access: "a-token", refresh: "r-token", user: { email: "new@user.com" } });
+	});
+
+	test("throws on 400 with field-level errors", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/register", () => {
+				return HttpResponse.json({ password: "Пароль слишком простой" }, { status: 400 });
+			}),
+		);
+
+		await expect(
+			register({
+				email: "new@user.com",
+				password: "123",
+				first_name: "Иван",
+				phone: "+71234567890",
+				invitation_code: "ABC12",
+			}),
+		).rejects.toMatchObject({
+			status: 400,
+			body: { password: "Пароль слишком простой" },
 		});
 	});
 });
