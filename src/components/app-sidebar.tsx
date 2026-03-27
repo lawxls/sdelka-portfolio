@@ -19,11 +19,11 @@ export function AppSidebar() {
 		<Sidebar collapsible="icon" data-testid="app-sidebar">
 			<SidebarHeader className="items-center py-3">
 				<Link to="/procurement" data-testid="app-sidebar-logo" aria-label="На главную">
-					<LogoIcon className="h-5 w-auto" />
+					<LogoIcon className="h-7 w-auto" />
 				</Link>
 			</SidebarHeader>
 			<SidebarContent>
-				<SidebarMenu className="items-center gap-1 px-1">
+				<SidebarMenu className="items-center gap-2 px-1 pt-3 [&_svg]:size-6 [&_[data-sidebar=menu-button]]:group-data-[collapsible=icon]:!size-10">
 					{NAV_ITEMS.map(({ path, label, icon: Icon }) => {
 						const active = pathname.startsWith(path);
 						return (
@@ -47,7 +47,7 @@ export function AppSidebar() {
 				</SidebarMenu>
 			</SidebarContent>
 			<SidebarFooter className="items-center pb-3">
-				<UserAvatarMenu side="right" align="end" />
+				<UserAvatarMenu side="right" align="end" iconClassName="size-8" />
 			</SidebarFooter>
 		</Sidebar>
 	);

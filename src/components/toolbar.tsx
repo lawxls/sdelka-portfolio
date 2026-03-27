@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, ListFilter, Plus, Search, X } from "lucide-react";
 import { useRef, useState } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -249,8 +248,6 @@ export function Toolbar({
 					</TooltipTrigger>
 					<TooltipContent>Скачать таблицу</TooltipContent>
 				</Tooltip>
-
-				<ThemeToggle />
 
 				<Button
 					type="button"

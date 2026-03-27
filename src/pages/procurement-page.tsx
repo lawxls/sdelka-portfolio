@@ -237,7 +237,7 @@ export function ProcurementPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				<header className="z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
+				<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
 					<Button
 						variant="ghost"
 						size="icon-sm"

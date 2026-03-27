@@ -33,6 +33,12 @@ describe("MobileBottomNav", () => {
 		expect(link.className).toContain("text-primary");
 	});
 
+	test("tab links have focus-visible ring styling", () => {
+		renderNav();
+		const link = screen.getByRole("link", { name: "Закупки" });
+		expect(link.className).toContain("focus-visible:ring-2");
+	});
+
 	test("inactive tab has muted styling", () => {
 		renderNav("/procurement");
 		const link = screen.getByRole("link", { name: "Аналитика" });

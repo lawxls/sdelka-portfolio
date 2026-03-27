@@ -168,6 +168,13 @@ describe("Routing", () => {
 		});
 	});
 
+	test("/ preserves query params when redirecting to /procurement", async () => {
+		await renderAppReady(["/?deviation=overpaying"]);
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		expect(rows.length).toBeGreaterThan(1);
+	});
+
 	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
 		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
