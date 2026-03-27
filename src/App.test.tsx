@@ -8,9 +8,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import * as mockParser from "@/data/mock-file-parser";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+import { DragItemOverlay } from "@/pages/procurement-page";
 import { server } from "@/test-msw";
 import { makeItem } from "@/test-utils";
-import App, { DragItemOverlay } from "./App";
+import App from "./App";
 
 const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
@@ -130,7 +131,7 @@ let queryClient: QueryClient;
 function renderApp(initialEntries?: string[]) {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={initialEntries}>
+			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<App />
 				</TooltipProvider>
@@ -157,14 +158,124 @@ beforeEach(() => {
 	setupHandlers();
 });
 
-describe("App", () => {
-	test("renders page layout with header, main, and footer", async () => {
+// ---- Route tests (TDD) ----
+
+describe("Routing", () => {
+	test("/ redirects to /procurement", async () => {
+		renderApp(["/"]);
+		await waitFor(() => {
+			expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
+		});
+	});
+
+	test("/ preserves query params when redirecting to /procurement", async () => {
+		await renderAppReady(["/?deviation=overpaying"]);
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		expect(rows.length).toBeGreaterThan(1);
+	});
+
+	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
 		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
-		expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+	});
+
+	test("/analytics renders placeholder page with icon", async () => {
+		renderApp(["/analytics"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
+			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
+		});
+	});
+
+	test("/companies renders placeholder page with icon", async () => {
+		renderApp(["/companies"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
+			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
+		});
+	});
+
+	test("/tasks renders placeholder page with icon", async () => {
+		renderApp(["/tasks"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
+			expect(screen.getByText("В разработке")).toBeInTheDocument();
+			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
+		});
+	});
+
+	test("FolderSidebar renders on /procurement", async () => {
+		await renderAppReady();
+		expect(screen.getByTestId("sidebar")).toBeInTheDocument();
+	});
+
+	test("FolderSidebar does not render on /analytics", async () => {
+		renderApp(["/analytics"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
+		});
+		expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
+	});
+
+	test("URL query params preserved under /procurement", async () => {
+		await renderAppReady(["/procurement?deviation=overpaying"]);
+		const table = screen.getByRole("table");
+		const rows = within(table).getAllByRole("row");
+		expect(rows.length).toBeGreaterThan(1);
+	});
+
+	test("mobile bottom nav renders in layout", () => {
+		renderApp();
+		expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
+	});
+
+	test("mobile header renders avatar button", () => {
+		renderApp();
+		const header = screen.getByTestId("mobile-header");
+		expect(within(header).getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
+	});
+
+	test("mobile header avatar opens dropdown with 3 items", async () => {
+		renderApp();
+		const user = userEvent.setup();
+		const header = screen.getByTestId("mobile-header");
+		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
+
+		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
+	});
+
+	test("mobile bottom nav navigates between sections", async () => {
+		renderApp();
+		const user = userEvent.setup();
+		const nav = screen.getByTestId("mobile-bottom-nav");
+		await user.click(within(nav).getByRole("link", { name: "Аналитика" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
+		});
+	});
+});
+
+// ---- Procurement page tests ----
+
+describe("ProcurementPage", () => {
+	test("renders page layout with header and main", async () => {
+		await renderAppReady();
+		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
+		expect(screen.getByRole("banner")).toBeInTheDocument();
+		expect(screen.getByRole("main")).toBeInTheDocument();
+	});
+
+	test("no footer in layout", async () => {
+		await renderAppReady();
+		expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
 	});
 
 	test("renders procurement table with server data", async () => {
@@ -181,21 +292,9 @@ describe("App", () => {
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
-	test("renders summary panel with SKU count from server totals", async () => {
-		await renderAppReady();
-		const footer = screen.getByRole("contentinfo");
-		expect(within(footer).getByText(/SKU/)).toBeInTheDocument();
-		expect(within(footer).getByText("35")).toBeInTheDocument();
-	});
-
 	test("shows skeleton rows during initial load", () => {
 		renderApp();
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
-	});
-
-	test("shows SKU skeleton during totals load", () => {
-		renderApp();
-		expect(screen.getByTestId("sku-skeleton")).toBeInTheDocument();
 	});
 
 	test("search filters table rows via API refetch", async () => {
@@ -243,7 +342,7 @@ describe("App", () => {
 	});
 
 	test("restores state from URL search params", async () => {
-		await renderAppReady(["/?deviation=overpaying"]);
+		await renderAppReady(["/procurement?deviation=overpaying"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -260,7 +359,7 @@ describe("App", () => {
 	});
 
 	test("deep-link with folder param filters table to folder items", async () => {
-		await renderAppReady(["/?folder=folder-1"]);
+		await renderAppReady(["/procurement?folder=folder-1"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -269,7 +368,7 @@ describe("App", () => {
 	});
 
 	test("deep-link with folder=none shows only unassigned items", async () => {
-		await renderAppReady(["/?folder=none"]);
+		await renderAppReady(["/procurement?folder=none"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -309,7 +408,7 @@ describe("App", () => {
 	});
 
 	test("deleting active folder clears folder filter", async () => {
-		await renderAppReady(["/?folder=folder-1"]);
+		await renderAppReady(["/procurement?folder=folder-1"]);
 
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");

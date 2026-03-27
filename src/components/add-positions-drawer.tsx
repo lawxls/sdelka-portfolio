@@ -390,8 +390,11 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	return (
 		<>
 			<Sheet open={open} onOpenChange={handleOpenChange}>
-				<SheetContent className="flex flex-col">
-					<SheetHeader>
+				<SheetContent
+					showCloseButton={false}
+					className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
+				>
+					<SheetHeader className="max-md:border-b max-md:border-border">
 						<SheetTitle>Добавить позиции</SheetTitle>
 						<SheetDescription className="sr-only">Создание новых позиций закупок</SheetDescription>
 					</SheetHeader>
@@ -449,7 +452,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 											spellCheck={false}
 											autoComplete="off"
 										/>
-										<div className="flex gap-2">
+										<div className="flex flex-wrap gap-2">
 											<Input
 												type="number"
 												inputMode="numeric"
@@ -472,7 +475,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 													))}
 												</SelectContent>
 											</Select>
-											<div className="flex flex-1 items-center gap-1.5">
+											<div className="flex flex-1 basis-full items-center gap-1.5 md:basis-auto">
 												<Input
 													inputMode="numeric"
 													placeholder="Цена без НДС"
@@ -503,7 +506,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 							</Button>
 						</div>
 
-						<p className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+						<p className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs max-md:text-[0.65rem] text-muted-foreground">
 							Условия ниже применяются ко всем позициям указанным в этом окне
 						</p>
 
