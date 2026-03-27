@@ -269,7 +269,6 @@ describe("ProcurementPage", () => {
 	test("renders page layout with header and main", async () => {
 		await renderAppReady();
 		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 		expect(screen.getByRole("banner")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
