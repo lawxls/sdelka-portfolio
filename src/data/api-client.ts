@@ -1,4 +1,5 @@
-import { clearTokens, getAccessToken } from "./auth";
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
+import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
 import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
@@ -65,9 +66,39 @@ async function ensureOk(response: Response): Promise<void> {
 	}
 }
 
+let refreshPromise: Promise<void> | null = null;
+
+function attemptRefresh(): Promise<void> {
+	if (refreshPromise) return refreshPromise;
+
+	const refresh = getRefreshToken();
+	if (!refresh) return Promise.reject(new Error("No refresh token"));
+
+	refreshPromise = refreshToken(refresh)
+		.then(({ access }) => {
+			setTokens(access, refresh);
+		})
+		.finally(() => {
+			refreshPromise = null;
+		});
+
+	return refreshPromise;
+}
+
 async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
 	const headers = buildAuthHeaders(options.headers, options.skipAuth);
-	const response = await fetch(`${BASE}${path}`, { ...options, headers });
+	let response = await fetch(`${BASE}${path}`, { ...options, headers });
+
+	if (response.status === 401 && !options.skipAuth && getRefreshToken()) {
+		try {
+			await attemptRefresh();
+			const retryHeaders = buildAuthHeaders(options.headers, options.skipAuth);
+			response = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders });
+		} catch {
+			// Refresh failed — fall through to ensureOk with original 401 response
+		}
+	}
+
 	await ensureOk(response);
 
 	if (response.status === 204) return undefined as T;
@@ -172,11 +203,20 @@ export interface ExportResult {
 }
 
 export async function exportItems(params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
+	const url = `${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`;
 	const headers = buildAuthHeaders();
-	const response = await fetch(
-		`${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`,
-		{ headers },
-	);
+	let response = await fetch(url, { headers });
+
+	if (response.status === 401 && getRefreshToken()) {
+		try {
+			await attemptRefresh();
+			const retryHeaders = buildAuthHeaders();
+			response = await fetch(url, { headers: retryHeaders });
+		} catch {
+			// Refresh failed — fall through to ensureOk
+		}
+	}
+
 	await ensureOk(response);
 
 	const disposition = response.headers.get("Content-Disposition") ?? "";

@@ -121,6 +121,17 @@ export async function resetPassword(token: string, password: string): Promise<Re
 	});
 }
 
+export interface RefreshTokenResponse {
+	access: string;
+}
+
+export async function refreshToken(refresh: string): Promise<RefreshTokenResponse> {
+	return authRequest("/token/refresh", {
+		method: "POST",
+		body: JSON.stringify({ refresh }),
+	});
+}
+
 export async function logout(): Promise<void> {
 	const refresh = getRefreshToken();
 	return authRequest("/logout", {

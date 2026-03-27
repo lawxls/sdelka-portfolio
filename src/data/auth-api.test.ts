@@ -10,6 +10,7 @@ import {
 	login,
 	logout,
 	parseApiError,
+	refreshToken,
 	register,
 	resetPassword,
 	verifyInvitationCode,
@@ -235,6 +236,37 @@ describe("resetPassword", () => {
 		await expect(resetPassword("bad-token", "newSecure1")).rejects.toMatchObject({
 			status: 400,
 			body: { detail: "Недействительный или просроченный токен" },
+		});
+	});
+});
+
+describe("refreshToken", () => {
+	test("sends POST to /api/v1/auth/token/refresh with refresh token", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/token/refresh", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ access: "new-access-token" });
+			}),
+		);
+
+		const result = await refreshToken("my-refresh-token");
+		expect(capturedBody).toEqual({ refresh: "my-refresh-token" });
+		expect(result).toEqual({ access: "new-access-token" });
+	});
+
+	test("throws on 401 (expired refresh token)", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/token/refresh", () => {
+				return HttpResponse.json({ detail: "Token is invalid or expired" }, { status: 401 });
+			}),
+		);
+
+		await expect(refreshToken("expired-refresh")).rejects.toMatchObject({
+			status: 401,
+			body: { detail: "Token is invalid or expired" },
 		});
 	});
 });
