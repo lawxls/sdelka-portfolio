@@ -1,18 +1,38 @@
-const LS_KEY = "auth-token";
+const ACCESS_KEY = "auth-access-token";
+const REFRESH_KEY = "auth-refresh-token";
+const INVITATION_KEY = "auth-invitation-code";
 
-export function getToken(): string | null {
-	return localStorage.getItem(LS_KEY);
+export function getAccessToken(): string | null {
+	return localStorage.getItem(ACCESS_KEY);
 }
 
-export function setToken(token: string): void {
-	localStorage.setItem(LS_KEY, token);
+export function getRefreshToken(): string | null {
+	return localStorage.getItem(REFRESH_KEY);
 }
 
-export function clearToken(): void {
-	localStorage.removeItem(LS_KEY);
+export function setTokens(access: string, refresh: string): void {
+	localStorage.setItem(ACCESS_KEY, access);
+	localStorage.setItem(REFRESH_KEY, refresh);
+}
+
+export function clearTokens(): void {
+	localStorage.removeItem(ACCESS_KEY);
+	localStorage.removeItem(REFRESH_KEY);
 	window.dispatchEvent(new Event("auth:cleared"));
 }
 
-export function hasToken(): boolean {
-	return getToken() !== null;
+export function isAuthenticated(): boolean {
+	return getAccessToken() !== null;
+}
+
+export function getInvitationCode(): string | null {
+	return localStorage.getItem(INVITATION_KEY);
+}
+
+export function setInvitationCode(code: string): void {
+	localStorage.setItem(INVITATION_KEY, code);
+}
+
+export function clearInvitationCode(): void {
+	localStorage.removeItem(INVITATION_KEY);
 }

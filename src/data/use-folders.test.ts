@@ -4,7 +4,7 @@ import { delay, HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import { setToken } from "./auth";
+import { setTokens } from "./auth";
 import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
 import {
@@ -36,7 +36,7 @@ let queryClient: QueryClient;
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setToken("test-jwt");
+	setTokens("test-jwt", "test-refresh");
 });
 
 afterEach(() => {

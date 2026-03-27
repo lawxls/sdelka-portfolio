@@ -15,9 +15,8 @@ import {
 	parseDecimals,
 	updateFolder,
 	updateItem,
-	validateCode,
 } from "./api-client";
-import { setToken } from "./auth";
+import { setTokens } from "./auth";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
@@ -78,52 +77,6 @@ describe("parseDecimals", () => {
 	});
 });
 
-describe("validateCode", () => {
-	it("sends code to POST /api/v1/company/validate-code with X-Tenant header", async () => {
-		let capturedHeaders: Headers | undefined;
-		let capturedBody: unknown;
-
-		server.use(
-			http.post("/api/v1/company/validate-code", async ({ request }) => {
-				capturedHeaders = request.headers;
-				capturedBody = await request.json();
-				return HttpResponse.json({ token: "eyJ.test.jwt" });
-			}),
-		);
-
-		const result = await validateCode("ABC12");
-		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
-		expect(capturedHeaders?.get("Content-Type")).toBe("application/json");
-		expect(capturedBody).toEqual({ code: "ABC12" });
-		expect(result).toEqual({ token: "eyJ.test.jwt" });
-	});
-
-	it("throws on 401 response", async () => {
-		server.use(
-			http.post("/api/v1/company/validate-code", () => {
-				return HttpResponse.json({ detail: "Invalid credentials." }, { status: 401 });
-			}),
-		);
-
-		await expect(validateCode("wrong")).rejects.toThrow();
-	});
-
-	it("does not send Authorization header", async () => {
-		let capturedHeaders: Headers | undefined;
-
-		server.use(
-			http.post("/api/v1/company/validate-code", ({ request }) => {
-				capturedHeaders = request.headers;
-				return HttpResponse.json({ token: "eyJ.test.jwt" });
-			}),
-		);
-
-		setToken("existing-token");
-		await validateCode("ABC12");
-		expect(capturedHeaders?.get("Authorization")).toBeNull();
-	});
-});
-
 describe("fetchCompanyInfo", () => {
 	it("sends GET /api/v1/company/info/ with auth headers", async () => {
 		let capturedHeaders: Headers | undefined;
@@ -135,7 +88,7 @@ describe("fetchCompanyInfo", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchCompanyInfo();
 		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
 		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
@@ -149,9 +102,9 @@ describe("fetchCompanyInfo", () => {
 			}),
 		);
 
-		setToken("expired-token");
+		setTokens("expired-token", "expired-refresh");
 		await expect(fetchCompanyInfo()).rejects.toThrow();
-		expect(localStorage.getItem("auth-token")).toBeNull();
+		expect(localStorage.getItem("auth-access-token")).toBeNull();
 	});
 });
 
@@ -167,7 +120,7 @@ describe("fetchFolders", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchFolders();
 		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
 		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
@@ -188,7 +141,7 @@ describe("fetchFolderStats", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchFolderStats();
 		expect(result).toEqual({ stats });
 	});
@@ -205,7 +158,7 @@ describe("createFolder", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await createFolder({ name: "Test", color: "blue" });
 		expect(capturedBody).toEqual({ name: "Test", color: "blue" });
 		expect(result).toEqual({ id: "new-id", name: "Test", color: "blue" });
@@ -218,7 +171,7 @@ describe("createFolder", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		await expect(createFolder({ name: "Dup", color: "red" })).rejects.toThrow();
 	});
 });
@@ -234,7 +187,7 @@ describe("updateFolder", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await updateFolder("f1", { name: "Renamed" });
 		expect(capturedBody).toEqual({ name: "Renamed" });
 		expect(result).toEqual({ id: "f1", name: "Renamed", color: "blue" });
@@ -252,7 +205,7 @@ describe("deleteFolder", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await deleteFolder("f1");
 		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
@@ -287,7 +240,7 @@ describe("fetchItems", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchItems({ q: "Widget", status: "searching", sort: "currentPrice", dir: "asc", limit: 25 });
 
 		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
@@ -313,7 +266,7 @@ describe("fetchItems", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		await fetchItems({});
 
 		const url = new URL(capturedUrl as string);
@@ -330,7 +283,7 @@ describe("fetchItems", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		await fetchItems({ cursor: "eyJvcyI6MjV9" });
 
 		const url = new URL(capturedUrl as string);
@@ -358,7 +311,7 @@ describe("updateItem", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await updateItem("i1", { name: "Renamed" });
 		expect(capturedBody).toEqual({ name: "Renamed" });
 		expect(result.name).toBe("Renamed");
@@ -385,7 +338,7 @@ describe("updateItem", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		await updateItem("i1", { folderId: "f1" });
 		expect(capturedBody).toEqual({ folderId: "f1" });
 	});
@@ -402,7 +355,7 @@ describe("deleteItem", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await deleteItem("i1");
 		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
@@ -438,7 +391,7 @@ describe("createItemsBatch", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await createItemsBatch([{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }]);
 
 		expect(capturedBody).toEqual({ items: [{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }] });
@@ -454,7 +407,7 @@ describe("createItemsBatch", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await createItemsBatch([{ name: "Item" }]);
 
 		expect(result.isAsync).toBe(true);
@@ -469,7 +422,7 @@ describe("createItemsBatch", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		await expect(createItemsBatch([{ name: "" }])).rejects.toThrow();
 	});
 });
@@ -490,7 +443,7 @@ describe("fetchTotals", () => {
 			}),
 		);
 
-		setToken("eyJ.test.jwt");
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchTotals({ q: "test", deviation: "overpaying", folder: "f1" });
 
 		const url = new URL(capturedUrl as string);

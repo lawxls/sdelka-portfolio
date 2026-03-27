@@ -6,7 +6,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clearToken } from "@/data/auth";
+import { clearTokens } from "@/data/auth";
 
 interface UserAvatarMenuProps {
 	side?: "top" | "right" | "bottom" | "left";
@@ -47,7 +47,7 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					<span className="hidden dark:inline">Сменить на светлую тему</span>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem variant="destructive" onSelect={clearToken}>
+				<DropdownMenuItem variant="destructive" onSelect={clearTokens}>
 					<LogOut />
 					Выйти
 				</DropdownMenuItem>

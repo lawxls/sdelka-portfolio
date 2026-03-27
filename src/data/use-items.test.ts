@@ -4,7 +4,7 @@ import { delay, HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeItem, mockHostname } from "@/test-utils";
-import { setToken } from "./auth";
+import { setTokens } from "./auth";
 import type { ProcurementItem } from "./types";
 import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
 
@@ -24,7 +24,7 @@ const DEFAULT_PARAMS = {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setToken("test-jwt");
+	setTokens("test-jwt", "test-refresh");
 });
 
 afterEach(() => {

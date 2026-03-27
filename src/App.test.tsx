@@ -5,6 +5,7 @@ import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { setTokens } from "@/data/auth";
 import * as mockParser from "@/data/mock-file-parser";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
@@ -152,6 +153,7 @@ async function renderAppReady(initialEntries?: string[]) {
 
 beforeEach(() => {
 	localStorage.clear();
+	setTokens("test-access", "test-refresh");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

@@ -1,4 +1,4 @@
-import { clearToken, getToken } from "./auth";
+import { clearTokens, getAccessToken } from "./auth";
 import { getTenant } from "./tenant";
 import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
@@ -49,7 +49,7 @@ function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {
 	const headers = new Headers(existing);
 	headers.set("X-Tenant", getTenant() ?? "");
 	if (!skipAuth) {
-		const token = getToken();
+		const token = getAccessToken();
 		if (token) headers.set("Authorization", `Bearer ${token}`);
 	}
 	return headers;
@@ -57,7 +57,7 @@ function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {
 
 async function ensureOk(response: Response): Promise<void> {
 	if (response.status === 401) {
-		clearToken();
+		clearTokens();
 		throw new ApiError(401, await response.json().catch(() => null));
 	}
 	if (!response.ok) {
@@ -74,17 +74,6 @@ async function request<T>(path: string, options: RequestInit & { skipAuth?: bool
 
 	const data = await response.json();
 	return parseDecimals(data);
-}
-
-// --- Auth ---
-
-export async function validateCode(code: string): Promise<{ token: string }> {
-	return request("/validate-code", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ code }),
-		skipAuth: true,
-	});
 }
 
 // --- Company ---

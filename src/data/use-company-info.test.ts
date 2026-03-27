@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import { setToken } from "./auth";
+import { setTokens } from "./auth";
 import { useCompanyInfo } from "./use-company-info";
 
 afterEach(() => {
@@ -14,7 +14,7 @@ afterEach(() => {
 describe("useCompanyInfo", () => {
 	it("fetches company info and returns data", async () => {
 		mockHostname("acme.localhost");
-		setToken("valid-jwt");
+		setTokens("valid-jwt", "valid-refresh");
 
 		server.use(
 			http.get("/api/v1/company/info/", () => {
@@ -33,7 +33,7 @@ describe("useCompanyInfo", () => {
 
 	it("returns error state on failure", async () => {
 		mockHostname("acme.localhost");
-		setToken("valid-jwt");
+		setTokens("valid-jwt", "valid-refresh");
 
 		server.use(
 			http.get("/api/v1/company/info/", () => {
