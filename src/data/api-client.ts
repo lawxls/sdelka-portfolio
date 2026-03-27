@@ -1,3 +1,4 @@
+import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
@@ -14,7 +15,6 @@ const DECIMAL_FIELDS = new Set([
 	"totalDeviation",
 ]);
 
-/** Recursively parse string decimal fields to numbers at the API boundary. */
 export function parseDecimals<T>(obj: T): T {
 	if (obj === null || obj === undefined) return obj;
 	if (Array.isArray(obj)) return obj.map(parseDecimals) as T;
@@ -32,18 +32,6 @@ export function parseDecimals<T>(obj: T): T {
 		return result as T;
 	}
 	return obj;
-}
-
-class ApiError extends Error {
-	status: number;
-	body: unknown;
-
-	constructor(status: number, body: unknown) {
-		super(`API error ${status}`);
-		this.name = "ApiError";
-		this.status = status;
-		this.body = body;
-	}
 }
 
 function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {

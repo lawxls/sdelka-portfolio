@@ -1,3 +1,5 @@
+export const AUTH_CLEARED_EVENT = "auth:cleared";
+
 const ACCESS_KEY = "auth-access-token";
 const REFRESH_KEY = "auth-refresh-token";
 const INVITATION_KEY = "auth-invitation-code";
@@ -18,7 +20,7 @@ export function setTokens(access: string, refresh: string): void {
 export function clearTokens(): void {
 	localStorage.removeItem(ACCESS_KEY);
 	localStorage.removeItem(REFRESH_KEY);
-	window.dispatchEvent(new Event("auth:cleared"));
+	window.dispatchEvent(new Event(AUTH_CLEARED_EVENT));
 }
 
 export function isAuthenticated(): boolean {

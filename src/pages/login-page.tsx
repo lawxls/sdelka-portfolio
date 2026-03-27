@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { setTokens } from "@/data/auth";
-import { login, parseApiError } from "@/data/auth-api";
+import { extractFormErrors, login } from "@/data/auth-api";
 
 export function LoginPage() {
 	const navigate = useNavigate();
@@ -27,17 +27,9 @@ export function LoginPage() {
 			setTokens(result.access, result.refresh);
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
-			const apiErr = err as { body?: unknown };
-			const parsed = parseApiError(apiErr.body);
-			if (parsed.detail) {
-				setError(parsed.detail);
-			}
-			if (Object.keys(parsed.fieldErrors).length > 0) {
-				setFieldErrors(parsed.fieldErrors);
-			}
-			if (!parsed.detail && Object.keys(parsed.fieldErrors).length === 0) {
-				setError("Произошла ошибка. Попробуйте ещё раз.");
-			}
+			const result = extractFormErrors(err);
+			setError(result.error);
+			setFieldErrors(result.fieldErrors);
 		} finally {
 			setSubmitting(false);
 		}

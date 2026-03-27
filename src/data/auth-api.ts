@@ -1,19 +1,8 @@
+import { ApiError } from "./api-error";
 import { getAccessToken, getRefreshToken } from "./auth";
 import { getTenant } from "./tenant";
 
 const BASE = "/api/v1/auth";
-
-class AuthApiError extends Error {
-	status: number;
-	body: unknown;
-
-	constructor(status: number, body: unknown) {
-		super(`Auth API error ${status}`);
-		this.name = "AuthApiError";
-		this.status = status;
-		this.body = body;
-	}
-}
 
 function buildHeaders(authenticated = false): Headers {
 	const headers = new Headers({ "Content-Type": "application/json" });
@@ -31,7 +20,7 @@ async function authRequest<T>(path: string, options: RequestInit & { authenticat
 
 	if (!response.ok) {
 		const body = await response.json().catch(() => null);
-		throw new AuthApiError(response.status, body);
+		throw new ApiError(response.status, body);
 	}
 
 	if (response.status === 204) return undefined as T;
@@ -159,4 +148,14 @@ export function parseApiError(body: unknown): ParsedApiError {
 		}
 	}
 	return result;
+}
+
+export function extractFormErrors(err: unknown): { error: string | null; fieldErrors: Record<string, string> } {
+	const body = err instanceof ApiError ? err.body : undefined;
+	const parsed = parseApiError(body);
+	const hasFields = Object.keys(parsed.fieldErrors).length > 0;
+	return {
+		error: parsed.detail ?? (hasFields ? null : "Произошла ошибка. Попробуйте ещё раз."),
+		fieldErrors: parsed.fieldErrors,
+	};
 }

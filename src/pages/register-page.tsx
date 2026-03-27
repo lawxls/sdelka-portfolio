@@ -3,8 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { clearInvitationCode, getInvitationCode, setInvitationCode } from "@/data/auth";
-import { checkEmail, parseApiError, register, verifyInvitationCode } from "@/data/auth-api";
-import { validatePassword } from "@/data/password-validation";
+import { checkEmail, extractFormErrors, register, verifyInvitationCode } from "@/data/auth-api";
+import { validatePasswordWithConfirm } from "@/data/password-validation";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
 type Stage = "email" | "details" | "confirmation";
@@ -84,14 +84,9 @@ export function RegisterPage() {
 		setError(null);
 		setFieldErrors({});
 
-		// Client-side validation
-		const passwordError = validatePassword(password);
-		if (passwordError) {
-			setFieldErrors({ password: passwordError });
-			return;
-		}
-		if (password !== confirmPassword) {
-			setFieldErrors({ confirmPassword: "Пароли не совпадают" });
+		const validationErrors = validatePasswordWithConfirm(password, confirmPassword);
+		if (validationErrors) {
+			setFieldErrors(validationErrors);
 			return;
 		}
 
@@ -109,13 +104,9 @@ export function RegisterPage() {
 			clearInvitationCode();
 			setStage("confirmation");
 		} catch (err: unknown) {
-			const apiErr = err as { body?: unknown };
-			const parsed = parseApiError(apiErr.body);
-			if (parsed.detail) setError(parsed.detail);
-			if (Object.keys(parsed.fieldErrors).length > 0) setFieldErrors(parsed.fieldErrors);
-			if (!parsed.detail && Object.keys(parsed.fieldErrors).length === 0) {
-				setError("Произошла ошибка. Попробуйте ещё раз.");
-			}
+			const result = extractFormErrors(err);
+			setError(result.error);
+			setFieldErrors(result.fieldErrors);
 		} finally {
 			setSubmitting(false);
 		}
