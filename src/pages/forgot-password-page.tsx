@@ -8,14 +8,18 @@ export function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
 	const [submitted, setSubmitted] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		setError(null);
 		setSubmitting(true);
 
 		try {
 			await forgotPassword(email);
 			setSubmitted(true);
+		} catch {
+			setError("Не удалось отправить запрос. Попробуйте позже");
 		} finally {
 			setSubmitting(false);
 		}
@@ -43,6 +47,12 @@ export function ForgotPasswordPage() {
 			<p className="mt-1 text-sm text-muted-foreground">Введите email для восстановления доступа</p>
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
+				{error && (
+					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+						{error}
+					</div>
+				)}
+
 				<FloatingInput
 					label="Email"
 					name="email"

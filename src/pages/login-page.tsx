@@ -8,7 +8,8 @@ import { extractFormErrors, login } from "@/data/auth-api";
 export function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/procurement";
+	const from =
+		(location.state as { from?: { pathname: string; search?: string; hash?: string } })?.from ?? "/procurement";
 
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");

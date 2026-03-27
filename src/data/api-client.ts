@@ -64,7 +64,9 @@ function attemptRefresh(): Promise<void> {
 
 	refreshPromise = refreshToken(refresh)
 		.then(({ access }) => {
-			setTokens(access, refresh);
+			if (getRefreshToken() === refresh) {
+				setTokens(access, refresh);
+			}
 		})
 		.finally(() => {
 			refreshPromise = null;

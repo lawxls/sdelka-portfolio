@@ -102,6 +102,28 @@ describe("ForgotPasswordPage", () => {
 		resolveRequest?.();
 	});
 
+	test("shows error message when request fails", async () => {
+		server.use(
+			http.post("/api/v1/auth/forgot-password", () => {
+				return HttpResponse.json({ detail: "Server error" }, { status: 500 });
+			}),
+		);
+
+		renderForgotPassword();
+		const user = userEvent.setup();
+
+		await user.type(screen.getByLabelText("Email"), "user@example.com");
+		await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Не удалось отправить запрос. Попробуйте позже")).toBeInTheDocument();
+		});
+		// Should stay on the form, not show confirmation
+		expect(screen.getByLabelText("Email")).toBeInTheDocument();
+		// Button re-enabled after failure
+		expect(screen.getByRole("button", { name: "Отправить" })).toBeEnabled();
+	});
+
 	test("submits email and shows confirmation message", async () => {
 		server.use(
 			http.post("/api/v1/auth/forgot-password", () => {

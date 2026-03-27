@@ -17,7 +17,7 @@ import {
 	updateFolder,
 	updateItem,
 } from "./api-client";
-import { setTokens } from "./auth";
+import { clearTokens, setTokens } from "./auth";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
@@ -546,6 +546,40 @@ describe("401 refresh interceptor", () => {
 		expect(info).toEqual({ name: "Acme Corp" });
 		expect(folders).toEqual({ folders: [] });
 		expect(refreshCount).toBe(1);
+	});
+
+	it("does not write tokens back if user logged out during refresh", async () => {
+		let resolveRefresh: ((value: Response | PromiseLike<Response>) => void) | undefined;
+		server.use(
+			http.get("/api/v1/company/info/", ({ request }) => {
+				const auth = request.headers.get("Authorization");
+				if (!auth || auth === "Bearer expired-token") {
+					return HttpResponse.json({}, { status: 401 });
+				}
+				return HttpResponse.json({ name: "Acme Corp" });
+			}),
+			http.post("/api/v1/auth/token/refresh", () => {
+				return new Promise((resolve) => {
+					resolveRefresh = resolve;
+				});
+			}),
+		);
+
+		setTokens("expired-token", "valid-refresh");
+		const promise = fetchCompanyInfo();
+
+		// Simulate logout while refresh is in flight
+		await vi.waitFor(() => expect(resolveRefresh).toBeDefined());
+		clearTokens();
+
+		// Now let refresh succeed
+		resolveRefresh?.(HttpResponse.json({ access: "new-access-token" }));
+
+		// Retry uses empty auth (logged out) → 401 → clears tokens → throws
+		await expect(promise).rejects.toThrow();
+		// Tokens must NOT have been written back
+		expect(localStorage.getItem("auth-access-token")).toBeNull();
+		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
 	});
 
 	it("refreshes token and retries for export requests", async () => {
