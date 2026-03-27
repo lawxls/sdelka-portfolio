@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
-import { checkEmail, login, logout, parseApiError, register, verifyInvitationCode } from "./auth-api";
+import { checkEmail, confirmEmail, login, logout, parseApiError, register, verifyInvitationCode } from "./auth-api";
 
 afterEach(() => {
 	localStorage.clear();
@@ -147,6 +147,37 @@ describe("checkEmail", () => {
 
 		const result = await checkEmail("taken@user.com");
 		expect(result).toEqual({ exists: true });
+	});
+});
+
+describe("confirmEmail", () => {
+	test("sends POST with token and returns message", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/confirm-email", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ message: "Email confirmed successfully" });
+			}),
+		);
+
+		const result = await confirmEmail("uid-token-123");
+		expect(capturedBody).toEqual({ token: "uid-token-123" });
+		expect(result).toEqual({ message: "Email confirmed successfully" });
+	});
+
+	test("throws on 400 with error body", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/confirm-email", () => {
+				return HttpResponse.json({ detail: "Недействительный токен" }, { status: 400 });
+			}),
+		);
+
+		await expect(confirmEmail("bad-token")).rejects.toMatchObject({
+			status: 400,
+			body: { detail: "Недействительный токен" },
+		});
 	});
 });
 

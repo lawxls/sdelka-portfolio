@@ -88,6 +88,17 @@ export async function register(data: RegisterData): Promise<LoginResponse> {
 	});
 }
 
+export interface ConfirmEmailResponse {
+	message: string;
+}
+
+export async function confirmEmail(token: string): Promise<ConfirmEmailResponse> {
+	return authRequest("/confirm-email", {
+		method: "POST",
+		body: JSON.stringify({ token }),
+	});
+}
+
 export async function logout(): Promise<void> {
 	const refresh = getRefreshToken();
 	return authRequest("/logout", {

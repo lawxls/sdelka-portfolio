@@ -263,6 +263,18 @@ describe("Routing", () => {
 		});
 	});
 
+	test("/confirm-email renders confirmation page", async () => {
+		localStorage.clear(); // no auth token — public route
+		server.use(
+			http.post("/api/v1/auth/confirm-email", () => HttpResponse.json({ message: "Email confirmed successfully" })),
+		);
+
+		renderApp(["/confirm-email?token=test-token"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Email подтверждён" })).toBeInTheDocument();
+		});
+	});
+
 	test("mobile bottom nav navigates between sections", async () => {
 		renderApp();
 		const user = userEvent.setup();

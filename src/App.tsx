@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { NAV_ITEMS } from "@/lib/nav-items";
+import { ConfirmEmailPage } from "@/pages/confirm-email-page";
 import { LoginPage } from "@/pages/login-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
@@ -22,6 +23,7 @@ function App() {
 			<Route element={<AuthLayout />}>
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/register" element={<RegisterPage />} />
+				<Route path="/confirm-email" element={<ConfirmEmailPage />} />
 			</Route>
 
 			{/* App routes (protected) */}
