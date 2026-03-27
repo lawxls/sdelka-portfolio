@@ -107,19 +107,21 @@ describe("User avatar dropdown", () => {
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 
-	test("logout clears auth token from localStorage", async () => {
-		localStorage.setItem("auth-token", "test-token");
+	test("logout clears auth tokens from localStorage", async () => {
+		localStorage.setItem("auth-access-token", "test-access");
+		localStorage.setItem("auth-refresh-token", "test-refresh");
 		renderSidebar();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 		await user.click(screen.getByRole("menuitem", { name: "Выйти" }));
 
-		expect(localStorage.getItem("auth-token")).toBeNull();
+		expect(localStorage.getItem("auth-access-token")).toBeNull();
+		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
 	});
 
 	test("logout dispatches auth:cleared event", async () => {
-		localStorage.setItem("auth-token", "test-token");
+		localStorage.setItem("auth-access-token", "test-access");
 		const handler = vi.fn();
 		window.addEventListener("auth:cleared", handler);
 

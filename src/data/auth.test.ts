@@ -1,51 +1,88 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { clearToken, getToken, hasToken, setToken } from "./auth";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import {
+	clearInvitationCode,
+	clearTokens,
+	getAccessToken,
+	getInvitationCode,
+	getRefreshToken,
+	isAuthenticated,
+	setInvitationCode,
+	setTokens,
+} from "./auth";
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
-describe("getToken", () => {
-	it("returns null when no token stored", () => {
-		expect(getToken()).toBeNull();
+describe("auth tokens", () => {
+	test("setTokens stores access and refresh tokens in localStorage", () => {
+		setTokens("access-123", "refresh-456");
+		expect(localStorage.getItem("auth-access-token")).toBe("access-123");
+		expect(localStorage.getItem("auth-refresh-token")).toBe("refresh-456");
 	});
 
-	it("returns the stored JWT", () => {
-		localStorage.setItem("auth-token", "eyJ.test.jwt");
-		expect(getToken()).toBe("eyJ.test.jwt");
+	test("getAccessToken returns stored access token", () => {
+		localStorage.setItem("auth-access-token", "my-access");
+		expect(getAccessToken()).toBe("my-access");
+	});
+
+	test("getAccessToken returns null when no token stored", () => {
+		expect(getAccessToken()).toBeNull();
+	});
+
+	test("getRefreshToken returns stored refresh token", () => {
+		localStorage.setItem("auth-refresh-token", "my-refresh");
+		expect(getRefreshToken()).toBe("my-refresh");
+	});
+
+	test("getRefreshToken returns null when no token stored", () => {
+		expect(getRefreshToken()).toBeNull();
+	});
+
+	test("clearTokens removes both tokens from localStorage", () => {
+		setTokens("access", "refresh");
+		clearTokens();
+		expect(localStorage.getItem("auth-access-token")).toBeNull();
+		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
+	});
+
+	test("clearTokens dispatches auth:cleared event", () => {
+		const handler = vi.fn();
+		window.addEventListener("auth:cleared", handler);
+		clearTokens();
+		expect(handler).toHaveBeenCalledTimes(1);
+		window.removeEventListener("auth:cleared", handler);
+	});
+
+	test("isAuthenticated returns true when access token exists", () => {
+		setTokens("access", "refresh");
+		expect(isAuthenticated()).toBe(true);
+	});
+
+	test("isAuthenticated returns false when no access token", () => {
+		expect(isAuthenticated()).toBe(false);
 	});
 });
 
-describe("setToken", () => {
-	it("stores the JWT in localStorage", () => {
-		setToken("eyJ.new.jwt");
-		expect(localStorage.getItem("auth-token")).toBe("eyJ.new.jwt");
-	});
-});
-
-describe("clearToken", () => {
-	it("removes the token from localStorage", () => {
-		setToken("eyJ.test.jwt");
-		expect(getToken()).toBe("eyJ.test.jwt");
-
-		clearToken();
-		expect(getToken()).toBeNull();
-	});
-});
-
-describe("hasToken", () => {
-	it("returns false when no token stored", () => {
-		expect(hasToken()).toBe(false);
+describe("invitation code", () => {
+	test("setInvitationCode stores code in localStorage", () => {
+		setInvitationCode("ABC12");
+		expect(localStorage.getItem("auth-invitation-code")).toBe("ABC12");
 	});
 
-	it("returns true when a token is stored", () => {
-		setToken("eyJ.test.jwt");
-		expect(hasToken()).toBe(true);
+	test("getInvitationCode returns stored code", () => {
+		localStorage.setItem("auth-invitation-code", "XYZ99");
+		expect(getInvitationCode()).toBe("XYZ99");
 	});
 
-	it("returns false after clearToken", () => {
-		setToken("eyJ.test.jwt");
-		clearToken();
-		expect(hasToken()).toBe(false);
+	test("getInvitationCode returns null when no code stored", () => {
+		expect(getInvitationCode()).toBeNull();
+	});
+
+	test("clearInvitationCode removes code from localStorage", () => {
+		setInvitationCode("ABC12");
+		clearInvitationCode();
+		expect(localStorage.getItem("auth-invitation-code")).toBeNull();
 	});
 });

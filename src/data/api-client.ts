@@ -1,4 +1,6 @@
-import { clearToken, getToken } from "./auth";
+import { ApiError } from "./api-error";
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
+import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
 import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
@@ -13,7 +15,6 @@ const DECIMAL_FIELDS = new Set([
 	"totalDeviation",
 ]);
 
-/** Recursively parse string decimal fields to numbers at the API boundary. */
 export function parseDecimals<T>(obj: T): T {
 	if (obj === null || obj === undefined) return obj;
 	if (Array.isArray(obj)) return obj.map(parseDecimals) as T;
@@ -33,23 +34,11 @@ export function parseDecimals<T>(obj: T): T {
 	return obj;
 }
 
-class ApiError extends Error {
-	status: number;
-	body: unknown;
-
-	constructor(status: number, body: unknown) {
-		super(`API error ${status}`);
-		this.name = "ApiError";
-		this.status = status;
-		this.body = body;
-	}
-}
-
 function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {
 	const headers = new Headers(existing);
 	headers.set("X-Tenant", getTenant() ?? "");
 	if (!skipAuth) {
-		const token = getToken();
+		const token = getAccessToken();
 		if (token) headers.set("Authorization", `Bearer ${token}`);
 	}
 	return headers;
@@ -57,7 +46,7 @@ function buildAuthHeaders(existing?: HeadersInit, skipAuth?: boolean): Headers {
 
 async function ensureOk(response: Response): Promise<void> {
 	if (response.status === 401) {
-		clearToken();
+		clearTokens();
 		throw new ApiError(401, await response.json().catch(() => null));
 	}
 	if (!response.ok) {
@@ -65,26 +54,47 @@ async function ensureOk(response: Response): Promise<void> {
 	}
 }
 
+let refreshPromise: Promise<void> | null = null;
+
+function attemptRefresh(): Promise<void> {
+	if (refreshPromise) return refreshPromise;
+
+	const refresh = getRefreshToken();
+	if (!refresh) return Promise.reject(new Error("No refresh token"));
+
+	refreshPromise = refreshToken(refresh)
+		.then(({ access }) => {
+			if (getRefreshToken() === refresh) {
+				setTokens(access, refresh);
+			}
+		})
+		.finally(() => {
+			refreshPromise = null;
+		});
+
+	return refreshPromise;
+}
+
 async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
 	const headers = buildAuthHeaders(options.headers, options.skipAuth);
-	const response = await fetch(`${BASE}${path}`, { ...options, headers });
+	let response = await fetch(`${BASE}${path}`, { ...options, headers });
+
+	if (response.status === 401 && !options.skipAuth && getRefreshToken()) {
+		try {
+			await attemptRefresh();
+			const retryHeaders = buildAuthHeaders(options.headers, options.skipAuth);
+			response = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders });
+		} catch {
+			// Refresh failed — fall through to ensureOk with original 401 response
+		}
+	}
+
 	await ensureOk(response);
 
 	if (response.status === 204) return undefined as T;
 
 	const data = await response.json();
 	return parseDecimals(data);
-}
-
-// --- Auth ---
-
-export async function validateCode(code: string): Promise<{ token: string }> {
-	return request("/validate-code", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ code }),
-		skipAuth: true,
-	});
 }
 
 // --- Company ---
@@ -183,11 +193,20 @@ export interface ExportResult {
 }
 
 export async function exportItems(params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
+	const url = `${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`;
 	const headers = buildAuthHeaders();
-	const response = await fetch(
-		`${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`,
-		{ headers },
-	);
+	let response = await fetch(url, { headers });
+
+	if (response.status === 401 && getRefreshToken()) {
+		try {
+			await attemptRefresh();
+			const retryHeaders = buildAuthHeaders();
+			response = await fetch(url, { headers: retryHeaders });
+		} catch {
+			// Refresh failed — fall through to ensureOk
+		}
+	}
+
 	await ensureOk(response);
 
 	const disposition = response.headers.get("Content-Disposition") ?? "";

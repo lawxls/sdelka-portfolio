@@ -5,6 +5,7 @@ import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { setTokens } from "@/data/auth";
 import * as mockParser from "@/data/mock-file-parser";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
@@ -152,6 +153,7 @@ async function renderAppReady(initialEntries?: string[]) {
 
 beforeEach(() => {
 	localStorage.clear();
+	setTokens("test-access", "test-refresh");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -249,6 +251,44 @@ describe("Routing", () => {
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
+	});
+
+	test("/register renders registration page with valid invitation", async () => {
+		localStorage.clear(); // no auth token — public route
+		server.use(http.post("/api/v1/auth/verify-invitation-code", () => HttpResponse.json({ valid: true })));
+
+		renderApp(["/register?i=ABC12"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
+		});
+	});
+
+	test("/confirm-email renders confirmation page", async () => {
+		localStorage.clear(); // no auth token — public route
+		server.use(
+			http.post("/api/v1/auth/confirm-email", () => HttpResponse.json({ message: "Email confirmed successfully" })),
+		);
+
+		renderApp(["/confirm-email?token=test-token"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Email подтверждён" })).toBeInTheDocument();
+		});
+	});
+
+	test("/forgot-password renders forgot password page", async () => {
+		localStorage.clear(); // no auth token — public route
+		renderApp(["/forgot-password"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Восстановление пароля" })).toBeInTheDocument();
+		});
+	});
+
+	test("/reset-password renders reset password page", async () => {
+		localStorage.clear(); // no auth token — public route
+		renderApp(["/reset-password?token=test-token"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Новый пароль" })).toBeInTheDocument();
+		});
 	});
 
 	test("mobile bottom nav navigates between sections", async () => {
