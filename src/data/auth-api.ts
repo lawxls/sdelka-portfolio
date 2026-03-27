@@ -99,6 +99,28 @@ export async function confirmEmail(token: string): Promise<ConfirmEmailResponse>
 	});
 }
 
+export interface ForgotPasswordResponse {
+	detail: string;
+}
+
+export interface ResetPasswordResponse {
+	detail: string;
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+	return authRequest("/forgot-password", {
+		method: "POST",
+		body: JSON.stringify({ email }),
+	});
+}
+
+export async function resetPassword(token: string, password: string): Promise<ResetPasswordResponse> {
+	return authRequest("/reset-password", {
+		method: "POST",
+		body: JSON.stringify({ token, password }),
+	});
+}
+
 export async function logout(): Promise<void> {
 	const refresh = getRefreshToken();
 	return authRequest("/logout", {

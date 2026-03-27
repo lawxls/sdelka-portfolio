@@ -275,6 +275,22 @@ describe("Routing", () => {
 		});
 	});
 
+	test("/forgot-password renders forgot password page", async () => {
+		localStorage.clear(); // no auth token — public route
+		renderApp(["/forgot-password"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Восстановление пароля" })).toBeInTheDocument();
+		});
+	});
+
+	test("/reset-password renders reset password page", async () => {
+		localStorage.clear(); // no auth token — public route
+		renderApp(["/reset-password?token=test-token"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Новый пароль" })).toBeInTheDocument();
+		});
+	});
+
 	test("mobile bottom nav navigates between sections", async () => {
 		renderApp();
 		const user = userEvent.setup();

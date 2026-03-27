@@ -3,7 +3,17 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
-import { checkEmail, confirmEmail, login, logout, parseApiError, register, verifyInvitationCode } from "./auth-api";
+import {
+	checkEmail,
+	confirmEmail,
+	forgotPassword,
+	login,
+	logout,
+	parseApiError,
+	register,
+	resetPassword,
+	verifyInvitationCode,
+} from "./auth-api";
 
 afterEach(() => {
 	localStorage.clear();
@@ -177,6 +187,54 @@ describe("confirmEmail", () => {
 		await expect(confirmEmail("bad-token")).rejects.toMatchObject({
 			status: 400,
 			body: { detail: "Недействительный токен" },
+		});
+	});
+});
+
+describe("forgotPassword", () => {
+	test("sends POST with email and returns message", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/forgot-password", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ detail: "Password reset email sent" });
+			}),
+		);
+
+		const result = await forgotPassword("user@example.com");
+		expect(capturedBody).toEqual({ email: "user@example.com" });
+		expect(result).toEqual({ detail: "Password reset email sent" });
+	});
+});
+
+describe("resetPassword", () => {
+	test("sends POST with token and password, returns message", async () => {
+		mockHostname("acme.localhost");
+		let capturedBody: unknown;
+		server.use(
+			http.post("/api/v1/auth/reset-password", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ detail: "Password has been reset" });
+			}),
+		);
+
+		const result = await resetPassword("uid-token-123", "newSecure1");
+		expect(capturedBody).toEqual({ token: "uid-token-123", password: "newSecure1" });
+		expect(result).toEqual({ detail: "Password has been reset" });
+	});
+
+	test("throws on 400 with error body", async () => {
+		mockHostname("acme.localhost");
+		server.use(
+			http.post("/api/v1/auth/reset-password", () => {
+				return HttpResponse.json({ detail: "Недействительный или просроченный токен" }, { status: 400 });
+			}),
+		);
+
+		await expect(resetPassword("bad-token", "newSecure1")).rejects.toMatchObject({
+			status: 400,
+			body: { detail: "Недействительный или просроченный токен" },
 		});
 	});
 });
