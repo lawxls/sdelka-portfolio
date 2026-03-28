@@ -36,7 +36,7 @@ import type {
 	EmployeeRole,
 	PermissionLevel,
 } from "@/data/types";
-import { ADDRESS_TYPE_LABELS } from "@/data/types";
+import { ADDRESS_TYPE_LABELS, ADDRESS_TYPES, ROLE_LABELS, ROLES } from "@/data/types";
 import {
 	useCompanyDetail,
 	useCreateAddress,
@@ -295,10 +295,6 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 		</div>
 	);
 }
-
-// --- Addresses Tab ---
-
-const ADDRESS_TYPES: AddressType[] = ["office", "warehouse", "production"];
 
 const EMPTY_ADDRESS_FORM: AddressFormState = {
 	name: "",
@@ -593,11 +589,6 @@ function AddressForm({
 		</div>
 	);
 }
-
-// --- Employees Tab ---
-
-const ROLE_LABELS: Record<EmployeeRole, string> = { admin: "Администратор", user: "Пользователь" };
-const ROLES: EmployeeRole[] = ["admin", "user"];
 
 const PERMISSION_MODULES: {
 	key: keyof Omit<EmployeePermissions, "id" | "employeeId">;

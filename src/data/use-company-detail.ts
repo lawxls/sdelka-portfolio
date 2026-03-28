@@ -113,8 +113,6 @@ export function useDeleteAddress(companyId: string) {
 	});
 }
 
-// --- Employees ---
-
 export function useCreateEmployee(companyId: string) {
 	const queryClient = useQueryClient();
 

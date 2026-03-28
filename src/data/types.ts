@@ -172,7 +172,17 @@ export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
 	production: "Производство",
 };
 
-/** @public Used by company detail (#109) */
+export const ADDRESS_TYPES = Object.keys(ADDRESS_TYPE_LABELS) as AddressType[];
+
+export type EmployeeRole = "admin" | "user";
+
+export const ROLE_LABELS: Record<EmployeeRole, string> = {
+	admin: "Администратор",
+	user: "Пользователь",
+};
+
+export const ROLES = Object.keys(ROLE_LABELS) as EmployeeRole[];
+
 export interface Address {
 	id: string;
 	name: string;
@@ -185,12 +195,8 @@ export interface Address {
 	phone: string;
 }
 
-/** @public Used by employees tab (#113) */
-export type EmployeeRole = "admin" | "user";
-/** @public Used by employees tab (#113) */
 export type PermissionLevel = "none" | "view" | "edit";
 
-/** @public Used by employees tab (#113) */
 export interface EmployeePermissions {
 	id: string;
 	employeeId: string;
@@ -200,7 +206,6 @@ export interface EmployeePermissions {
 	tasks: PermissionLevel;
 }
 
-/** @public Used by employees tab (#113) */
 export interface Employee {
 	id: string;
 	firstName: string;
@@ -213,7 +218,6 @@ export interface Employee {
 	isResponsible: boolean;
 }
 
-/** @public Used by company detail (#109) */
 export interface Company {
 	id: string;
 	name: string;

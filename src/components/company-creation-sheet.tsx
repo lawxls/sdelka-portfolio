@@ -9,11 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { CreateCompanyPayload } from "@/data/api-client";
 import type { AddressType, EmployeeRole } from "@/data/types";
-import { ADDRESS_TYPE_LABELS } from "@/data/types";
-
-const ADDRESS_TYPES: AddressType[] = ["office", "warehouse", "production"];
-const ROLES: EmployeeRole[] = ["admin", "user"];
-const ROLE_LABELS: Record<EmployeeRole, string> = { admin: "Администратор", user: "Пользователь" };
+import { ADDRESS_TYPE_LABELS, ADDRESS_TYPES, ROLE_LABELS, ROLES } from "@/data/types";
 
 interface AddressFormState {
 	name: string;
@@ -122,7 +118,6 @@ function CreationForm({ onSubmit, isPending }: { onSubmit: (data: CreateCompanyP
 
 			<div className="flex-1 overflow-y-auto px-4" data-testid="creation-form">
 				<div className="flex flex-col gap-4 py-4">
-					{/* Company name */}
 					<div className="flex flex-col gap-3">
 						<h3 className="text-sm font-medium text-muted-foreground">Компания</h3>
 						<FieldRow label="Название">
@@ -138,7 +133,6 @@ function CreationForm({ onSubmit, isPending }: { onSubmit: (data: CreateCompanyP
 
 					<Separator />
 
-					{/* Address */}
 					<div className="flex flex-col gap-3">
 						<div className="flex items-center gap-2">
 							<h3 className="text-sm font-medium text-muted-foreground">Адрес</h3>
@@ -151,7 +145,6 @@ function CreationForm({ onSubmit, isPending }: { onSubmit: (data: CreateCompanyP
 
 					<Separator />
 
-					{/* Employee */}
 					<div className="flex flex-col gap-3">
 						<div className="flex items-center gap-2">
 							<h3 className="text-sm font-medium text-muted-foreground">Ответственный сотрудник</h3>
