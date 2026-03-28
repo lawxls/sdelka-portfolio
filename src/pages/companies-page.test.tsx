@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
-import type { Company, CompanySummary } from "@/data/types";
+import type { Address, Company, CompanySummary } from "@/data/types";
 import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
 import { makeCompany, makeCompanyDetail } from "@/test-utils";
@@ -53,6 +53,31 @@ const MOCK_COMPANIES: CompanySummary[] = [
 	),
 ];
 
+const MOCK_ADDRESSES: Address[] = [
+	{
+		id: "addr-detail-1",
+		name: "Главный офис",
+		type: "office",
+		postalCode: "123456",
+		address: "ул. Тестовая, 1",
+		city: "Москва",
+		region: "Московская область",
+		contactPerson: "Иванов",
+		phone: "+71234567890",
+	},
+	{
+		id: "addr-detail-2",
+		name: "Склад №1",
+		type: "warehouse",
+		postalCode: "654321",
+		address: "ул. Складская, 10",
+		city: "Подольск",
+		region: "Московская область",
+		contactPerson: "Петров",
+		phone: "+79876543210",
+	},
+];
+
 const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
 	name: "Сделка",
 	isMain: true,
@@ -64,22 +89,52 @@ const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
 	additionalComments: "Важный клиент",
 	employeeCount: 12,
 	procurementItemCount: 25,
+	addresses: MOCK_ADDRESSES,
 });
 
 let companyList: CompanySummary[];
+let companyDetail: Company;
 let queryClient: QueryClient;
 
 function setupHandlers() {
 	companyList = [...MOCK_COMPANIES];
+	companyDetail = { ...MOCK_COMPANY_DETAIL, addresses: [...MOCK_ADDRESSES] };
 	server.use(
 		http.get("/api/v1/companies/:id/", ({ params }) => {
-			if (params.id === "company-1") return HttpResponse.json(MOCK_COMPANY_DETAIL);
+			if (params.id === "company-1") return HttpResponse.json(companyDetail);
 			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		}),
 		http.patch("/api/v1/companies/:id/", async ({ params, request }) => {
 			if (params.id !== "company-1") return HttpResponse.json({}, { status: 404 });
 			const body = (await request.json()) as Record<string, unknown>;
-			return HttpResponse.json({ ...MOCK_COMPANY_DETAIL, ...body });
+			return HttpResponse.json({ ...companyDetail, ...body });
+		}),
+		http.post("/api/v1/companies/:id/addresses", async ({ request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const newAddr = { id: `addr-new-${Date.now()}`, ...body };
+			companyDetail = { ...companyDetail, addresses: [...companyDetail.addresses, newAddr as Address] };
+			return HttpResponse.json(newAddr);
+		}),
+		http.patch("/api/v1/companies/:id/addresses/:addressId", async ({ params, request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const addr = companyDetail.addresses.find((a) => a.id === params.addressId);
+			if (!addr) return HttpResponse.json({}, { status: 404 });
+			const updated = { ...addr, ...body };
+			companyDetail = {
+				...companyDetail,
+				addresses: companyDetail.addresses.map((a) => (a.id === params.addressId ? (updated as Address) : a)),
+			};
+			return HttpResponse.json(updated);
+		}),
+		http.delete("/api/v1/companies/:id/addresses/:addressId", ({ params }) => {
+			if (companyDetail.addresses.length <= 1) {
+				return HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 });
+			}
+			companyDetail = {
+				...companyDetail,
+				addresses: companyDetail.addresses.filter((a) => a.id !== params.addressId),
+			};
+			return new HttpResponse(null, { status: 204 });
 		}),
 		http.get("/api/v1/companies/", ({ request }) => {
 			const url = new URL(request.url);
@@ -509,5 +564,148 @@ describe("CompaniesPage drawer", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("drawer-loading")).toBeInTheDocument();
 		});
+	});
+});
+
+describe("CompaniesPage Адреса tab", () => {
+	async function openAddressesTab() {
+		renderPage(["/companies?company=company-1&tab=addresses"]);
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument();
+		});
+	}
+
+	test("renders all addresses for the company", async () => {
+		await openAddressesTab();
+
+		const tab = screen.getByTestId("tab-content-addresses");
+		expect(within(tab).getByText("Главный офис")).toBeInTheDocument();
+		expect(within(tab).getByText("Склад №1")).toBeInTheDocument();
+	});
+
+	test("each address shows type badge", async () => {
+		await openAddressesTab();
+
+		expect(screen.getByTestId("address-addr-detail-1")).toBeInTheDocument();
+		expect(within(screen.getByTestId("address-addr-detail-1")).getByText("Офис")).toBeInTheDocument();
+		expect(within(screen.getByTestId("address-addr-detail-2")).getByText("Склад")).toBeInTheDocument();
+	});
+
+	test("each address shows all fields in view mode", async () => {
+		await openAddressesTab();
+
+		const card = screen.getByTestId("address-addr-detail-1");
+		expect(within(card).getByText("123456")).toBeInTheDocument();
+		expect(within(card).getByText("ул. Тестовая, 1")).toBeInTheDocument();
+		expect(within(card).getByText("Москва")).toBeInTheDocument();
+		expect(within(card).getByText("Московская область")).toBeInTheDocument();
+		expect(within(card).getByText("Иванов")).toBeInTheDocument();
+		expect(within(card).getByText("+71234567890")).toBeInTheDocument();
+	});
+
+	test("edit button opens edit mode with prefilled fields", async () => {
+		await openAddressesTab();
+		const user = userEvent.setup();
+
+		const card = screen.getByTestId("address-addr-detail-1");
+		await user.click(within(card).getByRole("button", { name: "Редактировать" }));
+
+		expect(within(card).getByLabelText("Название")).toHaveValue("Главный офис");
+		expect(within(card).getByLabelText("Индекс")).toHaveValue("123456");
+		expect(within(card).getByLabelText("Адрес")).toHaveValue("ул. Тестовая, 1");
+		expect(within(card).getByLabelText("Населенный пункт")).toHaveValue("Москва");
+		expect(within(card).getByLabelText("Регион")).toHaveValue("Московская область");
+		expect(within(card).getByLabelText("Контактное лицо")).toHaveValue("Иванов");
+		expect(within(card).getByLabelText("Телефон")).toHaveValue("+71234567890");
+	});
+
+	test("edit save sends PATCH with changed fields", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/addresses/:addressId", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...MOCK_ADDRESSES[0], ...capturedBody });
+			}),
+		);
+
+		await openAddressesTab();
+		const user = userEvent.setup();
+
+		const card = screen.getByTestId("address-addr-detail-1");
+		await user.click(within(card).getByRole("button", { name: "Редактировать" }));
+
+		const nameInput = within(card).getByLabelText("Название");
+		await user.clear(nameInput);
+		await user.type(nameInput, "Новый офис");
+
+		await user.click(within(card).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ name: "Новый офис" });
+		});
+	});
+
+	test("cancel edit returns to view mode without saving", async () => {
+		await openAddressesTab();
+		const user = userEvent.setup();
+
+		const card = screen.getByTestId("address-addr-detail-1");
+		await user.click(within(card).getByRole("button", { name: "Редактировать" }));
+
+		const nameInput = within(card).getByLabelText("Название");
+		await user.clear(nameInput);
+		await user.type(nameInput, "Changed");
+
+		await user.click(within(card).getByRole("button", { name: "Отмена" }));
+
+		// Back in view mode with original name
+		expect(within(card).getByText("Главный офис")).toBeInTheDocument();
+		expect(within(card).queryByLabelText("Название")).not.toBeInTheDocument();
+	});
+
+	test("add address form creates new address", async () => {
+		await openAddressesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Добавить адрес" }));
+
+		const form = screen.getByTestId("address-add-form");
+		await user.type(within(form).getByLabelText("Название"), "Новый склад");
+		await user.type(within(form).getByLabelText("Индекс"), "111111");
+		await user.type(within(form).getByLabelText("Адрес"), "ул. Новая, 5");
+		await user.type(within(form).getByLabelText("Населенный пункт"), "Москва");
+		await user.type(within(form).getByLabelText("Регион"), "МО");
+		await user.type(within(form).getByLabelText("Контактное лицо"), "Сидоров");
+		await user.type(within(form).getByLabelText("Телефон"), "+79001234567");
+
+		await user.click(within(form).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Новый склад")).toBeInTheDocument();
+		});
+	});
+
+	test("delete address removes it from the list", async () => {
+		await openAddressesTab();
+		const user = userEvent.setup();
+
+		expect(screen.getByText("Склад №1")).toBeInTheDocument();
+
+		const card = screen.getByTestId("address-addr-detail-2");
+		await user.click(within(card).getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Склад №1")).not.toBeInTheDocument();
+		});
+	});
+
+	test("last address delete is blocked", async () => {
+		// Company with single address
+		companyDetail = { ...MOCK_COMPANY_DETAIL, addresses: [MOCK_ADDRESSES[0]] };
+
+		await openAddressesTab();
+
+		const card = screen.getByTestId("address-addr-detail-1");
+		expect(within(card).getByRole("button", { name: "Удалить" })).toBeDisabled();
 	});
 });

@@ -2,7 +2,16 @@ import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
-import type { Company, CompanySummary, Folder, NewItemInput, ProcurementItem, Totals } from "./types";
+import type {
+	Address,
+	AddressType,
+	Company,
+	CompanySummary,
+	Folder,
+	NewItemInput,
+	ProcurementItem,
+	Totals,
+} from "./types";
 
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
@@ -275,5 +284,54 @@ export async function updateCompany(id: string, data: UpdateCompanyData): Promis
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(data),
+	});
+}
+
+// --- Addresses ---
+
+export interface CreateAddressData {
+	name: string;
+	type: AddressType;
+	postalCode: string;
+	address: string;
+	city: string;
+	region: string;
+	contactPerson: string;
+	phone: string;
+}
+
+export interface UpdateAddressData {
+	name?: string;
+	type?: AddressType;
+	postalCode?: string;
+	address?: string;
+	city?: string;
+	region?: string;
+	contactPerson?: string;
+	phone?: string;
+}
+
+export async function createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
+	return request(`/${companyId}/addresses`, {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address> {
+	return request(`/${companyId}/addresses/${addressId}`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteAddress(companyId: string, addressId: string): Promise<void> {
+	return request(`/${companyId}/addresses/${addressId}`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
 	});
 }

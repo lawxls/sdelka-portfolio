@@ -1,5 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchCompany, type UpdateCompanyData, updateCompany } from "./api-client";
+import {
+	type CreateAddressData,
+	createAddress,
+	deleteAddress,
+	fetchCompany,
+	type UpdateAddressData,
+	type UpdateCompanyData,
+	updateAddress,
+	updateCompany,
+} from "./api-client";
 import type { Company } from "./types";
 
 export function useCompanyDetail(id: string | null) {
@@ -30,6 +39,43 @@ export function useUpdateCompany(id: string) {
 		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", id] });
+			queryClient.invalidateQueries({ queryKey: ["companies"] });
+		},
+	});
+}
+
+export function useCreateAddress(companyId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: CreateAddressData) => createAddress(companyId, data),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
+			queryClient.invalidateQueries({ queryKey: ["companies"] });
+		},
+	});
+}
+
+export function useUpdateAddress(companyId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ addressId, data }: { addressId: string; data: UpdateAddressData }) =>
+			updateAddress(companyId, addressId, data),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
+			queryClient.invalidateQueries({ queryKey: ["companies"] });
+		},
+	});
+}
+
+export function useDeleteAddress(companyId: string) {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (addressId: string) => deleteAddress(companyId, addressId),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
 		},
 	});
