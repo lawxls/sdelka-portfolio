@@ -242,6 +242,16 @@ function setupHandlers() {
 			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
 			return HttpResponse.json(emp?.permissions);
 		}),
+		http.delete("/api/v1/companies/:id/", ({ params }) => {
+			const id = params.id as string;
+			const company = companyList.find((c) => c.id === id);
+			if (!company) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
+			if (company.isMain) return HttpResponse.json({ detail: "Cannot delete main company" }, { status: 403 });
+			if (company.procurementItemCount > 0)
+				return HttpResponse.json({ detail: "Company has active procurement items" }, { status: 409 });
+			companyList = companyList.filter((c) => c.id !== id);
+			return new HttpResponse(null, { status: 204 });
+		}),
 		http.get("/api/v1/companies/", ({ request }) => {
 			const url = new URL(request.url);
 			const q = url.searchParams.get("q");
@@ -1053,6 +1063,170 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await waitFor(() => {
 			expect(profileCaptured).toEqual({ role: "admin" });
 			expect(permsCaptured).toEqual({ analytics: "edit", procurement: "edit", companies: "edit", tasks: "edit" });
+		});
+	});
+});
+
+describe("CompaniesPage context menu", () => {
+	test("right-click on company row shows context menu", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-company-2");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
+		});
+	});
+
+	test("Просмотреть сотрудников opens drawer on Сотрудники tab", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-company-1");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
+			expect(screen.getByTestId("tab-employees")).toHaveAttribute("aria-selected", "true");
+		});
+	});
+
+	test("Удалить is hidden for isMain company", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-company-1");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+		});
+
+		expect(screen.queryByRole("menuitem", { name: "Удалить" })).not.toBeInTheDocument();
+	});
+
+	test("Удалить shows confirmation dialog", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-company-2");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Удалить компанию?")).toBeInTheDocument();
+		});
+	});
+
+	test("confirmed deletion removes company from list", async () => {
+		// company-2 has procurementItemCount: 10, need a deletable company
+		companyList = companyList.map((c) => (c.id === "company-2" ? { ...c, procurementItemCount: 0 } : c));
+
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		expect(screen.getByText("СтройМастер")).toBeInTheDocument();
+
+		const row = screen.getByTestId("row-company-2");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Удалить компанию?")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("СтройМастер")).not.toBeInTheDocument();
+		});
+	});
+
+	test("drawer closes if deleted company was open", async () => {
+		// Make company-2 deletable
+		companyList = companyList.map((c) => (c.id === "company-2" ? { ...c, procurementItemCount: 0 } : c));
+		// Set up detail handler for company-2
+		server.use(
+			http.get("/api/v1/companies/:id/", ({ params }) => {
+				if (params.id === "company-1") return HttpResponse.json(companyDetail);
+				if (params.id === "company-2")
+					return HttpResponse.json(makeCompanyDetail("company-2", { name: "СтройМастер" }));
+				return HttpResponse.json({ detail: "Not found" }, { status: 404 });
+			}),
+		);
+
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		// Open drawer by clicking the row
+		await user.click(screen.getByTestId("row-company-2"));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("drawer-title")).toHaveTextContent("СтройМастер");
+		});
+
+		// Right-click on the row (use fireEvent because Sheet overlay blocks pointer-events in JSDOM)
+		fireEvent.contextMenu(screen.getByTestId("row-company-2"));
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Удалить компанию?")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("drawer-title")).not.toBeInTheDocument();
+		});
+	});
+
+	test("company with active procurement items shows error on delete (409)", async () => {
+		// company-2 has procurementItemCount: 10, so delete will return 409
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		const row = screen.getByTestId("row-company-2");
+		await user.pointer({ keys: "[MouseRight]", target: row });
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Удалить компанию?")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			// Company should still be in the list
+			expect(screen.getByText("СтройМастер")).toBeInTheDocument();
 		});
 	});
 });

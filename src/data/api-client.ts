@@ -291,6 +291,13 @@ export async function updateCompany(id: string, data: UpdateCompanyData): Promis
 	});
 }
 
+export async function deleteCompany(id: string): Promise<void> {
+	return request(`/${id}/`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
+	});
+}
+
 // --- Addresses ---
 
 export interface CreateAddressData {

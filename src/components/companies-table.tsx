@@ -1,6 +1,13 @@
-import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Building2, LoaderCircle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Building2, LoaderCircle, Trash2, Users } from "lucide-react";
 import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -71,6 +78,8 @@ interface CompaniesTableProps {
 	loadMore: () => void;
 	onSort: (field: CompanySortField) => void;
 	onRowClick?: (company: CompanySummary) => void;
+	onViewEmployees?: (company: CompanySummary) => void;
+	onDelete?: (company: CompanySummary) => void;
 	isLoading?: boolean;
 	isFetchingNextPage?: boolean;
 	error?: Error | null;
@@ -85,6 +94,8 @@ export function CompaniesTable({
 	loadMore,
 	onSort,
 	onRowClick,
+	onViewEmployees,
+	onDelete,
 	isLoading,
 	isFetchingNextPage,
 	error,
@@ -240,35 +251,53 @@ export function CompaniesTable({
 								const extraAddresses = company.addresses.slice(1);
 
 								return (
-									<TableRow
-										key={company.id}
-										className={onRowClick ? "cursor-pointer" : undefined}
-										onClick={onRowClick ? () => onRowClick(company) : undefined}
-										data-testid={`row-${company.id}`}
-									>
-										<TableCell className="font-medium">
-											<div>
-												<span>{company.name}</span>
-												{company.isMain && (
-													<Badge variant="outline" className="ml-2 text-[10px]">
-														Основная
-													</Badge>
-												)}
-											</div>
-											<div className="mt-0.5 text-xs text-muted-foreground">{company.responsibleEmployeeName}</div>
-										</TableCell>
-										<TableCell className="text-right tabular-nums">{company.employeeCount}</TableCell>
-										<TableCell className="text-right tabular-nums">{company.procurementItemCount}</TableCell>
-										<TableCell>
-											{firstAddress && (
-												<div className="flex items-center gap-2">
-													<span className="text-sm truncate">{firstAddress.name}</span>
-													<AddressTypeBadge type={firstAddress.type} />
-													{extraAddresses.length > 0 && <ExtraAddressesPopover addresses={extraAddresses} />}
-												</div>
+									<ContextMenu key={company.id}>
+										<ContextMenuTrigger asChild>
+											<TableRow
+												className={onRowClick ? "cursor-pointer" : undefined}
+												onClick={onRowClick ? () => onRowClick(company) : undefined}
+												data-testid={`row-${company.id}`}
+											>
+												<TableCell className="font-medium">
+													<div>
+														<span>{company.name}</span>
+														{company.isMain && (
+															<Badge variant="outline" className="ml-2 text-[10px]">
+																Основная
+															</Badge>
+														)}
+													</div>
+													<div className="mt-0.5 text-xs text-muted-foreground">{company.responsibleEmployeeName}</div>
+												</TableCell>
+												<TableCell className="text-right tabular-nums">{company.employeeCount}</TableCell>
+												<TableCell className="text-right tabular-nums">{company.procurementItemCount}</TableCell>
+												<TableCell>
+													{firstAddress && (
+														<div className="flex items-center gap-2">
+															<span className="text-sm truncate">{firstAddress.name}</span>
+															<AddressTypeBadge type={firstAddress.type} />
+															{extraAddresses.length > 0 && <ExtraAddressesPopover addresses={extraAddresses} />}
+														</div>
+													)}
+												</TableCell>
+											</TableRow>
+										</ContextMenuTrigger>
+										<ContextMenuContent>
+											<ContextMenuItem onClick={() => onViewEmployees?.(company)}>
+												<Users className="size-4" aria-hidden="true" />
+												Просмотреть сотрудников
+											</ContextMenuItem>
+											{!company.isMain && (
+												<>
+													<ContextMenuSeparator />
+													<ContextMenuItem variant="destructive" onClick={() => onDelete?.(company)}>
+														<Trash2 className="size-4" aria-hidden="true" />
+														Удалить
+													</ContextMenuItem>
+												</>
 											)}
-										</TableCell>
-									</TableRow>
+										</ContextMenuContent>
+									</ContextMenu>
 								);
 							})}
 					</TableBody>

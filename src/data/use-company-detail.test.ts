@@ -10,6 +10,7 @@ import {
 	useCreateAddress,
 	useCreateEmployee,
 	useDeleteAddress,
+	useDeleteCompany,
 	useDeleteEmployee,
 	useUpdateAddress,
 	useUpdateCompany,
@@ -151,6 +152,61 @@ describe("useUpdateCompany", () => {
 
 		// Cache rolled back
 		expect(result.current.detail.data?.name).toBe("Original");
+	});
+});
+
+describe("useDeleteCompany", () => {
+	it("sends DELETE and invalidates companies list", async () => {
+		let deletedId: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/companies/:id/", ({ params }) => {
+				deletedId = params.id as string;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		const { result } = renderHook(() => useDeleteCompany(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		result.current.mutate("c1");
+
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+		expect(deletedId).toBe("c1");
+	});
+
+	it("returns error for isMain company (403)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/", () =>
+				HttpResponse.json({ detail: "Cannot delete main company" }, { status: 403 }),
+			),
+		);
+
+		const { result } = renderHook(() => useDeleteCompany(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		result.current.mutate("c1");
+
+		await waitFor(() => expect(result.current.error).toBeTruthy());
+	});
+
+	it("returns error for company with active procurement (409)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/", () =>
+				HttpResponse.json({ detail: "Company has active procurement items" }, { status: 409 }),
+			),
+		);
+
+		const { result } = renderHook(() => useDeleteCompany(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		result.current.mutate("c1");
+
+		await waitFor(() => expect(result.current.error).toBeTruthy());
 	});
 });
 

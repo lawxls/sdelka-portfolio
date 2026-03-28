@@ -1,12 +1,25 @@
 import { Plus, Search } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { CompaniesTable } from "@/components/companies-table";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/data/api-error";
 import type { CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
+import { useDeleteCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
@@ -36,6 +49,9 @@ export function CompaniesPage() {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const latestQueryRef = useRef(search);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
+
+	const [companyToDelete, setCompanyToDelete] = useState<CompanySummary | null>(null);
+	const deleteCompany = useDeleteCompany();
 
 	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
 		const value = e.target.value;
@@ -110,6 +126,37 @@ export function CompaniesPage() {
 		);
 	}
 
+	function handleViewEmployees(company: CompanySummary) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("company", company.id);
+				next.set("tab", "employees");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleConfirmDelete() {
+		if (!companyToDelete) return;
+		const id = companyToDelete.id;
+		deleteCompany.mutate(id, {
+			onSuccess: () => {
+				if (companyId === id) handleDrawerClose();
+				setCompanyToDelete(null);
+			},
+			onError: (err) => {
+				setCompanyToDelete(null);
+				if (err instanceof ApiError && err.status === 409) {
+					toast.error("Невозможно удалить компанию с активными закупками");
+				} else {
+					toast.error("Не удалось удалить компанию");
+				}
+			},
+		});
+	}
+
 	return (
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
@@ -146,6 +193,8 @@ export function CompaniesPage() {
 					loadMore={loadMore}
 					onSort={handleSort}
 					onRowClick={handleRowClick}
+					onViewEmployees={handleViewEmployees}
+					onDelete={setCompanyToDelete}
 					isLoading={isLoading}
 					isFetchingNextPage={isFetchingNextPage}
 					error={error}
@@ -160,6 +209,23 @@ export function CompaniesPage() {
 				onClose={handleDrawerClose}
 				onTabChange={handleTabChange}
 			/>
+
+			<AlertDialog open={companyToDelete !== null} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Удалить компанию?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Компания «{companyToDelete?.name}» будет удалена. Это действие нельзя отменить.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
+							Удалить
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

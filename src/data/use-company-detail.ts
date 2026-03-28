@@ -5,6 +5,7 @@ import {
 	createAddress,
 	createEmployee,
 	deleteAddress,
+	deleteCompany,
 	deleteEmployee,
 	fetchCompany,
 	type UpdateAddressData,
@@ -46,6 +47,17 @@ export function useUpdateCompany(id: string) {
 		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", id] });
+			queryClient.invalidateQueries({ queryKey: ["companies"] });
+		},
+	});
+}
+
+export function useDeleteCompany() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => deleteCompany(id),
+		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
 		},
 	});
