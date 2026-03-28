@@ -1,6 +1,7 @@
 import {
 	Archive,
 	ArchiveRestore,
+	Building2,
 	Check,
 	Clock,
 	Ellipsis,
@@ -67,6 +68,8 @@ interface ProcurementCardProps {
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	onArchiveItem?: (id: string, isArchived: boolean) => void;
 	isArchiveView?: boolean;
+	companyName?: string;
+	showCompanyBadge?: boolean;
 }
 
 const FIELDS: { label: string; key: string }[] = [
@@ -86,6 +89,8 @@ export function ProcurementCard({
 	onAssignFolder,
 	onArchiveItem,
 	isArchiveView,
+	companyName,
+	showCompanyBadge,
 }: ProcurementCardProps) {
 	const deviation = getDeviation(item);
 	const overpayment = getOverpayment(item);
@@ -144,7 +149,16 @@ export function ProcurementCard({
 			<div className="flex items-start justify-between">
 				<div className="flex items-center gap-1.5">
 					<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
-					{folder && !isEditing && !isArchiveView && (
+					{showCompanyBadge && companyName && !isEditing && (
+						<div
+							className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+							data-testid={`company-badge-${item.id}`}
+						>
+							<Building2 className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+							<span className="text-xs text-muted-foreground">{companyName}</span>
+						</div>
+					)}
+					{!showCompanyBadge && folder && !isEditing && !isArchiveView && (
 						<div
 							className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 							data-testid={`folder-badge-${item.id}`}

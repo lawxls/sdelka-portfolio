@@ -20,18 +20,18 @@ export function nextUnusedColor(folders: Folder[]): string {
 
 // --- Query hooks ---
 
-export function useFolders() {
+export function useFolders(company?: string) {
 	return useQuery({
-		queryKey: ["folders"],
-		queryFn: fetchFolders,
+		queryKey: ["folders", { company }],
+		queryFn: () => fetchFolders(company ? { company } : undefined),
 		select: (data) => data.folders,
 	});
 }
 
-export function useFolderStats() {
+export function useFolderStats(company?: string) {
 	return useQuery({
-		queryKey: ["folderStats"],
-		queryFn: fetchFolderStats,
+		queryKey: ["folderStats", { company }],
+		queryFn: () => fetchFolderStats(company ? { company } : undefined),
 		select: (data) => {
 			const counts: Record<string, number> = {};
 			let total = 0;

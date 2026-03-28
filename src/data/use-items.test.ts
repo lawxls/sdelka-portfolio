@@ -134,6 +134,31 @@ describe("useItems", () => {
 		expect(url.searchParams.get("dir")).toBe("desc");
 	});
 
+	it("includes company param in API request when provided", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ items: [], nextCursor: null });
+			}),
+		);
+
+		const params = {
+			...DEFAULT_PARAMS,
+			company: "c1",
+		};
+
+		const { result } = renderHook(() => useItems(params), { wrapper: createQueryWrapper(queryClient) });
+
+		await waitFor(() => {
+			expect(result.current.isLoading).toBe(false);
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("company")).toBe("c1");
+	});
+
 	it("omits 'all' filter values from API request", async () => {
 		let capturedUrl: string | undefined;
 
@@ -230,6 +255,36 @@ describe("useTotals", () => {
 		expect(url.searchParams.get("deviation")).toBe("overpaying");
 		expect(url.searchParams.get("status")).toBe("searching");
 		expect(url.searchParams.get("folder")).toBe("f1");
+	});
+
+	it("includes company param in totals request", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/totals", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					itemCount: 10,
+					totalOverpayment: "0",
+					totalSavings: "0",
+					totalDeviation: "0",
+				});
+			}),
+		);
+
+		const params = {
+			...DEFAULT_PARAMS,
+			company: "c1",
+		};
+
+		const { result } = renderHook(() => useTotals(params), { wrapper: createQueryWrapper(queryClient) });
+
+		await waitFor(() => {
+			expect(result.current.data).toBeTruthy();
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("company")).toBe("c1");
 	});
 
 	it("returns loading state initially", () => {

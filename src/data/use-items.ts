@@ -17,14 +17,16 @@ interface ItemQueryParams {
 	filters: FilterState;
 	sort: SortState | null;
 	folder?: string;
+	company?: string;
 }
 
-export function buildFilterParams({ search, filters, folder, sort }: ItemQueryParams) {
+export function buildFilterParams({ search, filters, folder, sort, company }: ItemQueryParams) {
 	return {
 		q: search || undefined,
 		status: filters.status !== "all" ? filters.status : undefined,
 		deviation: filters.deviation !== "all" ? filters.deviation : undefined,
 		folder,
+		company,
 		sort: sort?.field,
 		dir: sort?.direction,
 	};

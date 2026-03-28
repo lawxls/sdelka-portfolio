@@ -72,6 +72,26 @@ describe("useFolders", () => {
 		});
 	});
 
+	it("includes company param in folders request", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/folders/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ folders: MOCK_FOLDERS });
+			}),
+		);
+
+		const { result } = renderHook(() => useFolders("c1"), { wrapper: createQueryWrapper(queryClient) });
+
+		await waitFor(() => {
+			expect(result.current.data).toBeTruthy();
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("company")).toBe("c1");
+	});
+
 	it("returns loading state initially", () => {
 		server.use(
 			http.get("/api/v1/company/folders/", async () => {
@@ -112,6 +132,26 @@ describe("useFolderStats", () => {
 				archive: 3,
 			});
 		});
+	});
+
+	it("includes company param in stats request", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/folders/stats", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ stats: MOCK_STATS, archiveCount: 3 });
+			}),
+		);
+
+		const { result } = renderHook(() => useFolderStats("c1"), { wrapper: createQueryWrapper(queryClient) });
+
+		await waitFor(() => {
+			expect(result.current.data).toBeTruthy();
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("company")).toBe("c1");
 	});
 
 	it("returns loading state initially", () => {

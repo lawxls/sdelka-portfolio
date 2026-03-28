@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { fetchCompanies } from "./api-client";
 import type { CompanySortState } from "./types";
 
@@ -36,4 +36,12 @@ export function useCompanies(params: CompanyQueryParams) {
 		error: query.error,
 		refetch: query.refetch,
 	};
+}
+
+export function useProcurementCompanies() {
+	return useQuery({
+		queryKey: ["procurementCompanies"],
+		queryFn: () => fetchCompanies({ limit: 100 }),
+		select: (data) => data.companies,
+	});
 }

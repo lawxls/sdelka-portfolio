@@ -79,6 +79,7 @@ export interface FolderSidebarProps {
 	onRenameFolder: (id: string, name: string) => void;
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
+	headerSlot?: React.ReactNode;
 }
 
 export function FolderSidebar({
@@ -93,6 +94,7 @@ export function FolderSidebar({
 	onRenameFolder,
 	onRecolorFolder,
 	onDeleteFolder,
+	headerSlot,
 }: FolderSidebarProps) {
 	const isDesktop = useIsDesktop();
 	const [isCreating, setIsCreating] = useState(false);
@@ -142,6 +144,8 @@ export function FolderSidebar({
 					<ChevronLeft className="size-4" />
 				</Button>
 			</div>
+
+			{headerSlot && <div className="shrink-0 border-b border-sidebar-border p-2">{headerSlot}</div>}
 
 			{/* Scrollable nav */}
 			<nav className="flex-1 overflow-y-auto p-2" aria-label="Разделы">

@@ -120,15 +120,15 @@ export async function fetchCompanyInfo(): Promise<{ name: string }> {
 
 // --- Folders ---
 
-export async function fetchFolders(): Promise<{ folders: Folder[] }> {
-	return request("/folders/");
+export async function fetchFolders(params?: { company?: string }): Promise<{ folders: Folder[] }> {
+	return request(`/folders/${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
 }
 
-export async function fetchFolderStats(): Promise<{
+export async function fetchFolderStats(params?: { company?: string }): Promise<{
 	stats: Array<{ folderId: string | null; itemCount: number }>;
 	archiveCount: number;
 }> {
-	return request("/folders/stats");
+	return request(`/folders/stats${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
 }
 
 export async function createFolder(data: { name: string; color: string }): Promise<Folder> {
@@ -167,6 +167,7 @@ export interface FetchItemsParams {
 	status?: string;
 	deviation?: string;
 	folder?: string;
+	company?: string;
 	sort?: string;
 	dir?: string;
 	cursor?: string;
@@ -243,6 +244,7 @@ export interface FetchTotalsParams {
 	status?: string;
 	deviation?: string;
 	folder?: string;
+	company?: string;
 }
 
 export async function fetchTotals(params: FetchTotalsParams): Promise<Totals> {

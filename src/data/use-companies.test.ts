@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeCompany, mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
-import { useCompanies } from "./use-companies";
+import { useCompanies, useProcurementCompanies } from "./use-companies";
 
 let queryClient: QueryClient;
 
@@ -187,5 +187,22 @@ describe("useCompanies", () => {
 		await waitFor(() => {
 			expect(result.current.companies).toHaveLength(1);
 		});
+	});
+});
+
+describe("useProcurementCompanies", () => {
+	it("fetches all companies for procurement sidebar", async () => {
+		const companies = [makeCompany("c1", { procurementItemCount: 15 }), makeCompany("c2", { procurementItemCount: 8 })];
+
+		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+
+		const { result } = renderHook(() => useProcurementCompanies(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.data).toHaveLength(2);
+		});
+		expect(result.current.data?.[0].procurementItemCount).toBe(15);
 	});
 });

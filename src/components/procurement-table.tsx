@@ -6,6 +6,7 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	Building2,
 	Check,
 	Clock,
 	FolderInput,
@@ -97,6 +98,8 @@ interface ProcurementTableProps {
 	error?: Error | null;
 	onRetry?: () => void;
 	isMobile?: boolean;
+	companyMap?: Record<string, string>;
+	showCompanyBadge?: boolean;
 }
 
 export function ProcurementTable({
@@ -119,6 +122,8 @@ export function ProcurementTable({
 	error,
 	onRetry,
 	isMobile,
+	companyMap,
+	showCompanyBadge,
 }: ProcurementTableProps) {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -208,6 +213,8 @@ export function ProcurementTable({
 									onAssignFolder={onAssignFolder}
 									onArchiveItem={onArchiveItem}
 									isArchiveView={isArchiveView}
+									companyName={companyMap?.[item.companyId]}
+									showCompanyBadge={showCompanyBadge}
 								/>
 							))}
 						</div>
@@ -336,7 +343,16 @@ export function ProcurementTable({
 										<div className="max-w-[350px]">
 											<div className="flex items-center gap-2 min-w-0">
 												<TruncatedName name={displayName} className="truncate" />
-												{folder && !isArchiveView && (
+												{showCompanyBadge && companyMap?.[item.companyId] && (
+													<div
+														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+														data-testid={`company-badge-${item.id}`}
+													>
+														<Building2 className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+														<span className="text-xs text-muted-foreground">{companyMap[item.companyId]}</span>
+													</div>
+												)}
+												{!showCompanyBadge && folder && !isArchiveView && (
 													<div
 														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 														data-testid={`folder-badge-${item.id}`}
