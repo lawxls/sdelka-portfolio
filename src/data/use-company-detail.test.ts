@@ -8,6 +8,7 @@ import { setTokens } from "./auth";
 import {
 	useCompanyDetail,
 	useCreateAddress,
+	useCreateCompany,
 	useCreateEmployee,
 	useDeleteAddress,
 	useDeleteCompany,
@@ -205,6 +206,88 @@ describe("useDeleteCompany", () => {
 		});
 
 		result.current.mutate("c1");
+
+		await waitFor(() => expect(result.current.error).toBeTruthy());
+	});
+});
+
+describe("useCreateCompany", () => {
+	it("sends POST with nested payload", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		const created = makeCompanyDetail("new-1", { name: "Новая компания" });
+
+		server.use(
+			http.post("/api/v1/companies/", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json(created);
+			}),
+		);
+
+		const { result } = renderHook(() => useCreateCompany(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		const payload = {
+			name: "Новая компания",
+			address: {
+				name: "Офис",
+				type: "office" as const,
+				postalCode: "123456",
+				address: "ул. Тестовая, 1",
+				city: "Москва",
+				region: "Московская область",
+				contactPerson: "Иванов",
+				phone: "+71234567890",
+			},
+			employee: {
+				firstName: "Иван",
+				lastName: "Иванов",
+				patronymic: "Иванович",
+				position: "Директор",
+				role: "admin" as const,
+				phone: "+71234567890",
+				email: "ivan@example.com",
+				isResponsible: true,
+			},
+		};
+
+		result.current.mutate(payload);
+
+		await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+		expect(capturedBody).toEqual(payload);
+	});
+
+	it("returns error on server failure", async () => {
+		server.use(http.post("/api/v1/companies/", () => HttpResponse.json({ detail: "Server error" }, { status: 500 })));
+
+		const { result } = renderHook(() => useCreateCompany(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		result.current.mutate({
+			name: "Fail",
+			address: {
+				name: "Офис",
+				type: "office" as const,
+				postalCode: "",
+				address: "",
+				city: "",
+				region: "",
+				contactPerson: "",
+				phone: "",
+			},
+			employee: {
+				firstName: "Тест",
+				lastName: "Тестов",
+				patronymic: "",
+				position: "",
+				role: "user" as const,
+				phone: "",
+				email: "",
+				isResponsible: true,
+			},
+		});
 
 		await waitFor(() => expect(result.current.error).toBeTruthy());
 	});

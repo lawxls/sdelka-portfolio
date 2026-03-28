@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CompaniesTable } from "@/components/companies-table";
+import { CompanyCreationSheet } from "@/components/company-creation-sheet";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
 import {
 	AlertDialog,
@@ -16,10 +17,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { CreateCompanyPayload } from "@/data/api-client";
 import { ApiError } from "@/data/api-error";
 import type { CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
-import { useDeleteCompany } from "@/data/use-company-detail";
+import { useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
@@ -52,6 +54,9 @@ export function CompaniesPage() {
 
 	const [companyToDelete, setCompanyToDelete] = useState<CompanySummary | null>(null);
 	const deleteCompany = useDeleteCompany();
+
+	const [creationOpen, setCreationOpen] = useState(false);
+	const createCompanyMutation = useCreateCompany();
 
 	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
 		const value = e.target.value;
@@ -157,6 +162,17 @@ export function CompaniesPage() {
 		});
 	}
 
+	function handleCreateCompany(data: CreateCompanyPayload) {
+		createCompanyMutation.mutate(data, {
+			onSuccess: () => {
+				setCreationOpen(false);
+			},
+			onError: () => {
+				toast.error("Не удалось создать компанию");
+			},
+		});
+	}
+
 	return (
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
@@ -177,7 +193,12 @@ export function CompaniesPage() {
 							autoComplete="off"
 						/>
 					</div>
-					<Button type="button" size="sm" className="bg-status-highlight hover:bg-status-highlight/80">
+					<Button
+						type="button"
+						size="sm"
+						className="bg-status-highlight hover:bg-status-highlight/80"
+						onClick={() => setCreationOpen(true)}
+					>
 						<Plus data-icon="inline-start" aria-hidden="true" />
 						<span className="hidden sm:inline">Добавить компанию</span>
 						<span className="sm:hidden">Добавить</span>
@@ -208,6 +229,16 @@ export function CompaniesPage() {
 				activeTab={activeTab}
 				onClose={handleDrawerClose}
 				onTabChange={handleTabChange}
+			/>
+
+			<CompanyCreationSheet
+				open={creationOpen}
+				onOpenChange={(open) => {
+					setCreationOpen(open);
+					if (!open) createCompanyMutation.reset();
+				}}
+				onSubmit={handleCreateCompany}
+				isPending={createCompanyMutation.isPending}
 			/>
 
 			<AlertDialog open={companyToDelete !== null} onOpenChange={(open) => !open && setCompanyToDelete(null)}>

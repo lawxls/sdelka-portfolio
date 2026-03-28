@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	type CreateAddressData,
+	type CreateCompanyPayload,
 	type CreateEmployeeData,
 	createAddress,
+	createCompany,
 	createEmployee,
 	deleteAddress,
 	deleteCompany,
@@ -57,6 +59,17 @@ export function useDeleteCompany() {
 
 	return useMutation({
 		mutationFn: (id: string) => deleteCompany(id),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["companies"] });
+		},
+	});
+}
+
+export function useCreateCompany() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (data: CreateCompanyPayload) => createCompany(data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
 		},

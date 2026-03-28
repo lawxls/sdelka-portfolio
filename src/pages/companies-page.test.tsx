@@ -242,6 +242,17 @@ function setupHandlers() {
 			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
 			return HttpResponse.json(emp?.permissions);
 		}),
+		http.post("/api/v1/companies/", async ({ request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const id = `company-new-${Date.now()}`;
+			const created = makeCompanyDetail(id, { name: body.name as string });
+			const summary = makeCompany(id, {
+				name: body.name as string,
+				responsibleEmployeeName: `${(body.employee as Record<string, string>).lastName} ${(body.employee as Record<string, string>).firstName}`,
+			});
+			companyList = [...companyList, summary];
+			return HttpResponse.json(created);
+		}),
 		http.delete("/api/v1/companies/:id/", ({ params }) => {
 			const id = params.id as string;
 			const company = companyList.find((c) => c.id === id);
@@ -1228,5 +1239,223 @@ describe("CompaniesPage context menu", () => {
 			// Company should still be in the list
 			expect(screen.getByText("СтройМастер")).toBeInTheDocument();
 		});
+	});
+});
+
+describe("CompaniesPage company creation", () => {
+	test("Добавить компанию button opens creation sheet", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Новая компания")).toBeInTheDocument();
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+	});
+
+	test("creation form has company name, address, and employee sections", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		// Company section
+		expect(within(form).getByText("Компания")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Название компании")).toBeInTheDocument();
+		// Address section
+		expect(within(form).getByLabelText("Название адреса")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Тип адреса")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Индекс")).toBeInTheDocument();
+		// Employee section
+		expect(within(form).getByText("Ответственный сотрудник")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Фамилия сотрудника")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Имя сотрудника")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Роль сотрудника")).toBeInTheDocument();
+	});
+
+	test("submit blocked when company name is empty", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		// Fill address and employee but not company name
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
+		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Иванов");
+		await user.type(within(form).getByLabelText("Имя сотрудника"), "Иван");
+
+		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
+	});
+
+	test("submit blocked when address name is empty", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "Тестовая");
+		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Иванов");
+		await user.type(within(form).getByLabelText("Имя сотрудника"), "Иван");
+
+		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
+	});
+
+	test("submit blocked when employee name is incomplete", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "Тестовая");
+		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
+		// No employee name filled
+
+		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
+	});
+
+	test("successful creation closes sheet", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "НоваяКомпания");
+		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
+		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Сидоров");
+		await user.type(within(form).getByLabelText("Имя сотрудника"), "Алексей");
+
+		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeEnabled();
+
+		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("creation-form")).not.toBeInTheDocument();
+		});
+	});
+
+	test("new company appears in list after creation", async () => {
+		// Start with small dataset so new company fits first page
+		companyList = MOCK_COMPANIES.slice(0, 3);
+
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByText("Сделка")).toBeInTheDocument();
+		});
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "НоваяКомпания");
+		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
+		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Сидоров");
+		await user.type(within(form).getByLabelText("Имя сотрудника"), "Алексей");
+
+		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("НоваяКомпания")).toBeInTheDocument();
+		});
+	});
+
+	test("form sends correct nested payload", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.post("/api/v1/companies/", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				const created = makeCompanyDetail("new-1", { name: capturedBody.name as string });
+				companyList = [...companyList, makeCompany("new-1", { name: capturedBody.name as string })];
+				return HttpResponse.json(created);
+			}),
+		);
+
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "ТестКомпания");
+		await user.type(within(form).getByLabelText("Название адреса"), "Центральный");
+		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Петров");
+		await user.type(within(form).getByLabelText("Имя сотрудника"), "Пётр");
+
+		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+
+		await waitFor(() => {
+			expect(capturedBody).toBeDefined();
+		});
+
+		expect(capturedBody).toMatchObject({
+			name: "ТестКомпания",
+			address: { name: "Центральный", type: "office" },
+			employee: { firstName: "Пётр", lastName: "Петров", isResponsible: true },
+		});
+	});
+
+	test("form clears on close and reopen", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		// Open and fill
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		const form = screen.getByTestId("creation-form");
+		await user.type(within(form).getByLabelText("Название компании"), "Временная");
+
+		// Close via sheet close (press Escape)
+		await user.keyboard("{Escape}");
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("creation-form")).not.toBeInTheDocument();
+		});
+
+		// Reopen
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
+		});
+
+		expect(screen.getByLabelText("Название компании")).toHaveValue("");
 	});
 });

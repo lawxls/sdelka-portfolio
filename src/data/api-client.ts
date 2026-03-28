@@ -298,6 +298,21 @@ export async function deleteCompany(id: string): Promise<void> {
 	});
 }
 
+export interface CreateCompanyPayload {
+	name: string;
+	address: CreateAddressData;
+	employee: CreateEmployeeData;
+}
+
+export async function createCompany(data: CreateCompanyPayload): Promise<Company> {
+	return request("/", {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
 // --- Addresses ---
 
 export interface CreateAddressData {
