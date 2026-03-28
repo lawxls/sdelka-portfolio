@@ -2,7 +2,7 @@ import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
-import type { CompanySummary, Folder, NewItemInput, ProcurementItem, Totals } from "./types";
+import type { Company, CompanySummary, Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
@@ -252,5 +252,28 @@ export async function fetchCompanies(params: FetchCompaniesParams): Promise<{
 }> {
 	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
 		base: COMPANIES_BASE,
+	});
+}
+
+export async function fetchCompany(id: string): Promise<Company> {
+	return request(`/${id}/`, { base: COMPANIES_BASE });
+}
+
+export interface UpdateCompanyData {
+	name?: string;
+	industry?: string;
+	website?: string;
+	description?: string;
+	preferredPayment?: string;
+	preferredDelivery?: string;
+	additionalComments?: string;
+}
+
+export async function updateCompany(id: string, data: UpdateCompanyData): Promise<Company> {
+	return request(`/${id}/`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
 	});
 }

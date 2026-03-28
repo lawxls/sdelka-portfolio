@@ -6,10 +6,10 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
-import type { CompanySummary } from "@/data/types";
+import type { Company, CompanySummary } from "@/data/types";
 import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
-import { makeCompany } from "@/test-utils";
+import { makeCompany, makeCompanyDetail } from "@/test-utils";
 import { CompaniesPage } from "./companies-page";
 
 const MOCK_COMPANIES: CompanySummary[] = [
@@ -53,12 +53,34 @@ const MOCK_COMPANIES: CompanySummary[] = [
 	),
 ];
 
+const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
+	name: "Сделка",
+	isMain: true,
+	industry: "Технологии",
+	website: "https://sdelka.ai",
+	description: "Платформа для закупок",
+	preferredPayment: "Безналичный расчёт",
+	preferredDelivery: "Курьером",
+	additionalComments: "Важный клиент",
+	employeeCount: 12,
+	procurementItemCount: 25,
+});
+
 let companyList: CompanySummary[];
 let queryClient: QueryClient;
 
 function setupHandlers() {
 	companyList = [...MOCK_COMPANIES];
 	server.use(
+		http.get("/api/v1/companies/:id/", ({ params }) => {
+			if (params.id === "company-1") return HttpResponse.json(MOCK_COMPANY_DETAIL);
+			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
+		}),
+		http.patch("/api/v1/companies/:id/", async ({ params, request }) => {
+			if (params.id !== "company-1") return HttpResponse.json({}, { status: 404 });
+			const body = (await request.json()) as Record<string, unknown>;
+			return HttpResponse.json({ ...MOCK_COMPANY_DETAIL, ...body });
+		}),
 		http.get("/api/v1/companies/", ({ request }) => {
 			const url = new URL(request.url);
 			const q = url.searchParams.get("q");
@@ -320,5 +342,172 @@ describe("CompaniesPage mobile", () => {
 		expect(screen.getByText("Сделка")).toBeInTheDocument();
 
 		vi.restoreAllMocks();
+	});
+});
+
+describe("CompaniesPage drawer", () => {
+	test("clicking company row opens drawer with company details", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("row-company-1"));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка");
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+	});
+
+	test("drawer renders 3 tabs with Общее active by default", async () => {
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-general")).toBeInTheDocument();
+		});
+
+		expect(screen.getByTestId("tab-addresses")).toBeInTheDocument();
+		expect(screen.getByTestId("tab-employees")).toBeInTheDocument();
+
+		expect(screen.getByTestId("tab-general")).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+	});
+
+	test("Общее tab displays company fields populated from data", async () => {
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		expect(screen.getByLabelText("Название")).toHaveValue("Сделка");
+		expect(screen.getByLabelText("Отрасль")).toHaveValue("Технологии");
+		expect(screen.getByLabelText("Сайт")).toHaveValue("https://sdelka.ai");
+		expect(screen.getByLabelText("Описание")).toHaveValue("Платформа для закупок");
+		expect(screen.getByLabelText("Предпочтительная оплата")).toHaveValue("Безналичный расчёт");
+		expect(screen.getByLabelText("Предпочтительная доставка")).toHaveValue("Курьером");
+		expect(screen.getByLabelText("Дополнительные комментарии")).toHaveValue("Важный клиент");
+	});
+
+	test("Общее tab shows both sections", async () => {
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		expect(screen.getByText("Основная информация")).toBeInTheDocument();
+		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
+	});
+
+	test("save button is disabled when no changes", async () => {
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+	});
+
+	test("save button sends PATCH with changed fields only", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...MOCK_COMPANY_DETAIL, ...capturedBody });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		const nameInput = screen.getByLabelText("Название");
+		await user.clear(nameInput);
+		await user.type(nameInput, "Новое название");
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ name: "Новое название" });
+		});
+	});
+
+	test("save button disabled when name is empty", async () => {
+		renderPage(["/companies?company=company-1"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		const nameInput = screen.getByLabelText("Название");
+		await user.clear(nameInput);
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+	});
+
+	test("tab switching shows correct content", async () => {
+		renderPage(["/companies?company=company-1"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByTestId("tab-addresses"));
+		expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument();
+		expect(screen.queryByTestId("tab-content-general")).not.toBeInTheDocument();
+
+		await user.click(screen.getByTestId("tab-employees"));
+		expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
+		expect(screen.queryByTestId("tab-content-addresses")).not.toBeInTheDocument();
+	});
+
+	test("URL with company=id opens drawer directly", async () => {
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка");
+		});
+	});
+
+	test("URL with tab param opens correct tab", async () => {
+		renderPage(["/companies?company=company-1&tab=addresses"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument();
+		});
+
+		expect(screen.getByTestId("tab-addresses")).toHaveAttribute("aria-selected", "true");
+	});
+
+	test("invalid company shows error in drawer", async () => {
+		renderPage(["/companies?company=nonexistent"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("drawer-error")).toBeInTheDocument();
+		});
+
+		expect(screen.getByText("Не удалось загрузить компанию")).toBeInTheDocument();
+	});
+
+	test("drawer shows loading state", async () => {
+		server.use(
+			http.get("/api/v1/companies/:id/", async () => {
+				await new Promise(() => {});
+			}),
+		);
+
+		renderPage(["/companies?company=company-1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("drawer-loading")).toBeInTheDocument();
+		});
 	});
 });

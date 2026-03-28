@@ -2,9 +2,10 @@ import { Plus, Search } from "lucide-react";
 import { useRef } from "react";
 import { useSearchParams } from "react-router";
 import { CompaniesTable } from "@/components/companies-table";
+import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { CompanySortField, CompanySortState } from "@/data/types";
+import type { CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -23,6 +24,8 @@ export function CompaniesPage() {
 
 	const search = searchParams.get("q") ?? "";
 	const sort = parseSort(searchParams);
+	const companyId = searchParams.get("company");
+	const activeTab = parseCompanyTab(searchParams.get("tab"));
 
 	const { companies, hasNextPage, loadMore, isLoading, isFetchingNextPage, error, refetch } = useCompanies({
 		search,
@@ -71,6 +74,42 @@ export function CompaniesPage() {
 		});
 	}
 
+	function handleRowClick(company: CompanySummary) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("company", company.id);
+				next.delete("tab");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleDrawerClose() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("company");
+				next.delete("tab");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleTabChange(tab: CompanyTab) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (tab === "general") next.delete("tab");
+				else next.set("tab", tab);
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
 	return (
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
@@ -106,6 +145,7 @@ export function CompaniesPage() {
 					hasNextPage={hasNextPage}
 					loadMore={loadMore}
 					onSort={handleSort}
+					onRowClick={handleRowClick}
 					isLoading={isLoading}
 					isFetchingNextPage={isFetchingNextPage}
 					error={error}
@@ -113,6 +153,13 @@ export function CompaniesPage() {
 					isMobile={isMobile}
 				/>
 			</main>
+
+			<CompanyDrawer
+				companyId={companyId}
+				activeTab={activeTab}
+				onClose={handleDrawerClose}
+				onTabChange={handleTabChange}
+			/>
 		</div>
 	);
 }

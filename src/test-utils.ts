@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import type { CompanySummary, ProcurementItem } from "@/data/types";
+import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
 
 export function mockHostname(hostname: string) {
 	vi.spyOn(window, "location", "get").mockReturnValue({
@@ -44,6 +44,57 @@ export function makeCompany(id: string, overrides: Partial<CompanySummary> = {})
 		addresses: [{ id: `addr-${id}`, name: "Офис", type: "office" }],
 		employeeCount: 5,
 		procurementItemCount: 10,
+		...overrides,
+	};
+}
+
+export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}): Company {
+	return {
+		id,
+		name: `Company ${id}`,
+		industry: "",
+		website: "",
+		description: "",
+		preferredPayment: "",
+		preferredDelivery: "",
+		additionalComments: "",
+		isMain: false,
+		employeeCount: 5,
+		procurementItemCount: 10,
+		addresses: [
+			{
+				id: `addr-${id}`,
+				name: "Офис",
+				type: "office",
+				postalCode: "123456",
+				address: "ул. Тестовая, 1",
+				city: "Москва",
+				region: "Московская область",
+				contactPerson: "Иванов",
+				phone: "+71234567890",
+			},
+		],
+		employees: [
+			{
+				id: `emp-${id}`,
+				firstName: "Иван",
+				lastName: "Иванов",
+				patronymic: "Иванович",
+				position: "Директор",
+				role: "admin",
+				phone: "+71234567890",
+				email: "ivan@example.com",
+				isResponsible: true,
+				permissions: {
+					id: `perm-${id}`,
+					employeeId: `emp-${id}`,
+					analytics: "edit",
+					procurement: "edit",
+					companies: "edit",
+					tasks: "edit",
+				},
+			},
+		],
 		...overrides,
 	};
 }

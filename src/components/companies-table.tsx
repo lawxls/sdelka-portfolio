@@ -45,6 +45,7 @@ function ExtraAddressesPopover({ addresses }: { addresses: AddressSummary[] }) {
 				<button
 					type="button"
 					className="inline-flex h-5 items-center rounded-4xl bg-muted px-1.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/80 transition-colors"
+					onClick={(e) => e.stopPropagation()}
 				>
 					+{addresses.length}
 				</button>
