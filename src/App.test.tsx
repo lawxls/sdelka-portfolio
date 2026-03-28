@@ -193,12 +193,11 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/companies renders placeholder page with icon", async () => {
+	test("/companies renders companies page", async () => {
+		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [], nextCursor: null })));
 		renderApp(["/companies"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
-			expect(screen.getByText("В разработке")).toBeInTheDocument();
-			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
@@ -521,6 +520,7 @@ describe("ProcurementPage", () => {
 					bestPrice: 1,
 					averagePrice: 1,
 					folderId: null,
+					companyId: "company-1",
 				}}
 			/>,
 		);

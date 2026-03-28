@@ -2,9 +2,10 @@ import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
-import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
+import type { CompanySummary, Folder, NewItemInput, ProcurementItem, Totals } from "./types";
 
 const BASE = "/api/v1/company";
+const COMPANIES_BASE = "/api/v1/companies";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -75,15 +76,16 @@ function attemptRefresh(): Promise<void> {
 	return refreshPromise;
 }
 
-async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
-	const headers = buildAuthHeaders(options.headers, options.skipAuth);
-	let response = await fetch(`${BASE}${path}`, { ...options, headers });
+async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean; base?: string } = {}): Promise<T> {
+	const { base = BASE, skipAuth, ...fetchOpts } = options;
+	const headers = buildAuthHeaders(fetchOpts.headers, skipAuth);
+	let response = await fetch(`${base}${path}`, { ...fetchOpts, headers });
 
-	if (response.status === 401 && !options.skipAuth && getRefreshToken()) {
+	if (response.status === 401 && !skipAuth && getRefreshToken()) {
 		try {
 			await attemptRefresh();
-			const retryHeaders = buildAuthHeaders(options.headers, options.skipAuth);
-			response = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders });
+			const retryHeaders = buildAuthHeaders(fetchOpts.headers, skipAuth);
+			response = await fetch(`${base}${path}`, { ...fetchOpts, headers: retryHeaders });
 		} catch {
 			// Refresh failed — fall through to ensureOk with original 401 response
 		}
@@ -232,4 +234,23 @@ export interface FetchTotalsParams {
 
 export async function fetchTotals(params: FetchTotalsParams): Promise<Totals> {
 	return request(`/items/totals${buildQuery(params as Record<string, string | number | undefined>)}`);
+}
+
+// --- Companies ---
+
+export interface FetchCompaniesParams {
+	q?: string;
+	sort?: string;
+	dir?: string;
+	cursor?: string;
+	limit?: number;
+}
+
+export async function fetchCompanies(params: FetchCompaniesParams): Promise<{
+	companies: CompanySummary[];
+	nextCursor: string | null;
+}> {
+	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
+		base: COMPANIES_BASE,
+	});
 }
