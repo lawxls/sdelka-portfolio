@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
-import type { Address, Company, CompanySummary } from "@/data/types";
+import type { Address, Company, CompanySummary, Employee, EmployeePermissions } from "@/data/types";
 import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
 import { makeCompany, makeCompanyDetail } from "@/test-utils";
@@ -78,6 +78,47 @@ const MOCK_ADDRESSES: Address[] = [
 	},
 ];
 
+const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
+	{
+		id: "emp-1",
+		firstName: "Иван",
+		lastName: "Иванов",
+		patronymic: "Иванович",
+		position: "Директор",
+		role: "admin",
+		phone: "+71234567890",
+		email: "ivan@example.com",
+		isResponsible: true,
+		permissions: {
+			id: "perm-1",
+			employeeId: "emp-1",
+			analytics: "edit",
+			procurement: "edit",
+			companies: "edit",
+			tasks: "edit",
+		},
+	},
+	{
+		id: "emp-2",
+		firstName: "Пётр",
+		lastName: "Петров",
+		patronymic: "Петрович",
+		position: "Менеджер",
+		role: "user",
+		phone: "+79001234567",
+		email: "petr@example.com",
+		isResponsible: false,
+		permissions: {
+			id: "perm-2",
+			employeeId: "emp-2",
+			analytics: "none",
+			procurement: "view",
+			companies: "none",
+			tasks: "none",
+		},
+	},
+];
+
 const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
 	name: "Сделка",
 	isMain: true,
@@ -90,6 +131,7 @@ const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
 	employeeCount: 12,
 	procurementItemCount: 25,
 	addresses: MOCK_ADDRESSES,
+	employees: MOCK_EMPLOYEES,
 });
 
 let companyList: CompanySummary[];
@@ -98,7 +140,7 @@ let queryClient: QueryClient;
 
 function setupHandlers() {
 	companyList = [...MOCK_COMPANIES];
-	companyDetail = { ...MOCK_COMPANY_DETAIL, addresses: [...MOCK_ADDRESSES] };
+	companyDetail = { ...MOCK_COMPANY_DETAIL, addresses: [...MOCK_ADDRESSES], employees: [...MOCK_EMPLOYEES] };
 	server.use(
 		http.get("/api/v1/companies/:id/", ({ params }) => {
 			if (params.id === "company-1") return HttpResponse.json(companyDetail);
@@ -135,6 +177,70 @@ function setupHandlers() {
 				addresses: companyDetail.addresses.filter((a) => a.id !== params.addressId),
 			};
 			return new HttpResponse(null, { status: 204 });
+		}),
+		http.post("/api/v1/companies/:id/employees", async ({ request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const newEmp = {
+				id: `emp-new-${Date.now()}`,
+				...body,
+				permissions: {
+					id: `perm-new-${Date.now()}`,
+					employeeId: `emp-new-${Date.now()}`,
+					analytics: body.role === "admin" ? "edit" : "none",
+					procurement: body.role === "admin" ? "edit" : "none",
+					companies: body.role === "admin" ? "edit" : "none",
+					tasks: body.role === "admin" ? "edit" : "none",
+				},
+			};
+			companyDetail = {
+				...companyDetail,
+				employees: [...companyDetail.employees, newEmp as Employee & { permissions: EmployeePermissions }],
+			};
+			return HttpResponse.json(newEmp);
+		}),
+		http.patch("/api/v1/companies/:id/employees/:employeeId", async ({ params, request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+			if (!emp) return HttpResponse.json({}, { status: 404 });
+			// Handle isResponsible radio behavior
+			if (body.isResponsible === true) {
+				companyDetail = {
+					...companyDetail,
+					employees: companyDetail.employees.map((e) =>
+						e.id === params.employeeId ? { ...e, ...body, isResponsible: true } : { ...e, isResponsible: false },
+					) as (Employee & { permissions: EmployeePermissions })[],
+				};
+			} else {
+				companyDetail = {
+					...companyDetail,
+					employees: companyDetail.employees.map((e) =>
+						e.id === params.employeeId ? { ...e, ...body } : e,
+					) as (Employee & { permissions: EmployeePermissions })[],
+				};
+			}
+			return HttpResponse.json(companyDetail.employees.find((e) => e.id === params.employeeId));
+		}),
+		http.delete("/api/v1/companies/:id/employees/:employeeId", ({ params }) => {
+			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+			if (emp?.isResponsible && companyDetail.employees.filter((e) => e.isResponsible).length <= 1) {
+				return HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 });
+			}
+			companyDetail = {
+				...companyDetail,
+				employees: companyDetail.employees.filter((e) => e.id !== params.employeeId),
+			};
+			return new HttpResponse(null, { status: 204 });
+		}),
+		http.patch("/api/v1/companies/:id/employees/:employeeId/permissions", async ({ params, request }) => {
+			const body = (await request.json()) as Record<string, unknown>;
+			companyDetail = {
+				...companyDetail,
+				employees: companyDetail.employees.map((e) =>
+					e.id === params.employeeId ? { ...e, permissions: { ...e.permissions, ...body } } : e,
+				),
+			};
+			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+			return HttpResponse.json(emp?.permissions);
 		}),
 		http.get("/api/v1/companies/", ({ request }) => {
 			const url = new URL(request.url);
@@ -707,5 +813,246 @@ describe("CompaniesPage Адреса tab", () => {
 
 		const card = screen.getByTestId("address-addr-detail-1");
 		expect(within(card).getByRole("button", { name: "Удалить" })).toBeDisabled();
+	});
+});
+
+describe("CompaniesPage Сотрудники tab", () => {
+	async function openEmployeesTab() {
+		renderPage(["/companies?company=company-1&tab=employees"]);
+		await waitFor(() => {
+			expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
+		});
+	}
+
+	test("renders employee cards with name, position, and role", async () => {
+		await openEmployeesTab();
+
+		const tab = screen.getByTestId("tab-content-employees");
+		expect(within(tab).getByText("Иванов Иван Иванович")).toBeInTheDocument();
+		expect(within(tab).getByText("Петров Пётр Петрович")).toBeInTheDocument();
+		expect(within(tab).getByText("Директор")).toBeInTheDocument();
+		expect(within(tab).getByText("Менеджер")).toBeInTheDocument();
+		expect(within(tab).getByText("Администратор")).toBeInTheDocument();
+		expect(within(tab).getByText("Пользователь")).toBeInTheDocument();
+	});
+
+	test("responsible employee shows star indicator", async () => {
+		await openEmployeesTab();
+
+		const card = screen.getByTestId("employee-emp-1");
+		expect(within(card).getByLabelText("Ответственный")).toBeInTheDocument();
+	});
+
+	test("expand card shows profile fields and permissions matrix", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+
+		const card = screen.getByTestId("employee-emp-1");
+		// Profile fields
+		expect(within(card).getByLabelText("Фамилия")).toHaveValue("Иванов");
+		expect(within(card).getByLabelText("Имя")).toHaveValue("Иван");
+		expect(within(card).getByLabelText("Отчество")).toHaveValue("Иванович");
+		expect(within(card).getByLabelText("Должность")).toHaveValue("Директор");
+		expect(within(card).getByLabelText("Телефон")).toHaveValue("+71234567890");
+		expect(within(card).getByLabelText("Электронная почта")).toHaveValue("ivan@example.com");
+
+		// Permissions matrix
+		expect(within(card).getByTestId("permissions-matrix")).toBeInTheDocument();
+		expect(within(card).getByTestId("perm-row-analytics")).toBeInTheDocument();
+		expect(within(card).getByTestId("perm-row-procurement")).toBeInTheDocument();
+		expect(within(card).getByTestId("perm-row-companies")).toBeInTheDocument();
+		expect(within(card).getByTestId("perm-row-tasks")).toBeInTheDocument();
+	});
+
+	test("collapse card hides expanded content", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		expect(screen.getByTestId("permissions-matrix")).toBeInTheDocument();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		expect(screen.queryByTestId("permissions-matrix")).not.toBeInTheDocument();
+	});
+
+	test("explicit save sends PATCH with changed fields", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				const emp = companyDetail.employees.find((e) => e.id === "emp-1");
+				return HttpResponse.json({ ...emp, ...capturedBody });
+			}),
+		);
+
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+
+		const card = screen.getByTestId("employee-emp-1");
+		const posInput = within(card).getByLabelText("Должность");
+		await user.clear(posInput);
+		await user.type(posInput, "Генеральный директор");
+
+		await user.click(within(card).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ position: "Генеральный директор" });
+		});
+	});
+
+	test("permission segment toggle sends immediate PATCH", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				const emp = companyDetail.employees.find((e) => e.id === "emp-2");
+				return HttpResponse.json({ ...emp?.permissions, ...capturedBody });
+			}),
+		);
+
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+
+		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByTestId("perm-analytics-edit"));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ analytics: "edit" });
+		});
+	});
+
+	test("permissions matrix shows module icons for all 4 modules", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+
+		const matrix = screen.getByTestId("permissions-matrix");
+		// Each module row should have the icon + label
+		expect(within(matrix).getByText("Аналитика")).toBeInTheDocument();
+		expect(within(matrix).getByText("Закупки")).toBeInTheDocument();
+		expect(within(matrix).getByText("Компании")).toBeInTheDocument();
+		expect(within(matrix).getByText("Задачи")).toBeInTheDocument();
+	});
+
+	test("isResponsible checkbox has radio behavior", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				// Apply isResponsible radio behavior in mock
+				if (capturedBody.isResponsible === true) {
+					companyDetail = {
+						...companyDetail,
+						employees: companyDetail.employees.map((e) =>
+							e.id === params.employeeId ? { ...e, isResponsible: true } : { ...e, isResponsible: false },
+						) as (Employee & { permissions: EmployeePermissions })[],
+					};
+				}
+				return HttpResponse.json(companyDetail.employees.find((e) => e.id === params.employeeId));
+			}),
+		);
+
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		// Expand second employee (not responsible) and click responsible checkbox
+		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+
+		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("checkbox", { name: "Ответственный" }));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ isResponsible: true });
+		});
+	});
+
+	test("cannot delete only responsible employee", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		// Expand the responsible employee (emp-1)
+		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+
+		const card = screen.getByTestId("employee-emp-1");
+		expect(within(card).getByRole("button", { name: "Удалить сотрудника" })).toBeDisabled();
+	});
+
+	test("add employee form creates new employee", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить сотрудника/ }));
+
+		const form = screen.getByTestId("employee-add-form");
+		await user.type(within(form).getByLabelText("Фамилия"), "Сидоров");
+		await user.type(within(form).getByLabelText("Имя"), "Алексей");
+		await user.type(within(form).getByLabelText("Отчество"), "Сергеевич");
+		await user.type(within(form).getByLabelText("Должность"), "Инженер");
+		await user.type(within(form).getByLabelText("Телефон"), "+79005551234");
+		await user.type(within(form).getByLabelText("Электронная почта"), "alex@example.com");
+
+		await user.click(within(form).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Сидоров Алексей Сергеевич")).toBeInTheDocument();
+		});
+	});
+
+	test("delete non-responsible employee removes from list", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		expect(screen.getByText("Петров Пётр Петрович")).toBeInTheDocument();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+
+		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("button", { name: "Удалить сотрудника" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Петров Пётр Петрович")).not.toBeInTheDocument();
+		});
+	});
+
+	test("admin role prefills permissions to Редактирование", async () => {
+		let permsCaptured: Record<string, unknown> | undefined;
+		let profileCaptured: Record<string, unknown> | undefined;
+		server.use(
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+				permsCaptured = (await request.json()) as Record<string, unknown>;
+				const emp = companyDetail.employees.find((e) => e.id === "emp-2");
+				return HttpResponse.json({ ...emp?.permissions, ...permsCaptured });
+			}),
+			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+				profileCaptured = (await request.json()) as Record<string, unknown>;
+				const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+				return HttpResponse.json({ ...emp, ...profileCaptured });
+			}),
+		);
+
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+
+		const card = screen.getByTestId("employee-emp-2");
+		// Change role to admin via select
+		await user.click(within(card).getByLabelText("Роль"));
+		await user.click(screen.getByRole("option", { name: "Администратор" }));
+
+		// Save the profile change
+		await user.click(within(card).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(profileCaptured).toEqual({ role: "admin" });
+			expect(permsCaptured).toEqual({ analytics: "edit", procurement: "edit", companies: "edit", tasks: "edit" });
+		});
 	});
 });

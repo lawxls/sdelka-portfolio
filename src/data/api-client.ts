@@ -7,8 +7,12 @@ import type {
 	AddressType,
 	Company,
 	CompanySummary,
+	Employee,
+	EmployeePermissions,
+	EmployeeRole,
 	Folder,
 	NewItemInput,
+	PermissionLevel,
 	ProcurementItem,
 	Totals,
 } from "./types";
@@ -333,5 +337,81 @@ export async function deleteAddress(companyId: string, addressId: string): Promi
 	return request(`/${companyId}/addresses/${addressId}`, {
 		base: COMPANIES_BASE,
 		method: "DELETE",
+	});
+}
+
+// --- Employees ---
+
+export interface CreateEmployeeData {
+	firstName: string;
+	lastName: string;
+	patronymic: string;
+	position: string;
+	role: EmployeeRole;
+	phone: string;
+	email: string;
+	isResponsible: boolean;
+}
+
+export interface UpdateEmployeeData {
+	firstName?: string;
+	lastName?: string;
+	patronymic?: string;
+	position?: string;
+	role?: EmployeeRole;
+	phone?: string;
+	email?: string;
+	isResponsible?: boolean;
+}
+
+export interface UpdatePermissionsData {
+	analytics?: PermissionLevel;
+	procurement?: PermissionLevel;
+	companies?: PermissionLevel;
+	tasks?: PermissionLevel;
+}
+
+export async function createEmployee(
+	companyId: string,
+	data: CreateEmployeeData,
+): Promise<Employee & { permissions: EmployeePermissions }> {
+	return request(`/${companyId}/employees`, {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateEmployee(
+	companyId: string,
+	employeeId: string,
+	data: UpdateEmployeeData,
+): Promise<Employee & { permissions: EmployeePermissions }> {
+	return request(`/${companyId}/employees/${employeeId}`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteEmployee(companyId: string, employeeId: string): Promise<void> {
+	return request(`/${companyId}/employees/${employeeId}`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
+	});
+}
+
+export async function updateEmployeePermissions(
+	companyId: string,
+	employeeId: string,
+	data: UpdatePermissionsData,
+): Promise<EmployeePermissions> {
+	return request(`/${companyId}/employees/${employeeId}/permissions`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
 	});
 }

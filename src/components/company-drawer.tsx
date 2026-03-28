@@ -1,21 +1,52 @@
-import { LoaderCircle, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+	BarChart3,
+	Building2,
+	ChevronDown,
+	ChevronUp,
+	ListTodo,
+	LoaderCircle,
+	Pencil,
+	Plus,
+	ShoppingCart,
+	Star,
+	Trash2,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import type { CreateAddressData, UpdateCompanyData } from "@/data/api-client";
-import type { Address, AddressType, Company } from "@/data/types";
+import type {
+	CreateAddressData,
+	CreateEmployeeData,
+	UpdateCompanyData,
+	UpdateEmployeeData,
+	UpdatePermissionsData,
+} from "@/data/api-client";
+import type {
+	Address,
+	AddressType,
+	Company,
+	Employee,
+	EmployeePermissions,
+	EmployeeRole,
+	PermissionLevel,
+} from "@/data/types";
 import { ADDRESS_TYPE_LABELS } from "@/data/types";
 import {
 	useCompanyDetail,
 	useCreateAddress,
+	useCreateEmployee,
 	useDeleteAddress,
+	useDeleteEmployee,
 	useUpdateAddress,
 	useUpdateCompany,
+	useUpdateEmployee,
+	useUpdateEmployeePermissions,
 } from "@/data/use-company-detail";
 
 export type CompanyTab = "general" | "addresses" | "employees";
@@ -119,11 +150,7 @@ function CompanyDrawerContent({
 			<div className="flex-1 overflow-y-auto px-4">
 				{activeTab === "general" && <GeneralTab key={companyId} company={company} companyId={companyId} />}
 				{activeTab === "addresses" && <AddressesTab company={company} companyId={companyId} />}
-				{activeTab === "employees" && (
-					<div data-testid="tab-content-employees" className="flex items-center justify-center py-8">
-						<p className="text-sm text-muted-foreground">Сотрудники (в разработке)</p>
-					</div>
-				)}
+				{activeTab === "employees" && <EmployeesTab company={company} companyId={companyId} />}
 			</div>
 		</>
 	);
@@ -554,6 +581,541 @@ function AddressForm({
 					inputMode="tel"
 				/>
 			</FieldRow>
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="outline" onClick={onCancel}>
+					Отмена
+				</Button>
+				<Button type="button" disabled={!canSave || isPending} onClick={() => onSave(form)}>
+					{isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
+					Сохранить
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+// --- Employees Tab ---
+
+const ROLE_LABELS: Record<EmployeeRole, string> = { admin: "Администратор", user: "Пользователь" };
+const ROLES: EmployeeRole[] = ["admin", "user"];
+
+const PERMISSION_MODULES: {
+	key: keyof Omit<EmployeePermissions, "id" | "employeeId">;
+	label: string;
+	icon: ReactNode;
+}[] = [
+	{ key: "analytics", label: "Аналитика", icon: <BarChart3 className="size-4" aria-hidden="true" /> },
+	{ key: "procurement", label: "Закупки", icon: <ShoppingCart className="size-4" aria-hidden="true" /> },
+	{ key: "companies", label: "Компании", icon: <Building2 className="size-4" aria-hidden="true" /> },
+	{ key: "tasks", label: "Задачи", icon: <ListTodo className="size-4" aria-hidden="true" /> },
+];
+
+const PERMISSION_LEVELS: { value: PermissionLevel; label: string }[] = [
+	{ value: "none", label: "Нет доступа" },
+	{ value: "view", label: "Просмотр" },
+	{ value: "edit", label: "Редактирование" },
+];
+
+interface EmployeeFormState {
+	firstName: string;
+	lastName: string;
+	patronymic: string;
+	position: string;
+	role: EmployeeRole;
+	phone: string;
+	email: string;
+	isResponsible: boolean;
+}
+
+const EMPTY_EMPLOYEE_FORM: EmployeeFormState = {
+	firstName: "",
+	lastName: "",
+	patronymic: "",
+	position: "",
+	role: "user",
+	phone: "",
+	email: "",
+	isResponsible: false,
+};
+
+function EmployeesTab({ company, companyId }: { company: Company; companyId: string }) {
+	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [showAddForm, setShowAddForm] = useState(false);
+
+	const createMutation = useCreateEmployee(companyId);
+	const updateMutation = useUpdateEmployee(companyId);
+	const deleteMutation = useDeleteEmployee(companyId);
+	const permsMutation = useUpdateEmployeePermissions(companyId);
+
+	const responsibleCount = company.employees.filter((e) => e.isResponsible).length;
+
+	function handleCreate(form: EmployeeFormState) {
+		createMutation.mutate(form as CreateEmployeeData, {
+			onSuccess: () => setShowAddForm(false),
+		});
+	}
+
+	function handleUpdate(
+		employeeId: string,
+		original: Employee & { permissions: EmployeePermissions },
+		form: EmployeeFormState,
+	) {
+		const changed: Record<string, unknown> = {};
+		for (const key of Object.keys(form) as (keyof EmployeeFormState)[]) {
+			if (form[key] !== original[key]) changed[key] = form[key];
+		}
+		if (Object.keys(changed).length === 0) {
+			setExpandedId(null);
+			return;
+		}
+		// If role changed to admin, prefill all permissions to edit
+		if (changed.role === "admin") {
+			const permData: UpdatePermissionsData = {
+				analytics: "edit",
+				procurement: "edit",
+				companies: "edit",
+				tasks: "edit",
+			};
+			permsMutation.mutate({ employeeId, data: permData });
+		}
+		updateMutation.mutate(
+			{ employeeId, data: changed as UpdateEmployeeData },
+			{ onSuccess: () => setExpandedId(null) },
+		);
+	}
+
+	function handleDelete(employeeId: string) {
+		deleteMutation.mutate(employeeId);
+	}
+
+	function handlePermissionChange(employeeId: string, module: keyof UpdatePermissionsData, level: PermissionLevel) {
+		permsMutation.mutate({ employeeId, data: { [module]: level } });
+	}
+
+	function handleResponsibleChange(employeeId: string) {
+		updateMutation.mutate({ employeeId, data: { isResponsible: true } });
+	}
+
+	return (
+		<div className="flex flex-col gap-3 py-4" data-testid="tab-content-employees">
+			{company.employees.map((emp) => (
+				<EmployeeCard
+					key={emp.id}
+					employee={emp}
+					isExpanded={expandedId === emp.id}
+					canDelete={!(emp.isResponsible && responsibleCount <= 1) && company.employees.length > 1}
+					canUnsetResponsible={responsibleCount > 1 || !emp.isResponsible}
+					onToggle={() => setExpandedId(expandedId === emp.id ? null : emp.id)}
+					onSave={(form) => handleUpdate(emp.id, emp, form)}
+					onDelete={() => handleDelete(emp.id)}
+					onPermissionChange={(mod, level) => handlePermissionChange(emp.id, mod, level)}
+					onResponsibleChange={() => handleResponsibleChange(emp.id)}
+				/>
+			))}
+
+			{showAddForm ? (
+				<EmployeeForm
+					testId="employee-add-form"
+					initial={EMPTY_EMPLOYEE_FORM}
+					onSave={handleCreate}
+					onCancel={() => setShowAddForm(false)}
+					isPending={createMutation.isPending}
+					showResponsible={false}
+				/>
+			) : (
+				<Button type="button" variant="outline" className="w-full" onClick={() => setShowAddForm(true)}>
+					<Plus className="size-4" aria-hidden="true" />
+					Добавить сотрудника
+				</Button>
+			)}
+		</div>
+	);
+}
+
+function EmployeeCard({
+	employee,
+	isExpanded,
+	canDelete,
+	canUnsetResponsible,
+	onToggle,
+	onSave,
+	onDelete,
+	onPermissionChange,
+	onResponsibleChange,
+}: {
+	employee: Employee & { permissions: EmployeePermissions };
+	isExpanded: boolean;
+	canDelete: boolean;
+	canUnsetResponsible: boolean;
+	onToggle: () => void;
+	onSave: (form: EmployeeFormState) => void;
+	onDelete: () => void;
+	onPermissionChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
+	onResponsibleChange: () => void;
+}) {
+	return (
+		<div data-testid={`employee-${employee.id}`} className="rounded-lg border border-border">
+			<button
+				type="button"
+				className="flex w-full items-center justify-between p-3 text-left"
+				onClick={onToggle}
+				data-testid={`employee-toggle-${employee.id}`}
+			>
+				<div className="flex flex-col gap-0.5">
+					<div className="flex items-center gap-2">
+						<span className="text-sm font-medium">
+							{employee.lastName} {employee.firstName} {employee.patronymic}
+						</span>
+						{employee.isResponsible && (
+							<Star className="size-3.5 fill-yellow-400 text-yellow-400" aria-label="Ответственный" />
+						)}
+					</div>
+					<div className="flex items-center gap-2 text-xs text-muted-foreground">
+						<span>{employee.position}</span>
+						<Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+							{ROLE_LABELS[employee.role]}
+						</Badge>
+					</div>
+				</div>
+				{isExpanded ? (
+					<ChevronUp className="size-4 text-muted-foreground" />
+				) : (
+					<ChevronDown className="size-4 text-muted-foreground" />
+				)}
+			</button>
+
+			{isExpanded && (
+				<div className="border-t border-border p-3">
+					<EmployeeExpandedContent
+						employee={employee}
+						canDelete={canDelete}
+						canUnsetResponsible={canUnsetResponsible}
+						onSave={onSave}
+						onDelete={onDelete}
+						onPermissionChange={onPermissionChange}
+						onResponsibleChange={onResponsibleChange}
+					/>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function EmployeeExpandedContent({
+	employee,
+	canDelete,
+	canUnsetResponsible,
+	onSave,
+	onDelete,
+	onPermissionChange,
+	onResponsibleChange,
+}: {
+	employee: Employee & { permissions: EmployeePermissions };
+	canDelete: boolean;
+	canUnsetResponsible: boolean;
+	onSave: (form: EmployeeFormState) => void;
+	onDelete: () => void;
+	onPermissionChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
+	onResponsibleChange: () => void;
+}) {
+	const [form, setForm] = useState<EmployeeFormState>({
+		firstName: employee.firstName,
+		lastName: employee.lastName,
+		patronymic: employee.patronymic,
+		position: employee.position,
+		role: employee.role,
+		phone: employee.phone,
+		email: employee.email,
+		isResponsible: employee.isResponsible,
+	});
+
+	const isDirty = (Object.keys(form) as (keyof EmployeeFormState)[]).some((k) => form[k] !== employee[k]);
+	const canSave = isDirty && form.firstName.trim() !== "" && form.lastName.trim() !== "";
+
+	function update(field: keyof EmployeeFormState, value: string | boolean) {
+		setForm((prev) => ({ ...prev, [field]: value }));
+	}
+
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-col gap-3">
+				<FieldRow label="Фамилия">
+					<Input
+						value={form.lastName}
+						onChange={(e) => update("lastName", e.target.value)}
+						aria-label="Фамилия"
+						spellCheck={false}
+						autoComplete="off"
+					/>
+				</FieldRow>
+				<FieldRow label="Имя">
+					<Input
+						value={form.firstName}
+						onChange={(e) => update("firstName", e.target.value)}
+						aria-label="Имя"
+						spellCheck={false}
+						autoComplete="off"
+					/>
+				</FieldRow>
+				<FieldRow label="Отчество">
+					<Input
+						value={form.patronymic}
+						onChange={(e) => update("patronymic", e.target.value)}
+						aria-label="Отчество"
+						spellCheck={false}
+						autoComplete="off"
+					/>
+				</FieldRow>
+				<FieldRow label="Должность">
+					<Input
+						value={form.position}
+						onChange={(e) => update("position", e.target.value)}
+						aria-label="Должность"
+						spellCheck={false}
+						autoComplete="off"
+					/>
+				</FieldRow>
+				<FieldRow label="Роль">
+					<Select value={form.role} onValueChange={(v) => update("role", v)}>
+						<SelectTrigger aria-label="Роль">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{ROLES.map((r) => (
+								<SelectItem key={r} value={r}>
+									{ROLE_LABELS[r]}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</FieldRow>
+				<FieldRow label="Телефон">
+					<Input
+						value={form.phone}
+						onChange={(e) => update("phone", e.target.value)}
+						aria-label="Телефон"
+						spellCheck={false}
+						autoComplete="off"
+						inputMode="tel"
+					/>
+				</FieldRow>
+				<FieldRow label="Электронная почта">
+					<Input
+						value={form.email}
+						onChange={(e) => update("email", e.target.value)}
+						aria-label="Электронная почта"
+						spellCheck={false}
+						autoComplete="off"
+						inputMode="email"
+					/>
+				</FieldRow>
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id={`responsible-${employee.id}`}
+						checked={employee.isResponsible}
+						disabled={employee.isResponsible && !canUnsetResponsible}
+						onCheckedChange={() => {
+							if (!employee.isResponsible) onResponsibleChange();
+						}}
+						aria-label="Ответственный"
+					/>
+					<label htmlFor={`responsible-${employee.id}`} className="text-sm">
+						Ответственный
+					</label>
+				</div>
+			</div>
+
+			<div className="flex justify-between">
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					className="text-destructive hover:text-destructive"
+					onClick={onDelete}
+					disabled={!canDelete}
+					aria-label="Удалить сотрудника"
+				>
+					<Trash2 className="size-3.5" aria-hidden="true" />
+					Удалить
+				</Button>
+				<Button type="button" size="sm" disabled={!canSave} onClick={() => onSave(form)}>
+					Сохранить
+				</Button>
+			</div>
+
+			<Separator />
+
+			<div className="flex flex-col gap-2">
+				<h4 className="text-xs font-medium text-muted-foreground">Права доступа</h4>
+				<PermissionsMatrix permissions={employee.permissions} onChange={onPermissionChange} />
+			</div>
+		</div>
+	);
+}
+
+function PermissionsMatrix({
+	permissions,
+	onChange,
+}: {
+	permissions: EmployeePermissions;
+	onChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
+}) {
+	return (
+		<div className="flex flex-col gap-2" data-testid="permissions-matrix">
+			{PERMISSION_MODULES.map((mod) => (
+				<div key={mod.key} className="flex items-center gap-3" data-testid={`perm-row-${mod.key}`}>
+					<div className="flex items-center gap-1.5 w-28 shrink-0">
+						{mod.icon}
+						<span className="text-xs">{mod.label}</span>
+					</div>
+					<PermissionSegments
+						value={permissions[mod.key]}
+						onChange={(level) => onChange(mod.key, level)}
+						moduleKey={mod.key}
+					/>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function PermissionSegments({
+	value,
+	onChange,
+	moduleKey,
+}: {
+	value: PermissionLevel;
+	onChange: (level: PermissionLevel) => void;
+	moduleKey: string;
+}) {
+	return (
+		<div className="flex rounded-md border border-border text-xs">
+			{PERMISSION_LEVELS.map((lvl) => (
+				<button
+					key={lvl.value}
+					type="button"
+					aria-pressed={value === lvl.value}
+					className={`px-2 py-1 transition-colors first:rounded-l-md last:rounded-r-md border-r last:border-r-0 border-border ${
+						value === lvl.value ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+					}`}
+					onClick={() => onChange(lvl.value)}
+					data-testid={`perm-${moduleKey}-${lvl.value}`}
+				>
+					{lvl.label}
+				</button>
+			))}
+		</div>
+	);
+}
+
+function EmployeeForm({
+	testId,
+	initial,
+	onSave,
+	onCancel,
+	isPending,
+	showResponsible,
+}: {
+	testId?: string;
+	initial: EmployeeFormState;
+	onSave: (form: EmployeeFormState) => void;
+	onCancel: () => void;
+	isPending: boolean;
+	showResponsible: boolean;
+}) {
+	const [form, setForm] = useState<EmployeeFormState>(initial);
+
+	function update(field: keyof EmployeeFormState, value: string | boolean) {
+		setForm((prev) => ({ ...prev, [field]: value }));
+	}
+
+	const canSave = form.firstName.trim() !== "" && form.lastName.trim() !== "";
+
+	return (
+		<div className="flex flex-col gap-3 rounded-lg border border-border p-3" data-testid={testId}>
+			<FieldRow label="Фамилия">
+				<Input
+					value={form.lastName}
+					onChange={(e) => update("lastName", e.target.value)}
+					aria-label="Фамилия"
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</FieldRow>
+			<FieldRow label="Имя">
+				<Input
+					value={form.firstName}
+					onChange={(e) => update("firstName", e.target.value)}
+					aria-label="Имя"
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</FieldRow>
+			<FieldRow label="Отчество">
+				<Input
+					value={form.patronymic}
+					onChange={(e) => update("patronymic", e.target.value)}
+					aria-label="Отчество"
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</FieldRow>
+			<FieldRow label="Должность">
+				<Input
+					value={form.position}
+					onChange={(e) => update("position", e.target.value)}
+					aria-label="Должность"
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</FieldRow>
+			<FieldRow label="Роль">
+				<Select value={form.role} onValueChange={(v) => update("role", v)}>
+					<SelectTrigger aria-label="Роль">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{ROLES.map((r) => (
+							<SelectItem key={r} value={r}>
+								{ROLE_LABELS[r]}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</FieldRow>
+			<FieldRow label="Телефон">
+				<Input
+					value={form.phone}
+					onChange={(e) => update("phone", e.target.value)}
+					aria-label="Телефон"
+					spellCheck={false}
+					autoComplete="off"
+					inputMode="tel"
+				/>
+			</FieldRow>
+			<FieldRow label="Электронная почта">
+				<Input
+					value={form.email}
+					onChange={(e) => update("email", e.target.value)}
+					aria-label="Электронная почта"
+					spellCheck={false}
+					autoComplete="off"
+					inputMode="email"
+				/>
+			</FieldRow>
+			{showResponsible && (
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id="new-employee-responsible"
+						checked={form.isResponsible}
+						onCheckedChange={(checked) => update("isResponsible", checked === true)}
+						aria-label="Ответственный"
+					/>
+					<label htmlFor="new-employee-responsible" className="text-sm">
+						Ответственный
+					</label>
+				</div>
+			)}
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="outline" onClick={onCancel}>
 					Отмена

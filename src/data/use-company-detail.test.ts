@@ -8,9 +8,13 @@ import { setTokens } from "./auth";
 import {
 	useCompanyDetail,
 	useCreateAddress,
+	useCreateEmployee,
 	useDeleteAddress,
+	useDeleteEmployee,
 	useUpdateAddress,
 	useUpdateCompany,
+	useUpdateEmployee,
+	useUpdateEmployeePermissions,
 } from "./use-company-detail";
 
 let queryClient: QueryClient;
@@ -302,5 +306,221 @@ describe("useDeleteAddress", () => {
 		result.current.remove.mutate(company.addresses[0].id);
 
 		await waitFor(() => expect(result.current.remove.error).toBeTruthy());
+	});
+});
+
+describe("useCreateEmployee", () => {
+	it("sends POST with employee data", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		const company = makeCompanyDetail("c1");
+		const newEmployee = {
+			id: "emp-new",
+			firstName: "Пётр",
+			lastName: "Петров",
+			patronymic: "Петрович",
+			position: "Менеджер",
+			role: "user" as const,
+			phone: "+79001234567",
+			email: "petr@example.com",
+			isResponsible: false,
+			permissions: {
+				id: "perm-new",
+				employeeId: "emp-new",
+				analytics: "none" as const,
+				procurement: "none" as const,
+				companies: "none" as const,
+				tasks: "none" as const,
+			},
+		};
+
+		server.use(
+			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
+			http.post("/api/v1/companies/c1/employees", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json(newEmployee);
+			}),
+		);
+
+		const { result } = renderHook(
+			() => ({
+				detail: useCompanyDetail("c1"),
+				create: useCreateEmployee("c1"),
+			}),
+			{ wrapper: createQueryWrapper(queryClient) },
+		);
+
+		await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+		const { id: _, permissions: __, ...createData } = newEmployee;
+		result.current.create.mutate(createData);
+
+		await waitFor(() => expect(result.current.create.isSuccess).toBe(true));
+
+		expect(capturedBody).toEqual(createData);
+	});
+});
+
+describe("useUpdateEmployee", () => {
+	it("sends PATCH with updated fields", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		const company = makeCompanyDetail("c1");
+
+		server.use(
+			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
+			http.patch("/api/v1/companies/c1/employees/:employeeId", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...company.employees[0], ...capturedBody });
+			}),
+		);
+
+		const { result } = renderHook(
+			() => ({
+				detail: useCompanyDetail("c1"),
+				update: useUpdateEmployee("c1"),
+			}),
+			{ wrapper: createQueryWrapper(queryClient) },
+		);
+
+		await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+		result.current.update.mutate({
+			employeeId: company.employees[0].id,
+			data: { position: "Директор по продажам" },
+		});
+
+		await waitFor(() => expect(result.current.update.isSuccess).toBe(true));
+
+		expect(capturedBody).toEqual({ position: "Директор по продажам" });
+	});
+});
+
+describe("useDeleteEmployee", () => {
+	it("sends DELETE and invalidates cache", async () => {
+		let deletedId: string | undefined;
+		const company = makeCompanyDetail("c1", {
+			employees: [
+				{
+					id: "emp-1",
+					firstName: "Иван",
+					lastName: "Иванов",
+					patronymic: "Иванович",
+					position: "Директор",
+					role: "admin",
+					phone: "+71234567890",
+					email: "ivan@example.com",
+					isResponsible: true,
+					permissions: {
+						id: "p1",
+						employeeId: "emp-1",
+						analytics: "edit",
+						procurement: "edit",
+						companies: "edit",
+						tasks: "edit",
+					},
+				},
+				{
+					id: "emp-2",
+					firstName: "Пётр",
+					lastName: "Петров",
+					patronymic: "Петрович",
+					position: "Менеджер",
+					role: "user",
+					phone: "+79001234567",
+					email: "petr@example.com",
+					isResponsible: false,
+					permissions: {
+						id: "p2",
+						employeeId: "emp-2",
+						analytics: "none",
+						procurement: "none",
+						companies: "none",
+						tasks: "none",
+					},
+				},
+			],
+		});
+
+		server.use(
+			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
+			http.delete("/api/v1/companies/c1/employees/:employeeId", ({ params }) => {
+				deletedId = params.employeeId as string;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		const { result } = renderHook(
+			() => ({
+				detail: useCompanyDetail("c1"),
+				remove: useDeleteEmployee("c1"),
+			}),
+			{ wrapper: createQueryWrapper(queryClient) },
+		);
+
+		await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+		result.current.remove.mutate("emp-2");
+
+		await waitFor(() => expect(result.current.remove.isSuccess).toBe(true));
+
+		expect(deletedId).toBe("emp-2");
+	});
+
+	it("returns error when deleting only responsible employee (409)", async () => {
+		const company = makeCompanyDetail("c1");
+
+		server.use(
+			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
+			http.delete("/api/v1/companies/c1/employees/:employeeId", () =>
+				HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 }),
+			),
+		);
+
+		const { result } = renderHook(
+			() => ({
+				detail: useCompanyDetail("c1"),
+				remove: useDeleteEmployee("c1"),
+			}),
+			{ wrapper: createQueryWrapper(queryClient) },
+		);
+
+		await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+		result.current.remove.mutate(company.employees[0].id);
+
+		await waitFor(() => expect(result.current.remove.error).toBeTruthy());
+	});
+});
+
+describe("useUpdateEmployeePermissions", () => {
+	it("sends PATCH with permission changes", async () => {
+		let capturedBody: Record<string, unknown> | undefined;
+		const company = makeCompanyDetail("c1");
+
+		server.use(
+			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
+			http.patch("/api/v1/companies/c1/employees/:employeeId/permissions", async ({ request }) => {
+				capturedBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...company.employees[0].permissions, ...capturedBody });
+			}),
+		);
+
+		const { result } = renderHook(
+			() => ({
+				detail: useCompanyDetail("c1"),
+				updatePerms: useUpdateEmployeePermissions("c1"),
+			}),
+			{ wrapper: createQueryWrapper(queryClient) },
+		);
+
+		await waitFor(() => expect(result.current.detail.data).toBeDefined());
+
+		result.current.updatePerms.mutate({
+			employeeId: company.employees[0].id,
+			data: { analytics: "view" },
+		});
+
+		await waitFor(() => expect(result.current.updatePerms.isSuccess).toBe(true));
+
+		expect(capturedBody).toEqual({ analytics: "view" });
 	});
 });
