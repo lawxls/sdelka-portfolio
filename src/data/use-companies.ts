@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchCompanies } from "./api-client";
 import type { CompanySortState } from "./types";
 
@@ -39,9 +39,22 @@ export function useCompanies(params: CompanyQueryParams) {
 }
 
 export function useProcurementCompanies() {
-	return useQuery({
+	const query = useInfiniteQuery({
 		queryKey: ["procurementCompanies"],
-		queryFn: () => fetchCompanies({ limit: 100 }),
-		select: (data) => data.companies,
+		queryFn: ({ pageParam }) => fetchCompanies({ cursor: pageParam }),
+		initialPageParam: undefined as string | undefined,
+		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
+
+	// Auto-fetch all pages for complete sidebar navigation
+	if (query.hasNextPage && !query.isFetchingNextPage) {
+		query.fetchNextPage();
+	}
+
+	const companies = query.data?.pages.flatMap((page) => page.companies) ?? [];
+
+	return {
+		data: companies,
+		isLoading: query.isLoading || query.isFetchingNextPage,
+	};
 }

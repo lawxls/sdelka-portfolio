@@ -906,7 +906,10 @@ function EmployeeExpandedContent({
 						checked={employee.isResponsible}
 						disabled={employee.isResponsible && !canUnsetResponsible}
 						onCheckedChange={() => {
-							if (!employee.isResponsible) onResponsibleChange();
+							if (!employee.isResponsible) {
+								onResponsibleChange();
+								update("isResponsible", true);
+							}
 						}}
 						aria-label="Ответственный"
 					/>

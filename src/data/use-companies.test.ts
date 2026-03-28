@@ -205,4 +205,27 @@ describe("useProcurementCompanies", () => {
 		});
 		expect(result.current.data?.[0].procurementItemCount).toBe(15);
 	});
+
+	it("auto-paginates through all pages", async () => {
+		server.use(
+			http.get("/api/v1/companies/", ({ request }) => {
+				const url = new URL(request.url);
+				const cursor = url.searchParams.get("cursor");
+
+				if (!cursor) {
+					return HttpResponse.json({ companies: [makeCompany("c1")], nextCursor: "page2" });
+				}
+				return HttpResponse.json({ companies: [makeCompany("c2")], nextCursor: null });
+			}),
+		);
+
+		const { result } = renderHook(() => useProcurementCompanies(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.data).toHaveLength(2);
+		});
+		expect(result.current.isLoading).toBe(false);
+	});
 });
