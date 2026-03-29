@@ -221,6 +221,15 @@ tbody > tr.dragging-row > [data-slot="table-cell"]:nth-child(2) {
 	scrollbar-color: var(--color-border) transparent;
 }
 
+@utility scrollbar-hover {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+
+	&:hover {
+		scrollbar-color: var(--color-border) transparent;
+	}
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;

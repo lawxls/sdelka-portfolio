@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import * as mockParser from "@/data/mock-file-parser";
+import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { DragItemOverlay } from "@/pages/procurement-page";
@@ -158,6 +159,8 @@ beforeEach(() => {
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	setupHandlers();
+	_resetTaskStore();
+	_setMockDelay(0, 0);
 });
 
 // ---- Route tests (TDD) ----
@@ -201,12 +204,11 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/tasks renders placeholder page with icon", async () => {
+	test("/tasks renders tasks page with board", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
-			expect(screen.getByText("В разработке")).toBeInTheDocument();
-			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
+			expect(screen.getByTestId("task-board")).toBeInTheDocument();
 		});
 	});
 
