@@ -11,7 +11,7 @@ import { RegisterPage } from "./register-page";
 
 let queryClient: QueryClient;
 
-function renderRegister(initialEntries = ["/register?i=ABC12"]) {
+function renderRegister(initialEntries = ["/register?code=ABC12"]) {
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter initialEntries={initialEntries}>

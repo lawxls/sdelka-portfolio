@@ -177,6 +177,25 @@ describe("LoginPage", () => {
 		});
 	});
 
+	test("shows workspace access error in Russian", async () => {
+		server.use(
+			http.post("/api/v1/auth/login", () => {
+				return HttpResponse.json({ detail: ["You don't have access to this workspace."] }, { status: 403 });
+			}),
+		);
+
+		renderLogin();
+		const user = userEvent.setup();
+
+		await user.type(screen.getByLabelText("Email"), "a@b.com");
+		await user.type(screen.getByLabelText("Пароль"), "pass1234");
+		await user.click(screen.getByRole("button", { name: "Войти" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("У вас нет доступа к этому рабочему пространству")).toBeInTheDocument();
+		});
+	});
+
 	test("shows unconfirmed email error on 403", async () => {
 		server.use(
 			http.post("/api/v1/auth/login", () => {

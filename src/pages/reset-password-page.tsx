@@ -89,6 +89,7 @@ export function ResetPasswordPage() {
 					onChange={(e) => setPassword(e.target.value)}
 					error={fieldErrors.password}
 					autoComplete="new-password"
+					required
 				/>
 
 				<FloatingInput
@@ -99,9 +100,10 @@ export function ResetPasswordPage() {
 					onChange={(e) => setConfirmPassword(e.target.value)}
 					error={fieldErrors.confirmPassword}
 					autoComplete="new-password"
+					required
 				/>
 
-				<Button type="submit" className="w-full" disabled={submitting}>
+				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 					Сохранить
 				</Button>
 			</form>

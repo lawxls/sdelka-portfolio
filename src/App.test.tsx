@@ -257,7 +257,7 @@ describe("Routing", () => {
 		localStorage.clear(); // no auth token — public route
 		server.use(http.post("/api/v1/auth/verify-invitation-code", () => HttpResponse.json({ valid: true })));
 
-		renderApp(["/register?i=ABC12"]);
+		renderApp(["/register?code=ABC12"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
 		});

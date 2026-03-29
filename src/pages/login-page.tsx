@@ -29,7 +29,13 @@ export function LoginPage() {
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
 			const result = extractFormErrors(err);
-			setError(result.error);
+			const msg = result.error?.toLowerCase();
+			const translated = msg?.includes("invalid email or password")
+				? "Неверный пароль или почта"
+				: msg?.includes("you don't have access to this workspace")
+					? "У вас нет доступа к этому рабочему пространству"
+					: result.error;
+			setError(translated);
 			setFieldErrors(result.fieldErrors);
 		} finally {
 			setSubmitting(false);
@@ -56,6 +62,7 @@ export function LoginPage() {
 					onChange={(e) => setEmail(e.target.value)}
 					error={fieldErrors.email}
 					autoComplete="email"
+					required
 				/>
 
 				<FloatingInput
@@ -66,6 +73,7 @@ export function LoginPage() {
 					onChange={(e) => setPassword(e.target.value)}
 					error={fieldErrors.password}
 					autoComplete="current-password"
+					required
 				/>
 
 				<div className="flex justify-end">
@@ -74,7 +82,7 @@ export function LoginPage() {
 					</Link>
 				</div>
 
-				<Button type="submit" className="w-full" disabled={submitting}>
+				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 					Войти
 				</Button>
 			</form>

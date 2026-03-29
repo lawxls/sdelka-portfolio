@@ -12,6 +12,7 @@ interface FloatingInputProps {
 	autoComplete?: string;
 	prefix?: string;
 	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+	required?: boolean;
 }
 
 export function FloatingInput({
@@ -24,6 +25,7 @@ export function FloatingInput({
 	autoComplete,
 	prefix,
 	inputMode,
+	required,
 }: FloatingInputProps) {
 	const isPassword = type === "password";
 	const [showPassword, setShowPassword] = useState(false);
@@ -45,10 +47,11 @@ export function FloatingInput({
 				placeholder=" "
 				autoComplete={autoComplete}
 				inputMode={inputMode}
+				required={required}
 				spellCheck={false}
 				aria-invalid={error ? true : undefined}
 				className={cn(
-					"peer h-12 w-full rounded-lg border bg-transparent pt-4 pb-1 text-sm outline-none transition-colors",
+					"peer h-12 w-full rounded-lg border bg-transparent text-sm outline-none transition-colors",
 					"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
 					"aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
 					"dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
@@ -61,8 +64,8 @@ export function FloatingInput({
 				htmlFor={name}
 				className={cn(
 					"pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all",
-					"peer-focus-visible:top-2.5 peer-focus-visible:translate-y-0 peer-focus-visible:text-xs peer-focus-visible:text-foreground",
-					"peer-[:not(:placeholder-shown)]:top-2.5 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs",
+					"peer-focus-visible:top-0 peer-focus-visible:-translate-y-1/2 peer-focus-visible:text-xs peer-focus-visible:text-foreground peer-focus-visible:bg-background peer-focus-visible:px-1",
+					"peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:-translate-y-1/2 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:bg-background peer-[:not(:placeholder-shown)]:px-1",
 					prefix ? "left-9" : "left-3",
 				)}
 			>

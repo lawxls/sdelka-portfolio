@@ -60,9 +60,10 @@ export function ForgotPasswordPage() {
 					value={email}
 					onChange={(e) => setEmail(e.target.value)}
 					autoComplete="email"
+					required
 				/>
 
-				<Button type="submit" className="w-full" disabled={submitting}>
+				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 					Отправить
 				</Button>
 			</form>

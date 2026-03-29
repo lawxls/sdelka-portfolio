@@ -32,7 +32,7 @@ export function RegisterPage() {
 		let cancelled = false;
 
 		async function validate() {
-			const urlCode = searchParams.get("i");
+			const urlCode = searchParams.get("code");
 			if (urlCode) setInvitationCode(urlCode);
 
 			const code = urlCode ?? getInvitationCode();
@@ -151,9 +151,10 @@ export function RegisterPage() {
 						onChange={(e) => setEmail(e.target.value)}
 						error={fieldErrors.email}
 						autoComplete="email"
+						required
 					/>
 
-					<Button type="submit" className="w-full" disabled={submitting}>
+					<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 						Продолжить
 					</Button>
 				</form>
@@ -174,6 +175,7 @@ export function RegisterPage() {
 						onChange={(e) => setFirstName(e.target.value)}
 						error={fieldErrors.first_name}
 						autoComplete="given-name"
+						required
 					/>
 
 					<FloatingInput
@@ -185,6 +187,7 @@ export function RegisterPage() {
 						autoComplete="tel"
 						prefix="+7"
 						inputMode="tel"
+						required
 					/>
 
 					<FloatingInput
@@ -195,6 +198,7 @@ export function RegisterPage() {
 						onChange={(e) => setPassword(e.target.value)}
 						error={fieldErrors.password}
 						autoComplete="new-password"
+						required
 					/>
 
 					<FloatingInput
@@ -205,9 +209,10 @@ export function RegisterPage() {
 						onChange={(e) => setConfirmPassword(e.target.value)}
 						error={fieldErrors.confirmPassword}
 						autoComplete="new-password"
+						required
 					/>
 
-					<Button type="submit" className="w-full" disabled={submitting}>
+					<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 						Зарегистрироваться
 					</Button>
 				</form>

@@ -143,6 +143,8 @@ export function parseApiError(body: unknown): ParsedApiError {
 	for (const [key, value] of Object.entries(record)) {
 		if (key === "detail" && typeof value === "string") {
 			result.detail = value;
+		} else if (key === "detail" && Array.isArray(value)) {
+			result.detail = value.join(". ");
 		} else if (typeof value === "string") {
 			result.fieldErrors[key] = value;
 		}

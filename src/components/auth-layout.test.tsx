@@ -21,9 +21,10 @@ describe("AuthLayout", () => {
 		expect(screen.getByText("Login Form")).toBeInTheDocument();
 	});
 
-	test("displays Sdelka.ai logo", () => {
+	test("displays logo wordmark", () => {
 		renderWithRouter();
-		expect(screen.getByText("Sdelka.ai")).toBeInTheDocument();
+		const svg = document.querySelector('svg[viewBox="0 0 1121 203"]');
+		expect(svg).toBeInTheDocument();
 	});
 
 	test("renders gradient panel on desktop", () => {
