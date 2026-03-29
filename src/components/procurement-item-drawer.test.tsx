@@ -2,10 +2,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
+
+// Mock recharts ResponsiveContainer for jsdom
+vi.mock("recharts", async () => {
+	const actual = await vi.importActual<typeof import("recharts")>("recharts");
+	return {
+		...actual,
+		ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+			<div data-testid="responsive-container" style={{ width: 320, height: 200 }}>
+				{children}
+			</div>
+		),
+	};
+});
 
 let queryClient: QueryClient;
 
@@ -298,6 +311,30 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Стоимость")).toBeInTheDocument();
 		});
+	});
+
+	test("analytics tab renders donut chart with supplier status distribution", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await user.click(screen.getByRole("tab", { name: "Аналитика" }));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("analytics-chart")).toBeInTheDocument();
+		});
+		// Legend labels should be present
+		expect(screen.getByText("Отправлено RFQ")).toBeInTheDocument();
+		expect(screen.getByText("Прислали КП")).toBeInTheDocument();
+		// Total count should be displayed
+		expect(screen.getByText("10")).toBeInTheDocument();
+		expect(screen.getByText("Поставщиков")).toBeInTheDocument();
+	});
+
+	test("analytics tab deep link via ?tab=analytics loads chart", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=analytics"]);
+		await waitFor(() => {
+			expect(screen.getByTestId("analytics-chart")).toBeInTheDocument();
+		});
+		expect(screen.getByText("Не ответили")).toBeInTheDocument();
 	});
 
 	test("selecting suppliers shows selection toolbar with delete", async () => {

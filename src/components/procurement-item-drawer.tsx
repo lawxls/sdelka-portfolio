@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -229,8 +230,8 @@ function ProcurementItemDrawerContent({
 			<div className="flex-1 overflow-y-auto p-4">
 				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
 				{activeTab === "analytics" && (
-					<div data-testid="tab-panel-analytics" className="text-sm text-muted-foreground">
-						Аналитика — скоро
+					<div data-testid="tab-panel-analytics">
+						<AnalyticsTabPanel itemId={itemId} />
 					</div>
 				)}
 				{activeTab === "details" && (
