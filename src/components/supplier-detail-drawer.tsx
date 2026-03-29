@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Supplier, SupplierChatMessage, SupplierDocument } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS } from "@/data/supplier-types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatCurrency, formatDateTime, formatFileSize, pluralizeRu } from "@/lib/format";
+import { formatCurrency, formatDateTime, formatFileSize, formatRating, pluralizeRu, stripProtocol } from "@/lib/format";
 
 interface SupplierDetailDrawerProps {
 	supplier: Supplier | null;
@@ -57,7 +57,7 @@ function RatingSection({ rating }: { rating: number | null }) {
 	return (
 		<section>
 			<h3 className="mb-1 text-sm font-medium">Рейтинг</h3>
-			<span className="text-2xl font-semibold tabular-nums">{rating != null ? `${rating}%` : "—"}</span>
+			<span className="text-2xl font-semibold tabular-nums">{formatRating(rating)}</span>
 		</section>
 	);
 }
@@ -162,7 +162,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 							<SheetDescription>{supplier.address}</SheetDescription>
 							<div className="flex items-center gap-2">
 								<Badge variant="outline">{SUPPLIER_STATUS_LABELS[supplier.status]}</Badge>
-								<span className="text-sm text-muted-foreground">{supplier.website.replace(/^https?:\/\//, "")}</span>
+								<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
 							</div>
 						</SheetHeader>
 

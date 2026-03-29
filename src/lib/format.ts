@@ -81,6 +81,15 @@ export function getInitials(firstName: string, lastName: string): string {
 	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
+export function formatRating(value: number | null | undefined): string {
+	if (value == null) return "\u2014";
+	return `${value}%`;
+}
+
+export function stripProtocol(url: string): string {
+	return url.replace(/^https?:\/\//, "");
+}
+
 export function pluralizeRu(count: number, one: string, few: string, many: string): string {
 	const mod100 = count % 100;
 	const mod10 = count % 10;

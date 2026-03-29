@@ -4,7 +4,7 @@ import type { SupplierFilterParams } from "./supplier-types";
 
 export function useSuppliers(itemId: string | null, params?: SupplierFilterParams) {
 	return useQuery({
-		queryKey: params ? ["suppliers", itemId, params] : ["suppliers", itemId],
+		queryKey: ["suppliers", itemId, params ?? {}],
 		queryFn: () => getSuppliers(itemId as string, params),
 		enabled: itemId !== null,
 	});

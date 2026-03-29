@@ -7,29 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Supplier, SupplierSortField, SupplierStatus } from "@/data/supplier-types";
+import type { Supplier, SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatRating, stripProtocol } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-function formatRating(rating: number | null): string {
-	if (rating == null) return "\u2014";
-	return `${rating}%`;
-}
-
-function stripProtocol(url: string): string {
-	return url.replace(/^https?:\/\//, "");
-}
-
-type SortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
 
 interface SuppliersTableProps {
 	suppliers: Supplier[];
 	isLoading: boolean;
 	search: string;
 	onSearchChange: (query: string) => void;
-	sort: SortState;
+	sort: SupplierSortState;
 	onSort: (field: SupplierSortField) => void;
 	activeStatuses: SupplierStatus[];
 	onStatusFilter: (status: SupplierStatus) => void;
@@ -51,7 +40,7 @@ const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
-function SortIcon({ sort, field }: { sort: SortState; field: SupplierSortField }) {
+function SortIcon({ sort, field }: { sort: SupplierSortState; field: SupplierSortField }) {
 	if (sort?.field !== field) return <ArrowUpDown className="ml-1 size-3.5" aria-hidden="true" />;
 	if (sort.direction === "asc") return <ArrowUp className="ml-1 size-3.5" aria-hidden="true" data-testid="sort-asc" />;
 	return <ArrowDown className="ml-1 size-3.5" aria-hidden="true" data-testid="sort-desc" />;

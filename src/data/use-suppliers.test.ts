@@ -56,7 +56,7 @@ describe("useSuppliers", () => {
 		});
 
 		await waitFor(() => {
-			const data = queryClient.getQueryData(["suppliers", "item-1"]);
+			const data = queryClient.getQueryData(["suppliers", "item-1", {}]);
 			expect(data).toBeTruthy();
 		});
 
@@ -65,7 +65,7 @@ describe("useSuppliers", () => {
 		});
 
 		await waitFor(() => {
-			const data = queryClient.getQueryData(["suppliers", "item-2"]);
+			const data = queryClient.getQueryData(["suppliers", "item-2", {}]);
 			expect(data).toBeTruthy();
 		});
 

@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { SupplierSortField, SupplierStatus } from "@/data/supplier-types";
+import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { useDeleteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -115,20 +115,21 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 	);
 }
 
-type SortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
-
 function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortState>(null);
+	const [sort, setSort] = useState<SupplierSortState>(null);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-	const filterParams = {
-		search: search || undefined,
-		statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
-		sort: sort?.field,
-		dir: sort?.direction,
-	};
+	const filterParams = useMemo(
+		() => ({
+			search: search || undefined,
+			statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
+			sort: sort?.field,
+			dir: sort?.direction,
+		}),
+		[search, activeStatuses, sort],
+	);
 	const { data, isLoading } = useSuppliers(itemId, filterParams);
 	const deleteMutation = useDeleteSuppliers();
 	const suppliers = data?.suppliers ?? [];

@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DeliveryType, PaymentType, ProcurementItem, Unit } from "@/data/types";
@@ -69,44 +70,11 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 	);
 }
 
-function SegmentedControl<T extends string>({
-	options,
-	labels,
-	value,
-	onChange,
-}: {
-	options: readonly T[];
-	labels: Record<T, string>;
-	value: T;
-	onChange: (v: T) => void;
-}) {
-	return (
-		<div className="flex rounded-lg border border-input">
-			{options.map((opt) => (
-				<button
-					key={opt}
-					type="button"
-					aria-pressed={value === opt}
-					className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
-						value === opt
-							? "bg-primary text-primary-foreground"
-							: "bg-background text-muted-foreground hover:text-foreground"
-					}`}
-					onClick={() => onChange(opt)}
-				>
-					{labels[opt]}
-				</button>
-			))}
-		</div>
-	);
-}
-
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: item, isLoading } = useItemDetail(itemId);
 	const updateMutation = useUpdateItemDetail();
 	const [form, setForm] = useState<FormState | null>(null);
 
-	// Initialize form from fetched data (only once)
 	const formState = form ?? (item ? initFormState(item) : null);
 
 	if (isLoading || !item || !formState) {
@@ -122,7 +90,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		);
 	}
 
-	// Capture for use in closures after null guard
+	// Non-null alias — TS doesn't preserve narrowing into closures
 	const currentItem = item;
 
 	function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {

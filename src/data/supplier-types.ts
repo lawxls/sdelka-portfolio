@@ -37,6 +37,7 @@ export interface SupplierPositionOffer {
 }
 
 export type SupplierSortField = "companyName" | "pricePerUnit" | "tco" | "rating";
+export type SupplierSortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
 
 export interface SupplierFilterParams {
 	search?: string;

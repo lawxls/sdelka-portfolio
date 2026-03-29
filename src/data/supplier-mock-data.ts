@@ -250,7 +250,7 @@ export async function getSuppliers(itemId: string, params?: SupplierFilterParams
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
 	const filtered = applySupplierFilters(suppliers, params);
-	return { suppliers: filtered.map((s) => ({ ...s })) };
+	return { suppliers: filtered };
 }
 
 export async function deleteSuppliers(itemId: string, supplierIds: string[]): Promise<void> {
