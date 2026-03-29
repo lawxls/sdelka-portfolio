@@ -39,13 +39,13 @@ describe("TaskTable", () => {
 
 		const headers = screen.getAllByRole("columnheader");
 		expect(headers).toHaveLength(7);
-		expect(headers[0]).toHaveTextContent("Название");
-		expect(headers[1]).toHaveTextContent("Позиция");
-		expect(headers[2]).toHaveTextContent("Исполнитель");
-		expect(headers[3]).toHaveTextContent("Статус");
-		expect(headers[4]).toHaveTextContent("Дедлайн");
-		expect(headers[5]).toHaveTextContent("Создано");
-		expect(headers[6]).toHaveTextContent("Вопросы");
+		expect(headers[0]).toHaveTextContent("№");
+		expect(headers[1]).toHaveTextContent("НАЗВАНИЕ");
+		expect(headers[2]).toHaveTextContent("ПОЗИЦИЯ");
+		expect(headers[3]).toHaveTextContent("ИСПОЛНИТЕЛЬ");
+		expect(headers[4]).toHaveTextContent("ДЕДЛАЙН");
+		expect(headers[5]).toHaveTextContent("СОЗДАНО");
+		expect(headers[6]).toHaveTextContent("ВОПРОСЫ");
 	});
 
 	it("renders task rows with correct data", async () => {

@@ -1,4 +1,5 @@
 import { useDraggable } from "@dnd-kit/core";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Task } from "@/data/task-types";
 import { formatShortDate, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,7 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 		<article
 			ref={draggable ? setNodeRef : undefined}
 			className={cn(
-				"rounded-lg border bg-background p-3",
+				"rounded-lg border bg-background p-4",
 				onClick &&
 					"cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 				isDragging && "opacity-50",
@@ -44,7 +45,12 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 		>
 			<div className="flex items-start justify-between gap-2">
 				<div className="min-w-0">
-					<p className="truncate text-sm font-medium">{task.title}</p>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<p className="line-clamp-2 min-h-[2lh] text-sm font-medium">{task.title}</p>
+						</TooltipTrigger>
+						<TooltipContent side="top">{task.title}</TooltipContent>
+					</Tooltip>
 					<p className="truncate text-xs text-muted-foreground">{task.procurementItemName}</p>
 				</div>
 				<span
@@ -55,16 +61,17 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 					{task.assignee.initials}
 				</span>
 			</div>
-			<div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-				<div className="flex items-center gap-2">
-					<time dateTime={task.createdAt}>{formatShortDate(task.createdAt)}</time>
-					<time
-						dateTime={task.deadline}
-						className={cn(isOverdue && "font-medium text-destructive")}
-						data-testid={`deadline-${task.id}`}
-					>
-						{formatShortDate(task.deadline)}
-					</time>
+			<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+				<div className="flex items-center gap-3">
+					<span>
+						Создана <time dateTime={task.createdAt}>{formatShortDate(task.createdAt)}</time>
+					</span>
+					<span className={cn(isOverdue && "font-medium text-destructive")}>
+						Дедлайн{" "}
+						<time dateTime={task.deadline} data-testid={`deadline-${task.id}`}>
+							{formatShortDate(task.deadline)}
+						</time>
+					</span>
 				</div>
 				<span>{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}</span>
 			</div>

@@ -1,3 +1,6 @@
+import type { LucideIcon } from "lucide-react";
+import { Archive, CheckCircle, CircleDot, Loader } from "lucide-react";
+
 export type TaskStatus = "assigned" | "in_progress" | "completed" | "archived";
 
 export const TASK_STATUSES: TaskStatus[] = ["assigned", "in_progress", "completed", "archived"];
@@ -7,6 +10,13 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 	in_progress: "В работе",
 	completed: "Завершено",
 	archived: "Архив",
+};
+
+export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
+	assigned: CircleDot,
+	in_progress: Loader,
+	completed: CheckCircle,
+	archived: Archive,
 };
 
 export interface TaskAssignee {

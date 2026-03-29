@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { STATUS_LABELS, type TaskStatus } from "@/data/task-types";
+import { STATUS_ICONS, STATUS_LABELS, type TaskStatus } from "@/data/task-types";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
 import { formatDateTime } from "@/lib/format";
 
@@ -26,7 +26,7 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 				if (!open) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90dvh]" : undefined}>
+			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : undefined}>
 				{taskId && (
 					<TaskDrawerContent
 						key={taskId}
@@ -127,11 +127,15 @@ function TaskDrawerContent({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							{(Object.entries(STATUS_LABELS) as [TaskStatus, string][]).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
+							{(Object.entries(STATUS_LABELS) as [TaskStatus, string][]).map(([value, label]) => {
+								const Icon = STATUS_ICONS[value];
+								return (
+									<SelectItem key={value} value={value}>
+										<Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+										{label}
+									</SelectItem>
+								);
+							})}
 						</SelectContent>
 					</Select>
 				)}
@@ -151,49 +155,58 @@ function TaskDrawerContent({
 					</div>
 				) : (
 					<div className="space-y-3">
-						<Textarea
-							ref={textareaRef}
-							value={answerText}
-							onChange={(e) => setAnswerText(e.target.value)}
-							placeholder="Введите ответ…"
-						/>
-						{files.length > 0 && (
-							<ul className="space-y-1">
-								{files.map((file) => (
-									<li key={file.name} className="flex items-center gap-2 text-sm">
-										<span className="truncate">{file.name}</span>
-										<button
-											type="button"
-											onClick={() => removeFile(file.name)}
-											className="shrink-0 text-muted-foreground hover:text-foreground"
-											aria-label={`Удалить ${file.name}`}
-										>
-											<X className="size-3.5" aria-hidden="true" />
-										</button>
-									</li>
-								))}
-							</ul>
-						)}
-						<div className="flex items-center gap-2">
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								onClick={() => fileInputRef.current?.click()}
-								aria-label="Прикрепить файл"
-							>
-								<Paperclip className="size-4" aria-hidden="true" />
-							</Button>
-							<input
-								ref={fileInputRef}
-								type="file"
-								className="hidden"
-								multiple
-								onChange={handleFileChange}
-								tabIndex={-1}
+						<div className="rounded-lg border focus-within:ring-2 focus-within:ring-ring">
+							<Textarea
+								ref={textareaRef}
+								value={answerText}
+								onChange={(e) => setAnswerText(e.target.value)}
+								placeholder="Введите ответ…"
+								className="border-0 shadow-none focus-visible:ring-0"
 							/>
-							<Button onClick={handleSubmitAnswer} disabled={!answerText.trim() || submitAnswerMutation.isPending}>
-								{submitAnswerMutation.isPending ? "Отправка…" : "Отправить"}
-							</Button>
+							{files.length > 0 && (
+								<ul className="space-y-1 px-3 pb-2">
+									{files.map((file) => (
+										<li key={file.name} className="flex items-center gap-2 text-sm">
+											<span className="truncate">{file.name}</span>
+											<button
+												type="button"
+												onClick={() => removeFile(file.name)}
+												className="shrink-0 text-muted-foreground hover:text-foreground"
+												aria-label={`Удалить ${file.name}`}
+											>
+												<X className="size-3.5" aria-hidden="true" />
+											</button>
+										</li>
+									))}
+								</ul>
+							)}
+							<div className="flex items-center justify-between border-t px-2 py-1.5">
+								<div className="flex items-center">
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										onClick={() => fileInputRef.current?.click()}
+										aria-label="Прикрепить файл"
+									>
+										<Paperclip className="size-4" aria-hidden="true" />
+									</Button>
+									<input
+										ref={fileInputRef}
+										type="file"
+										className="hidden"
+										multiple
+										onChange={handleFileChange}
+										tabIndex={-1}
+									/>
+								</div>
+								<Button
+									size="sm"
+									onClick={handleSubmitAnswer}
+									disabled={!answerText.trim() || submitAnswerMutation.isPending}
+								>
+									{submitAnswerMutation.isPending ? "Отправка…" : "Отправить"}
+								</Button>
+							</div>
 						</div>
 					</div>
 				)}

@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Task } from "@/data/task-types";
-import { makeTask } from "@/test-utils";
+import { makeTask, TooltipWrapper } from "@/test-utils";
 import { TaskBoard, type TaskBoardProps } from "./task-board";
 
 function makeColumn(tasks: Task[] = [], isLoading = false) {
@@ -18,7 +18,7 @@ function renderBoard(overrides: Partial<TaskBoardProps["columns"]> = {}, isMobil
 		archived: makeColumn(),
 		...overrides,
 	};
-	return render(<TaskBoard columns={columns} isMobile={isMobile} />);
+	return render(<TaskBoard columns={columns} isMobile={isMobile} />, { wrapper: TooltipWrapper });
 }
 
 describe("TaskBoard", () => {
@@ -90,6 +90,7 @@ describe("TaskBoard", () => {
 					}}
 				/>
 			</DndContext>,
+			{ wrapper: TooltipWrapper },
 		);
 
 		expect(screen.getByTestId("task-card-t1").getAttribute("aria-roledescription")).toBe("draggable");
@@ -109,6 +110,7 @@ describe("TaskBoard", () => {
 					}}
 				/>
 			</DndContext>,
+			{ wrapper: TooltipWrapper },
 		);
 
 		expect(screen.getByTestId("task-card-t3").getAttribute("aria-roledescription")).not.toBe("draggable");
@@ -126,6 +128,7 @@ describe("TaskBoard", () => {
 					}}
 				/>
 			</DndContext>,
+			{ wrapper: TooltipWrapper },
 		);
 
 		for (const status of ["assigned", "in_progress", "completed", "archived"]) {

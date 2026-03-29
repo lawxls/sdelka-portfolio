@@ -2,7 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Task, TaskStatus } from "@/data/task-types";
+import { STATUS_ICONS, type Task, type TaskStatus } from "@/data/task-types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "./task-card";
@@ -43,10 +43,13 @@ export function TaskColumn({
 		if (hasNextPage && !isFetchingNextPage && loadMore) loadMore();
 	});
 
+	const StatusIcon = STATUS_ICONS[status];
+
 	return (
 		<section className="flex min-h-0 flex-col" data-testid={`column-${status}`}>
 			{!hideHeader && (
 				<div className="flex shrink-0 items-center gap-2 px-1 pb-2">
+					<StatusIcon className="size-4 text-muted-foreground" aria-hidden="true" />
 					<h2 className="text-sm font-medium">{label}</h2>
 					<Badge variant="secondary" className="tabular-nums">
 						{tasks.length}

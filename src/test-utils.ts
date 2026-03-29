@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Task } from "@/data/task-types";
 import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
 
@@ -19,6 +20,10 @@ export function createTestQueryClient() {
 
 export function createQueryWrapper(queryClient: QueryClient) {
 	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children });
+}
+
+export function TooltipWrapper({ children }: { children: ReactNode }) {
+	return TooltipProvider({ children });
 }
 
 export function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { STATUS_LABELS, TASK_STATUSES, type Task, type TaskStatus } from "@/data/task-types";
+import { STATUS_ICONS, STATUS_LABELS, TASK_STATUSES, type Task, type TaskStatus } from "@/data/task-types";
 import { cn } from "@/lib/utils";
 import { TaskColumn } from "./task-column";
 
@@ -38,23 +38,27 @@ export function TaskBoard({ columns, onTaskClick, activeTaskId, activeTaskStatus
 		return (
 			<div className="flex min-h-0 flex-1 flex-col" data-testid="task-board">
 				<div role="tablist" className="flex shrink-0 border-b border-border">
-					{TASK_STATUSES.map((status) => (
-						<button
-							key={status}
-							role="tab"
-							type="button"
-							aria-selected={activeTab === status}
-							onClick={() => setActiveTab(status)}
-							className={cn(
-								"flex-1 px-2 py-2.5 text-sm transition-colors",
-								activeTab === status
-									? "border-b-2 border-primary font-medium text-foreground"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-						>
-							{STATUS_LABELS[status]}
-						</button>
-					))}
+					{TASK_STATUSES.map((status) => {
+						const Icon = STATUS_ICONS[status];
+						return (
+							<button
+								key={status}
+								role="tab"
+								type="button"
+								aria-selected={activeTab === status}
+								onClick={() => setActiveTab(status)}
+								className={cn(
+									"flex-1 px-2 py-2.5 text-sm transition-colors inline-flex items-center justify-center gap-1.5",
+									activeTab === status
+										? "border-b-2 border-primary font-medium text-foreground"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+							>
+								<Icon className="size-3.5" aria-hidden="true" />
+								{STATUS_LABELS[status]}
+							</button>
+						);
+					})}
 				</div>
 				<div className="min-h-0 flex-1 p-4">
 					<TaskColumn

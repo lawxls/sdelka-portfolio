@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
-import { makeTask } from "@/test-utils";
+import { makeTask, TooltipWrapper } from "@/test-utils";
 import { TaskColumn } from "./task-column";
 
 let observers: ObserverRecord[];
@@ -19,23 +19,23 @@ const defaultProps = {
 
 describe("TaskColumn infinite scroll", () => {
 	it("renders sentinel when hasNextPage is true", () => {
-		render(<TaskColumn {...defaultProps} hasNextPage loadMore={vi.fn()} />);
+		render(<TaskColumn {...defaultProps} hasNextPage loadMore={vi.fn()} />, { wrapper: TooltipWrapper });
 		expect(screen.getByTestId("column-sentinel-assigned")).toBeInTheDocument();
 	});
 
 	it("does not render sentinel when hasNextPage is false", () => {
-		render(<TaskColumn {...defaultProps} hasNextPage={false} loadMore={vi.fn()} />);
+		render(<TaskColumn {...defaultProps} hasNextPage={false} loadMore={vi.fn()} />, { wrapper: TooltipWrapper });
 		expect(screen.queryByTestId("column-sentinel-assigned")).not.toBeInTheDocument();
 	});
 
 	it("does not render sentinel when hasNextPage is undefined", () => {
-		render(<TaskColumn {...defaultProps} />);
+		render(<TaskColumn {...defaultProps} />, { wrapper: TooltipWrapper });
 		expect(screen.queryByTestId("column-sentinel-assigned")).not.toBeInTheDocument();
 	});
 
 	it("calls loadMore when sentinel intersects", () => {
 		const loadMore = vi.fn();
-		render(<TaskColumn {...defaultProps} hasNextPage loadMore={loadMore} />);
+		render(<TaskColumn {...defaultProps} hasNextPage loadMore={loadMore} />, { wrapper: TooltipWrapper });
 
 		expect(observers).toHaveLength(1);
 		observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -44,12 +44,14 @@ describe("TaskColumn infinite scroll", () => {
 	});
 
 	it("shows loading spinner when isFetchingNextPage is true", () => {
-		render(<TaskColumn {...defaultProps} hasNextPage isFetchingNextPage loadMore={vi.fn()} />);
+		render(<TaskColumn {...defaultProps} hasNextPage isFetchingNextPage loadMore={vi.fn()} />, {
+			wrapper: TooltipWrapper,
+		});
 		expect(screen.getByTestId("column-loading-assigned")).toBeInTheDocument();
 	});
 
 	it("does not show loading spinner when isFetchingNextPage is false", () => {
-		render(<TaskColumn {...defaultProps} hasNextPage loadMore={vi.fn()} />);
+		render(<TaskColumn {...defaultProps} hasNextPage loadMore={vi.fn()} />, { wrapper: TooltipWrapper });
 		expect(screen.queryByTestId("column-loading-assigned")).not.toBeInTheDocument();
 	});
 });
