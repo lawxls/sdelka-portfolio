@@ -1,4 +1,5 @@
 import { CircleUser, LogOut, Moon, Settings, Sun, User } from "lucide-react";
+import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -15,6 +16,8 @@ interface UserAvatarMenuProps {
 }
 
 export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-7" }: UserAvatarMenuProps) {
+	const navigate = useNavigate();
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
@@ -27,11 +30,11 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side={side} align={align} className="w-56">
-				<DropdownMenuItem disabled>
+				<DropdownMenuItem onSelect={() => navigate("/profile")}>
 					<User />
 					Мой профиль
 				</DropdownMenuItem>
-				<DropdownMenuItem disabled>
+				<DropdownMenuItem onSelect={() => navigate("/profile?tab=settings")}>
 					<Settings />
 					Настройки
 				</DropdownMenuItem>

@@ -212,6 +212,26 @@ describe("Routing", () => {
 		});
 	});
 
+	test("/profile renders profile page with skeleton then content", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () =>
+				HttpResponse.json({
+					first_name: "Иван",
+					last_name: "Иванов",
+					email: "ivan@example.com",
+					phone: "+79991234567",
+					avatar_icon: "blue",
+					date_joined: "2024-01-15T10:00:00Z",
+					mailing_allowed: true,
+				}),
+			),
+		);
+		renderApp(["/profile"]);
+		await waitFor(() => {
+			expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
+		});
+	});
+
 	test("FolderSidebar renders on /procurement", async () => {
 		await renderAppReady();
 		expect(screen.getByTestId("sidebar")).toBeInTheDocument();

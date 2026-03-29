@@ -9,6 +9,7 @@ import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
+import { ProfilePage } from "@/pages/profile-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { TasksPage } from "@/pages/tasks-page";
@@ -41,6 +42,7 @@ function App() {
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					<Route path="/companies" element={<CompaniesPage />} />
+					<Route path="/profile" element={<ProfilePage />} />
 					{PLACEHOLDER_ROUTES.map(({ path, label, icon }) => (
 						<Route
 							key={path}
