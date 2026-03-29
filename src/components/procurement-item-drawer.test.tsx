@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
@@ -44,10 +45,13 @@ beforeEach(() => {
 	});
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
+	_resetItemDetailStore();
+	_setItemDetailMockDelay(0, 0);
 });
 
 afterEach(() => {
 	_resetSupplierStore();
+	_resetItemDetailStore();
 });
 
 describe("ProcurementItemDrawer", () => {
@@ -350,5 +354,61 @@ describe("ProcurementItemDrawer", () => {
 
 		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
+	});
+
+	test("details tab renders editable form with item data", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+
+		await user.click(screen.getByRole("tab", { name: "Детальная информация" }));
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		});
+
+		expect(screen.getByLabelText("Годовой объём")).toHaveValue(1200);
+		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
+		expect(screen.getByLabelText("Статус")).toHaveAttribute("readonly");
+	});
+
+	test("details tab deep link via ?tab=details loads form", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		});
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+	});
+
+	test("details tab save button updates item", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		});
+
+		const nameInput = screen.getByLabelText("Название");
+		await user.clear(nameInput);
+		await user.type(nameInput, "Обновлённая позиция");
+
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Название")).toHaveValue("Обновлённая позиция");
+		});
+	});
+
+	test("details tab shows read-only status, bestPrice, averagePrice", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Статус")).toBeInTheDocument();
+		});
+
+		expect(screen.getByLabelText("Статус")).toHaveAttribute("readonly");
+		expect(screen.getByLabelText("Лучшая цена")).toHaveAttribute("readonly");
+		expect(screen.getByLabelText("Средняя цена")).toHaveAttribute("readonly");
 	});
 });

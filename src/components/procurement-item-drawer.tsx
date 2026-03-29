@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
+import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -234,11 +235,7 @@ function ProcurementItemDrawerContent({
 						<AnalyticsTabPanel itemId={itemId} />
 					</div>
 				)}
-				{activeTab === "details" && (
-					<div data-testid="tab-panel-details" className="text-sm text-muted-foreground">
-						Детальная информация — скоро
-					</div>
-				)}
+				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
 			</div>
 		</div>
 	);
