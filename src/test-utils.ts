@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
+import type { Task } from "@/data/task-types";
 import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
 
 export function mockHostname(hostname: string) {
@@ -93,6 +94,23 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 				},
 			},
 		],
+		...overrides,
+	};
+}
+
+export function makeTask(id: string, overrides: Partial<Task> = {}): Task {
+	return {
+		id,
+		title: `Task ${id}`,
+		procurementItemName: "Арматура А500С",
+		status: "assigned",
+		createdAt: "2026-03-15T10:00:00.000Z",
+		deadline: "2026-04-01T18:00:00.000Z",
+		assignee: { name: "Иванов Алексей", initials: "ИА" },
+		description: "Test description",
+		questionCount: 1,
+		answer: null,
+		attachments: [],
 		...overrides,
 	};
 }
