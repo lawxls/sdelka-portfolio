@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { UserSettings } from "@/data/settings-api";
+import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
 
@@ -113,6 +114,28 @@ export function makeSettings(overrides: Partial<UserSettings> = {}): UserSetting
 		avatar_icon: "blue",
 		date_joined: "2024-01-15T10:00:00Z",
 		mailing_allowed: true,
+		...overrides,
+	};
+}
+
+export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Supplier {
+	return {
+		id,
+		itemId: "item-1",
+		companyName: `Поставщик ${id}`,
+		status: "ждем_ответа",
+		email: "info@example.ru",
+		website: "https://example.ru",
+		address: "г. Москва, ул. Тестовая, д. 1",
+		pricePerUnit: null,
+		tco: null,
+		rating: null,
+		deliveryCost: 1500,
+		deferralDays: 14,
+		aiComment: "Тестовый комментарий",
+		documents: [],
+		chatHistory: [],
+		positionOffers: [],
 		...overrides,
 	};
 }

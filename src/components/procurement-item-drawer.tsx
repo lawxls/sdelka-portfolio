@@ -1,5 +1,7 @@
 import { useSearchParams } from "react-router";
+import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useSuppliers } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 type ItemDrawerTab = "suppliers" | "analytics" | "details";
@@ -68,6 +70,7 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 				{itemId && (
 					<ProcurementItemDrawerContent
 						key={itemId}
+						itemId={itemId}
 						itemName={itemName}
 						activeTab={activeTab}
 						onTabChange={handleTabChange}
@@ -78,11 +81,22 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 	);
 }
 
+function SuppliersTabPanel({ itemId }: { itemId: string }) {
+	const { data, isLoading } = useSuppliers(itemId);
+	return (
+		<div data-testid="tab-panel-suppliers">
+			<SuppliersTable suppliers={data?.suppliers ?? []} isLoading={isLoading} />
+		</div>
+	);
+}
+
 function ProcurementItemDrawerContent({
+	itemId,
 	itemName,
 	activeTab,
 	onTabChange,
 }: {
+	itemId: string;
 	itemName?: string;
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
@@ -114,11 +128,7 @@ function ProcurementItemDrawerContent({
 			</div>
 
 			<div className="flex-1 overflow-y-auto p-4">
-				{activeTab === "suppliers" && (
-					<div data-testid="tab-panel-suppliers" className="text-sm text-muted-foreground">
-						Поставщики — скоро
-					</div>
-				)}
+				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} />}
 				{activeTab === "analytics" && (
 					<div data-testid="tab-panel-analytics" className="text-sm text-muted-foreground">
 						Аналитика — скоро

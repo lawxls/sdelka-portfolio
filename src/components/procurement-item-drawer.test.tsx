@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
@@ -28,6 +29,12 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	_resetSupplierStore();
+	_setSupplierMockDelay(0, 0);
+});
+
+afterEach(() => {
+	_resetSupplierStore();
 });
 
 describe("ProcurementItemDrawer", () => {
@@ -122,5 +129,31 @@ describe("ProcurementItemDrawer", () => {
 	test("invalid tab param defaults to suppliers", () => {
 		renderDrawer(["/procurement?item=item-1&tab=bogus"]);
 		expect(screen.getByRole("tab", { name: "Поставщики" })).toHaveAttribute("aria-selected", "true");
+	});
+
+	test("suppliers tab loads and renders supplier table with data", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		// Should show loading skeletons first, then data
+		await waitFor(() => {
+			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
+		});
+		// Table headers present
+		expect(screen.getByText("Компания")).toBeInTheDocument();
+		expect(screen.getByText("TCO")).toBeInTheDocument();
+		// Supplier data loaded (10 suppliers for item-1)
+		await waitFor(() => {
+			const rows = screen.getAllByRole("row");
+			// 1 header row + 10 data rows
+			expect(rows.length).toBe(11);
+		});
+	});
+
+	test("suppliers tab shows status badges", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		// Should have at least one Получено КП badge
+		expect(screen.getAllByText("Получено КП").length).toBeGreaterThan(0);
 	});
 });
