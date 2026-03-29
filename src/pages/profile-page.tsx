@@ -41,6 +41,14 @@ function stripPhonePrefix(phone: string): string {
 	return phone.startsWith("+7") ? phone.slice(2) : phone;
 }
 
+function normalizePhone(value: string): string {
+	const digits = value.replace(/\D/g, "");
+	if (digits.length === 11 && (digits[0] === "7" || digits[0] === "8")) {
+		return digits.slice(1);
+	}
+	return digits;
+}
+
 function AccountForm({ data }: { data: UserSettings }) {
 	const updateSettings = useUpdateSettings();
 
@@ -64,7 +72,7 @@ function AccountForm({ data }: { data: UserSettings }) {
 		const patch: Record<string, unknown> = {};
 		if (firstName !== data.first_name) patch.first_name = firstName;
 		if (lastName !== data.last_name) patch.last_name = lastName;
-		if (phone !== strippedPhone) patch.phone = `+7${phone}`;
+		if (phone !== strippedPhone) patch.phone = `+7${normalizePhone(phone)}`;
 		if (mailingAllowed !== data.mailing_allowed) patch.mailing_allowed = mailingAllowed;
 
 		updateSettings.mutate(patch, {
