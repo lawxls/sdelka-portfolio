@@ -2,7 +2,9 @@ import type {
 	Supplier,
 	SupplierChatMessage,
 	SupplierDocument,
+	SupplierFilterParams,
 	SupplierPositionOffer,
+	SupplierSortField,
 	SupplierStatus,
 } from "./supplier-types";
 
@@ -194,10 +196,61 @@ function simulateDelay(): Promise<void> {
 	return new Promise((r) => setTimeout(r, ms));
 }
 
+// --- Filtering & sorting ---
+
+function applySupplierFilters(suppliers: Supplier[], params?: SupplierFilterParams): Supplier[] {
+	let result = suppliers;
+
+	if (params?.search) {
+		const q = params.search.toLowerCase();
+		result = result.filter((s) => s.companyName.toLowerCase().includes(q));
+	}
+
+	if (params?.statuses && params.statuses.length > 0) {
+		const set = new Set(params.statuses);
+		result = result.filter((s) => set.has(s.status));
+	}
+
+	if (params?.sort) {
+		result = sortSuppliers(result, params.sort, params.dir ?? "asc");
+	}
+
+	return result;
+}
+
+function sortSuppliers(suppliers: Supplier[], field: SupplierSortField, dir: "asc" | "desc"): Supplier[] {
+	const sorted = [...suppliers];
+	const mul = dir === "asc" ? 1 : -1;
+
+	sorted.sort((a, b) => {
+		if (field === "companyName") {
+			return mul * a.companyName.localeCompare(b.companyName, "ru");
+		}
+		const va = a[field];
+		const vb = b[field];
+		// nulls always last regardless of direction
+		if (va == null && vb == null) return 0;
+		if (va == null) return 1;
+		if (vb == null) return -1;
+		return mul * (va - vb);
+	});
+
+	return sorted;
+}
+
 // --- Mock API functions ---
 
-export async function getSuppliers(itemId: string): Promise<{ suppliers: Supplier[] }> {
+export async function getSuppliers(itemId: string, params?: SupplierFilterParams): Promise<{ suppliers: Supplier[] }> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
-	return { suppliers: suppliers.map((s) => ({ ...s })) };
+	const filtered = applySupplierFilters(suppliers, params);
+	return { suppliers: filtered.map((s) => ({ ...s })) };
+}
+
+export async function deleteSuppliers(itemId: string, supplierIds: string[]): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const idsToDelete = new Set(supplierIds);
+	const remaining = suppliers.filter((s) => !idsToDelete.has(s.id));
+	store.set(itemId, remaining);
 }

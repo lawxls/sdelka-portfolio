@@ -36,6 +36,15 @@ export interface SupplierPositionOffer {
 	total: number;
 }
 
+export type SupplierSortField = "companyName" | "pricePerUnit" | "tco" | "rating";
+
+export interface SupplierFilterParams {
+	search?: string;
+	statuses?: SupplierStatus[];
+	sort?: SupplierSortField;
+	dir?: "asc" | "desc";
+}
+
 export interface Supplier {
 	id: string;
 	itemId: string;

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
@@ -20,34 +21,48 @@ afterEach(() => {
 	_resetSupplierStore();
 });
 
-function renderTable(
-	suppliers = [
-		makeSupplier("s1", {
-			companyName: "ООО «Альфа»",
-			status: "получено_кп",
-			pricePerUnit: 1200,
-			tco: 2700,
-			rating: 85,
-			email: "alfa@test.ru",
-			website: "https://alfa.ru",
-		}),
-		makeSupplier("s2", {
-			companyName: "ООО «Бета»",
-			status: "ждем_ответа",
-			email: "beta@test.ru",
-			website: "https://beta.ru",
-		}),
-		makeSupplier("s3", {
-			companyName: "ООО «Гамма»",
-			status: "переговоры",
-			email: "gamma@test.ru",
-			website: "https://gamma.ru",
-		}),
-	],
-) {
+const defaultSuppliers = [
+	makeSupplier("s1", {
+		companyName: "ООО «Альфа»",
+		status: "получено_кп",
+		pricePerUnit: 1200,
+		tco: 2700,
+		rating: 85,
+		email: "alfa@test.ru",
+		website: "https://alfa.ru",
+	}),
+	makeSupplier("s2", {
+		companyName: "ООО «Бета»",
+		status: "ждем_ответа",
+		email: "beta@test.ru",
+		website: "https://beta.ru",
+	}),
+	makeSupplier("s3", {
+		companyName: "ООО «Гамма»",
+		status: "переговоры",
+		email: "gamma@test.ru",
+		website: "https://gamma.ru",
+	}),
+];
+
+function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>> = {}) {
+	const defaultProps: React.ComponentProps<typeof SuppliersTable> = {
+		suppliers: defaultSuppliers,
+		isLoading: false,
+		search: "",
+		onSearchChange: vi.fn(),
+		sort: null,
+		onSort: vi.fn(),
+		activeStatuses: [],
+		onStatusFilter: vi.fn(),
+		selectedIds: new Set<string>(),
+		onSelectionChange: vi.fn(),
+		onDelete: vi.fn(),
+		isDeleting: false,
+	};
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<SuppliersTable suppliers={suppliers} isLoading={false} />
+			<SuppliersTable {...defaultProps} {...props} />
 		</QueryClientProvider>,
 	);
 }
@@ -101,8 +116,7 @@ describe("SuppliersTable", () => {
 		const nonKpRow = rows[2];
 		const cells = within(nonKpRow).getAllByRole("cell");
 
-		// Price, TCO, Rating columns (indices 3, 4, 5 after company, email, website)
-		// Should contain em-dash
+		// Price, TCO, Rating columns should contain em-dash
 		const emDashCells = cells.filter((c) => c.textContent === "\u2014");
 		expect(emDashCells.length).toBe(3);
 	});
@@ -116,21 +130,168 @@ describe("SuppliersTable", () => {
 	});
 
 	test("shows loading skeleton when isLoading is true", () => {
-		render(
-			<QueryClientProvider client={queryClient}>
-				<SuppliersTable suppliers={[]} isLoading={true} />
-			</QueryClientProvider>,
-		);
+		renderTable({ suppliers: [], isLoading: true });
 		const skeletons = document.querySelectorAll("[data-slot='skeleton']");
 		expect(skeletons.length).toBeGreaterThan(0);
 	});
 
 	test("shows empty state when no suppliers", () => {
-		render(
-			<QueryClientProvider client={queryClient}>
-				<SuppliersTable suppliers={[]} isLoading={false} />
-			</QueryClientProvider>,
-		);
+		renderTable({ suppliers: [] });
 		expect(screen.getByText(/нет поставщиков/i)).toBeInTheDocument();
+	});
+});
+
+describe("SuppliersTable search", () => {
+	test("renders search input with placeholder", () => {
+		renderTable();
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+	});
+
+	test("calls onSearchChange on input", async () => {
+		const user = userEvent.setup();
+		const onSearchChange = vi.fn();
+		renderTable({ onSearchChange });
+
+		await user.type(screen.getByPlaceholderText("Поиск…"), "Альфа");
+		// Debounced — onSearchChange called after 300ms
+		await vi.waitFor(() => expect(onSearchChange).toHaveBeenCalledWith("Альфа"));
+	});
+});
+
+describe("SuppliersTable sort", () => {
+	test("sortable column headers have sort buttons", () => {
+		renderTable();
+		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Цена\/ед/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /TCO/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Рейтинг/i })).toBeInTheDocument();
+	});
+
+	test("clicking sort button calls onSort with field name", async () => {
+		const user = userEvent.setup();
+		const onSort = vi.fn();
+		renderTable({ onSort });
+
+		await user.click(screen.getByRole("button", { name: /Компания/i }));
+		expect(onSort).toHaveBeenCalledWith("companyName");
+	});
+
+	test("active sort shows direction icon", () => {
+		renderTable({ sort: { field: "companyName", direction: "asc" } });
+		const btn = screen.getByRole("button", { name: /Компания/i });
+		// Should have an ArrowUp icon (not ArrowUpDown)
+		expect(within(btn).getByTestId("sort-asc")).toBeInTheDocument();
+	});
+
+	test("descending sort shows down arrow", () => {
+		renderTable({ sort: { field: "pricePerUnit", direction: "desc" } });
+		const btn = screen.getByRole("button", { name: /Цена\/ед/i });
+		expect(within(btn).getByTestId("sort-desc")).toBeInTheDocument();
+	});
+});
+
+describe("SuppliersTable status filter", () => {
+	test("renders filter button", () => {
+		renderTable();
+		expect(screen.getByRole("button", { name: "Фильтр по статусу" })).toBeInTheDocument();
+	});
+
+	test("shows indicator dot when filter is active", () => {
+		renderTable({ activeStatuses: ["получено_кп"] });
+		const btn = screen.getByRole("button", { name: "Фильтр по статусу" });
+		expect(within(btn).getByTestId("filter-indicator")).toBeInTheDocument();
+	});
+
+	test("clicking filter button opens popover with status options", async () => {
+		const user = userEvent.setup();
+		renderTable();
+		await user.click(screen.getByRole("button", { name: "Фильтр по статусу" }));
+		// All 5 status labels should have corresponding filter buttons
+		expect(screen.getByRole("button", { name: "Получено КП" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Ждём ответа" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Переговоры" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отказ" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Письмо не отправлено" })).toBeInTheDocument();
+	});
+
+	test("clicking status option calls onStatusFilter", async () => {
+		const user = userEvent.setup();
+		const onStatusFilter = vi.fn();
+		renderTable({ onStatusFilter });
+		await user.click(screen.getByRole("button", { name: "Фильтр по статусу" }));
+		await user.click(screen.getByRole("button", { name: "Получено КП" }));
+		expect(onStatusFilter).toHaveBeenCalledWith("получено_кп");
+	});
+});
+
+describe("SuppliersTable multi-select", () => {
+	test("renders checkbox in each row", () => {
+		renderTable();
+		// Header checkbox + 3 row checkboxes
+		const checkboxes = screen.getAllByRole("checkbox");
+		expect(checkboxes).toHaveLength(4);
+	});
+
+	test("clicking row checkbox calls onSelectionChange", async () => {
+		const user = userEvent.setup();
+		const onSelectionChange = vi.fn();
+		renderTable({ onSelectionChange });
+
+		const checkboxes = screen.getAllByRole("checkbox");
+		// First row checkbox (index 1, index 0 is header)
+		await user.click(checkboxes[1]);
+		expect(onSelectionChange).toHaveBeenCalledWith("s1");
+	});
+
+	test("select-all checkbox calls onSelectionChange with 'all'", async () => {
+		const user = userEvent.setup();
+		const onSelectionChange = vi.fn();
+		renderTable({ onSelectionChange });
+
+		const checkboxes = screen.getAllByRole("checkbox");
+		await user.click(checkboxes[0]); // header checkbox
+		expect(onSelectionChange).toHaveBeenCalledWith("all");
+	});
+
+	test("selected rows show checked checkbox", () => {
+		renderTable({ selectedIds: new Set(["s1", "s3"]) });
+		const checkboxes = screen.getAllByRole("checkbox");
+		// s1 = index 1, s3 = index 3
+		expect(checkboxes[1]).toHaveAttribute("data-state", "checked");
+		expect(checkboxes[2]).not.toHaveAttribute("data-state", "checked");
+		expect(checkboxes[3]).toHaveAttribute("data-state", "checked");
+	});
+
+	test("select-all shows checked when all selected", () => {
+		renderTable({ selectedIds: new Set(["s1", "s2", "s3"]) });
+		const checkboxes = screen.getAllByRole("checkbox");
+		expect(checkboxes[0]).toHaveAttribute("data-state", "checked");
+	});
+});
+
+describe("SuppliersTable toolbar", () => {
+	test("shows selection toolbar when items selected", () => {
+		renderTable({ selectedIds: new Set(["s1"]) });
+		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
+	});
+
+	test("hides search/filter when selection toolbar is shown", () => {
+		renderTable({ selectedIds: new Set(["s1"]) });
+		expect(screen.queryByPlaceholderText("Поиск…")).not.toBeInTheDocument();
+	});
+
+	test("delete button calls onDelete", async () => {
+		const user = userEvent.setup();
+		const onDelete = vi.fn();
+		renderTable({ selectedIds: new Set(["s1", "s2"]), onDelete });
+
+		await user.click(screen.getByRole("button", { name: /удалить/i }));
+		expect(onDelete).toHaveBeenCalled();
+	});
+
+	test("shows correct selected count", () => {
+		renderTable({ selectedIds: new Set(["s1", "s2"]) });
+		expect(screen.getByText(/выбрано: 2/i)).toBeInTheDocument();
 	});
 });

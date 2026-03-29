@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useSuppliers } from "@/data/use-suppliers";
+import type { SupplierSortField, SupplierStatus } from "@/data/supplier-types";
+import { useDeleteSuppliers, useSuppliers } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 type ItemDrawerTab = "suppliers" | "analytics" | "details";
@@ -81,11 +83,75 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 	);
 }
 
+type SortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
+
 function SuppliersTabPanel({ itemId }: { itemId: string }) {
-	const { data, isLoading } = useSuppliers(itemId);
+	const [search, setSearch] = useState("");
+	const [sort, setSort] = useState<SortState>(null);
+	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+	const filterParams = {
+		search: search || undefined,
+		statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
+		sort: sort?.field,
+		dir: sort?.direction,
+	};
+	const { data, isLoading } = useSuppliers(itemId, filterParams);
+	const deleteMutation = useDeleteSuppliers();
+	const suppliers = data?.suppliers ?? [];
+
+	function handleSort(field: SupplierSortField) {
+		setSort((prev) => {
+			if (prev?.field !== field) return { field, direction: "asc" };
+			if (prev.direction === "asc") return { field, direction: "desc" };
+			return null;
+		});
+	}
+
+	function handleStatusFilter(status: SupplierStatus) {
+		setActiveStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
+	}
+
+	function handleSelectionChange(idOrAll: string) {
+		if (idOrAll === "all") {
+			setSelectedIds((prev) => (prev.size === suppliers.length ? new Set() : new Set(suppliers.map((s) => s.id))));
+		} else {
+			setSelectedIds((prev) => {
+				const next = new Set(prev);
+				if (next.has(idOrAll)) next.delete(idOrAll);
+				else next.add(idOrAll);
+				return next;
+			});
+		}
+	}
+
+	function handleDelete() {
+		const ids = [...selectedIds];
+		deleteMutation.mutate(
+			{ itemId, supplierIds: ids },
+			{
+				onSuccess: () => setSelectedIds(new Set()),
+			},
+		);
+	}
+
 	return (
 		<div data-testid="tab-panel-suppliers">
-			<SuppliersTable suppliers={data?.suppliers ?? []} isLoading={isLoading} />
+			<SuppliersTable
+				suppliers={suppliers}
+				isLoading={isLoading}
+				search={search}
+				onSearchChange={setSearch}
+				sort={sort}
+				onSort={handleSort}
+				activeStatuses={activeStatuses}
+				onStatusFilter={handleStatusFilter}
+				selectedIds={selectedIds}
+				onSelectionChange={handleSelectionChange}
+				onDelete={handleDelete}
+				isDeleting={deleteMutation.isPending}
+			/>
 		</div>
 	);
 }

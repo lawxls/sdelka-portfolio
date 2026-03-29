@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
 import { _resetSupplierStore, _setSupplierMockDelay } from "./supplier-mock-data";
-import { useSuppliers } from "./use-suppliers";
+import { useDeleteSuppliers, useSuppliers } from "./use-suppliers";
 
 let queryClient: QueryClient;
 
@@ -72,5 +72,46 @@ describe("useSuppliers", () => {
 		// Two separate cache entries
 		const entries = queryClient.getQueriesData({ queryKey: ["suppliers"] });
 		expect(entries.length).toBe(2);
+	});
+
+	it("includes filter params in query key for cache isolation", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+		renderHook(() => useSuppliers("item-1", { search: "Альфа" }), { wrapper });
+
+		await waitFor(() => {
+			expect(queryClient.getQueryData(["suppliers", "item-1", { search: "Альфа" }])).toBeTruthy();
+		});
+
+		renderHook(() => useSuppliers("item-1", { search: "Бета" }), { wrapper });
+
+		await waitFor(() => {
+			expect(queryClient.getQueryData(["suppliers", "item-1", { search: "Бета" }])).toBeTruthy();
+		});
+
+		const entries = queryClient.getQueriesData({ queryKey: ["suppliers", "item-1"] });
+		expect(entries.length).toBe(2);
+	});
+});
+
+describe("useDeleteSuppliers", () => {
+	it("deletes suppliers and invalidates cache", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+
+		// First load suppliers
+		const { result: suppliersResult } = renderHook(() => useSuppliers("item-1"), { wrapper });
+		await waitFor(() => {
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(10);
+		});
+
+		const idToDelete = suppliersResult.current.data?.suppliers[0].id as string;
+
+		// Delete one supplier
+		const { result: deleteResult } = renderHook(() => useDeleteSuppliers(), { wrapper });
+		await deleteResult.current.mutateAsync({ itemId: "item-1", supplierIds: [idToDelete] });
+
+		// Cache should be invalidated — refetched data should have 9
+		await waitFor(() => {
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(9);
+		});
 	});
 });

@@ -156,4 +156,77 @@ describe("ProcurementItemDrawer", () => {
 		// Should have at least one Получено КП badge
 		expect(screen.getAllByText("Получено КП").length).toBeGreaterThan(0);
 	});
+
+	test("suppliers tab has search input", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+	});
+
+	test("suppliers tab search filters rows", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Get the name of the first supplier to search for
+		const firstRow = screen.getAllByRole("row")[1];
+		const companyName = firstRow.querySelector(".font-medium")?.textContent ?? "";
+		// Take first word for search
+		const searchTerm = companyName.split(" ")[0];
+
+		await user.type(screen.getByPlaceholderText("Поиск…"), searchTerm);
+
+		// After debounce, should see fewer rows
+		await waitFor(() => {
+			const dataRows = screen.getAllByRole("row").length - 1; // minus header
+			expect(dataRows).toBeLessThan(10);
+			expect(dataRows).toBeGreaterThan(0);
+		});
+	});
+
+	test("suppliers tab has sort buttons", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Цена\/ед/i })).toBeInTheDocument();
+	});
+
+	test("suppliers tab has status filter button", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		expect(screen.getByRole("button", { name: "Фильтр по статусу" })).toBeInTheDocument();
+	});
+
+	test("suppliers tab has checkboxes for multi-select", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		// 1 header checkbox + 10 row checkboxes
+		const checkboxes = screen.getAllByRole("checkbox");
+		expect(checkboxes).toHaveLength(11);
+	});
+
+	test("selecting suppliers shows selection toolbar with delete", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Click first row checkbox
+		const checkboxes = screen.getAllByRole("checkbox");
+		await user.click(checkboxes[1]);
+
+		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
+	});
 });
