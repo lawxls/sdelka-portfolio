@@ -269,6 +269,28 @@ describe("SuppliersTable multi-select", () => {
 	});
 });
 
+describe("SuppliersTable row click", () => {
+	test("clicking a row calls onRowClick with supplier id", async () => {
+		const user = userEvent.setup();
+		const onRowClick = vi.fn();
+		renderTable({ onRowClick });
+
+		const rows = screen.getAllByRole("row");
+		await user.click(rows[1]); // first data row
+		expect(onRowClick).toHaveBeenCalledWith("s1");
+	});
+
+	test("clicking checkbox does not trigger onRowClick", async () => {
+		const user = userEvent.setup();
+		const onRowClick = vi.fn();
+		renderTable({ onRowClick });
+
+		const checkboxes = screen.getAllByRole("checkbox");
+		await user.click(checkboxes[1]); // first row checkbox
+		expect(onRowClick).not.toHaveBeenCalled();
+	});
+});
+
 describe("SuppliersTable toolbar", () => {
 	test("shows selection toolbar when items selected", () => {
 		renderTable({ selectedIds: new Set(["s1"]) });

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteSuppliers, getSuppliers } from "./supplier-mock-data";
+import { deleteSuppliers, getSupplier, getSuppliers } from "./supplier-mock-data";
 import type { SupplierFilterParams } from "./supplier-types";
 
 export function useSuppliers(itemId: string | null, params?: SupplierFilterParams) {
@@ -7,6 +7,14 @@ export function useSuppliers(itemId: string | null, params?: SupplierFilterParam
 		queryKey: params ? ["suppliers", itemId, params] : ["suppliers", itemId],
 		queryFn: () => getSuppliers(itemId as string, params),
 		enabled: itemId !== null,
+	});
+}
+
+export function useSupplier(itemId: string, supplierId: string | null) {
+	return useQuery({
+		queryKey: ["supplier", itemId, supplierId],
+		queryFn: () => getSupplier(itemId, supplierId as string),
+		enabled: supplierId !== null,
 	});
 }
 

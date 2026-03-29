@@ -215,6 +215,91 @@ describe("ProcurementItemDrawer", () => {
 		expect(checkboxes).toHaveLength(11);
 	});
 
+	test("clicking supplier row opens supplier detail drawer with &supplier= in URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Click first data row
+		const rows = screen.getAllByRole("row");
+		await user.click(rows[1]);
+
+		// Should open supplier detail drawer and update URL
+		await waitFor(() => {
+			expect(screen.getByTestId("url-spy").textContent).toContain("supplier=");
+		});
+		// Supplier detail drawer should render with company info
+		await waitFor(() => {
+			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+		});
+	});
+
+	test("supplier detail drawer shows TCO breakdown, rating, AI comment", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Click a supplier row
+		await user.click(screen.getAllByRole("row")[1]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+		});
+		// "Рейтинг" exists both as table column header and detail section — check section heading via h3
+		expect(screen.getByRole("heading", { name: "Рейтинг" })).toBeInTheDocument();
+		expect(screen.getByText("AI-комментарий")).toBeInTheDocument();
+	});
+
+	test("supplier detail drawer shows documents and chat history", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		await user.click(screen.getAllByRole("row")[1]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Документы")).toBeInTheDocument();
+		});
+		expect(screen.getByText("Переписка")).toBeInTheDocument();
+	});
+
+	test("closing supplier drawer removes &supplier= from URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Open supplier drawer
+		await user.click(screen.getAllByRole("row")[1]);
+		await waitFor(() => {
+			expect(screen.getByTestId("url-spy").textContent).toContain("supplier=");
+		});
+
+		// Close supplier drawer — find close buttons, the last one is for the supplier drawer
+		const closeButtons = screen.getAllByRole("button", { name: "Close" });
+		await user.click(closeButtons[closeButtons.length - 1]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("url-spy").textContent).not.toContain("supplier=");
+		});
+		// Procurement drawer should still be open
+		expect(screen.getByTestId("url-spy").textContent).toContain("item=");
+	});
+
+	test("?supplier= deep link opens supplier detail drawer", async () => {
+		renderDrawer(["/procurement?item=item-1&supplier=supplier-item-1-1"]);
+		await waitFor(() => {
+			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+		});
+	});
+
 	test("selecting suppliers shows selection toolbar with delete", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);

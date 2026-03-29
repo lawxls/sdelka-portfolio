@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { _resetSupplierStore, _setSupplierMockDelay, deleteSuppliers, getSuppliers } from "./supplier-mock-data";
+import {
+	_resetSupplierStore,
+	_setSupplierMockDelay,
+	deleteSuppliers,
+	getSupplier,
+	getSuppliers,
+} from "./supplier-mock-data";
 import { SUPPLIER_STATUSES } from "./supplier-types";
 
 beforeEach(() => {
@@ -195,6 +201,20 @@ describe("deleteSuppliers", () => {
 		await deleteSuppliers("item-1", ["nonexistent-id"]);
 		const { suppliers } = await getSuppliers("item-1");
 		expect(suppliers).toHaveLength(10);
+	});
+});
+
+describe("getSupplier (single)", () => {
+	it("returns a supplier by itemId and supplierId", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const target = suppliers[0];
+		const result = await getSupplier("item-1", target.id);
+		expect(result).toEqual(target);
+	});
+
+	it("returns null for non-existent supplierId", async () => {
+		const result = await getSupplier("item-1", "nonexistent");
+		expect(result).toBeNull();
 	});
 });
 

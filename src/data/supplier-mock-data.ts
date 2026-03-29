@@ -240,6 +240,12 @@ function sortSuppliers(suppliers: Supplier[], field: SupplierSortField, dir: "as
 
 // --- Mock API functions ---
 
+export async function getSupplier(itemId: string, supplierId: string): Promise<Supplier | null> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	return suppliers.find((s) => s.id === supplierId) ?? null;
+}
+
 export async function getSuppliers(itemId: string, params?: SupplierFilterParams): Promise<{ suppliers: Supplier[] }> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);

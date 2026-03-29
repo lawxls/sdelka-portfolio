@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
 import { _resetSupplierStore, _setSupplierMockDelay } from "./supplier-mock-data";
-import { useDeleteSuppliers, useSuppliers } from "./use-suppliers";
+import { useDeleteSuppliers, useSupplier, useSuppliers } from "./use-suppliers";
 
 let queryClient: QueryClient;
 
@@ -90,6 +90,29 @@ describe("useSuppliers", () => {
 
 		const entries = queryClient.getQueriesData({ queryKey: ["suppliers", "item-1"] });
 		expect(entries.length).toBe(2);
+	});
+});
+
+describe("useSupplier", () => {
+	it("fetches a single supplier by itemId and supplierId", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+		// First get all to find a valid ID
+		const { result: listResult } = renderHook(() => useSuppliers("item-1"), { wrapper });
+		await waitFor(() => expect(listResult.current.data).toBeTruthy());
+		const supplierId = listResult.current.data?.suppliers[0].id as string;
+
+		const { result } = renderHook(() => useSupplier("item-1", supplierId), { wrapper });
+		await waitFor(() => expect(result.current.data).toBeTruthy());
+		expect(result.current.data?.id).toBe(supplierId);
+		expect(result.current.data?.itemId).toBe("item-1");
+	});
+
+	it("does not fetch when supplierId is null", () => {
+		const { result } = renderHook(() => useSupplier("item-1", null), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+		expect(result.current.isLoading).toBe(false);
+		expect(result.current.data).toBeUndefined();
 	});
 });
 

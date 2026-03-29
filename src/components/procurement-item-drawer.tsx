@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { SupplierSortField, SupplierStatus } from "@/data/supplier-types";
-import { useDeleteSuppliers, useSuppliers } from "@/data/use-suppliers";
+import { useDeleteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 type ItemDrawerTab = "suppliers" | "analytics" | "details";
@@ -31,7 +32,10 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 
 	const itemId = searchParams.get("item");
 	const activeTab = parseItemDrawerTab(searchParams.get("tab"));
+	const supplierId = searchParams.get("supplier");
 	const open = itemId != null;
+
+	const { data: supplier } = useSupplier(itemId ?? "", supplierId);
 
 	function handleTabChange(tab: ItemDrawerTab) {
 		setSearchParams(
@@ -61,31 +65,57 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 		);
 	}
 
+	function handleSupplierOpen(id: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("supplier", id);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleSupplierClose() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("supplier");
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
 	return (
-		<Sheet
-			open={open}
-			onOpenChange={(nextOpen) => {
-				if (!nextOpen) handleClose();
-			}}
-		>
-			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : "!w-2/3 !max-w-none"}>
-				{itemId && (
-					<ProcurementItemDrawerContent
-						key={itemId}
-						itemId={itemId}
-						itemName={itemName}
-						activeTab={activeTab}
-						onTabChange={handleTabChange}
-					/>
-				)}
-			</SheetContent>
-		</Sheet>
+		<>
+			<Sheet
+				open={open}
+				onOpenChange={(nextOpen) => {
+					if (!nextOpen) handleClose();
+				}}
+			>
+				<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : "!w-2/3 !max-w-none"}>
+					{itemId && (
+						<ProcurementItemDrawerContent
+							key={itemId}
+							itemId={itemId}
+							itemName={itemName}
+							activeTab={activeTab}
+							onTabChange={handleTabChange}
+							onSupplierClick={handleSupplierOpen}
+						/>
+					)}
+				</SheetContent>
+			</Sheet>
+			<SupplierDetailDrawer supplier={supplier ?? null} open={supplierId != null} onClose={handleSupplierClose} />
+		</>
 	);
 }
 
 type SortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
 
-function SuppliersTabPanel({ itemId }: { itemId: string }) {
+function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortState>(null);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
@@ -151,6 +181,7 @@ function SuppliersTabPanel({ itemId }: { itemId: string }) {
 				onSelectionChange={handleSelectionChange}
 				onDelete={handleDelete}
 				isDeleting={deleteMutation.isPending}
+				onRowClick={onSupplierClick}
 			/>
 		</div>
 	);
@@ -161,11 +192,13 @@ function ProcurementItemDrawerContent({
 	itemName,
 	activeTab,
 	onTabChange,
+	onSupplierClick,
 }: {
 	itemId: string;
 	itemName?: string;
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
+	onSupplierClick: (id: string) => void;
 }) {
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
@@ -194,7 +227,7 @@ function ProcurementItemDrawerContent({
 			</div>
 
 			<div className="flex-1 overflow-y-auto p-4">
-				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} />}
+				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
 				{activeTab === "analytics" && (
 					<div data-testid="tab-panel-analytics" className="text-sm text-muted-foreground">
 						Аналитика — скоро

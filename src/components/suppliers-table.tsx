@@ -37,6 +37,7 @@ interface SuppliersTableProps {
 	onSelectionChange: (idOrAll: string) => void;
 	onDelete: () => void;
 	isDeleting: boolean;
+	onRowClick?: (supplierId: string) => void;
 }
 
 const SORTABLE_COLUMNS: { label: string; field: SupplierSortField }[] = [
@@ -69,6 +70,7 @@ export function SuppliersTable({
 	onSelectionChange,
 	onDelete,
 	isDeleting,
+	onRowClick,
 }: SuppliersTableProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
@@ -218,8 +220,12 @@ export function SuppliersTable({
 						</TableRow>
 					) : (
 						suppliers.map((supplier) => (
-							<TableRow key={supplier.id}>
-								<TableCell>
+							<TableRow
+								key={supplier.id}
+								className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+								onClick={() => onRowClick?.(supplier.id)}
+							>
+								<TableCell onClick={(e) => e.stopPropagation()}>
 									<Checkbox
 										checked={selectedIds.has(supplier.id)}
 										onCheckedChange={() => onSelectionChange(supplier.id)}
