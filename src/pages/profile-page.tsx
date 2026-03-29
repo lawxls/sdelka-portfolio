@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/data/api-error";
 import { parseApiError } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
-import { useSettings, useUpdateSettings } from "@/data/use-settings";
+import { useChangePassword, useSettings, useUpdateSettings } from "@/data/use-settings";
 
 type ProfileTab = "account" | "settings";
 
@@ -147,6 +147,86 @@ function AccountForm({ data }: { data: UserSettings }) {
 	);
 }
 
+function PasswordForm() {
+	const changePasswordMutation = useChangePassword();
+
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+	function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		setFieldErrors({});
+
+		if (newPassword !== confirmPassword) {
+			setFieldErrors({ confirmPassword: "Пароли не совпадают" });
+			return;
+		}
+
+		changePasswordMutation.mutate(
+			{ currentPassword, newPassword },
+			{
+				onSuccess: () => {
+					toast.success("Пароль успешно изменён");
+				},
+				onError: (err) => {
+					if (err instanceof ApiError) {
+						const parsed = parseApiError(err.body);
+						if (Object.keys(parsed.fieldErrors).length > 0) {
+							setFieldErrors(parsed.fieldErrors);
+							return;
+						}
+						if (parsed.detail) {
+							toast.error(parsed.detail);
+							return;
+						}
+					}
+					toast.error("Произошла ошибка. Попробуйте ещё раз.");
+				},
+			},
+		);
+	}
+
+	return (
+		<div>
+			<h2 className="mb-4 text-lg font-semibold">Безопасность</h2>
+			<form onSubmit={handleSubmit} className="space-y-4">
+				<FloatingInput
+					label="Текущий пароль"
+					name="currentPassword"
+					type="password"
+					value={currentPassword}
+					onChange={(e) => setCurrentPassword(e.target.value)}
+					autoComplete="current-password"
+				/>
+				<FloatingInput
+					label="Новый пароль"
+					name="newPassword"
+					type="password"
+					value={newPassword}
+					onChange={(e) => setNewPassword(e.target.value)}
+					error={fieldErrors.new_password}
+					autoComplete="new-password"
+				/>
+				<FloatingInput
+					label="Подтвердите пароль"
+					name="confirmPassword"
+					type="password"
+					value={confirmPassword}
+					onChange={(e) => setConfirmPassword(e.target.value)}
+					error={fieldErrors.confirmPassword}
+					autoComplete="new-password"
+				/>
+				<Button type="submit" disabled={changePasswordMutation.isPending}>
+					{changePasswordMutation.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+					Изменить пароль
+				</Button>
+			</form>
+		</div>
+	);
+}
+
 function ProfileSkeleton() {
 	return (
 		<div data-testid="profile-skeleton" className="flex flex-col items-center gap-4 py-8">
@@ -243,7 +323,7 @@ export function ProfilePage() {
 			{/* Tab content */}
 			<div className="mt-6">
 				{activeTab === "account" && <AccountForm key={data.date_joined} data={data} />}
-				{activeTab === "settings" && <div data-testid="settings-tab-content" />}
+				{activeTab === "settings" && <PasswordForm />}
 			</div>
 		</div>
 	);

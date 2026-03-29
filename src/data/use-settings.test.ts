@@ -1,10 +1,13 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
+import { createElement, type ReactNode } from "react";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test } from "vitest";
-import { setTokens } from "@/data/auth";
+import { getAccessToken, setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import { useSettings, useUpdateSettings } from "./use-settings";
+import { useChangePassword, useSettings, useUpdateSettings } from "./use-settings";
 
 const MOCK_SETTINGS = {
 	first_name: "Иван",
@@ -94,5 +97,37 @@ describe("useUpdateSettings", () => {
 		// Query should be invalidated (marked stale)
 		const state = queryClient.getQueryState(["settings"]);
 		expect(state?.isInvalidated).toBe(true);
+	});
+});
+
+describe("useChangePassword", () => {
+	test("calls POST change-password, clears tokens, and navigates to /login on success", async () => {
+		let postBody: unknown = null;
+
+		server.use(
+			http.post("/api/v1/auth/change-password", async ({ request }) => {
+				postBody = await request.json();
+				return HttpResponse.json({ detail: "Пароль успешно изменён" });
+			}),
+		);
+
+		const queryClient = createTestQueryClient();
+
+		function Wrapper({ children }: { children: ReactNode }) {
+			return createElement(
+				QueryClientProvider,
+				{ client: queryClient },
+				createElement(MemoryRouter, { initialEntries: ["/profile?tab=settings"] }, children),
+			);
+		}
+
+		const { result } = renderHook(() => useChangePassword(), { wrapper: Wrapper });
+
+		await act(async () => {
+			await result.current.mutateAsync({ currentPassword: "old123", newPassword: "new456" });
+		});
+
+		expect(postBody).toEqual({ current_password: "old123", new_password: "new456" });
+		expect(getAccessToken()).toBeNull();
 	});
 });

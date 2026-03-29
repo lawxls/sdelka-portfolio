@@ -34,6 +34,27 @@ export async function fetchSettings(): Promise<UserSettings> {
 	return response.json();
 }
 
+export interface ChangePasswordResponse {
+	detail: string;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
+	const headers = buildSettingsHeaders();
+	headers.set("Content-Type", "application/json");
+
+	const response = await fetch(`${BASE}/change-password`, {
+		method: "POST",
+		headers,
+		body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+	});
+
+	if (!response.ok) {
+		throw new ApiError(response.status, await response.json().catch(() => null));
+	}
+
+	return response.json();
+}
+
 export async function patchSettings(data: SettingsPatch): Promise<UserSettings> {
 	const headers = buildSettingsHeaders();
 	headers.set("Content-Type", "application/json");

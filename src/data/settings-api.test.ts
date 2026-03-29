@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
-import { fetchSettings, patchSettings } from "./settings-api";
+import { changePassword, fetchSettings, patchSettings } from "./settings-api";
 
 beforeEach(() => {
 	localStorage.clear();
@@ -103,5 +103,42 @@ describe("patchSettings", () => {
 		);
 
 		await expect(patchSettings({ first_name: "Пётр" })).rejects.toThrow();
+	});
+});
+
+describe("changePassword", () => {
+	test("calls POST /api/v1/auth/change-password with auth headers and body", async () => {
+		let capturedHeaders: Record<string, string> = {};
+		let capturedBody: unknown = null;
+
+		server.use(
+			http.post("/api/v1/auth/change-password", async ({ request }) => {
+				capturedHeaders = {
+					authorization: request.headers.get("Authorization") ?? "",
+					tenant: request.headers.get("X-Tenant") ?? "",
+					contentType: request.headers.get("Content-Type") ?? "",
+				};
+				capturedBody = await request.json();
+				return HttpResponse.json({ detail: "Пароль успешно изменён" });
+			}),
+		);
+
+		const result = await changePassword("oldpass123", "newpass456");
+
+		expect(capturedHeaders.authorization).toBe("Bearer test-access");
+		expect(capturedHeaders.tenant).toBe("acme");
+		expect(capturedHeaders.contentType).toBe("application/json");
+		expect(capturedBody).toEqual({ current_password: "oldpass123", new_password: "newpass456" });
+		expect(result).toEqual({ detail: "Пароль успешно изменён" });
+	});
+
+	test("throws ApiError on non-OK response", async () => {
+		server.use(
+			http.post("/api/v1/auth/change-password", () => {
+				return HttpResponse.json({ detail: "Неверный текущий пароль" }, { status: 400 });
+			}),
+		);
+
+		await expect(changePassword("wrong", "newpass456")).rejects.toThrow();
 	});
 });

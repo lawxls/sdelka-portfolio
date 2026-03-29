@@ -26,12 +26,17 @@ const MOCK_SETTINGS = {
 
 let queryClient: QueryClient;
 
+function LoginStub() {
+	return <div data-testid="login-page">Login</div>;
+}
+
 function renderProfile(initialEntries = ["/profile"]) {
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter initialEntries={initialEntries}>
 				<Routes>
 					<Route path="/profile" element={<ProfilePage />} />
+					<Route path="/login" element={<LoginStub />} />
 				</Routes>
 			</MemoryRouter>
 		</QueryClientProvider>,
@@ -186,7 +191,7 @@ describe("ProfilePage", () => {
 		});
 	});
 
-	test("Настройки tab shows placeholder content", async () => {
+	test("Настройки tab shows password form", async () => {
 		server.use(
 			http.get("/api/v1/auth/settings", () => {
 				return HttpResponse.json(MOCK_SETTINGS);
@@ -196,7 +201,7 @@ describe("ProfilePage", () => {
 		renderProfile(["/profile?tab=settings"]);
 
 		await waitFor(() => {
-			expect(screen.getByTestId("settings-tab-content")).toBeInTheDocument();
+			expect(screen.getByText("Безопасность")).toBeInTheDocument();
 		});
 	});
 
@@ -374,5 +379,142 @@ describe("ProfilePage", () => {
 		await user.click(screen.getByLabelText("Получать сервисные уведомления на почту"));
 
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+	});
+
+	test("settings tab renders password form with three fields", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderProfile(["/profile?tab=settings"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Безопасность")).toBeInTheDocument();
+		});
+
+		expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		expect(screen.getByLabelText("Новый пароль")).toBeInTheDocument();
+		expect(screen.getByLabelText("Подтвердите пароль")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Изменить пароль" })).toBeInTheDocument();
+	});
+
+	test("password mismatch shows client-side error on submit", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderProfile(["/profile?tab=settings"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByLabelText("Текущий пароль"), "oldpass");
+		await user.type(screen.getByLabelText("Новый пароль"), "newpass123");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "different");
+		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+
+		expect(screen.getByText("Пароли не совпадают")).toBeInTheDocument();
+	});
+
+	test("successful password change shows toast and redirects to /login", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.post("/api/v1/auth/change-password", () => {
+				return HttpResponse.json({ detail: "Пароль успешно изменён" });
+			}),
+		);
+
+		renderProfile(["/profile?tab=settings"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByLabelText("Текущий пароль"), "oldpass");
+		await user.type(screen.getByLabelText("Новый пароль"), "newpass123");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "newpass123");
+		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+
+		await waitFor(() => {
+			expect(toast.success).toHaveBeenCalledWith("Пароль успешно изменён");
+		});
+
+		await waitFor(() => {
+			expect(screen.getByTestId("login-page")).toBeInTheDocument();
+		});
+	});
+
+	test("wrong current password error shows toast", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.post("/api/v1/auth/change-password", () => {
+				return HttpResponse.json({ detail: "Неверный текущий пароль" }, { status: 400 });
+			}),
+		);
+
+		renderProfile(["/profile?tab=settings"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByLabelText("Текущий пароль"), "wrong");
+		await user.type(screen.getByLabelText("Новый пароль"), "newpass123");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "newpass123");
+		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Неверный текущий пароль");
+		});
+	});
+
+	test("weak password errors show inline under new password field", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.post("/api/v1/auth/change-password", () => {
+				return HttpResponse.json({ new_password: ["Пароль слишком короткий"] }, { status: 400 });
+			}),
+		);
+
+		renderProfile(["/profile?tab=settings"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByLabelText("Текущий пароль"), "oldpass");
+		await user.type(screen.getByLabelText("Новый пароль"), "short");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "short");
+		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Пароль слишком короткий")).toBeInTheDocument();
+		});
+	});
+
+	test("submit button shows loading state during request", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.post("/api/v1/auth/change-password", () => {
+				return new Promise(() => {}); // never resolves
+			}),
+		);
+
+		renderProfile(["/profile?tab=settings"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Текущий пароль")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByLabelText("Текущий пароль"), "oldpass");
+		await user.type(screen.getByLabelText("Новый пароль"), "newpass123");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "newpass123");
+		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Изменить пароль" })).toBeDisabled();
+		});
 	});
 });
