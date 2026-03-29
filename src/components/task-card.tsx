@@ -1,3 +1,4 @@
+import { useDraggable } from "@dnd-kit/core";
 import type { Task } from "@/data/task-types";
 import { cn } from "@/lib/utils";
 
@@ -22,17 +23,25 @@ function pluralizeQuestions(n: number): string {
 interface TaskCardProps {
 	task: Task;
 	onClick?: () => void;
+	draggable?: boolean;
+	isDragging?: boolean;
 }
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps) {
+	const { attributes, listeners, setNodeRef } = useDraggable({
+		id: task.id,
+		disabled: !draggable,
+	});
 	const isOverdue = new Date(task.deadline) < new Date();
 
 	return (
 		<article
+			ref={draggable ? setNodeRef : undefined}
 			className={cn(
 				"rounded-lg border bg-background p-3",
 				onClick &&
 					"cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+				isDragging && "opacity-50",
 			)}
 			data-testid={`task-card-${task.id}`}
 			onClick={onClick}
@@ -46,8 +55,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 						}
 					: undefined
 			}
-			tabIndex={onClick ? 0 : undefined}
-			role={onClick ? "button" : undefined}
+			{...(draggable
+				? { ...attributes, ...listeners }
+				: { tabIndex: onClick ? 0 : undefined, role: onClick ? "button" : undefined })}
 		>
 			<div className="flex items-start justify-between gap-2">
 				<div className="min-w-0">

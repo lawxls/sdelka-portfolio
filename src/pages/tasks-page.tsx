@@ -1,12 +1,50 @@
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import {
+	DndContext,
+	DragOverlay,
+	PointerSensor,
+	pointerWithin,
+	TouchSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
-import { TaskBoard } from "@/components/task-board";
+import { toast } from "sonner";
+import { isValidTransition, TaskBoard } from "@/components/task-board";
+import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
-import { useTaskColumns } from "@/data/use-tasks";
+import type { Task, TaskStatus } from "@/data/task-types";
+import { TASK_STATUSES } from "@/data/task-types";
+import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
+
+const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
+
+function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskId: string): Task | undefined {
+	for (const status of TASK_STATUSES) {
+		const found = columns[status].tasks.find((t) => t.id === taskId);
+		if (found) return found;
+	}
+	return undefined;
+}
 
 export function TasksPage() {
 	const columns = useTaskColumns();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const taskId = searchParams.get("task");
+	const updateStatus = useUpdateTaskStatus();
+
+	// Drag state
+	const [reducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+	const [activeTask, setActiveTask] = useState<Task | null>(null);
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+		useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+	);
+
+	// Answer-first flow state
+	const [pendingDrag, setPendingDrag] = useState<{ taskId: string } | null>(null);
 
 	function openTask(id: string) {
 		setSearchParams(
@@ -20,6 +58,10 @@ export function TasksPage() {
 	}
 
 	function closeTask() {
+		// If answer-first mode is active and user closes without answering, snap back
+		if (pendingDrag) {
+			setPendingDrag(null);
+		}
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
@@ -30,13 +72,73 @@ export function TasksPage() {
 		);
 	}
 
+	function handleDragStart(event: DragStartEvent) {
+		const task = findTaskInColumns(columns, String(event.active.id));
+		setActiveTask(task ?? null);
+	}
+
+	function handleDragEnd(event: DragEndEvent) {
+		setActiveTask(null);
+		if (!event.over) return;
+
+		const taskId = String(event.active.id);
+		const targetColumnId = String(event.over.id);
+		const targetStatus = targetColumnId.replace("column-", "") as TaskStatus;
+
+		const task = findTaskInColumns(columns, taskId);
+		if (!task) return;
+
+		// Same column — no-op
+		if (task.status === targetStatus) return;
+
+		// Validate transition
+		if (!isValidTransition(task.status, targetStatus)) return;
+
+		// Answer-first flow: dragging to completed opens drawer
+		if (targetStatus === "completed") {
+			setPendingDrag({ taskId });
+			openTask(taskId);
+			toast.info("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
+			return;
+		}
+
+		// Normal transition
+		updateStatus.mutate({ id: taskId, status: targetStatus });
+	}
+
+	function handleAnswerFirstComplete() {
+		// Answer submitted — task already moved to completed by submitAnswer mutation
+		setPendingDrag(null);
+	}
+
 	return (
-		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-			<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
-				<h1 className="text-lg tracking-tight">Задачи</h1>
-			</header>
-			<TaskBoard columns={columns} onTaskClick={openTask} />
-			<TaskDrawer taskId={taskId} onClose={closeTask} />
-		</div>
+		<DndContext
+			sensors={sensors}
+			collisionDetection={pointerWithin}
+			onDragStart={handleDragStart}
+			onDragEnd={handleDragEnd}
+		>
+			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
+				<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
+					<h1 className="text-lg tracking-tight">Задачи</h1>
+				</header>
+				<TaskBoard
+					columns={columns}
+					onTaskClick={openTask}
+					activeTaskId={activeTask?.id}
+					activeTaskStatus={activeTask?.status}
+				/>
+				<TaskDrawer
+					taskId={taskId}
+					onClose={closeTask}
+					answerFirstMode={pendingDrag !== null}
+					onAnswerFirstComplete={handleAnswerFirstComplete}
+				/>
+			</div>
+
+			<DragOverlay dropAnimation={reducedMotion ? null : undefined} modifiers={DRAG_OVERLAY_MODIFIERS}>
+				{activeTask ? <TaskCard task={activeTask} /> : null}
+			</DragOverlay>
+		</DndContext>
 	);
 }

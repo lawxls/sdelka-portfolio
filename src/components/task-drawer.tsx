@@ -20,9 +20,11 @@ const datetimeFormat = new Intl.DateTimeFormat("ru-RU", {
 interface TaskDrawerProps {
 	taskId: string | null;
 	onClose: () => void;
+	answerFirstMode?: boolean;
+	onAnswerFirstComplete?: () => void;
 }
 
-export function TaskDrawer({ taskId, onClose }: TaskDrawerProps) {
+export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComplete }: TaskDrawerProps) {
 	return (
 		<Sheet
 			open={taskId !== null}
@@ -31,13 +33,31 @@ export function TaskDrawer({ taskId, onClose }: TaskDrawerProps) {
 			}}
 		>
 			<SheetContent side="right">
-				{taskId && <TaskDrawerContent key={taskId} taskId={taskId} onClose={onClose} />}
+				{taskId && (
+					<TaskDrawerContent
+						key={taskId}
+						taskId={taskId}
+						onClose={onClose}
+						answerFirstMode={answerFirstMode}
+						onAnswerFirstComplete={onAnswerFirstComplete}
+					/>
+				)}
 			</SheetContent>
 		</Sheet>
 	);
 }
 
-function TaskDrawerContent({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+function TaskDrawerContent({
+	taskId,
+	onClose,
+	answerFirstMode,
+	onAnswerFirstComplete,
+}: {
+	taskId: string;
+	onClose: () => void;
+	answerFirstMode?: boolean;
+	onAnswerFirstComplete?: () => void;
+}) {
 	const { data: task } = useTask(taskId);
 	const updateStatus = useUpdateTaskStatus();
 	const submitAnswerMutation = useSubmitAnswer();
@@ -75,6 +95,7 @@ function TaskDrawerContent({ taskId, onClose }: { taskId: string; onClose: () =>
 			{
 				onSuccess: () => {
 					toast.success("Ответ отправлен");
+					if (answerFirstMode) onAnswerFirstComplete?.();
 					onClose();
 				},
 			},

@@ -1,3 +1,4 @@
+import { DndContext } from "@dnd-kit/core";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Task } from "@/data/task-types";
@@ -74,5 +75,61 @@ describe("TaskBoard", () => {
 		});
 
 		expect(screen.queryAllByTestId(/^task-card-/)).toHaveLength(0);
+	});
+
+	it("cards in assigned/in_progress/archived columns are draggable", () => {
+		render(
+			<DndContext>
+				<TaskBoard
+					columns={{
+						assigned: makeColumn([makeTask("t1", { status: "assigned" })]),
+						in_progress: makeColumn([makeTask("t2", { status: "in_progress" })]),
+						completed: makeColumn([makeTask("t3", { status: "completed", answer: "Done" })]),
+						archived: makeColumn([makeTask("t4", { status: "archived" })]),
+					}}
+				/>
+			</DndContext>,
+		);
+
+		expect(screen.getByTestId("task-card-t1").getAttribute("aria-roledescription")).toBe("draggable");
+		expect(screen.getByTestId("task-card-t2").getAttribute("aria-roledescription")).toBe("draggable");
+		expect(screen.getByTestId("task-card-t4").getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	it("cards in completed column are not draggable", () => {
+		render(
+			<DndContext>
+				<TaskBoard
+					columns={{
+						assigned: makeColumn(),
+						in_progress: makeColumn(),
+						completed: makeColumn([makeTask("t3", { status: "completed", answer: "Done" })]),
+						archived: makeColumn(),
+					}}
+				/>
+			</DndContext>,
+		);
+
+		expect(screen.getByTestId("task-card-t3").getAttribute("aria-roledescription")).not.toBe("draggable");
+	});
+
+	it("columns are drop targets", () => {
+		render(
+			<DndContext>
+				<TaskBoard
+					columns={{
+						assigned: makeColumn(),
+						in_progress: makeColumn(),
+						completed: makeColumn(),
+						archived: makeColumn(),
+					}}
+				/>
+			</DndContext>,
+		);
+
+		for (const status of ["assigned", "in_progress", "completed", "archived"]) {
+			const col = screen.getByTestId(`column-${status}`);
+			expect(col.querySelector("[data-droppable-id]") ?? col.getAttribute("data-droppable-id")).toBeTruthy();
+		}
 	});
 });

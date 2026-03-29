@@ -3,10 +3,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
 import { createTestQueryClient } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
+
+vi.mock("sonner", () => ({
+	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
 
 let queryClient: QueryClient;
 
@@ -100,6 +104,45 @@ describe("TasksPage", () => {
 			expect(
 				screen.queryByText("Согласование цены на арматуру", { selector: "[data-slot='sheet-title']" }),
 			).not.toBeInTheDocument();
+		});
+	});
+
+	it("cards in assigned/in_progress/archived are draggable", async () => {
+		renderPage();
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		// task-1 is assigned (status: assigned)
+		expect(screen.getByTestId("task-card-task-1").getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	it("cards in completed column are not draggable", async () => {
+		renderPage();
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		// task-31 is completed (first completed task in mock data)
+		expect(screen.getByTestId("task-card-task-31").getAttribute("aria-roledescription")).not.toBe("draggable");
+	});
+
+	it("status dropdown change to completed in drawer shows answer-first toast", async () => {
+		const { toast } = await import("sonner");
+		renderPage(["/tasks?task=task-1"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("combobox", { name: "Статус задачи" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("combobox", { name: "Статус задачи" }));
+		await user.click(screen.getByRole("option", { name: "Завершено" }));
+
+		await waitFor(() => {
+			expect(toast.info).toHaveBeenCalledWith("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
 		});
 	});
 });

@@ -1,3 +1,4 @@
+import { DndContext } from "@dnd-kit/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -70,5 +71,31 @@ describe("TaskCard", () => {
 		const user = userEvent.setup();
 		await user.click(screen.getByTestId("task-card-t1"));
 		expect(handleClick).toHaveBeenCalledOnce();
+	});
+
+	it("has draggable aria-roledescription when draggable", () => {
+		render(
+			<DndContext>
+				<TaskCard task={task} onClick={() => {}} draggable />
+			</DndContext>,
+		);
+		const card = screen.getByTestId("task-card-t1");
+		expect(card.getAttribute("aria-roledescription")).toBe("draggable");
+	});
+
+	it("does not have draggable attributes when draggable is false", () => {
+		render(
+			<DndContext>
+				<TaskCard task={task} onClick={() => {}} />
+			</DndContext>,
+		);
+		const card = screen.getByTestId("task-card-t1");
+		expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
+	});
+
+	it("reduces opacity when isDragging is true", () => {
+		render(<TaskCard task={task} onClick={() => {}} isDragging />);
+		const card = screen.getByTestId("task-card-t1");
+		expect(card.className).toContain("opacity-50");
 	});
 });
