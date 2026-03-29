@@ -60,7 +60,7 @@ function createMockTasks(): Task[] {
 
 	let idx = 0;
 	for (const status of statuses) {
-		for (let i = 0; i < 15; i++) {
+		for (let i = 0; i < 25; i++) {
 			const createdAt = new Date(BASE_CREATED);
 			createdAt.setDate(BASE_CREATED.getDate() + (idx % 28));
 

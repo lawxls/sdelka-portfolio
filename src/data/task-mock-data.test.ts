@@ -22,14 +22,14 @@ afterEach(() => {
 });
 
 describe("mock task store", () => {
-	it("has 60 tasks distributed across 4 statuses (~15 each)", async () => {
+	it("has 100 tasks distributed across 4 statuses (25 each)", async () => {
 		let total = 0;
 		for (const status of TASK_STATUSES) {
-			const { tasks } = await getTasks(status);
-			expect(tasks.length).toBe(15);
+			const { tasks } = await getTasks(status, undefined, 30);
+			expect(tasks.length).toBe(25);
 			total += tasks.length;
 		}
-		expect(total).toBe(60);
+		expect(total).toBe(100);
 	});
 
 	it("has 4 distinct assignees with Russian names", async () => {
@@ -72,28 +72,28 @@ describe("getTasks", () => {
 	});
 
 	it("returns paginated results with cursor", async () => {
-		const page1 = await getTasks("assigned", undefined, 5);
-		expect(page1.tasks).toHaveLength(5);
-		expect(page1.nextCursor).toBe("5");
+		const page1 = await getTasks("assigned", undefined, 10);
+		expect(page1.tasks).toHaveLength(10);
+		expect(page1.nextCursor).toBe("10");
 
-		const page2 = await getTasks("assigned", page1.nextCursor ?? undefined, 5);
-		expect(page2.tasks).toHaveLength(5);
-		expect(page2.nextCursor).toBe("10");
+		const page2 = await getTasks("assigned", page1.nextCursor ?? undefined, 10);
+		expect(page2.tasks).toHaveLength(10);
+		expect(page2.nextCursor).toBe("20");
 
-		const page3 = await getTasks("assigned", page2.nextCursor ?? undefined, 5);
+		const page3 = await getTasks("assigned", page2.nextCursor ?? undefined, 10);
 		expect(page3.tasks).toHaveLength(5);
 		expect(page3.nextCursor).toBeNull();
 	});
 
 	it("returns null cursor when all items fit in one page", async () => {
-		const { tasks, nextCursor } = await getTasks("assigned", undefined, 20);
-		expect(tasks).toHaveLength(15);
+		const { tasks, nextCursor } = await getTasks("assigned", undefined, 30);
+		expect(tasks).toHaveLength(25);
 		expect(nextCursor).toBeNull();
 	});
 
 	it("defaults to limit of 20", async () => {
 		const { tasks } = await getTasks("assigned");
-		expect(tasks).toHaveLength(15);
+		expect(tasks).toHaveLength(20);
 	});
 });
 
@@ -133,17 +133,21 @@ describe("getAllTasks", () => {
 
 	it("paginates with cursor", async () => {
 		const { getAllTasks } = await import("./task-mock-data");
-		const page1 = await getAllTasks(undefined, 20);
-		expect(page1.tasks).toHaveLength(20);
-		expect(page1.nextCursor).toBe("20");
+		const page1 = await getAllTasks(undefined, 25);
+		expect(page1.tasks).toHaveLength(25);
+		expect(page1.nextCursor).toBe("25");
 
-		const page2 = await getAllTasks(page1.nextCursor ?? undefined, 20);
-		expect(page2.tasks).toHaveLength(20);
-		expect(page2.nextCursor).toBe("40");
+		const page2 = await getAllTasks(page1.nextCursor ?? undefined, 25);
+		expect(page2.tasks).toHaveLength(25);
+		expect(page2.nextCursor).toBe("50");
 
-		const page3 = await getAllTasks(page2.nextCursor ?? undefined, 20);
-		expect(page3.tasks).toHaveLength(20);
-		expect(page3.nextCursor).toBeNull();
+		const page3 = await getAllTasks(page2.nextCursor ?? undefined, 25);
+		expect(page3.tasks).toHaveLength(25);
+		expect(page3.nextCursor).toBe("75");
+
+		const page4 = await getAllTasks(page3.nextCursor ?? undefined, 25);
+		expect(page4.tasks).toHaveLength(25);
+		expect(page4.nextCursor).toBeNull();
 	});
 });
 

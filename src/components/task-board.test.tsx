@@ -6,7 +6,7 @@ import { makeTask } from "@/test-utils";
 import { TaskBoard, type TaskBoardProps } from "./task-board";
 
 function makeColumn(tasks: Task[] = [], isLoading = false) {
-	return { tasks, isLoading };
+	return { tasks, isLoading, hasNextPage: false, isFetchingNextPage: false, loadMore: () => {} };
 }
 
 function renderBoard(overrides: Partial<TaskBoardProps["columns"]> = {}) {

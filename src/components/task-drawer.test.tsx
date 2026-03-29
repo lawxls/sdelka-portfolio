@@ -84,7 +84,7 @@ describe("TaskDrawer", () => {
 	});
 
 	it("shows read-only answer for completed tasks", async () => {
-		renderDrawer("task-31");
+		renderDrawer("task-51");
 
 		await waitFor(() => {
 			expect(screen.getByText(/Согласовано\. Условия поставки подтверждены/)).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("TaskDrawer", () => {
 	});
 
 	it("shows status badge for completed tasks", async () => {
-		renderDrawer("task-31");
+		renderDrawer("task-51");
 
 		await waitFor(() => {
 			expect(screen.getByText("Завершено")).toBeInTheDocument();

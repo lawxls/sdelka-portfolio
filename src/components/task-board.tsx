@@ -4,6 +4,9 @@ import { TaskColumn } from "./task-column";
 interface ColumnData {
 	tasks: Task[];
 	isLoading: boolean;
+	hasNextPage: boolean;
+	isFetchingNextPage: boolean;
+	loadMore: () => void;
 }
 
 export interface TaskBoardProps {
@@ -39,6 +42,9 @@ export function TaskBoard({ columns, onTaskClick, activeTaskId, activeTaskStatus
 					draggableCards={!!activeTaskId || true}
 					activeTaskId={activeTaskId}
 					isValidDrop={activeTaskStatus ? isValidTransition(activeTaskStatus, status) : false}
+					hasNextPage={columns[status].hasNextPage}
+					isFetchingNextPage={columns[status].isFetchingNextPage}
+					loadMore={columns[status].loadMore}
 				/>
 			))}
 		</div>

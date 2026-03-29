@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
+import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
 import { createTestQueryClient } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
@@ -14,9 +15,11 @@ vi.mock("sonner", () => ({
 }));
 
 let queryClient: QueryClient;
+let observers: ObserverRecord[];
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
+	observers = installMockIntersectionObserver();
 	_resetTaskStore();
 	_setMockDelay(0, 0);
 });
@@ -58,8 +61,8 @@ describe("TasksPage", () => {
 	it("shows correct card counts after loading", async () => {
 		renderPage();
 		await waitFor(() => {
-			// Mock data has 15 tasks per status
-			const badges = screen.getAllByText("15");
+			// Mock data has 25 tasks per status, limit 20 → first page shows 20
+			const badges = screen.getAllByText("20");
 			expect(badges).toHaveLength(4);
 		});
 	});
@@ -128,8 +131,8 @@ describe("TasksPage", () => {
 			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
 		});
 
-		// task-31 is completed (first completed task in mock data)
-		expect(screen.getByTestId("task-card-task-31").getAttribute("aria-roledescription")).not.toBe("draggable");
+		// task-51 is completed (first completed task in mock data)
+		expect(screen.getByTestId("task-card-task-51").getAttribute("aria-roledescription")).not.toBe("draggable");
 	});
 
 	it("renders view toggle with board and table buttons", async () => {
@@ -251,6 +254,57 @@ describe("TasksPage", () => {
 			expect(screen.getByRole("table")).toBeInTheDocument();
 			expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
 		});
+	});
+
+	it("renders column sentinels when columns have more pages", async () => {
+		renderPage();
+		await waitFor(() => {
+			// 25 tasks per status, limit 20 → all 4 columns have next page
+			expect(screen.getByTestId("column-sentinel-assigned")).toBeInTheDocument();
+			expect(screen.getByTestId("column-sentinel-in_progress")).toBeInTheDocument();
+			expect(screen.getByTestId("column-sentinel-completed")).toBeInTheDocument();
+			expect(screen.getByTestId("column-sentinel-archived")).toBeInTheDocument();
+		});
+	});
+
+	it("loads more cards when column sentinel intersects", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByTestId("column-sentinel-assigned")).toBeInTheDocument();
+		});
+
+		// Initially 20 cards per column
+		const assignedCol = screen.getByTestId("column-assigned");
+		expect(assignedCol.querySelectorAll("[data-testid^='task-card-']")).toHaveLength(20);
+
+		// Trigger intersection on the assigned column sentinel
+		const assignedObserver = observers.find((o) => o.observe.mock.calls.length > 0);
+		expect(assignedObserver).toBeTruthy();
+		assignedObserver?.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+
+		// After loading next page, should have 25 cards
+		await waitFor(() => {
+			expect(assignedCol.querySelectorAll("[data-testid^='task-card-']")).toHaveLength(25);
+		});
+	});
+
+	it("removes sentinel after all cards are loaded", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByTestId("column-sentinel-assigned")).toBeInTheDocument();
+		});
+
+		// Trigger intersection to load remaining 5 cards
+		const assignedObserver = observers.find((o) => o.observe.mock.calls.length > 0);
+		assignedObserver?.callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+
+		await waitFor(() => {
+			const assignedCol = screen.getByTestId("column-assigned");
+			expect(assignedCol.querySelectorAll("[data-testid^='task-card-']")).toHaveLength(25);
+		});
+
+		// Sentinel should be gone since all cards are loaded
+		expect(screen.queryByTestId("column-sentinel-assigned")).not.toBeInTheDocument();
 	});
 
 	it("status dropdown change to completed in drawer shows answer-first toast", async () => {

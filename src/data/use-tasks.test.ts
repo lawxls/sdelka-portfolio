@@ -78,7 +78,27 @@ describe("useTaskColumns", () => {
 			expect(result.current.assigned.isLoading).toBe(false);
 		});
 
-		// 15 tasks per status, default limit 20 → all fit in one page
+		// 25 tasks per status, default limit 20 → first page has more
+		expect(result.current.assigned.hasNextPage).toBe(true);
+	});
+
+	it("loadMore fetches remaining tasks for a column", async () => {
+		const { result } = renderHook(() => useTaskColumns(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.assigned.tasks).toHaveLength(20);
+		});
+		expect(result.current.assigned.hasNextPage).toBe(true);
+
+		await act(async () => {
+			await result.current.assigned.loadMore();
+		});
+
+		await waitFor(() => {
+			expect(result.current.assigned.tasks).toHaveLength(25);
+		});
 		expect(result.current.assigned.hasNextPage).toBe(false);
 	});
 });

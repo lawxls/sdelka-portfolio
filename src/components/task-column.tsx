@@ -1,7 +1,9 @@
 import { useDroppable } from "@dnd-kit/core";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Task, TaskStatus } from "@/data/task-types";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { cn } from "@/lib/utils";
 import { TaskCard } from "./task-card";
 
@@ -14,6 +16,9 @@ interface TaskColumnProps {
 	draggableCards?: boolean;
 	activeTaskId?: string;
 	isValidDrop?: boolean;
+	hasNextPage?: boolean;
+	isFetchingNextPage?: boolean;
+	loadMore?: () => void;
 }
 
 export function TaskColumn({
@@ -25,9 +30,16 @@ export function TaskColumn({
 	draggableCards,
 	activeTaskId,
 	isValidDrop,
+	hasNextPage,
+	isFetchingNextPage,
+	loadMore,
 }: TaskColumnProps) {
 	const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
 	const showHighlight = isOver && isValidDrop;
+
+	const sentinelRef = useIntersectionObserver(() => {
+		if (hasNextPage && !isFetchingNextPage && loadMore) loadMore();
+	});
 
 	return (
 		<section className="flex min-h-0 flex-col" data-testid={`column-${status}`}>
@@ -56,6 +68,12 @@ export function TaskColumn({
 								isDragging={activeTaskId === task.id}
 							/>
 						))}
+				{hasNextPage && <div ref={sentinelRef} data-testid={`column-sentinel-${status}`} className="h-px" />}
+				{isFetchingNextPage && (
+					<div data-testid={`column-loading-${status}`} className="flex justify-center py-2">
+						<Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
+					</div>
+				)}
 			</div>
 		</section>
 	);
