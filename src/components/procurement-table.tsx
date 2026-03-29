@@ -323,8 +323,8 @@ export function ProcurementTable({
 								const dev = formatDeviation(deviation);
 								const status = STATUS_CONFIG[item.status];
 								const folder = item.folderId ? folderMap[item.folderId] : undefined;
-								const rowCls = onRowClick ? "cursor-pointer group" : "group";
 								const isEditing = editingItemId === item.id;
+								const rowCls = onRowClick && !isEditing ? "cursor-pointer group" : "group";
 								const displayName = optimisticNames[item.id] ?? item.name;
 								const nameCell = isEditing ? (
 									<TableCell className={`font-medium ${stickyNameCell}`}>
@@ -395,7 +395,7 @@ export function ProcurementTable({
 								);
 								const rowProps = {
 									className: rowClassName,
-									onClick: onRowClick ? () => onRowClick(item) : undefined,
+									onClick: onRowClick && !isEditing ? () => onRowClick(item) : undefined,
 									"data-testid": hasContextMenu ? `row-${item.id}` : undefined,
 								};
 								const rowChildren = (

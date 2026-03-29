@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
+import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementSidebar } from "@/components/procurement-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
@@ -251,6 +252,20 @@ export function ProcurementPage() {
 		});
 	}
 
+	const selectedItemId = searchParams.get("item");
+	const selectedItemName = selectedItemId ? items.find((i) => i.id === selectedItemId)?.name : undefined;
+
+	function handleRowClick(item: ProcurementItem) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("item", item.id);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
 	function handleFolderSelect(folderId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -318,6 +333,7 @@ export function ProcurementPage() {
 							hasNextPage={hasNextPage}
 							loadMore={loadMore}
 							onSort={handleSort}
+							onRowClick={handleRowClick}
 							onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 							onDeleteItem={(id) => deleteItemMutation.mutate(id)}
 							onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
@@ -349,6 +365,7 @@ export function ProcurementPage() {
 				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
 			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
+			<ProcurementItemDrawer itemName={selectedItemName} />
 		</DndContext>
 	);
 }
