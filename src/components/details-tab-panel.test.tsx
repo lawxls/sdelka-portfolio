@@ -63,6 +63,14 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByTestId("details-loading")).toBeInTheDocument();
 	});
 
+	test("shows error state for unknown item ID", async () => {
+		renderPanel("nonexistent-item");
+		await waitFor(() => {
+			expect(screen.getByTestId("details-error")).toBeInTheDocument();
+		});
+		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
+	});
+
 	test("unit select shows current value", async () => {
 		renderPanel();
 		await waitFor(() => {

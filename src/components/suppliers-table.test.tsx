@@ -303,13 +303,32 @@ describe("SuppliersTable toolbar", () => {
 		expect(screen.queryByPlaceholderText("Поиск…")).not.toBeInTheDocument();
 	});
 
-	test("delete button calls onDelete", async () => {
+	test("delete button shows confirmation dialog before deleting", async () => {
 		const user = userEvent.setup();
 		const onDelete = vi.fn();
 		renderTable({ selectedIds: new Set(["s1", "s2"]), onDelete });
 
+		// Click delete — should open confirmation, not call onDelete yet
 		await user.click(screen.getByRole("button", { name: /удалить/i }));
+		expect(onDelete).not.toHaveBeenCalled();
+		expect(screen.getByText("Удалить поставщиков?")).toBeInTheDocument();
+		expect(screen.getByText(/будут удалены/)).toBeInTheDocument();
+
+		// Confirm deletion
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
 		expect(onDelete).toHaveBeenCalled();
+	});
+
+	test("delete confirmation can be cancelled", async () => {
+		const user = userEvent.setup();
+		const onDelete = vi.fn();
+		renderTable({ selectedIds: new Set(["s1"]), onDelete });
+
+		await user.click(screen.getByRole("button", { name: /удалить/i }));
+		expect(screen.getByText("Удалить поставщиков?")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+		expect(onDelete).not.toHaveBeenCalled();
 	});
 
 	test("shows correct selected count", () => {

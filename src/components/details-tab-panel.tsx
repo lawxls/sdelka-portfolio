@@ -71,13 +71,13 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
 }
 
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
-	const { data: item, isLoading } = useItemDetail(itemId);
+	const { data: item, isLoading, isError } = useItemDetail(itemId);
 	const updateMutation = useUpdateItemDetail();
 	const [form, setForm] = useState<FormState | null>(null);
 
 	const formState = form ?? (item ? initFormState(item) : null);
 
-	if (isLoading || !item || !formState) {
+	if (isLoading) {
 		return (
 			<div data-testid="details-loading" className="flex flex-col gap-4">
 				{["s1", "s2", "s3", "s4", "s5", "s6"].map((k) => (
@@ -87,6 +87,14 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</div>
 				))}
 			</div>
+		);
+	}
+
+	if (isError || !item || !formState) {
+		return (
+			<p data-testid="details-error" className="py-8 text-center text-sm text-muted-foreground">
+				Не удалось загрузить данные
+			</p>
 		);
 	}
 

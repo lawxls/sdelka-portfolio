@@ -1,5 +1,16 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, ListFilter, Search, Trash2 } from "lucide-react";
 import { useRef } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -114,17 +125,30 @@ export function SuppliersTable({
 			{hasSelection ? (
 				<div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2">
 					<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
-					<Button
-						type="button"
-						variant="destructive"
-						size="sm"
-						onClick={onDelete}
-						disabled={isDeleting}
-						aria-label="Удалить"
-					>
-						<Trash2 className="mr-1 size-4" aria-hidden="true" />
-						Удалить
-					</Button>
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<Button type="button" variant="destructive" size="sm" disabled={isDeleting} aria-label="Удалить">
+								<Trash2 className="mr-1 size-4" aria-hidden="true" />
+								Удалить
+							</Button>
+						</AlertDialogTrigger>
+						<AlertDialogContent size="sm">
+							<AlertDialogHeader>
+								<AlertDialogTitle>Удалить поставщиков?</AlertDialogTitle>
+								<AlertDialogDescription>
+									{selectedIds.size === 1
+										? "Выбранный поставщик будет удалён. Это действие нельзя отменить."
+										: `Выбранные поставщики (${selectedIds.size}) будут удалены. Это действие нельзя отменить.`}
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Отмена</AlertDialogCancel>
+								<AlertDialogAction variant="destructive" onClick={onDelete}>
+									Удалить
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
 				</div>
 			) : (
 				<div className="flex items-center gap-2">
