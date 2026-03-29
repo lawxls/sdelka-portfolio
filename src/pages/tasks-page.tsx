@@ -16,13 +16,16 @@ import { isValidTransition, TaskBoard } from "@/components/task-board";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { TaskTable } from "@/components/task-table";
+import { TaskToolbar } from "@/components/task-toolbar";
 import { Button } from "@/components/ui/button";
-import type { Task, TaskStatus } from "@/data/task-types";
+import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
-import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useProcurementItems, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
+
+const SORT_FIELDS = new Set<string>(["createdAt", "deadline", "questionCount"]);
 
 function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskId: string): Task | undefined {
 	for (const status of TASK_STATUSES) {
@@ -34,11 +37,29 @@ function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskI
 
 type ViewMode = "board" | "table";
 
+function parseSort(params: URLSearchParams): { field: TaskSortField; direction: "asc" | "desc" } | null {
+	const field = params.get("sort");
+	const dir = params.get("dir");
+	if (!field || !SORT_FIELDS.has(field) || (dir !== "asc" && dir !== "desc")) return null;
+	return { field: field as TaskSortField, direction: dir };
+}
+
 export function TasksPage() {
-	const columns = useTaskColumns();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const taskId = searchParams.get("task");
 	const view = (searchParams.get("view") ?? "board") as ViewMode;
+	const search = searchParams.get("q") ?? "";
+	const activeItem = searchParams.get("item") ?? undefined;
+	const sort = parseSort(searchParams);
+
+	const filterParams: TaskFilterParams = {
+		...(search && { q: search }),
+		...(activeItem && { item: activeItem }),
+		...(sort && { sort: sort.field, dir: sort.direction }),
+	};
+
+	const columns = useTaskColumns(filterParams);
+	const { data: procurementItems = [] } = useProcurementItems();
 	const updateStatus = useUpdateTaskStatus();
 
 	// Drag state
@@ -64,7 +85,6 @@ export function TasksPage() {
 	}
 
 	function closeTask() {
-		// If answer-first mode is active and user closes without answering, snap back
 		if (pendingDrag) {
 			setPendingDrag(null);
 		}
@@ -91,6 +111,50 @@ export function TasksPage() {
 			},
 			{ replace: true },
 		);
+	}
+
+	function handleSearchChange(query: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (query) next.set("q", query);
+				else next.delete("q");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleItemFilter(item: string | undefined) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (item) next.set("item", item);
+				else next.delete("item");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleSort(field: TaskSortField) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			const currentField = next.get("sort");
+			const currentDir = next.get("dir");
+			if (currentField === field) {
+				if (currentDir === "asc") {
+					next.set("dir", "desc");
+				} else {
+					next.delete("sort");
+					next.delete("dir");
+				}
+			} else {
+				next.set("sort", field);
+				next.set("dir", "asc");
+			}
+			return next;
+		});
 	}
 
 	function handleDragStart(event: DragStartEvent) {
@@ -128,7 +192,6 @@ export function TasksPage() {
 	}
 
 	function handleAnswerFirstComplete() {
-		// Answer submitted — task already moved to completed by submitAnswer mutation
 		setPendingDrag(null);
 	}
 
@@ -142,7 +205,16 @@ export function TasksPage() {
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 				<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
 					<h1 className="text-lg tracking-tight">Задачи</h1>
-					<div className="ml-auto flex items-center gap-1">
+					<TaskToolbar
+						defaultSearch={search}
+						onSearchChange={handleSearchChange}
+						sort={sort}
+						onSort={handleSort}
+						activeItem={activeItem}
+						onItemFilter={handleItemFilter}
+						procurementItems={procurementItems}
+					/>
+					<div className="flex items-center gap-1">
 						<Button
 							variant={view === "board" ? "secondary" : "ghost"}
 							size="icon-sm"
@@ -169,7 +241,7 @@ export function TasksPage() {
 						activeTaskStatus={activeTask?.status}
 					/>
 				) : (
-					<TaskTable onTaskClick={openTask} />
+					<TaskTable onTaskClick={openTask} filterParams={filterParams} />
 				)}
 				<TaskDrawer
 					taskId={taskId}

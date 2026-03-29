@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { TaskFilterParams } from "@/data/task-types";
 import { STATUS_LABELS } from "@/data/task-types";
 import { useAllTasks } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -24,10 +25,11 @@ const STATUS_BADGE_VARIANT = {
 
 interface TaskTableProps {
 	onTaskClick?: (taskId: string) => void;
+	filterParams?: TaskFilterParams;
 }
 
-export function TaskTable({ onTaskClick }: TaskTableProps) {
-	const { tasks, isLoading, hasNextPage, loadMore, isFetchingNextPage } = useAllTasks();
+export function TaskTable({ onTaskClick, filterParams }: TaskTableProps) {
+	const { tasks, isLoading, hasNextPage, loadMore, isFetchingNextPage } = useAllTasks(filterParams);
 
 	const sentinelRef = useIntersectionObserver(() => {
 		if (hasNextPage && !isFetchingNextPage) loadMore();

@@ -5,7 +5,14 @@ import { createQueryWrapper, createTestQueryClient, makeTask } from "@/test-util
 import * as taskMockData from "./task-mock-data";
 import { _resetTaskStore, _setMockDelay } from "./task-mock-data";
 import type { Task } from "./task-types";
-import { useAllTasks, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
+import {
+	useAllTasks,
+	useProcurementItems,
+	useSubmitAnswer,
+	useTask,
+	useTaskColumns,
+	useUpdateTaskStatus,
+} from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -29,7 +36,7 @@ afterEach(() => {
 });
 
 function seedTasks(status: string, tasks: Task[]) {
-	queryClient.setQueryData(["tasks", status], {
+	queryClient.setQueryData(["tasks", status, {}], {
 		pages: [{ tasks, nextCursor: null }],
 		pageParams: [undefined],
 	});
@@ -125,6 +132,84 @@ describe("useAllTasks", () => {
 	});
 });
 
+describe("useTaskColumns with filter params", () => {
+	it("passes search param to API and returns filtered results", async () => {
+		const { result } = renderHook(() => useTaskColumns({ q: "арматур" }), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.assigned.isLoading).toBe(false);
+		});
+
+		// Only tasks matching "арматур" in title or item name
+		for (const task of result.current.assigned.tasks) {
+			const matches =
+				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
+			expect(matches).toBe(true);
+		}
+	});
+
+	it("includes filter params in query key for cache isolation", async () => {
+		// Fetch with no filter
+		renderHook(() => useTaskColumns(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			const data = queryClient.getQueriesData({ queryKey: ["tasks", "assigned"] });
+			expect(data.length).toBeGreaterThan(0);
+		});
+
+		// Fetch with search filter — should create a separate cache entry
+		renderHook(() => useTaskColumns({ q: "арматур" }), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			const allEntries = queryClient.getQueriesData({ queryKey: ["tasks", "assigned"] });
+			expect(allEntries.length).toBe(2);
+		});
+	});
+});
+
+describe("useAllTasks with filter params", () => {
+	it("passes filter params to API", async () => {
+		const { result } = renderHook(() => useAllTasks({ q: "арматур" }), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.tasks.length).toBeGreaterThan(0);
+		});
+
+		for (const task of result.current.tasks) {
+			const matches =
+				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
+			expect(matches).toBe(true);
+		}
+	});
+});
+
+describe("useProcurementItems", () => {
+	it("returns unique sorted procurement item names", async () => {
+		const { result } = renderHook(() => useProcurementItems(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.data?.length).toBeGreaterThan(0);
+		});
+
+		const items = result.current.data ?? [];
+		expect(items.length).toBeGreaterThan(0);
+		expect(new Set(items).size).toBe(items.length);
+		for (let i = 1; i < items.length; i++) {
+			expect(items[i - 1].localeCompare(items[i], "ru")).toBeLessThanOrEqual(0);
+		}
+	});
+});
+
 describe("useUpdateTaskStatus", () => {
 	it("optimistically moves task between columns", async () => {
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
@@ -143,11 +228,11 @@ describe("useUpdateTaskStatus", () => {
 		});
 
 		await waitFor(() => {
-			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned"]);
+			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
 			expect(assigned?.pages[0].tasks).toHaveLength(0);
 		});
 
-		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress"]);
+		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(2);
 		expect(inProgress?.pages[0].tasks[0].id).toBe("t1");
 		expect(inProgress?.pages[0].tasks[0].status).toBe("in_progress");
@@ -170,11 +255,11 @@ describe("useUpdateTaskStatus", () => {
 			} catch {}
 		});
 
-		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned"]);
+		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
 		expect(assigned?.pages[0].tasks).toHaveLength(1);
 		expect(assigned?.pages[0].tasks[0].id).toBe("t1");
 
-		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress"]);
+		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(0);
 
 		expect(toast.error).toHaveBeenCalled();
@@ -212,11 +297,11 @@ describe("useSubmitAnswer", () => {
 		});
 
 		await waitFor(() => {
-			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned"]);
+			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
 			expect(assigned?.pages[0].tasks).toHaveLength(0);
 		});
 
-		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed"]);
+		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(1);
 		expect(completed?.pages[0].tasks[0].answer).toBe("Ответ");
 		expect(completed?.pages[0].tasks[0].attachments).toEqual(["file.pdf"]);
@@ -240,10 +325,10 @@ describe("useSubmitAnswer", () => {
 			} catch {}
 		});
 
-		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned"]);
+		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
 		expect(assigned?.pages[0].tasks).toHaveLength(1);
 
-		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed"]);
+		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(0);
 
 		expect(toast.error).toHaveBeenCalled();

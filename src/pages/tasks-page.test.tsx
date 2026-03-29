@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
 import { createTestQueryClient } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
@@ -23,9 +24,11 @@ beforeEach(() => {
 function renderPage(initialEntries?: string[]) {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={initialEntries ?? ["/tasks"]}>
-				<TasksPage />
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={initialEntries ?? ["/tasks"]}>
+					<TasksPage />
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -184,6 +187,69 @@ describe("TasksPage", () => {
 			expect(
 				screen.getByText("Согласование цены на арматуру", { selector: "[data-slot='sheet-title']" }),
 			).toBeInTheDocument();
+		});
+	});
+
+	it("search input filters displayed tasks in board view", async () => {
+		renderPage();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		const searchInput = screen.getByPlaceholderText("Поиск…");
+		await user.type(searchInput, "арматур");
+
+		await waitFor(() => {
+			const cards = screen.getAllByTestId(/^task-card-/);
+			// Should have fewer cards after filtering
+			expect(cards.length).toBeLessThan(60);
+			expect(cards.length).toBeGreaterThan(0);
+		});
+	});
+
+	it("?q= URL param filters tasks on load", async () => {
+		renderPage(["/tasks?q=арматур"]);
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		// All visible cards should match the search
+		const cards = screen.getAllByTestId(/^task-card-/);
+		expect(cards.length).toBeLessThan(60);
+	});
+
+	it("sort control renders and ?sort=&dir= params work", async () => {
+		renderPage(["/tasks?sort=deadline&dir=asc"]);
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		// Sort button should show active indicator
+		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
+		expect(sortBtn.querySelector("[data-indicator]")).toBeInTheDocument();
+	});
+
+	it("?item= URL param filters tasks", async () => {
+		renderPage(["/tasks?item=Арматура А500С"]);
+
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+		});
+
+		const cards = screen.getAllByTestId(/^task-card-/);
+		expect(cards.length).toBeLessThan(60);
+	});
+
+	it("search works in table view", async () => {
+		renderPage(["/tasks?view=table&q=арматур"]);
+
+		await waitFor(() => {
+			expect(screen.getByRole("table")).toBeInTheDocument();
+			expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
 		});
 	});
 

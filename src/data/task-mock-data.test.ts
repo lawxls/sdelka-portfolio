@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { _resetTaskStore, _setMockDelay, getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
+import {
+	_resetTaskStore,
+	_setMockDelay,
+	getAllTasks,
+	getProcurementItems,
+	getTask,
+	getTasks,
+	submitAnswer,
+	updateTaskStatus,
+} from "./task-mock-data";
 import type { TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
@@ -135,6 +144,90 @@ describe("getAllTasks", () => {
 		const page3 = await getAllTasks(page2.nextCursor ?? undefined, 20);
 		expect(page3.tasks).toHaveLength(20);
 		expect(page3.nextCursor).toBeNull();
+	});
+});
+
+describe("getProcurementItems", () => {
+	it("returns unique sorted procurement item names", () => {
+		const items = getProcurementItems();
+		expect(items.length).toBeGreaterThan(0);
+		// All unique
+		expect(new Set(items).size).toBe(items.length);
+		// Sorted in Russian locale
+		for (let i = 1; i < items.length; i++) {
+			expect(items[i - 1].localeCompare(items[i], "ru")).toBeLessThanOrEqual(0);
+		}
+	});
+});
+
+describe("getTasks with filter params", () => {
+	it("filters by search query matching title", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { q: "арматур" });
+		expect(tasks.length).toBeGreaterThan(0);
+		for (const task of tasks) {
+			const matches =
+				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
+			expect(matches).toBe(true);
+		}
+	});
+
+	it("filters by search query matching procurement item name", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { q: "пнд" });
+		expect(tasks.length).toBeGreaterThan(0);
+		for (const task of tasks) {
+			const matches =
+				task.title.toLowerCase().includes("пнд") || task.procurementItemName.toLowerCase().includes("пнд");
+			expect(matches).toBe(true);
+		}
+	});
+
+	it("filters by procurement item name (exact)", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { item: "Арматура А500С" });
+		expect(tasks.length).toBeGreaterThan(0);
+		for (const task of tasks) {
+			expect(task.procurementItemName).toBe("Арматура А500С");
+		}
+	});
+
+	it("sorts by deadline ascending", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { sort: "deadline", dir: "asc" });
+		for (let i = 1; i < tasks.length; i++) {
+			expect(new Date(tasks[i - 1].deadline).getTime()).toBeLessThanOrEqual(new Date(tasks[i].deadline).getTime());
+		}
+	});
+
+	it("sorts by questionCount descending", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { sort: "questionCount", dir: "desc" });
+		for (let i = 1; i < tasks.length; i++) {
+			expect(tasks[i - 1].questionCount).toBeGreaterThanOrEqual(tasks[i].questionCount);
+		}
+	});
+
+	it("returns empty when search matches nothing", async () => {
+		const { tasks } = await getTasks("assigned", undefined, 20, { q: "несуществующий_текст_xyz" });
+		expect(tasks).toHaveLength(0);
+	});
+});
+
+describe("getAllTasks with filter params", () => {
+	it("applies search filter across all statuses", async () => {
+		const { tasks } = await getAllTasks(undefined, 60, { q: "арматур" });
+		expect(tasks.length).toBeGreaterThan(0);
+		for (const task of tasks) {
+			const matches =
+				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
+			expect(matches).toBe(true);
+		}
+		// Should have tasks from multiple statuses
+		const statuses = new Set(tasks.map((t) => t.status));
+		expect(statuses.size).toBeGreaterThan(1);
+	});
+
+	it("applies sort across all statuses", async () => {
+		const { tasks } = await getAllTasks(undefined, 60, { sort: "deadline", dir: "asc" });
+		for (let i = 1; i < tasks.length; i++) {
+			expect(new Date(tasks[i - 1].deadline).getTime()).toBeLessThanOrEqual(new Date(tasks[i].deadline).getTime());
+		}
 	});
 });
 

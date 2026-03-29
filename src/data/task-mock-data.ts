@@ -1,4 +1,4 @@
-import type { Task, TaskAssignee, TaskStatus } from "./task-types";
+import type { Task, TaskAssignee, TaskFilterParams, TaskStatus } from "./task-types";
 
 const ASSIGNEES: TaskAssignee[] = [
 	{ name: "Иванов Алексей", initials: "ИА" },
@@ -110,16 +110,53 @@ function simulateDelay(): Promise<void> {
 	return new Promise((r) => setTimeout(r, ms));
 }
 
+// --- Filtering / sorting ---
+
+function applyFilterParams(tasks: Task[], params?: TaskFilterParams): Task[] {
+	if (!params) return tasks;
+	let result = tasks;
+
+	if (params.q) {
+		const q = params.q.toLowerCase();
+		result = result.filter((t) => t.title.toLowerCase().includes(q) || t.procurementItemName.toLowerCase().includes(q));
+	}
+
+	if (params.item) {
+		result = result.filter((t) => t.procurementItemName === params.item);
+	}
+
+	if (params.sort) {
+		const dir = params.dir === "asc" ? 1 : -1;
+		const field = params.sort;
+		result = [...result].sort((a, b) => {
+			if (field === "questionCount") return dir * (a.questionCount - b.questionCount);
+			return dir * (new Date(a[field]).getTime() - new Date(b[field]).getTime());
+		});
+	}
+
+	return result;
+}
+
 // --- Mock API functions ---
 
-export async function getAllTasks(cursor?: string, limit = 20): Promise<{ tasks: Task[]; nextCursor: string | null }> {
+export function getProcurementItems(): string[] {
+	const items = new Set(store.map((t) => t.procurementItemName));
+	return [...items].sort((a, b) => a.localeCompare(b, "ru"));
+}
+
+export async function getAllTasks(
+	cursor?: string,
+	limit = 20,
+	params?: TaskFilterParams,
+): Promise<{ tasks: Task[]; nextCursor: string | null }> {
 	await simulateDelay();
+	const filtered = applyFilterParams(store, params);
 	const startIndex = cursor ? Number.parseInt(cursor, 10) : 0;
-	const slice = store.slice(startIndex, startIndex + limit);
+	const slice = filtered.slice(startIndex, startIndex + limit);
 	const nextIndex = startIndex + limit;
 	return {
 		tasks: slice.map((t) => ({ ...t })),
-		nextCursor: nextIndex < store.length ? String(nextIndex) : null,
+		nextCursor: nextIndex < filtered.length ? String(nextIndex) : null,
 	};
 }
 
@@ -127,9 +164,11 @@ export async function getTasks(
 	status: TaskStatus,
 	cursor?: string,
 	limit = 20,
+	params?: TaskFilterParams,
 ): Promise<{ tasks: Task[]; nextCursor: string | null }> {
 	await simulateDelay();
-	const filtered = store.filter((t) => t.status === status);
+	const byStatus = store.filter((t) => t.status === status);
+	const filtered = applyFilterParams(byStatus, params);
 	const startIndex = cursor ? Number.parseInt(cursor, 10) : 0;
 	const slice = filtered.slice(startIndex, startIndex + limit);
 	const nextIndex = startIndex + limit;

@@ -14,6 +14,15 @@ export interface TaskAssignee {
 	initials: string;
 }
 
+export type TaskSortField = "createdAt" | "deadline" | "questionCount";
+
+export interface TaskFilterParams {
+	q?: string;
+	item?: string;
+	sort?: TaskSortField;
+	dir?: "asc" | "desc";
+}
+
 export interface Task {
 	id: string;
 	title: string;

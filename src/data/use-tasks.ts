@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getAllTasks, getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
-import type { Task, TaskStatus } from "./task-types";
+import { getAllTasks, getProcurementItems, getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
+import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
 type TasksCache = {
@@ -27,10 +27,10 @@ function addTaskToCache(cache: TasksCache, task: Task): TasksCache {
 	};
 }
 
-function useTasksByStatus(status: TaskStatus) {
+function useTasksByStatus(status: TaskStatus, params?: TaskFilterParams) {
 	const query = useInfiniteQuery({
-		queryKey: ["tasks", status],
-		queryFn: ({ pageParam }) => getTasks(status, pageParam),
+		queryKey: ["tasks", status, params ?? {}],
+		queryFn: ({ pageParam }) => getTasks(status, pageParam, 20, params),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
@@ -44,10 +44,10 @@ function useTasksByStatus(status: TaskStatus) {
 	};
 }
 
-export function useAllTasks() {
+export function useAllTasks(params?: TaskFilterParams) {
 	const query = useInfiniteQuery({
-		queryKey: ["tasks", "all"],
-		queryFn: ({ pageParam }) => getAllTasks(pageParam),
+		queryKey: ["tasks", "all", params ?? {}],
+		queryFn: ({ pageParam }) => getAllTasks(pageParam, 20, params),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
@@ -61,11 +61,11 @@ export function useAllTasks() {
 	};
 }
 
-export function useTaskColumns() {
-	const assigned = useTasksByStatus("assigned");
-	const in_progress = useTasksByStatus("in_progress");
-	const completed = useTasksByStatus("completed");
-	const archived = useTasksByStatus("archived");
+export function useTaskColumns(params?: TaskFilterParams) {
+	const assigned = useTasksByStatus("assigned", params);
+	const in_progress = useTasksByStatus("in_progress", params);
+	const completed = useTasksByStatus("completed", params);
+	const archived = useTasksByStatus("archived", params);
 
 	return { assigned, in_progress, completed, archived };
 }
@@ -78,14 +78,24 @@ export function useTask(id: string | null) {
 	});
 }
 
+export function useProcurementItems() {
+	return useQuery({
+		queryKey: ["tasks", "procurementItems"],
+		queryFn: () => getProcurementItems(),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+}
+
 function findTaskInCaches(queryClient: ReturnType<typeof useQueryClient>) {
-	return (id: string): { task: Task; oldStatus: TaskStatus } | undefined => {
+	return (id: string): { task: Task; oldStatus: TaskStatus; queryKey: readonly unknown[] } | undefined => {
 		for (const s of TASK_STATUSES) {
-			const data = queryClient.getQueryData<TasksCache>(["tasks", s]);
-			if (!data) continue;
-			for (const page of data.pages) {
-				const found = page.tasks.find((t) => t.id === id);
-				if (found) return { task: found, oldStatus: s };
+			const entries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", s] });
+			for (const [key, data] of entries) {
+				if (!data) continue;
+				for (const page of data.pages) {
+					const found = page.tasks.find((t) => t.id === id);
+					if (found) return { task: found, oldStatus: s, queryKey: key };
+				}
 			}
 		}
 		return undefined;
@@ -93,23 +103,21 @@ function findTaskInCaches(queryClient: ReturnType<typeof useQueryClient>) {
 }
 
 async function cancelAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>) {
-	await Promise.all(TASK_STATUSES.map((s) => queryClient.cancelQueries({ queryKey: ["tasks", s] })));
+	await queryClient.cancelQueries({ queryKey: ["tasks"] });
 }
 
 function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>) {
-	for (const s of TASK_STATUSES) {
-		queryClient.invalidateQueries({ queryKey: ["tasks", s] });
-	}
+	queryClient.invalidateQueries({ queryKey: ["tasks"] });
 }
 
 type OptimisticContext = {
-	snapshots: Map<TaskStatus, TasksCache>;
+	snapshots: Array<{ key: readonly unknown[]; data: TasksCache }>;
 };
 
 function rollbackTaskSnapshots(queryClient: ReturnType<typeof useQueryClient>, context: OptimisticContext | undefined) {
 	if (!context?.snapshots) return;
-	for (const [status, data] of context.snapshots) {
-		queryClient.setQueryData(["tasks", status], data);
+	for (const { key, data } of context.snapshots) {
+		queryClient.setQueryData(key, data);
 	}
 }
 
@@ -124,23 +132,22 @@ export function useUpdateTaskStatus() {
 
 			const found = findTask(id);
 			if (!found) return;
-			const { task, oldStatus } = found;
+			const { task, queryKey: sourceKey } = found;
 
-			const snapshots = new Map<TaskStatus, TasksCache>();
+			const snapshots: OptimisticContext["snapshots"] = [];
 
-			const sourceData = queryClient.getQueryData<TasksCache>(["tasks", oldStatus]);
+			const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
 			if (sourceData) {
-				snapshots.set(oldStatus, sourceData);
-				queryClient.setQueryData<TasksCache>(["tasks", oldStatus], removeTaskFromCache(sourceData, id));
+				snapshots.push({ key: sourceKey, data: sourceData });
+				queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
 			}
 
-			const targetData = queryClient.getQueryData<TasksCache>(["tasks", newStatus]);
-			if (targetData) {
-				snapshots.set(newStatus, targetData);
-				queryClient.setQueryData<TasksCache>(
-					["tasks", newStatus],
-					addTaskToCache(targetData, { ...task, status: newStatus }),
-				);
+			const targetEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", newStatus] });
+			for (const [key, data] of targetEntries) {
+				if (data) {
+					snapshots.push({ key, data });
+					queryClient.setQueryData<TasksCache>(key, addTaskToCache(data, { ...task, status: newStatus }));
+				}
 			}
 
 			return { snapshots };
@@ -165,24 +172,26 @@ export function useSubmitAnswer() {
 
 			const found = findTask(id);
 			if (!found) return;
-			const { task, oldStatus } = found;
+			const { task, oldStatus, queryKey: sourceKey } = found;
 
-			const snapshots = new Map<TaskStatus, TasksCache>();
+			const snapshots: OptimisticContext["snapshots"] = [];
 
-			const sourceData = queryClient.getQueryData<TasksCache>(["tasks", oldStatus]);
+			const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
 			if (sourceData) {
-				snapshots.set(oldStatus, sourceData);
-				queryClient.setQueryData<TasksCache>(["tasks", oldStatus], removeTaskFromCache(sourceData, id));
+				snapshots.push({ key: sourceKey, data: sourceData });
+				queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
 			}
 
 			if (oldStatus !== "completed") {
-				const completedData = queryClient.getQueryData<TasksCache>(["tasks", "completed"]);
-				if (completedData) {
-					snapshots.set("completed", completedData);
-					queryClient.setQueryData<TasksCache>(
-						["tasks", "completed"],
-						addTaskToCache(completedData, { ...task, status: "completed", answer, attachments }),
-					);
+				const completedEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", "completed"] });
+				for (const [key, data] of completedEntries) {
+					if (data) {
+						snapshots.push({ key, data });
+						queryClient.setQueryData<TasksCache>(
+							key,
+							addTaskToCache(data, { ...task, status: "completed", answer, attachments }),
+						);
+					}
 				}
 			}
 
