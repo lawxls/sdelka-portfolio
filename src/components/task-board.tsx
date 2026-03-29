@@ -1,12 +1,5 @@
-import type { Task, TaskStatus } from "@/data/task-types";
+import { STATUS_LABELS, TASK_STATUSES, type Task, type TaskStatus } from "@/data/task-types";
 import { TaskColumn } from "./task-column";
-
-const COLUMNS: { status: TaskStatus; label: string }[] = [
-	{ status: "assigned", label: "Назначено" },
-	{ status: "in_progress", label: "В работе" },
-	{ status: "completed", label: "Завершено" },
-	{ status: "archived", label: "Архив" },
-];
 
 interface ColumnData {
 	tasks: Task[];
@@ -15,18 +8,20 @@ interface ColumnData {
 
 export interface TaskBoardProps {
 	columns: Record<TaskStatus, ColumnData>;
+	onTaskClick?: (taskId: string) => void;
 }
 
-export function TaskBoard({ columns }: TaskBoardProps) {
+export function TaskBoard({ columns, onTaskClick }: TaskBoardProps) {
 	return (
 		<div className="grid min-h-0 flex-1 grid-cols-4 gap-4 p-4" data-testid="task-board">
-			{COLUMNS.map(({ status, label }) => (
+			{TASK_STATUSES.map((status) => (
 				<TaskColumn
 					key={status}
 					status={status}
-					label={label}
+					label={STATUS_LABELS[status]}
 					tasks={columns[status].tasks}
 					isLoading={columns[status].isLoading}
+					onTaskClick={onTaskClick}
 				/>
 			))}
 		</div>

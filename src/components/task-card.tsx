@@ -21,13 +21,34 @@ function pluralizeQuestions(n: number): string {
 
 interface TaskCardProps {
 	task: Task;
+	onClick?: () => void;
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, onClick }: TaskCardProps) {
 	const isOverdue = new Date(task.deadline) < new Date();
 
 	return (
-		<article className="rounded-lg border bg-background p-3" data-testid={`task-card-${task.id}`}>
+		<article
+			className={cn(
+				"rounded-lg border bg-background p-3",
+				onClick &&
+					"cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+			)}
+			data-testid={`task-card-${task.id}`}
+			onClick={onClick}
+			onKeyDown={
+				onClick
+					? (e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								onClick();
+							}
+						}
+					: undefined
+			}
+			tabIndex={onClick ? 0 : undefined}
+			role={onClick ? "button" : undefined}
+		>
 			<div className="flex items-start justify-between gap-2">
 				<div className="min-w-0">
 					<p className="truncate text-sm font-medium">{task.title}</p>

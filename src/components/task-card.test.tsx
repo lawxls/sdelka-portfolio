@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { makeTask } from "@/test-utils";
 import { TaskCard } from "./task-card";
 
@@ -61,5 +62,13 @@ describe("TaskCard", () => {
 		render(<TaskCard task={task} />);
 		const deadline = screen.getByTestId("deadline-t1");
 		expect(deadline.className).not.toContain("text-destructive");
+	});
+
+	it("calls onClick when clicked", async () => {
+		const handleClick = vi.fn();
+		render(<TaskCard task={task} onClick={handleClick} />);
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId("task-card-t1"));
+		expect(handleClick).toHaveBeenCalledOnce();
 	});
 });
