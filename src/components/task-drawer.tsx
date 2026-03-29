@@ -8,14 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_LABELS, type TaskStatus } from "@/data/task-types";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
-
-const datetimeFormat = new Intl.DateTimeFormat("ru-RU", {
-	day: "numeric",
-	month: "long",
-	year: "numeric",
-	hour: "2-digit",
-	minute: "2-digit",
-});
+import { formatDateTime } from "@/lib/format";
 
 interface TaskDrawerProps {
 	taskId: string | null;
@@ -76,6 +69,7 @@ function TaskDrawerContent({
 		);
 	}
 
+	// local const so TS narrows `task` inside closures below the early-return guard
 	const currentTask = task;
 	const isAnswered = currentTask.answer != null;
 
@@ -145,7 +139,7 @@ function TaskDrawerContent({
 
 			<div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
 				<time className="block text-xs text-muted-foreground" dateTime={task.createdAt}>
-					{datetimeFormat.format(new Date(task.createdAt))}
+					{formatDateTime(task.createdAt)}
 				</time>
 
 				<p className="text-sm">{task.description}</p>

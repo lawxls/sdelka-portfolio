@@ -1,24 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { Task } from "@/data/task-types";
+import { formatShortDate, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const shortDateFormat = new Intl.DateTimeFormat("ru-RU", {
-	day: "numeric",
-	month: "short",
-});
-
-function formatShortDate(iso: string): string {
-	return shortDateFormat.format(new Date(iso));
-}
-
-function pluralizeQuestions(n: number): string {
-	const mod100 = n % 100;
-	const mod10 = n % 10;
-	if (mod100 >= 11 && mod100 <= 14) return `${n} вопросов`;
-	if (mod10 === 1) return `${n} вопрос`;
-	if (mod10 >= 2 && mod10 <= 4) return `${n} вопроса`;
-	return `${n} вопросов`;
-}
 
 interface TaskCardProps {
 	task: Task;
@@ -83,7 +66,7 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 						{formatShortDate(task.deadline)}
 					</time>
 				</div>
-				<span>{pluralizeQuestions(task.questionCount)}</span>
+				<span>{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}</span>
 			</div>
 		</article>
 	);

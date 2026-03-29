@@ -38,16 +38,16 @@ describe("TaskCard", () => {
 
 	it("renders question count with correct pluralization", () => {
 		const { rerender } = render(<TaskCard task={makeTask("t-plur", { questionCount: 1 })} />);
-		expect(screen.getByText("1 вопрос")).toBeInTheDocument();
+		expect(screen.getByText(/1\s+вопрос$/)).toBeInTheDocument();
 
 		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 2 })} />);
-		expect(screen.getByText("2 вопроса")).toBeInTheDocument();
+		expect(screen.getByText(/2\s+вопроса/)).toBeInTheDocument();
 
 		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 5 })} />);
-		expect(screen.getByText("5 вопросов")).toBeInTheDocument();
+		expect(screen.getByText(/5\s+вопросов/)).toBeInTheDocument();
 
 		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 11 })} />);
-		expect(screen.getByText("11 вопросов")).toBeInTheDocument();
+		expect(screen.getByText(/11\s+вопросов/)).toBeInTheDocument();
 	});
 
 	it("highlights overdue deadline in red", () => {

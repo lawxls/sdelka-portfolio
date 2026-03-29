@@ -84,7 +84,7 @@ export function TaskBoard({ columns, onTaskClick, activeTaskId, activeTaskStatus
 					tasks={columns[status].tasks}
 					isLoading={columns[status].isLoading}
 					onTaskClick={onTaskClick}
-					draggableCards={!!activeTaskId || true}
+					draggableCards
 					activeTaskId={activeTaskId}
 					isValidDrop={activeTaskStatus ? isValidTransition(activeTaskStatus, status) : false}
 					hasNextPage={columns[status].hasNextPage}

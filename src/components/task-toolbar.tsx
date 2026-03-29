@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { TaskSortField } from "@/data/task-types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
+import { cn } from "@/lib/utils";
 
 interface TaskToolbarProps {
 	defaultSearch?: string;
@@ -83,7 +84,7 @@ export function TaskToolbar({
 								<button
 									key={preset.field}
 									type="button"
-									className={`${FILTER_BTN} ${isActive ? FILTER_BTN_ACTIVE : ""}`}
+									className={cn(FILTER_BTN, isActive && FILTER_BTN_ACTIVE)}
 									onClick={() => onSort(preset.field)}
 								>
 									<span className="flex items-center justify-between">
@@ -120,7 +121,7 @@ export function TaskToolbar({
 					<div className="flex flex-col gap-1">
 						<button
 							type="button"
-							className={`${FILTER_BTN} ${!activeItem ? FILTER_BTN_ACTIVE : ""}`}
+							className={cn(FILTER_BTN, !activeItem && FILTER_BTN_ACTIVE)}
 							onClick={() => onItemFilter(undefined)}
 						>
 							Все
@@ -130,7 +131,7 @@ export function TaskToolbar({
 							<button
 								key={item}
 								type="button"
-								className={`${FILTER_BTN} ${activeItem === item ? FILTER_BTN_ACTIVE : ""}`}
+								className={cn(FILTER_BTN, activeItem === item && FILTER_BTN_ACTIVE)}
 								onClick={() => onItemFilter(activeItem === item ? undefined : item)}
 							>
 								{item}

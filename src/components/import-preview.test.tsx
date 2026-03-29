@@ -81,7 +81,7 @@ describe("ImportPreview", () => {
 	test("import button shows total item count", () => {
 		observers = installMockIntersectionObserver();
 		renderPreview({ items: makeItems(50) });
-		expect(screen.getByRole("button", { name: /Импортировать 50 позиц/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Импортировать 50\s+позиц/ })).toBeInTheDocument();
 	});
 
 	test("import button calls onImport", async () => {

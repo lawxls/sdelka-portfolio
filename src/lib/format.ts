@@ -45,3 +45,33 @@ export function formatFileSize(bytes: number): string {
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
+
+const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "numeric",
+	month: "short",
+});
+
+export function formatShortDate(iso: string): string {
+	return shortDateFormatter.format(new Date(iso));
+}
+
+const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "numeric",
+	month: "long",
+	year: "numeric",
+	hour: "2-digit",
+	minute: "2-digit",
+});
+
+export function formatDateTime(iso: string): string {
+	return datetimeFormatter.format(new Date(iso));
+}
+
+export function pluralizeRu(count: number, one: string, few: string, many: string): string {
+	const mod100 = count % 100;
+	const mod10 = count % 10;
+	if (mod100 >= 11 && mod100 <= 14) return `${count}\u00A0${many}`;
+	if (mod10 === 1) return `${count}\u00A0${one}`;
+	if (mod10 >= 2 && mod10 <= 4) return `${count}\u00A0${few}`;
+	return `${count}\u00A0${many}`;
+}

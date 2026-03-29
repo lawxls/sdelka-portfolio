@@ -5,16 +5,8 @@ import type { TaskFilterParams } from "@/data/task-types";
 import { STATUS_LABELS } from "@/data/task-types";
 import { useAllTasks } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const shortDateFormat = new Intl.DateTimeFormat("ru-RU", {
-	day: "numeric",
-	month: "short",
-});
-
-function formatShortDate(iso: string): string {
-	return shortDateFormat.format(new Date(iso));
-}
 
 const STATUS_BADGE_VARIANT = {
 	assigned: "outline",

@@ -75,88 +75,54 @@ export function TasksPage() {
 	// Answer-first flow state
 	const [pendingDrag, setPendingDrag] = useState<{ taskId: string } | null>(null);
 
-	function openTask(id: string) {
+	function updateParams(modifier: (p: URLSearchParams) => void, replace = true) {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
-				next.set("task", id);
+				modifier(next);
 				return next;
 			},
-			{ replace: true },
+			{ replace },
 		);
+	}
+
+	function openTask(id: string) {
+		updateParams((p) => p.set("task", id));
 	}
 
 	function closeTask() {
-		if (pendingDrag) {
-			setPendingDrag(null);
-		}
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.delete("task");
-				return next;
-			},
-			{ replace: true },
-		);
+		if (pendingDrag) setPendingDrag(null);
+		updateParams((p) => p.delete("task"));
 	}
 
 	function setView(mode: ViewMode) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (mode === "board") {
-					next.delete("view");
-				} else {
-					next.set("view", mode);
-				}
-				return next;
-			},
-			{ replace: true },
-		);
+		updateParams((p) => (mode === "board" ? p.delete("view") : p.set("view", mode)));
 	}
 
 	function handleSearchChange(query: string) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (query) next.set("q", query);
-				else next.delete("q");
-				return next;
-			},
-			{ replace: true },
-		);
+		updateParams((p) => (query ? p.set("q", query) : p.delete("q")));
 	}
 
 	function handleItemFilter(item: string | undefined) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (item) next.set("item", item);
-				else next.delete("item");
-				return next;
-			},
-			{ replace: true },
-		);
+		updateParams((p) => (item ? p.set("item", item) : p.delete("item")));
 	}
 
 	function handleSort(field: TaskSortField) {
-		setSearchParams((prev) => {
-			const next = new URLSearchParams(prev);
-			const currentField = next.get("sort");
-			const currentDir = next.get("dir");
+		updateParams((p) => {
+			const currentField = p.get("sort");
+			const currentDir = p.get("dir");
 			if (currentField === field) {
 				if (currentDir === "asc") {
-					next.set("dir", "desc");
+					p.set("dir", "desc");
 				} else {
-					next.delete("sort");
-					next.delete("dir");
+					p.delete("sort");
+					p.delete("dir");
 				}
 			} else {
-				next.set("sort", field);
-				next.set("dir", "asc");
+				p.set("sort", field);
+				p.set("dir", "asc");
 			}
-			return next;
-		});
+		}, false);
 	}
 
 	function handleDragStart(event: DragStartEvent) {
