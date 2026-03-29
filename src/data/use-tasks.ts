@@ -106,8 +106,9 @@ async function cancelAllTaskQueries(queryClient: ReturnType<typeof useQueryClien
 	await queryClient.cancelQueries({ queryKey: ["tasks"] });
 }
 
-function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>, taskId?: string) {
 	queryClient.invalidateQueries({ queryKey: ["tasks"] });
+	if (taskId) queryClient.invalidateQueries({ queryKey: ["task", taskId] });
 }
 
 type OptimisticContext = {
@@ -156,7 +157,7 @@ export function useUpdateTaskStatus() {
 			rollbackTaskSnapshots(queryClient, context);
 			toast.error("Не удалось обновить статус задачи");
 		},
-		onSettled: () => invalidateAllTaskQueries(queryClient),
+		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
 }
 
@@ -201,6 +202,6 @@ export function useSubmitAnswer() {
 			rollbackTaskSnapshots(queryClient, context);
 			toast.error("Не удалось отправить ответ");
 		},
-		onSettled: () => invalidateAllTaskQueries(queryClient),
+		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
 }
