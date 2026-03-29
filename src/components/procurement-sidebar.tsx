@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Layers } from "lucide-react";
+import { ArrowLeft, Building2, Layers, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CompanySummary } from "@/data/types";
@@ -97,9 +97,11 @@ export function ProcurementSidebar({
 
 	// Multi-company with selection → folder sidebar + back button
 	if (selectedCompany) {
+		const companyName = companies.find((c) => c.id === selectedCompany)?.name;
 		return (
 			<FolderSidebar
 				{...folderSidebarProps}
+				title={companyName}
 				headerSlot={
 					<Button
 						variant="ghost"
@@ -121,7 +123,7 @@ export function ProcurementSidebar({
 		return (
 			<div className="hidden shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar p-2 md:flex">
 				<Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(true)} aria-label="Открыть боковую панель">
-					<Layers className="size-4" />
+					<PanelLeft className="size-4" />
 				</Button>
 			</div>
 		);

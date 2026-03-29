@@ -444,7 +444,7 @@ export function ProcurementTable({
 												<ContextMenuSub>
 													<ContextMenuSubTrigger>
 														<FolderInput className="size-3.5" />
-														Переместить в раздел
+														Переместить в категорию
 													</ContextMenuSubTrigger>
 													<ContextMenuSubContent>
 														{folders.map((f) => (
@@ -469,7 +469,7 @@ export function ProcurementTable({
 															onCheckedChange={() => onAssignFolder(item.id, null)}
 														>
 															<Inbox className="size-3.5" />
-															Без раздела
+															Без категории
 														</ContextMenuCheckboxItem>
 														{onArchiveItem && (
 															<>

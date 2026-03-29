@@ -189,8 +189,6 @@ export interface Address {
 	type: AddressType;
 	postalCode: string;
 	address: string;
-	city: string;
-	region: string;
 	contactPerson: string;
 	phone: string;
 }
@@ -238,6 +236,7 @@ export interface AddressSummary {
 	id: string;
 	name: string;
 	type: AddressType;
+	address: string;
 }
 
 export interface CompanySummary {

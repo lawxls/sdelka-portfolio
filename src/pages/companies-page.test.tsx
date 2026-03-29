@@ -18,9 +18,14 @@ const MOCK_COMPANIES: CompanySummary[] = [
 		isMain: true,
 		responsibleEmployeeName: "Иванов Иван",
 		addresses: [
-			{ id: "addr-1", name: "Главный офис", type: "office" },
-			{ id: "addr-2", name: "Склад №1", type: "warehouse" },
-			{ id: "addr-3", name: "Цех", type: "production" },
+			{ id: "addr-1", name: "Главный офис", type: "office", address: "г. Москва, ул. Ленина, д. 15, оф. 301" },
+			{
+				id: "addr-2",
+				name: "Склад №1",
+				type: "warehouse",
+				address: "Московская обл., г. Подольск, ул. Складская, д. 10",
+			},
+			{ id: "addr-3", name: "Цех", type: "production", address: "Московская обл., г. Химки, ул. Промышленная, д. 5" },
 		],
 		employeeCount: 12,
 		procurementItemCount: 25,
@@ -28,7 +33,7 @@ const MOCK_COMPANIES: CompanySummary[] = [
 	makeCompany("company-2", {
 		name: "СтройМастер",
 		responsibleEmployeeName: "Петров Пётр",
-		addresses: [{ id: "addr-4", name: "Центральный", type: "warehouse" }],
+		addresses: [{ id: "addr-4", name: "Центральный", type: "warehouse", address: "г. Казань, ул. Центральная, д. 3" }],
 		employeeCount: 5,
 		procurementItemCount: 10,
 	}),
@@ -36,8 +41,8 @@ const MOCK_COMPANIES: CompanySummary[] = [
 		name: "ТехноСервис",
 		responsibleEmployeeName: "Сидоров Алексей",
 		addresses: [
-			{ id: "addr-5", name: "Головной", type: "office" },
-			{ id: "addr-6", name: "Запасной", type: "warehouse" },
+			{ id: "addr-5", name: "Головной", type: "office", address: "г. Новосибирск, пр. Мира, д. 20, оф. 5" },
+			{ id: "addr-6", name: "Запасной", type: "warehouse", address: "г. Новосибирск, ул. Запасная, д. 8" },
 		],
 		employeeCount: 8,
 		procurementItemCount: 15,
@@ -46,7 +51,14 @@ const MOCK_COMPANIES: CompanySummary[] = [
 		makeCompany(`company-${i + 4}`, {
 			name: `Компания ${i + 4}`,
 			responsibleEmployeeName: `Сотрудник ${i + 4}`,
-			addresses: [{ id: `addr-gen-${i}`, name: `Адрес ${i + 4}`, type: "office" }],
+			addresses: [
+				{
+					id: `addr-gen-${i}`,
+					name: `Адрес ${i + 4}`,
+					type: "office",
+					address: `г. Москва, ул. Тестовая, д. ${i + 4}`,
+				},
+			],
 			employeeCount: i + 1,
 			procurementItemCount: i * 2,
 		}),
@@ -59,9 +71,7 @@ const MOCK_ADDRESSES: Address[] = [
 		name: "Главный офис",
 		type: "office",
 		postalCode: "123456",
-		address: "ул. Тестовая, 1",
-		city: "Москва",
-		region: "Московская область",
+		address: "г. Москва, ул. Ленина, д. 15, оф. 301",
 		contactPerson: "Иванов",
 		phone: "+71234567890",
 	},
@@ -70,9 +80,7 @@ const MOCK_ADDRESSES: Address[] = [
 		name: "Склад №1",
 		type: "warehouse",
 		postalCode: "654321",
-		address: "ул. Складская, 10",
-		city: "Подольск",
-		region: "Московская область",
+		address: "Московская обл., г. Подольск, ул. Складская, д. 10",
 		contactPerson: "Петров",
 		phone: "+79876543210",
 	},
@@ -246,10 +254,7 @@ function setupHandlers() {
 			const body = (await request.json()) as Record<string, unknown>;
 			const id = `company-new-${Date.now()}`;
 			const created = makeCompanyDetail(id, { name: body.name as string });
-			const summary = makeCompany(id, {
-				name: body.name as string,
-				responsibleEmployeeName: `${(body.employee as Record<string, string>).lastName} ${(body.employee as Record<string, string>).firstName}`,
-			});
+			const summary = makeCompany(id, { name: body.name as string, responsibleEmployeeName: "" });
 			companyList = [...companyList, summary];
 			return HttpResponse.json(created);
 		}),
@@ -354,46 +359,28 @@ describe("CompaniesPage", () => {
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
 	});
 
-	test("renders table with all 4 column headers", async () => {
+	test("renders table with all 5 column headers", async () => {
 		await renderPageReady();
 		const table = screen.getByRole("table");
+		expect(within(table).getByText("№")).toBeInTheDocument();
 		expect(within(table).getByText("НАЗВАНИЕ")).toBeInTheDocument();
-		expect(within(table).getByText("АДРЕСА")).toBeInTheDocument();
 		expect(within(table).getByText("СОТРУДНИКИ")).toBeInTheDocument();
 		expect(within(table).getByText("ЗАКУПКИ")).toBeInTheDocument();
+		expect(within(table).getByText("АДРЕС")).toBeInTheDocument();
 	});
 
 	test("renders company name and responsible employee in first row", async () => {
 		await renderPageReady();
 		const row = screen.getByTestId("row-company-1");
 		expect(within(row).getByText("Сделка")).toBeInTheDocument();
-		expect(within(row).getByText("Иванов Иван")).toBeInTheDocument();
+		expect(within(row).getByText("Ответственный: Иванов Иван")).toBeInTheDocument();
 	});
 
-	test("renders first address with type badge in first row", async () => {
+	test("renders row number and address field in first row", async () => {
 		await renderPageReady();
 		const row = screen.getByTestId("row-company-1");
-		expect(within(row).getByText("Главный офис")).toBeInTheDocument();
-		expect(within(row).getByText("Офис")).toBeInTheDocument();
-	});
-
-	test("renders +N badge when company has extra addresses", async () => {
-		await renderPageReady();
-		const row = screen.getByTestId("row-company-1");
-		expect(within(row).getByText("+2")).toBeInTheDocument();
-	});
-
-	test("+N popover shows remaining addresses on click", async () => {
-		await renderPageReady();
-		const user = userEvent.setup();
-		const row = screen.getByTestId("row-company-1");
-
-		await user.click(within(row).getByText("+2"));
-
-		await waitFor(() => {
-			expect(screen.getByText("Склад №1")).toBeInTheDocument();
-			expect(screen.getByText("Цех")).toBeInTheDocument();
-		});
+		expect(within(row).getByText("1")).toBeInTheDocument();
+		expect(within(row).getByText("г. Москва, ул. Ленина, д. 15, оф. 301")).toBeInTheDocument();
 	});
 
 	test("renders employee count and procurement count", async () => {
@@ -554,20 +541,23 @@ describe("CompaniesPage drawer", () => {
 		expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
 	});
 
-	test("Общее tab displays company fields populated from data", async () => {
+	test("Общее tab displays company fields as text in view mode", async () => {
 		renderPage(["/companies?company=company-1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
 		});
 
-		expect(screen.getByLabelText("Название")).toHaveValue("Сделка");
-		expect(screen.getByLabelText("Отрасль")).toHaveValue("Технологии");
-		expect(screen.getByLabelText("Сайт")).toHaveValue("https://sdelka.ai");
-		expect(screen.getByLabelText("Описание")).toHaveValue("Платформа для закупок");
-		expect(screen.getByLabelText("Предпочтительная оплата")).toHaveValue("Безналичный расчёт");
-		expect(screen.getByLabelText("Предпочтительная доставка")).toHaveValue("Курьером");
-		expect(screen.getByLabelText("Дополнительные комментарии")).toHaveValue("Важный клиент");
+		const tab = screen.getByTestId("tab-content-general");
+		expect(within(tab).getByText("Сделка")).toBeInTheDocument();
+		expect(within(tab).getByText("Технологии")).toBeInTheDocument();
+		expect(within(tab).getByText("https://sdelka.ai")).toBeInTheDocument();
+		expect(within(tab).getByText("Платформа для закупок")).toBeInTheDocument();
+		expect(within(tab).getByText("Безналичный расчёт")).toBeInTheDocument();
+		expect(within(tab).getByText("Курьером")).toBeInTheDocument();
+		expect(within(tab).getByText("Важный клиент")).toBeInTheDocument();
+		expect(within(tab).getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
+		expect(within(tab).getByRole("button", { name: "Редактировать дополнительную информацию" })).toBeInTheDocument();
 	});
 
 	test("Общее tab shows both sections", async () => {
@@ -578,15 +568,18 @@ describe("CompaniesPage drawer", () => {
 		});
 
 		expect(screen.getByText("Основная информация")).toBeInTheDocument();
-		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
+		expect(screen.getByText("Дополнительная информация для агента")).toBeInTheDocument();
 	});
 
-	test("save button is disabled when no changes", async () => {
+	test("save button is disabled when no changes in edit mode", async () => {
 		renderPage(["/companies?company=company-1"]);
+		const user = userEvent.setup();
 
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
 		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
 	});
@@ -606,6 +599,8 @@ describe("CompaniesPage drawer", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
 		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		const nameInput = screen.getByLabelText("Название");
 		await user.clear(nameInput);
@@ -627,6 +622,8 @@ describe("CompaniesPage drawer", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
 		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		const nameInput = screen.getByLabelText("Название");
 		await user.clear(nameInput);
@@ -723,9 +720,7 @@ describe("CompaniesPage Адреса tab", () => {
 
 		const card = screen.getByTestId("address-addr-detail-1");
 		expect(within(card).getByText("123456")).toBeInTheDocument();
-		expect(within(card).getByText("ул. Тестовая, 1")).toBeInTheDocument();
-		expect(within(card).getByText("Москва")).toBeInTheDocument();
-		expect(within(card).getByText("Московская область")).toBeInTheDocument();
+		expect(within(card).getByText("г. Москва, ул. Ленина, д. 15, оф. 301")).toBeInTheDocument();
 		expect(within(card).getByText("Иванов")).toBeInTheDocument();
 		expect(within(card).getByText("+71234567890")).toBeInTheDocument();
 	});
@@ -739,9 +734,7 @@ describe("CompaniesPage Адреса tab", () => {
 
 		expect(within(card).getByLabelText("Название")).toHaveValue("Главный офис");
 		expect(within(card).getByLabelText("Индекс")).toHaveValue("123456");
-		expect(within(card).getByLabelText("Адрес")).toHaveValue("ул. Тестовая, 1");
-		expect(within(card).getByLabelText("Населенный пункт")).toHaveValue("Москва");
-		expect(within(card).getByLabelText("Регион")).toHaveValue("Московская область");
+		expect(within(card).getByLabelText("Адрес")).toHaveValue("г. Москва, ул. Ленина, д. 15, оф. 301");
 		expect(within(card).getByLabelText("Контактное лицо")).toHaveValue("Иванов");
 		expect(within(card).getByLabelText("Телефон")).toHaveValue("+71234567890");
 	});
@@ -799,9 +792,7 @@ describe("CompaniesPage Адреса tab", () => {
 		const form = screen.getByTestId("address-add-form");
 		await user.type(within(form).getByLabelText("Название"), "Новый склад");
 		await user.type(within(form).getByLabelText("Индекс"), "111111");
-		await user.type(within(form).getByLabelText("Адрес"), "ул. Новая, 5");
-		await user.type(within(form).getByLabelText("Населенный пункт"), "Москва");
-		await user.type(within(form).getByLabelText("Регион"), "МО");
+		await user.type(within(form).getByLabelText("Адрес"), "г. Москва, ул. Новая, д. 5");
 		await user.type(within(form).getByLabelText("Контактное лицо"), "Сидоров");
 		await user.type(within(form).getByLabelText("Телефон"), "+79001234567");
 
@@ -864,20 +855,17 @@ describe("CompaniesPage Сотрудники tab", () => {
 		expect(within(card).getByLabelText("Ответственный")).toBeInTheDocument();
 	});
 
-	test("expand card shows profile fields and permissions matrix", async () => {
+	test("expand card shows profile fields in view mode and permissions matrix", async () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByTestId("employee-toggle-emp-1"));
 
 		const card = screen.getByTestId("employee-emp-1");
-		// Profile fields
-		expect(within(card).getByLabelText("Фамилия")).toHaveValue("Иванов");
-		expect(within(card).getByLabelText("Имя")).toHaveValue("Иван");
-		expect(within(card).getByLabelText("Отчество")).toHaveValue("Иванович");
-		expect(within(card).getByLabelText("Должность")).toHaveValue("Директор");
-		expect(within(card).getByLabelText("Телефон")).toHaveValue("+71234567890");
-		expect(within(card).getByLabelText("Электронная почта")).toHaveValue("ivan@example.com");
+		// View mode fields
+		expect(within(card).getByText("+71234567890")).toBeInTheDocument();
+		expect(within(card).getByText("ivan@example.com")).toBeInTheDocument();
+		expect(within(card).getByRole("button", { name: "Редактировать сотрудника" })).toBeInTheDocument();
 
 		// Permissions matrix
 		expect(within(card).getByTestId("permissions-matrix")).toBeInTheDocument();
@@ -914,6 +902,8 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await user.click(screen.getByTestId("employee-toggle-emp-1"));
 
 		const card = screen.getByTestId("employee-emp-1");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
+
 		const posInput = within(card).getByLabelText("Должность");
 		await user.clear(posInput);
 		await user.type(posInput, "Генеральный директор");
@@ -941,6 +931,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await user.click(screen.getByTestId("employee-toggle-emp-2"));
 
 		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("button", { name: "Редактировать права доступа" }));
 		await user.click(within(card).getByTestId("perm-analytics-edit"));
 
 		await waitFor(() => {
@@ -948,18 +939,18 @@ describe("CompaniesPage Сотрудники tab", () => {
 		});
 	});
 
-	test("permissions matrix shows module icons for all 4 modules", async () => {
+	test("permissions matrix shows all 4 module icons in view mode", async () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByTestId("employee-toggle-emp-1"));
 
 		const matrix = screen.getByTestId("permissions-matrix");
-		// Each module row should have the icon + label
-		expect(within(matrix).getByText("Аналитика")).toBeInTheDocument();
-		expect(within(matrix).getByText("Закупки")).toBeInTheDocument();
-		expect(within(matrix).getByText("Компании")).toBeInTheDocument();
-		expect(within(matrix).getByText("Задачи")).toBeInTheDocument();
+		expect(within(matrix).getByTestId("perm-row-analytics")).toBeInTheDocument();
+		expect(within(matrix).getByTestId("perm-row-procurement")).toBeInTheDocument();
+		expect(within(matrix).getByTestId("perm-row-companies")).toBeInTheDocument();
+		expect(within(matrix).getByTestId("perm-row-tasks")).toBeInTheDocument();
+		expect(within(matrix).getByRole("button", { name: "Редактировать права доступа" })).toBeInTheDocument();
 	});
 
 	test("isResponsible checkbox has radio behavior", async () => {
@@ -983,10 +974,11 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		// Expand second employee (not responsible) and click responsible checkbox
+		// Expand second employee (not responsible), enter edit mode, click responsible checkbox
 		await user.click(screen.getByTestId("employee-toggle-emp-2"));
 
 		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		await user.click(within(card).getByRole("checkbox", { name: "Ответственный" }));
 
 		await waitFor(() => {
@@ -998,10 +990,11 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		// Expand the responsible employee (emp-1)
+		// Expand the responsible employee (emp-1) and enter edit mode
 		await user.click(screen.getByTestId("employee-toggle-emp-1"));
 
 		const card = screen.getByTestId("employee-emp-1");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		expect(within(card).getByRole("button", { name: "Удалить сотрудника" })).toBeDisabled();
 	});
 
@@ -1035,6 +1028,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await user.click(screen.getByTestId("employee-toggle-emp-2"));
 
 		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		await user.click(within(card).getByRole("button", { name: "Удалить сотрудника" }));
 
 		await waitFor(() => {
@@ -1064,6 +1058,8 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await user.click(screen.getByTestId("employee-toggle-emp-2"));
 
 		const card = screen.getByTestId("employee-emp-2");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
+
 		// Change role to admin via select
 		await user.click(within(card).getByLabelText("Роль"));
 		await user.click(screen.getByRole("option", { name: "Администратор" }));
@@ -1087,12 +1083,13 @@ describe("CompaniesPage context menu", () => {
 		await user.pointer({ keys: "[MouseRight]", target: row });
 
 		await waitFor(() => {
-			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Просмотреть закупки" })).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Добавить сотрудника" })).toBeInTheDocument();
 			expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument();
 		});
 	});
 
-	test("Просмотреть сотрудников opens drawer on Сотрудники tab", async () => {
+	test("Добавить сотрудника opens drawer on Сотрудники tab with add form", async () => {
 		await renderPageReady();
 		const user = userEvent.setup();
 
@@ -1100,14 +1097,15 @@ describe("CompaniesPage context menu", () => {
 		await user.pointer({ keys: "[MouseRight]", target: row });
 
 		await waitFor(() => {
-			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Добавить сотрудника" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" }));
+		await user.click(screen.getByRole("menuitem", { name: "Добавить сотрудника" }));
 
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
 			expect(screen.getByTestId("tab-employees")).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByTestId("employee-add-form")).toBeInTheDocument();
 		});
 	});
 
@@ -1119,7 +1117,7 @@ describe("CompaniesPage context menu", () => {
 		await user.pointer({ keys: "[MouseRight]", target: row });
 
 		await waitFor(() => {
-			expect(screen.getByRole("menuitem", { name: "Просмотреть сотрудников" })).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Просмотреть закупки" })).toBeInTheDocument();
 		});
 
 		expect(screen.queryByRole("menuitem", { name: "Удалить" })).not.toBeInTheDocument();
@@ -1255,7 +1253,7 @@ describe("CompaniesPage company creation", () => {
 		});
 	});
 
-	test("creation form has company name, address, and employee sections", async () => {
+	test("creation form has company fields and address card", async () => {
 		await renderPageReady();
 		const user = userEvent.setup();
 
@@ -1266,18 +1264,19 @@ describe("CompaniesPage company creation", () => {
 		});
 
 		const form = screen.getByTestId("creation-form");
-		// Company section
-		expect(within(form).getByText("Компания")).toBeInTheDocument();
+		// Company fields
 		expect(within(form).getByLabelText("Название компании")).toBeInTheDocument();
-		// Address section
+		expect(within(form).getByLabelText("Отрасль")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Сайт")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Описание")).toBeInTheDocument();
+		expect(within(form).getByLabelText("Предпочтительная оплата")).toBeInTheDocument();
+		// Address card
+		expect(within(form).getByTestId("address-row-0")).toBeInTheDocument();
 		expect(within(form).getByLabelText("Название адреса")).toBeInTheDocument();
 		expect(within(form).getByLabelText("Тип адреса")).toBeInTheDocument();
-		expect(within(form).getByLabelText("Индекс")).toBeInTheDocument();
-		// Employee section
-		expect(within(form).getByText("Ответственный сотрудник")).toBeInTheDocument();
-		expect(within(form).getByLabelText("Фамилия сотрудника")).toBeInTheDocument();
-		expect(within(form).getByLabelText("Имя сотрудника")).toBeInTheDocument();
-		expect(within(form).getByLabelText("Роль сотрудника")).toBeInTheDocument();
+		// Footer buttons
+		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeInTheDocument();
 	});
 
 	test("submit blocked when company name is empty", async () => {
@@ -1290,11 +1289,8 @@ describe("CompaniesPage company creation", () => {
 			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
 		});
 
-		// Fill address and employee but not company name
 		const form = screen.getByTestId("creation-form");
 		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
-		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Иванов");
-		await user.type(within(form).getByLabelText("Имя сотрудника"), "Иван");
 
 		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
 	});
@@ -1311,26 +1307,6 @@ describe("CompaniesPage company creation", () => {
 
 		const form = screen.getByTestId("creation-form");
 		await user.type(within(form).getByLabelText("Название компании"), "Тестовая");
-		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Иванов");
-		await user.type(within(form).getByLabelText("Имя сотрудника"), "Иван");
-
-		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
-	});
-
-	test("submit blocked when employee name is incomplete", async () => {
-		await renderPageReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
-
-		await waitFor(() => {
-			expect(screen.getByTestId("creation-form")).toBeInTheDocument();
-		});
-
-		const form = screen.getByTestId("creation-form");
-		await user.type(within(form).getByLabelText("Название компании"), "Тестовая");
-		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
-		// No employee name filled
 
 		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeDisabled();
 	});
@@ -1348,8 +1324,6 @@ describe("CompaniesPage company creation", () => {
 		const form = screen.getByTestId("creation-form");
 		await user.type(within(form).getByLabelText("Название компании"), "НоваяКомпания");
 		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
-		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Сидоров");
-		await user.type(within(form).getByLabelText("Имя сотрудника"), "Алексей");
 
 		expect(screen.getByRole("button", { name: "Создать компанию" })).toBeEnabled();
 
@@ -1379,8 +1353,6 @@ describe("CompaniesPage company creation", () => {
 		const form = screen.getByTestId("creation-form");
 		await user.type(within(form).getByLabelText("Название компании"), "НоваяКомпания");
 		await user.type(within(form).getByLabelText("Название адреса"), "Офис");
-		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Сидоров");
-		await user.type(within(form).getByLabelText("Имя сотрудника"), "Алексей");
 
 		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
 
@@ -1412,8 +1384,6 @@ describe("CompaniesPage company creation", () => {
 		const form = screen.getByTestId("creation-form");
 		await user.type(within(form).getByLabelText("Название компании"), "ТестКомпания");
 		await user.type(within(form).getByLabelText("Название адреса"), "Центральный");
-		await user.type(within(form).getByLabelText("Фамилия сотрудника"), "Петров");
-		await user.type(within(form).getByLabelText("Имя сотрудника"), "Пётр");
 
 		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
 
@@ -1424,8 +1394,8 @@ describe("CompaniesPage company creation", () => {
 		expect(capturedBody).toMatchObject({
 			name: "ТестКомпания",
 			address: { name: "Центральный", type: "office" },
-			employee: { firstName: "Пётр", lastName: "Петров", isResponsible: true },
 		});
+		expect(capturedBody).not.toHaveProperty("employee");
 	});
 
 	test("form clears on close and reopen", async () => {

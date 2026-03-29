@@ -1,6 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import { useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CompaniesTable } from "@/components/companies-table";
 import { CompanyCreationSheet } from "@/components/company-creation-sheet";
@@ -36,11 +36,13 @@ function parseSort(params: URLSearchParams): CompanySortState | null {
 
 export function CompaniesPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
+	const navigate = useNavigate();
 
 	const search = searchParams.get("q") ?? "";
 	const sort = parseSort(searchParams);
 	const companyId = searchParams.get("company");
 	const activeTab = parseCompanyTab(searchParams.get("tab"));
+	const initialAddEmployee = searchParams.get("action") === "add-employee";
 
 	const { companies, hasNextPage, loadMore, isLoading, isFetchingNextPage, error, refetch } = useCompanies({
 		search,
@@ -113,6 +115,7 @@ export function CompaniesPage() {
 				const next = new URLSearchParams(prev);
 				next.delete("company");
 				next.delete("tab");
+				next.delete("action");
 				return next;
 			},
 			{ replace: true },
@@ -131,12 +134,17 @@ export function CompaniesPage() {
 		);
 	}
 
-	function handleViewEmployees(company: CompanySummary) {
+	function handleViewProcurement(company: CompanySummary) {
+		navigate(`/procurement?company=${company.id}`);
+	}
+
+	function handleAddEmployee(company: CompanySummary) {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
 				next.set("company", company.id);
 				next.set("tab", "employees");
+				next.set("action", "add-employee");
 				return next;
 			},
 			{ replace: true },
@@ -214,7 +222,8 @@ export function CompaniesPage() {
 					loadMore={loadMore}
 					onSort={handleSort}
 					onRowClick={handleRowClick}
-					onViewEmployees={handleViewEmployees}
+					onViewProcurement={handleViewProcurement}
+					onAddEmployee={handleAddEmployee}
 					onDelete={setCompanyToDelete}
 					isLoading={isLoading}
 					isFetchingNextPage={isFetchingNextPage}
@@ -227,6 +236,7 @@ export function CompaniesPage() {
 			<CompanyDrawer
 				companyId={companyId}
 				activeTab={activeTab}
+				initialAddEmployee={initialAddEmployee}
 				onClose={handleDrawerClose}
 				onTabChange={handleTabChange}
 			/>

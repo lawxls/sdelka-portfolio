@@ -429,7 +429,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 														nameRefs.current.delete(pos.key);
 													}
 												}}
-												placeholder="Название позиции"
+												placeholder="Название позиции *"
 												value={pos.name}
 												onChange={(e) => updatePosition(pos.key, "name", e.target.value)}
 												autoFocus={i === 0}
@@ -604,20 +604,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 								{/* ── Параметры запроса ── */}
 								<SectionGroupHeader title="Параметры запроса" />
 
-								<SectionLabel
-									label="Аналоги"
-									hint="Если аналоги не допускаются, предложения с заменами не будут учтены в системе"
-								>
-									<OptionalSegmentedControl
-										options={["allowed", "not-allowed"] as const}
-										labels={{ allowed: "Допускаются", "not-allowed": "Не допускаются" }}
-										value={
-											delivery.analoguesAllowed === null ? null : delivery.analoguesAllowed ? "allowed" : "not-allowed"
-										}
-										onChange={(v) => updateDelivery("analoguesAllowed", v === null ? null : v === "allowed")}
-									/>
-								</SectionLabel>
-
 								<SectionLabel label="Периодичность мониторинга цен">
 									<Select
 										value={delivery.monitoringPeriod}
@@ -636,11 +622,27 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									</Select>
 								</SectionLabel>
 
+								<div className="flex items-center gap-2 py-1">
+									<Checkbox
+										id="analogues-allowed"
+										checked={delivery.analoguesAllowed === true}
+										onCheckedChange={(checked) => updateDelivery("analoguesAllowed", checked === true ? true : null)}
+										aria-label="Аналоги допускаются"
+									/>
+									<label htmlFor="analogues-allowed" className="text-sm">
+										Допускаются аналоги
+									</label>
+								</div>
+
 								<div className="border-t border-border py-3">
 									<div className="flex items-center gap-2">
 										{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally */}
 										<label className="flex items-center gap-2">
-											<Checkbox checked={hideCompanyInfo} onCheckedChange={(v) => setHideCompanyInfo(v === true)} />
+											<Checkbox
+												checked={hideCompanyInfo}
+												onCheckedChange={(v) => setHideCompanyInfo(v === true)}
+												aria-label="Скрыть информацию о компании"
+											/>
 											<span className="text-sm font-medium">Скрыть информацию о компании в запросе</span>
 										</label>
 										<HintTooltip text="Запрос будет от имени Sdelka.ai, название вашей компании будет скрыто. Это может снизить количество предложений от поставщиков" />

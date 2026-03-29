@@ -1,4 +1,14 @@
-import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, Building2, LoaderCircle, Trash2, Users } from "lucide-react";
+import {
+	AlertTriangle,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	Building2,
+	Layers,
+	LoaderCircle,
+	Trash2,
+	UserPlus,
+} from "lucide-react";
 import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,17 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { AddressSummary, CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { ADDRESS_TYPE_LABELS } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
-
-interface SortableColumn {
-	label: string;
-	field: CompanySortField;
-}
-
-const SORTABLE_COLUMNS: SortableColumn[] = [
-	{ label: "НАЗВАНИЕ", field: "name" },
-	{ label: "СОТРУДНИКИ", field: "employeeCount" },
-	{ label: "ЗАКУПКИ", field: "procurementItemCount" },
-];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
 
@@ -78,7 +77,8 @@ interface CompaniesTableProps {
 	loadMore: () => void;
 	onSort: (field: CompanySortField) => void;
 	onRowClick?: (company: CompanySummary) => void;
-	onViewEmployees?: (company: CompanySummary) => void;
+	onViewProcurement?: (company: CompanySummary) => void;
+	onAddEmployee?: (company: CompanySummary) => void;
 	onDelete?: (company: CompanySummary) => void;
 	isLoading?: boolean;
 	isFetchingNextPage?: boolean;
@@ -94,7 +94,8 @@ export function CompaniesTable({
 	loadMore,
 	onSort,
 	onRowClick,
-	onViewEmployees,
+	onViewProcurement,
+	onAddEmployee,
 	onDelete,
 	isLoading,
 	isFetchingNextPage,
@@ -184,47 +185,71 @@ export function CompaniesTable({
 				className="flex flex-1 flex-col overflow-auto touch-manipulation"
 				data-testid="table-scroll-container"
 			>
-				<Table>
+				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
-							{SORTABLE_COLUMNS.map((col) => (
-								<TableHead key={col.field} className={col.field === "name" ? stickyHead : `text-right ${stickyHead}`}>
-									<button
-										type="button"
-										className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-										onClick={() => onSort(col.field)}
-										aria-label={`Сортировать по ${col.label}`}
-									>
-										{col.label}
-										<SortIcon field={col.field} sort={sort} />
-									</button>
-								</TableHead>
-							))}
-							<TableHead className={stickyHead}>АДРЕСА</TableHead>
+							<TableHead className={`w-8 text-right ${stickyHead}`}>№</TableHead>
+							<TableHead className={`w-[30%] ${stickyHead}`}>
+								<button
+									type="button"
+									className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+									onClick={() => onSort("name")}
+									aria-label="Сортировать по НАЗВАНИЕ"
+								>
+									НАЗВАНИЕ
+									<SortIcon field="name" sort={sort} />
+								</button>
+							</TableHead>
+							<TableHead className={`w-[30%] ${stickyHead}`}>АДРЕС</TableHead>
+							<TableHead className={`w-[15%] text-right ${stickyHead}`}>
+								<button
+									type="button"
+									className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+									onClick={() => onSort("employeeCount")}
+									aria-label="Сортировать по СОТРУДНИКИ"
+								>
+									СОТРУДНИКИ
+									<SortIcon field="employeeCount" sort={sort} />
+								</button>
+							</TableHead>
+							<TableHead className={`w-[15%] text-right ${stickyHead}`}>
+								<button
+									type="button"
+									className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+									onClick={() => onSort("procurementItemCount")}
+									aria-label="Сортировать по ЗАКУПКИ"
+								>
+									ЗАКУПКИ
+									<SortIcon field="procurementItemCount" sort={sort} />
+								</button>
+							</TableHead>
+							<TableHead className={`w-16 ${stickyHead}`} />
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{isLoading &&
-							SKELETON_KEYS.map((key) => (
+							SKELETON_KEYS.map((key, i) => (
 								<TableRow key={key} data-testid="skeleton-row">
+									<TableCell className="text-right tabular-nums text-muted-foreground">{i + 1}</TableCell>
 									<TableCell>
 										<Skeleton className="h-4 w-32" />
 										<Skeleton className="mt-1 h-3 w-24" />
 									</TableCell>
-									<TableCell className="text-right">
-										<Skeleton className="ml-auto h-4 w-8" />
-									</TableCell>
-									<TableCell className="text-right">
-										<Skeleton className="ml-auto h-4 w-8" />
-									</TableCell>
 									<TableCell>
 										<Skeleton className="h-4 w-28" />
 									</TableCell>
+									<TableCell className="text-right">
+										<Skeleton className="ml-auto h-4 w-8" />
+									</TableCell>
+									<TableCell className="text-right">
+										<Skeleton className="ml-auto h-4 w-8" />
+									</TableCell>
+									<TableCell />
 								</TableRow>
 							))}
 						{error && !isLoading && (
 							<TableRow>
-								<TableCell colSpan={4} className="h-48">
+								<TableCell colSpan={6} className="h-48">
 									<div
 										className="flex flex-col items-center justify-center gap-3 text-muted-foreground"
 										data-testid="companies-error"
@@ -246,9 +271,8 @@ export function CompaniesTable({
 						)}
 						{!isLoading &&
 							!error &&
-							companies.map((company) => {
+							companies.map((company, index) => {
 								const firstAddress = company.addresses[0];
-								const extraAddresses = company.addresses.slice(1);
 
 								return (
 									<ContextMenu key={company.id}>
@@ -258,34 +282,31 @@ export function CompaniesTable({
 												onClick={onRowClick ? () => onRowClick(company) : undefined}
 												data-testid={`row-${company.id}`}
 											>
+												<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
 												<TableCell className="font-medium">
 													<div>
 														<span>{company.name}</span>
-														{company.isMain && (
-															<Badge variant="outline" className="ml-2 text-[10px]">
-																Основная
-															</Badge>
-														)}
 													</div>
-													<div className="mt-0.5 text-xs text-muted-foreground">{company.responsibleEmployeeName}</div>
+													<div className="mt-0.5 text-xs text-muted-foreground">
+														Ответственный: {company.responsibleEmployeeName}
+													</div>
+												</TableCell>
+												<TableCell>
+													{firstAddress && <span className="text-sm truncate">{firstAddress.address}</span>}
 												</TableCell>
 												<TableCell className="text-right tabular-nums">{company.employeeCount}</TableCell>
 												<TableCell className="text-right tabular-nums">{company.procurementItemCount}</TableCell>
-												<TableCell>
-													{firstAddress && (
-														<div className="flex items-center gap-2">
-															<span className="text-sm truncate">{firstAddress.name}</span>
-															<AddressTypeBadge type={firstAddress.type} />
-															{extraAddresses.length > 0 && <ExtraAddressesPopover addresses={extraAddresses} />}
-														</div>
-													)}
-												</TableCell>
+												<TableCell />
 											</TableRow>
 										</ContextMenuTrigger>
 										<ContextMenuContent>
-											<ContextMenuItem onClick={() => onViewEmployees?.(company)}>
-												<Users className="size-4" aria-hidden="true" />
-												Просмотреть сотрудников
+											<ContextMenuItem onClick={() => onViewProcurement?.(company)}>
+												<Layers className="size-4" aria-hidden="true" />
+												Просмотреть закупки
+											</ContextMenuItem>
+											<ContextMenuItem onClick={() => onAddEmployee?.(company)}>
+												<UserPlus className="size-4" aria-hidden="true" />
+												Добавить сотрудника
 											</ContextMenuItem>
 											{!company.isMain && (
 												<>
@@ -348,13 +369,8 @@ function CompanyCard({ company, onClick }: { company: CompanySummary; onClick?: 
 				<div>
 					<div className="flex items-center gap-2">
 						<span className="font-medium text-sm">{company.name}</span>
-						{company.isMain && (
-							<Badge variant="outline" className="text-[10px]">
-								Основная
-							</Badge>
-						)}
 					</div>
-					<div className="mt-0.5 text-xs text-muted-foreground">{company.responsibleEmployeeName}</div>
+					<div className="mt-0.5 text-xs text-muted-foreground">Ответственный: {company.responsibleEmployeeName}</div>
 				</div>
 			</div>
 

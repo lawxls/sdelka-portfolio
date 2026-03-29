@@ -190,7 +190,7 @@ describe("ProcurementCard actions", () => {
 
 		await user.click(screen.getByRole("button", { name: "Действия" }));
 
-		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
+		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
@@ -210,7 +210,7 @@ describe("ProcurementCard actions", () => {
 
 		fireEvent.contextMenu(screen.getByTestId("card-1"));
 
-		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
+		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
@@ -308,10 +308,10 @@ describe("ProcurementCard actions", () => {
 
 		await user.click(screen.getByRole("button", { name: "Действия" }));
 		// Open folder submenu
-		fireEvent.click(screen.getByText("Переместить в раздел"));
+		fireEvent.click(screen.getByText("Переместить в категорию"));
 
 		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
 		expect(screen.getByText("Стройматериалы")).toBeInTheDocument();
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 });

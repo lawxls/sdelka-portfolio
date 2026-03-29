@@ -302,8 +302,13 @@ export async function deleteCompany(id: string): Promise<void> {
 
 export interface CreateCompanyPayload {
 	name: string;
+	industry?: string;
+	website?: string;
+	description?: string;
+	preferredPayment?: string;
+	preferredDelivery?: string;
+	additionalComments?: string;
 	address: CreateAddressData;
-	employee: CreateEmployeeData;
 }
 
 export async function createCompany(data: CreateCompanyPayload): Promise<Company> {
@@ -322,8 +327,6 @@ export interface CreateAddressData {
 	type: AddressType;
 	postalCode: string;
 	address: string;
-	city: string;
-	region: string;
 	contactPerson: string;
 	phone: string;
 }
@@ -333,8 +336,6 @@ export interface UpdateAddressData {
 	type?: AddressType;
 	postalCode?: string;
 	address?: string;
-	city?: string;
-	region?: string;
 	contactPerson?: string;
 	phone?: string;
 }

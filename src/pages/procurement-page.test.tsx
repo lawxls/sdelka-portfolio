@@ -111,7 +111,7 @@ describe("ProcurementPage — single-company tenant", () => {
 
 		// Should show folder navigation items (standard sidebar)
 		expect(within(sidebar).getByText("Все закупки")).toBeInTheDocument();
-		expect(within(sidebar).getByText("Без раздела")).toBeInTheDocument();
+		expect(within(sidebar).getByText("Без категории")).toBeInTheDocument();
 		expect(within(sidebar).getByText("Архив")).toBeInTheDocument();
 
 		// Should NOT show company navigator
@@ -137,7 +137,7 @@ describe("ProcurementPage — multi-company, no selection", () => {
 
 		// Should NOT show folder items in sidebar
 		const sidebar = screen.getByTestId("sidebar");
-		expect(within(sidebar).queryByText("Без раздела")).not.toBeInTheDocument();
+		expect(within(sidebar).queryByText("Без категории")).not.toBeInTheDocument();
 		expect(within(sidebar).queryByText("Архив")).not.toBeInTheDocument();
 	});
 
@@ -191,7 +191,7 @@ describe("ProcurementPage — multi-company, company selected", () => {
 			expect(screen.getByTestId("company-back-button")).toBeInTheDocument();
 		});
 		const sidebar = screen.getByTestId("sidebar");
-		expect(within(sidebar).getByText("Без раздела")).toBeInTheDocument();
+		expect(within(sidebar).getByText("Без категории")).toBeInTheDocument();
 		expect(within(sidebar).getByText("Архив")).toBeInTheDocument();
 
 		// Should NOT show other companies in sidebar
@@ -271,7 +271,7 @@ describe("ProcurementPage — multi-company, company selected", () => {
 			expect(screen.getByTestId("company-back-button")).toBeInTheDocument();
 		});
 		const sidebar = screen.getByTestId("sidebar");
-		expect(within(sidebar).getByText("Без раздела")).toBeInTheDocument();
+		expect(within(sidebar).getByText("Без категории")).toBeInTheDocument();
 	});
 });
 
@@ -284,6 +284,6 @@ describe("ProcurementPage — URL state", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("company-back-button")).toBeInTheDocument();
 		});
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 });

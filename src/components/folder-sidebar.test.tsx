@@ -2,8 +2,17 @@ import { DndContext } from "@dnd-kit/core";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { FolderSidebarProps } from "./folder-sidebar";
 import { FolderSidebar } from "./folder-sidebar";
+
+function renderSidebar(props: FolderSidebarProps) {
+	return render(
+		<TooltipProvider>
+			<FolderSidebar {...props} />
+		</TooltipProvider>,
+	);
+}
 
 const mockFolders = [
 	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
@@ -39,15 +48,15 @@ beforeEach(() => {
 
 describe("FolderSidebar", () => {
 	test("renders system items with counts", () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
 		expect(screen.getByText("75")).toBeInTheDocument();
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 		expect(screen.getByText("47")).toBeInTheDocument();
 	});
 
 	test("renders user folders with names and counts", () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
 		expect(screen.getByText("18")).toBeInTheDocument();
 		expect(screen.getByText("Стройматериалы")).toBeInTheDocument();
@@ -55,105 +64,106 @@ describe("FolderSidebar", () => {
 	});
 
 	test("renders folder color dots with correct style", () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		const dot = screen.getByTestId("folder-dot-folder-1");
 		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
 	});
 
 	test("highlights 'Все закупки' when no folder selected", () => {
-		render(<FolderSidebar {...makeProps({ activeFolder: undefined })} />);
+		renderSidebar(makeProps({ activeFolder: undefined }));
 		const btn = screen.getByText("Все закупки").closest("button") as HTMLElement;
 		expect(btn.className).toContain("bg-sidebar-accent");
 	});
 
-	test("highlights 'Без раздела' when folder=none", () => {
-		render(<FolderSidebar {...makeProps({ activeFolder: "none" })} />);
-		const btn = screen.getByText("Без раздела").closest("button") as HTMLElement;
+	test("highlights 'Без категории' when folder=none", () => {
+		renderSidebar(makeProps({ activeFolder: "none" }));
+		const btn = screen.getByText("Без категории").closest("button") as HTMLElement;
 		expect(btn.className).toContain("bg-sidebar-accent");
 	});
 
 	test("highlights active folder", () => {
-		render(<FolderSidebar {...makeProps({ activeFolder: "folder-1" })} />);
+		renderSidebar(makeProps({ activeFolder: "folder-1" }));
 		const btn = screen.getByText("Металлопрокат").closest("button") as HTMLElement;
 		expect(btn.className).toContain("bg-sidebar-accent");
 	});
 
 	test("does not highlight inactive items", () => {
-		render(<FolderSidebar {...makeProps({ activeFolder: "folder-1" })} />);
+		renderSidebar(makeProps({ activeFolder: "folder-1" }));
 		const allBtn = screen.getByText("Все закупки").closest("button") as HTMLElement;
 		expect(allBtn.className).not.toContain("font-medium");
 	});
 
 	test("calls onFolderSelect(undefined) when clicking 'Все закупки'", async () => {
 		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onFolderSelect })} />);
+		renderSidebar(makeProps({ onFolderSelect }));
 		await userEvent.setup().click(screen.getByText("Все закупки"));
 		expect(onFolderSelect).toHaveBeenCalledWith(undefined);
 	});
 
-	test("calls onFolderSelect('none') when clicking 'Без раздела'", async () => {
+	test("calls onFolderSelect('none') when clicking 'Без категории'", async () => {
 		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onFolderSelect })} />);
-		await userEvent.setup().click(screen.getByText("Без раздела"));
+		renderSidebar(makeProps({ onFolderSelect }));
+		await userEvent.setup().click(screen.getByText("Без категории"));
 		expect(onFolderSelect).toHaveBeenCalledWith("none");
 	});
 
 	test("calls onFolderSelect with folder id when clicking a folder", async () => {
 		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onFolderSelect })} />);
+		renderSidebar(makeProps({ onFolderSelect }));
 		await userEvent.setup().click(screen.getByText("Металлопрокат"));
 		expect(onFolderSelect).toHaveBeenCalledWith("folder-1");
 	});
 
-	test("renders 'Новый раздел' button (enabled)", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		const btn = screen.getByRole("button", { name: /Новый раздел/ });
+	test("renders 'Новая категория' button (enabled)", () => {
+		renderSidebar(makeProps());
+		const btn = screen.getByRole("button", { name: /Новая категория/ });
 		expect(btn).not.toBeDisabled();
 	});
 
-	test("renders header with title 'Разделы'", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		expect(screen.getByText("Разделы")).toBeInTheDocument();
+	test("renders header with title 'Категории'", () => {
+		renderSidebar(makeProps());
+		expect(screen.getByRole("heading", { name: "Категории" })).toBeInTheDocument();
 	});
 
 	test("renders three-dot menu button for each folder", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		expect(screen.getByRole("button", { name: "Меню раздела Металлопрокат" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Меню раздела Стройматериалы" })).toBeInTheDocument();
+		renderSidebar(makeProps());
+		expect(screen.getByRole("button", { name: "Меню категории Металлопрокат" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Меню категории Стройматериалы" })).toBeInTheDocument();
 	});
 
 	test("three-dot menu button has lg:invisible class for desktop hover behavior", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		const menuBtn = screen.getByRole("button", { name: "Меню раздела Металлопрокат" });
+		renderSidebar(makeProps());
+		const menuBtn = screen.getByRole("button", { name: "Меню категории Металлопрокат" });
 		expect(menuBtn.className).toContain("lg:invisible");
 		expect(menuBtn.className).toContain("lg:group-hover:visible");
 	});
 
 	test("folder names have truncate class", () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		const nameEl = screen.getByText("Металлопрокат");
 		expect(nameEl.className).toContain("truncate");
 	});
 
 	test("nav has overflow-y-auto for scrolling", () => {
-		render(<FolderSidebar {...makeProps()} />);
-		const nav = screen.getByRole("navigation", { name: "Разделы" });
+		renderSidebar(makeProps());
+		const nav = screen.getByRole("navigation", { name: "Категории" });
 		expect(nav.className).toContain("overflow-y-auto");
 	});
 
-	test("renders empty folder list without divider", () => {
-		render(<FolderSidebar {...makeProps({ folders: [] })} />);
+	test("renders 'Категории' section even with empty folder list", () => {
+		renderSidebar(makeProps({ folders: [] }));
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-		// No divider between system items and empty folder list
-		const sidebar = screen.getByTestId("sidebar");
-		expect(sidebar.querySelectorAll(".border-t.border-sidebar-border")).toHaveLength(1); // only footer border
+		// "Категории" label + plus button always visible
+		const nav = screen.getByRole("navigation", { name: "Категории" });
+		expect(nav.querySelectorAll(".border-t.border-sidebar-border")).toHaveLength(1);
+		expect(screen.getByRole("button", { name: "Новая категория" })).toBeInTheDocument();
 	});
 });
 
 describe("FolderSidebar collapse/expand", () => {
 	test("collapse button calls onOpenChange(false)", async () => {
 		const onOpenChange = vi.fn();
-		render(<FolderSidebar {...makeProps({ onOpenChange })} />);
+		renderSidebar(makeProps({ onOpenChange }));
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
 
@@ -161,7 +171,7 @@ describe("FolderSidebar collapse/expand", () => {
 	});
 
 	test("when closed, shows expand button", () => {
-		render(<FolderSidebar {...makeProps({ open: false })} />);
+		renderSidebar(makeProps({ open: false }));
 
 		expect(screen.queryByText("Все закупки")).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Открыть боковую панель" })).toBeInTheDocument();
@@ -169,7 +179,7 @@ describe("FolderSidebar collapse/expand", () => {
 
 	test("expand button calls onOpenChange(true)", async () => {
 		const onOpenChange = vi.fn();
-		render(<FolderSidebar {...makeProps({ open: false, onOpenChange })} />);
+		renderSidebar(makeProps({ open: false, onOpenChange }));
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Открыть боковую панель" }));
 
@@ -177,7 +187,7 @@ describe("FolderSidebar collapse/expand", () => {
 	});
 
 	test("persists collapsed state to localStorage on desktop", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
 
@@ -204,7 +214,7 @@ describe("FolderSidebar mobile", () => {
 
 	test("renders as overlay when open and not desktop", () => {
 		mockNonDesktop();
-		render(<FolderSidebar {...makeProps({ open: true })} />);
+		renderSidebar(makeProps({ open: true }));
 
 		expect(screen.getByTestId("sidebar-overlay")).toBeInTheDocument();
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
@@ -214,7 +224,7 @@ describe("FolderSidebar mobile", () => {
 	test("calls onOpenChange(false) on folder selection when not desktop", async () => {
 		mockNonDesktop();
 		const onOpenChange = vi.fn();
-		render(<FolderSidebar {...makeProps({ open: true, onOpenChange })} />);
+		renderSidebar(makeProps({ open: true, onOpenChange }));
 
 		await userEvent.setup().click(screen.getByText("Металлопрокат"));
 
@@ -225,7 +235,7 @@ describe("FolderSidebar mobile", () => {
 	test("does not persist to localStorage when not desktop", async () => {
 		mockNonDesktop();
 		const onOpenChange = vi.fn();
-		render(<FolderSidebar {...makeProps({ open: true, onOpenChange })} />);
+		renderSidebar(makeProps({ open: true, onOpenChange }));
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Закрыть боковую панель" }));
 
@@ -235,58 +245,58 @@ describe("FolderSidebar mobile", () => {
 });
 
 describe("FolderSidebar inline creation", () => {
-	test("clicking 'Новый раздел' shows inline input", async () => {
-		render(<FolderSidebar {...makeProps()} />);
-		await userEvent.setup().click(screen.getByRole("button", { name: /Новый раздел/ }));
-		const input = screen.getByRole("textbox", { name: "Название раздела" });
+	test("clicking 'Новая категория' shows inline input", async () => {
+		renderSidebar(makeProps());
+		await userEvent.setup().click(screen.getByRole("button", { name: /Новая категория/ }));
+		const input = screen.getByRole("textbox", { name: "Название категории" });
 		expect(input).toBeInTheDocument();
 	});
 
 	test("inline input has spellCheck=false and autocomplete=off", async () => {
-		render(<FolderSidebar {...makeProps()} />);
-		await userEvent.setup().click(screen.getByRole("button", { name: /Новый раздел/ }));
-		const input = screen.getByRole("textbox", { name: "Название раздела" });
+		renderSidebar(makeProps());
+		await userEvent.setup().click(screen.getByRole("button", { name: /Новая категория/ }));
+		const input = screen.getByRole("textbox", { name: "Название категории" });
 		expect(input).toHaveAttribute("spellcheck", "false");
 		expect(input).toHaveAttribute("autocomplete", "off");
 	});
 
 	test("inline input has maxLength=12", async () => {
-		render(<FolderSidebar {...makeProps()} />);
-		await userEvent.setup().click(screen.getByRole("button", { name: /Новый раздел/ }));
-		const input = screen.getByRole("textbox", { name: "Название раздела" });
+		renderSidebar(makeProps());
+		await userEvent.setup().click(screen.getByRole("button", { name: /Новая категория/ }));
+		const input = screen.getByRole("textbox", { name: "Название категории" });
 		expect(input).toHaveAttribute("maxlength", "13");
 	});
 
 	test("Enter saves non-empty name and calls onCreateFolder", async () => {
 		const onCreateFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
+		renderSidebar(makeProps({ onCreateFolder }));
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Новый раздел/ }));
-		await user.type(screen.getByRole("textbox", { name: "Название раздела" }), "Тест{Enter}");
+		await user.click(screen.getByRole("button", { name: /Новая категория/ }));
+		await user.type(screen.getByRole("textbox", { name: "Название категории" }), "Тест{Enter}");
 
 		expect(onCreateFolder).toHaveBeenCalledWith("Тест");
 	});
 
 	test("Esc cancels creation without calling onCreateFolder", async () => {
 		const onCreateFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
+		renderSidebar(makeProps({ onCreateFolder }));
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Новый раздел/ }));
-		await user.type(screen.getByRole("textbox", { name: "Название раздела" }), "Тест{Escape}");
+		await user.click(screen.getByRole("button", { name: /Новая категория/ }));
+		await user.type(screen.getByRole("textbox", { name: "Название категории" }), "Тест{Escape}");
 
 		expect(onCreateFolder).not.toHaveBeenCalled();
-		expect(screen.queryByRole("textbox", { name: "Название раздела" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("textbox", { name: "Название категории" })).not.toBeInTheDocument();
 	});
 
 	test("blur saves non-empty name", async () => {
 		const onCreateFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
+		renderSidebar(makeProps({ onCreateFolder }));
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Новый раздел/ }));
-		const input = screen.getByRole("textbox", { name: "Название раздела" });
+		await user.click(screen.getByRole("button", { name: /Новая категория/ }));
+		const input = screen.getByRole("textbox", { name: "Название категории" });
 		await user.type(input, "Тест");
 		fireEvent.blur(input);
 
@@ -295,20 +305,20 @@ describe("FolderSidebar inline creation", () => {
 
 	test("blur cancels if name is empty", async () => {
 		const onCreateFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onCreateFolder })} />);
+		renderSidebar(makeProps({ onCreateFolder }));
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Новый раздел/ }));
-		const input = screen.getByRole("textbox", { name: "Название раздела" });
+		await user.click(screen.getByRole("button", { name: /Новая категория/ }));
+		const input = screen.getByRole("textbox", { name: "Название категории" });
 		fireEvent.blur(input);
 
 		expect(onCreateFolder).not.toHaveBeenCalled();
-		expect(screen.queryByRole("textbox", { name: "Название раздела" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("textbox", { name: "Название категории" })).not.toBeInTheDocument();
 	});
 
 	test("inline creation row shows auto-colored dot", async () => {
-		render(<FolderSidebar {...makeProps()} />);
-		await userEvent.setup().click(screen.getByRole("button", { name: /Новый раздел/ }));
+		renderSidebar(makeProps());
+		await userEvent.setup().click(screen.getByRole("button", { name: /Новая категория/ }));
 		// The creating row should have a color dot
 		expect(screen.getByTestId("creating-folder-dot")).toBeInTheDocument();
 	});
@@ -317,13 +327,13 @@ describe("FolderSidebar inline creation", () => {
 // Helper: Radix DropdownMenu trigger requires pointerdown (not just click)
 async function openFolderMenu(folderName: string) {
 	const user = userEvent.setup();
-	await user.click(screen.getByRole("button", { name: `Меню раздела ${folderName}` }));
+	await user.click(screen.getByRole("button", { name: `Меню категории ${folderName}` }));
 	await screen.findByText("Переименовать");
 }
 
 describe("FolderSidebar DropdownMenu", () => {
 	test("three-dot button opens dropdown with Переименовать, Цвет, Удалить", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		await openFolderMenu("Металлопрокат");
 
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
@@ -332,7 +342,7 @@ describe("FolderSidebar DropdownMenu", () => {
 	});
 
 	test("color picker shows 8 color dots", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		await openFolderMenu("Металлопрокат");
 
 		const colorPicker = screen.getByTestId("color-picker");
@@ -341,7 +351,7 @@ describe("FolderSidebar DropdownMenu", () => {
 	});
 
 	test("active color has checkmark", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		await openFolderMenu("Металлопрокат");
 
 		// folder-1 has color "blue"
@@ -351,7 +361,7 @@ describe("FolderSidebar DropdownMenu", () => {
 
 	test("clicking a color calls onRecolorFolder", async () => {
 		const onRecolorFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onRecolorFolder })} />);
+		renderSidebar(makeProps({ onRecolorFolder }));
 		await openFolderMenu("Металлопрокат");
 
 		fireEvent.click(screen.getByTestId("color-dot-red"));
@@ -362,7 +372,7 @@ describe("FolderSidebar DropdownMenu", () => {
 
 describe("FolderSidebar rename", () => {
 	test("clicking Переименовать shows inline input with current name", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Переименовать"));
 
@@ -374,7 +384,7 @@ describe("FolderSidebar rename", () => {
 
 	test("Enter saves renamed folder", async () => {
 		const onRenameFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onRenameFolder })} />);
+		renderSidebar(makeProps({ onRenameFolder }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Переименовать"));
@@ -389,7 +399,7 @@ describe("FolderSidebar rename", () => {
 
 	test("Esc cancels rename", async () => {
 		const onRenameFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onRenameFolder })} />);
+		renderSidebar(makeProps({ onRenameFolder }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Переименовать"));
@@ -404,7 +414,7 @@ describe("FolderSidebar rename", () => {
 
 	test("empty name is rejected on blur", async () => {
 		const onRenameFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onRenameFolder })} />);
+		renderSidebar(makeProps({ onRenameFolder }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Переименовать"));
@@ -420,21 +430,21 @@ describe("FolderSidebar rename", () => {
 
 describe("FolderSidebar delete", () => {
 	test("clicking Удалить shows confirmation dialog", async () => {
-		render(<FolderSidebar {...makeProps()} />);
+		renderSidebar(makeProps());
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		expect(await screen.findByText("Удалить раздел?")).toBeInTheDocument();
+		expect(await screen.findByText("Удалить категорию?")).toBeInTheDocument();
 	});
 
 	test("confirming delete calls onDeleteFolder", async () => {
 		const onDeleteFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onDeleteFolder })} />);
+		renderSidebar(makeProps({ onDeleteFolder }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		await screen.findByText("Удалить раздел?");
+		await screen.findByText("Удалить категорию?");
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
 		expect(onDeleteFolder).toHaveBeenCalledWith("folder-1");
@@ -442,12 +452,12 @@ describe("FolderSidebar delete", () => {
 
 	test("cancelling delete does not call onDeleteFolder", async () => {
 		const onDeleteFolder = vi.fn();
-		render(<FolderSidebar {...makeProps({ onDeleteFolder })} />);
+		renderSidebar(makeProps({ onDeleteFolder }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		await screen.findByText("Удалить раздел?");
+		await screen.findByText("Удалить категорию?");
 		fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(onDeleteFolder).not.toHaveBeenCalled();
@@ -456,12 +466,12 @@ describe("FolderSidebar delete", () => {
 	test("deleting active folder switches to 'Все закупки'", async () => {
 		const onDeleteFolder = vi.fn();
 		const onFolderSelect = vi.fn();
-		render(<FolderSidebar {...makeProps({ onDeleteFolder, onFolderSelect, activeFolder: "folder-1" })} />);
+		renderSidebar(makeProps({ onDeleteFolder, onFolderSelect, activeFolder: "folder-1" }));
 
 		await openFolderMenu("Металлопрокат");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		await screen.findByText("Удалить раздел?");
+		await screen.findByText("Удалить категорию?");
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
 		expect(onDeleteFolder).toHaveBeenCalledWith("folder-1");
@@ -472,28 +482,34 @@ describe("FolderSidebar delete", () => {
 describe("FolderSidebar drag-and-drop targets", () => {
 	test("folder items are droppable targets", () => {
 		render(
-			<DndContext>
-				<FolderSidebar {...makeProps()} />
-			</DndContext>,
+			<TooltipProvider>
+				<DndContext>
+					<FolderSidebar {...makeProps()} />
+				</DndContext>
+			</TooltipProvider>,
 		);
 		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
 		expect(screen.getByTestId("droppable-folder-2")).toBeInTheDocument();
 	});
 
-	test("'Без раздела' is a droppable target", () => {
+	test("'Без категории' is a droppable target", () => {
 		render(
-			<DndContext>
-				<FolderSidebar {...makeProps()} />
-			</DndContext>,
+			<TooltipProvider>
+				<DndContext>
+					<FolderSidebar {...makeProps()} />
+				</DndContext>
+			</TooltipProvider>,
 		);
 		expect(screen.getByTestId("droppable-none")).toBeInTheDocument();
 	});
 
 	test("'Все закупки' is NOT a droppable target", () => {
 		render(
-			<DndContext>
-				<FolderSidebar {...makeProps()} />
-			</DndContext>,
+			<TooltipProvider>
+				<DndContext>
+					<FolderSidebar {...makeProps()} />
+				</DndContext>
+			</TooltipProvider>,
 		);
 		expect(screen.queryByTestId("droppable-all")).not.toBeInTheDocument();
 	});
@@ -504,9 +520,11 @@ describe("FolderSidebar drag-and-drop targets", () => {
 		// droppable structure is correct — the highlight logic
 		// is tested via DndContext integration
 		render(
-			<DndContext>
-				<FolderSidebar {...makeProps()} />
-			</DndContext>,
+			<TooltipProvider>
+				<DndContext>
+					<FolderSidebar {...makeProps()} />
+				</DndContext>
+			</TooltipProvider>,
 		);
 		const droppable = screen.getByTestId("droppable-folder-1");
 		expect(droppable).toBeInTheDocument();
@@ -515,23 +533,23 @@ describe("FolderSidebar drag-and-drop targets", () => {
 
 describe("FolderSidebar loading state", () => {
 	test("shows skeleton placeholders when isLoading is true", () => {
-		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		renderSidebar(makeProps({ isLoading: true }));
 		expect(screen.getByTestId("folder-skeletons")).toBeInTheDocument();
 	});
 
 	test("does not show folders when loading", () => {
-		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		renderSidebar(makeProps({ isLoading: true }));
 		expect(screen.queryByText("Металлопрокат")).not.toBeInTheDocument();
 	});
 
 	test("still shows system items when loading", () => {
-		render(<FolderSidebar {...makeProps({ isLoading: true })} />);
+		renderSidebar(makeProps({ isLoading: true }));
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 
 	test("does not show skeletons when loaded", () => {
-		render(<FolderSidebar {...makeProps({ isLoading: false })} />);
+		renderSidebar(makeProps({ isLoading: false }));
 		expect(screen.queryByTestId("folder-skeletons")).not.toBeInTheDocument();
 		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
 	});

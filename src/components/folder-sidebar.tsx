@@ -3,8 +3,8 @@ import {
 	Archive,
 	Check,
 	ChevronLeft,
+	CirclePlus,
 	EllipsisVertical,
-	FolderPlus,
 	Inbox,
 	Layers,
 	PanelLeft,
@@ -31,6 +31,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Folder } from "@/data/types";
 import { FOLDER_COLORS, FOLDER_NAME_MAX_LENGTH } from "@/data/types";
 import { nextUnusedColor } from "@/data/use-folders";
@@ -80,6 +81,7 @@ export interface FolderSidebarProps {
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
 	headerSlot?: React.ReactNode;
+	title?: string;
 }
 
 export function FolderSidebar({
@@ -95,6 +97,7 @@ export function FolderSidebar({
 	onRecolorFolder,
 	onDeleteFolder,
 	headerSlot,
+	title = "Категории",
 }: FolderSidebarProps) {
 	const isDesktop = useIsDesktop();
 	const [isCreating, setIsCreating] = useState(false);
@@ -139,7 +142,7 @@ export function FolderSidebar({
 		<aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground" data-testid="sidebar">
 			{/* Header */}
 			<div className="flex shrink-0 items-center justify-between border-b border-sidebar-border px-3 py-2">
-				<h2 className="text-sm font-semibold">Разделы</h2>
+				<h2 className="text-sm font-semibold truncate">{title}</h2>
 				<Button variant="ghost" size="icon-sm" onClick={toggle} aria-label="Закрыть боковую панель">
 					<ChevronLeft className="size-4" />
 				</Button>
@@ -148,7 +151,7 @@ export function FolderSidebar({
 			{headerSlot && <div className="shrink-0 border-b border-sidebar-border p-2">{headerSlot}</div>}
 
 			{/* Scrollable nav */}
-			<nav className="flex-1 overflow-y-auto p-2" aria-label="Разделы">
+			<nav className="flex-1 overflow-y-auto p-2" aria-label="Категории">
 				<div className="space-y-0.5">
 					<NavItem
 						icon={<Layers className="size-4" />}
@@ -160,7 +163,7 @@ export function FolderSidebar({
 					<DroppableNavItem
 						droppableId="none"
 						icon={<Inbox className="size-4" />}
-						label="Без раздела"
+						label="Без категории"
 						count={counts.none ?? 0}
 						active={activeFolder === "none"}
 						onClick={() => selectFolder("none")}
@@ -175,73 +178,66 @@ export function FolderSidebar({
 					/>
 				</div>
 
-				{isLoading ? (
-					<>
-						<div className="my-2 border-t border-sidebar-border" />
-						<div className="space-y-1 px-2" data-testid="folder-skeletons">
-							{["skel-a", "skel-b", "skel-c"].map((id) => (
-								<div key={id} className="flex items-center gap-2 py-1.5">
-									<Skeleton className="size-2.5 rounded-full" />
-									<Skeleton className="h-4 flex-1" />
-								</div>
-							))}
-						</div>
-					</>
-				) : (
-					<>
-						{(folders.length > 0 || isCreating) && <div className="my-2 border-t border-sidebar-border" />}
+				<div className="my-2 border-t border-sidebar-border" />
+				<div className="flex items-center justify-between px-2">
+					<span className="text-xs font-medium text-muted-foreground">Категории</span>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button variant="ghost" size="icon-xs" onClick={() => setIsCreating(true)} aria-label="Новая категория">
+								<CirclePlus className="size-3.5" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent side="right">Добавить категорию</TooltipContent>
+					</Tooltip>
+				</div>
 
-						<div className="space-y-0.5">
-							{folders.map((folder) =>
-								editingId === folder.id ? (
-									<InlineFolderRow
-										key={folder.id}
-										color={folder.color}
-										defaultValue={folder.name}
-										onSave={(name) => {
-											onRenameFolder(folder.id, name);
-											setEditingId(null);
-										}}
-										onCancel={() => setEditingId(null)}
-									/>
-								) : (
-									<FolderNavItem
-										key={folder.id}
-										folder={folder}
-										count={counts[folder.id] ?? 0}
-										active={activeFolder === folder.id}
-										onClick={() => selectFolder(folder.id)}
-										onRename={() => setEditingId(folder.id)}
-										onRecolor={(color) => onRecolorFolder(folder.id, color)}
-										onDelete={() => handleDelete(folder.id)}
-									/>
-								),
-							)}
-							{isCreating && (
+				{isLoading ? (
+					<div className="space-y-1 px-2 mt-1" data-testid="folder-skeletons">
+						{["skel-a", "skel-b", "skel-c"].map((id) => (
+							<div key={id} className="flex items-center gap-2 py-1.5">
+								<Skeleton className="size-2.5 rounded-full" />
+								<Skeleton className="h-4 flex-1" />
+							</div>
+						))}
+					</div>
+				) : (
+					<div className="space-y-0.5 mt-1">
+						{folders.map((folder) =>
+							editingId === folder.id ? (
 								<InlineFolderRow
-									color={nextUnusedColor(folders)}
-									dotTestId="creating-folder-dot"
-									onSave={handleCreate}
-									onCancel={() => setIsCreating(false)}
+									key={folder.id}
+									color={folder.color}
+									defaultValue={folder.name}
+									onSave={(name) => {
+										onRenameFolder(folder.id, name);
+										setEditingId(null);
+									}}
+									onCancel={() => setEditingId(null)}
 								/>
-							)}
-						</div>
-					</>
+							) : (
+								<FolderNavItem
+									key={folder.id}
+									folder={folder}
+									count={counts[folder.id] ?? 0}
+									active={activeFolder === folder.id}
+									onClick={() => selectFolder(folder.id)}
+									onRename={() => setEditingId(folder.id)}
+									onRecolor={(color) => onRecolorFolder(folder.id, color)}
+									onDelete={() => handleDelete(folder.id)}
+								/>
+							),
+						)}
+						{isCreating && (
+							<InlineFolderRow
+								color={nextUnusedColor(folders)}
+								dotTestId="creating-folder-dot"
+								onSave={handleCreate}
+								onCancel={() => setIsCreating(false)}
+							/>
+						)}
+					</div>
 				)}
 			</nav>
-
-			{/* Footer */}
-			<div className="shrink-0 border-t border-sidebar-border p-2">
-				<Button
-					variant="ghost"
-					size="sm"
-					className="w-full justify-start gap-2 text-muted-foreground"
-					onClick={() => setIsCreating(true)}
-				>
-					<FolderPlus className="size-4" />
-					Новый раздел
-				</Button>
-			</div>
 		</aside>
 	);
 
@@ -365,7 +361,7 @@ function FolderNavItem({
 							"lg:invisible lg:group-hover:visible lg:group-focus-within:visible",
 						)}
 						onClick={(e) => e.stopPropagation()}
-						aria-label={`Меню раздела ${folder.name}`}
+						aria-label={`Меню категории ${folder.name}`}
 					>
 						<EllipsisVertical className="size-3.5" />
 					</button>
@@ -409,9 +405,9 @@ function FolderNavItem({
 			<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
 				<AlertDialogContent size="sm">
 					<AlertDialogHeader>
-						<AlertDialogTitle>Удалить раздел?</AlertDialogTitle>
+						<AlertDialogTitle>Удалить категорию?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Раздел «{folder.name}» будет удалён. Закупки из этого раздела не будут удалены.
+							Категория «{folder.name}» будет удалена. Закупки из этой категории не будут удалены.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -466,7 +462,7 @@ function InlineFolderRow({
 				className="h-5 flex-1 bg-transparent text-sm outline-none"
 				defaultValue={defaultValue}
 				maxLength={FOLDER_NAME_MAX_LENGTH}
-				aria-label="Название раздела"
+				aria-label="Название категории"
 				spellCheck={false}
 				autoComplete="off"
 				onKeyDown={handleKeyDown}

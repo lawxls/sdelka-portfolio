@@ -201,7 +201,7 @@ export function ProcurementCard({
 									<DropdownMenuSeparator />
 									<DropdownMenuLabel className="flex items-center gap-1.5">
 										<FolderInput className="size-3.5" />
-										Переместить в раздел
+										Переместить в категорию
 									</DropdownMenuLabel>
 									{folders.map((f) => (
 										<DropdownMenuCheckboxItem
@@ -222,7 +222,7 @@ export function ProcurementCard({
 										onCheckedChange={() => onAssignFolder(item.id, null)}
 									>
 										<Inbox className="size-3.5" />
-										Без раздела
+										Без категории
 									</DropdownMenuCheckboxItem>
 									{onArchiveItem && (
 										<>
@@ -334,7 +334,7 @@ export function ProcurementCard({
 					<ContextMenuSub>
 						<ContextMenuSubTrigger>
 							<FolderInput className="size-3.5" />
-							Переместить в раздел
+							Переместить в категорию
 						</ContextMenuSubTrigger>
 						<ContextMenuSubContent>
 							{folders.map((f) => (
@@ -357,7 +357,7 @@ export function ProcurementCard({
 								onCheckedChange={() => onAssignFolder(item.id, null)}
 							>
 								<Inbox className="size-3.5" />
-								Без раздела
+								Без категории
 							</ContextMenuCheckboxItem>
 							{onArchiveItem && (
 								<>
