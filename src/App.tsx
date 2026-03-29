@@ -11,8 +11,11 @@ import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
+import { TasksPage } from "@/pages/tasks-page";
 
-const PLACEHOLDER_ROUTES = NAV_ITEMS.filter((item) => item.path !== "/procurement" && item.path !== "/companies");
+const PLACEHOLDER_ROUTES = NAV_ITEMS.filter(
+	(item) => item.path !== "/procurement" && item.path !== "/tasks" && item.path !== "/companies",
+);
 
 function RootRedirect() {
 	const { search } = useLocation();
@@ -36,6 +39,7 @@ function App() {
 				<Route path="/" element={<RootRedirect />} />
 				<Route element={<AppLayout />}>
 					<Route path="/procurement" element={<ProcurementPage />} />
+					<Route path="/tasks" element={<TasksPage />} />
 					<Route path="/companies" element={<CompaniesPage />} />
 					{PLACEHOLDER_ROUTES.map(({ path, label, icon }) => (
 						<Route

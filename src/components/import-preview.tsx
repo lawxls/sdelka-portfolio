@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { NewItemInput } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { pluralizeRu } from "@/lib/format";
 import { ImportItemCard } from "./import-item-card";
 
 const BATCH_SIZE = 20;
@@ -11,14 +12,6 @@ interface ImportPreviewProps {
 	items: NewItemInput[];
 	onBack: () => void;
 	onImport: () => void;
-}
-
-function pluralPositions(count: number): string {
-	const mod10 = count % 10;
-	const mod100 = count % 100;
-	if (mod10 === 1 && mod100 !== 11) return `${count} позицию`;
-	if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} позиции`;
-	return `${count} позиций`;
 }
 
 export function ImportPreview({ items, onBack, onImport }: ImportPreviewProps) {
@@ -43,7 +36,7 @@ export function ImportPreview({ items, onBack, onImport }: ImportPreviewProps) {
 			<span className="text-center text-xs text-muted-foreground tabular-nums">
 				{items.length > BATCH_SIZE
 					? `Показано ${visibleCount >= items.length ? items.length : visibleCount} из ${items.length}`
-					: `${pluralPositions(items.length)}`}
+					: `${pluralizeRu(items.length, "позицию", "позиции", "позиций")}`}
 			</span>
 
 			<div className="flex items-center justify-between border-t border-border pt-3">
@@ -51,7 +44,7 @@ export function ImportPreview({ items, onBack, onImport }: ImportPreviewProps) {
 					<ArrowLeft className="size-4" aria-hidden="true" />
 					Назад
 				</Button>
-				<Button onClick={onImport}>Импортировать {pluralPositions(items.length)}</Button>
+				<Button onClick={onImport}>Импортировать {pluralizeRu(items.length, "позицию", "позиции", "позиций")}</Button>
 			</div>
 		</div>
 	);
