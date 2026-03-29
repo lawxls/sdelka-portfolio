@@ -8,12 +8,15 @@ import {
 	useSensor,
 	useSensors,
 } from "@dnd-kit/core";
+import { Columns3, List } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { isValidTransition, TaskBoard } from "@/components/task-board";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
+import { TaskTable } from "@/components/task-table";
+import { Button } from "@/components/ui/button";
 import type { Task, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
@@ -29,10 +32,13 @@ function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskI
 	return undefined;
 }
 
+type ViewMode = "board" | "table";
+
 export function TasksPage() {
 	const columns = useTaskColumns();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const taskId = searchParams.get("task");
+	const view = (searchParams.get("view") ?? "board") as ViewMode;
 	const updateStatus = useUpdateTaskStatus();
 
 	// Drag state
@@ -66,6 +72,21 @@ export function TasksPage() {
 			(prev) => {
 				const next = new URLSearchParams(prev);
 				next.delete("task");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function setView(mode: ViewMode) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (mode === "board") {
+					next.delete("view");
+				} else {
+					next.set("view", mode);
+				}
 				return next;
 			},
 			{ replace: true },
@@ -121,13 +142,35 @@ export function TasksPage() {
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 				<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
 					<h1 className="text-lg tracking-tight">Задачи</h1>
+					<div className="ml-auto flex items-center gap-1">
+						<Button
+							variant={view === "board" ? "secondary" : "ghost"}
+							size="icon-sm"
+							onClick={() => setView("board")}
+							aria-label="Kanban"
+						>
+							<Columns3 className="size-4" aria-hidden="true" />
+						</Button>
+						<Button
+							variant={view === "table" ? "secondary" : "ghost"}
+							size="icon-sm"
+							onClick={() => setView("table")}
+							aria-label="Таблица"
+						>
+							<List className="size-4" aria-hidden="true" />
+						</Button>
+					</div>
 				</header>
-				<TaskBoard
-					columns={columns}
-					onTaskClick={openTask}
-					activeTaskId={activeTask?.id}
-					activeTaskStatus={activeTask?.status}
-				/>
+				{view === "board" ? (
+					<TaskBoard
+						columns={columns}
+						onTaskClick={openTask}
+						activeTaskId={activeTask?.id}
+						activeTaskStatus={activeTask?.status}
+					/>
+				) : (
+					<TaskTable onTaskClick={openTask} />
+				)}
 				<TaskDrawer
 					taskId={taskId}
 					onClose={closeTask}

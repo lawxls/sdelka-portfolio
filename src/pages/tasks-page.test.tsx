@@ -129,6 +129,64 @@ describe("TasksPage", () => {
 		expect(screen.getByTestId("task-card-task-31").getAttribute("aria-roledescription")).not.toBe("draggable");
 	});
 
+	it("renders view toggle with board and table buttons", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Kanban" })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
+		});
+	});
+
+	it("defaults to board view", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByTestId("task-board")).toBeInTheDocument();
+		});
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	});
+
+	it("switches to table view when table button is clicked", async () => {
+		renderPage();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Таблица" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("table")).toBeInTheDocument();
+		});
+		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
+	});
+
+	it("renders table view when ?view=table in URL", async () => {
+		renderPage(["/tasks?view=table"]);
+		await waitFor(() => {
+			expect(screen.getByRole("table")).toBeInTheDocument();
+		});
+		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
+	});
+
+	it("clicking table row opens drawer", async () => {
+		renderPage(["/tasks?view=table"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getAllByText("Назначено").length).toBeGreaterThan(0);
+		});
+
+		const rows = screen.getAllByRole("row");
+		await user.click(rows[1]);
+
+		await waitFor(() => {
+			expect(
+				screen.getByText("Согласование цены на арматуру", { selector: "[data-slot='sheet-title']" }),
+			).toBeInTheDocument();
+		});
+	});
+
 	it("status dropdown change to completed in drawer shows answer-first toast", async () => {
 		const { toast } = await import("sonner");
 		renderPage(["/tasks?task=task-1"]);

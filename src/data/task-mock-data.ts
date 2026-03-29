@@ -112,6 +112,17 @@ function simulateDelay(): Promise<void> {
 
 // --- Mock API functions ---
 
+export async function getAllTasks(cursor?: string, limit = 20): Promise<{ tasks: Task[]; nextCursor: string | null }> {
+	await simulateDelay();
+	const startIndex = cursor ? Number.parseInt(cursor, 10) : 0;
+	const slice = store.slice(startIndex, startIndex + limit);
+	const nextIndex = startIndex + limit;
+	return {
+		tasks: slice.map((t) => ({ ...t })),
+		nextCursor: nextIndex < store.length ? String(nextIndex) : null,
+	};
+}
+
 export async function getTasks(
 	status: TaskStatus,
 	cursor?: string,

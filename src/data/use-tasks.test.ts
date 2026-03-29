@@ -5,7 +5,7 @@ import { createQueryWrapper, createTestQueryClient, makeTask } from "@/test-util
 import * as taskMockData from "./task-mock-data";
 import { _resetTaskStore, _setMockDelay } from "./task-mock-data";
 import type { Task } from "./task-types";
-import { useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
+import { useAllTasks, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -97,6 +97,31 @@ describe("useTask", () => {
 
 		expect(result.current.isLoading).toBe(false);
 		expect(result.current.data).toBeUndefined();
+	});
+});
+
+describe("useAllTasks", () => {
+	it("fetches all tasks in a single paginated list", async () => {
+		const { result } = renderHook(() => useAllTasks(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.tasks.length).toBeGreaterThan(0);
+		});
+
+		// All 60 tasks fetched (limit 20 default = first page of 20)
+		expect(result.current.tasks).toHaveLength(20);
+		// Should have more pages
+		expect(result.current.hasNextPage).toBe(true);
+	});
+
+	it("returns loading state initially", () => {
+		_setMockDelay(10000, 10000);
+		const { result } = renderHook(() => useAllTasks(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+		expect(result.current.isLoading).toBe(true);
 	});
 });
 

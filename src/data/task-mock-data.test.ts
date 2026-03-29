@@ -115,6 +115,29 @@ describe("updateTaskStatus", () => {
 	});
 });
 
+describe("getAllTasks", () => {
+	it("returns all tasks across all statuses", async () => {
+		const { getAllTasks } = await import("./task-mock-data");
+		const { tasks } = await getAllTasks();
+		expect(tasks.length).toBe(20);
+	});
+
+	it("paginates with cursor", async () => {
+		const { getAllTasks } = await import("./task-mock-data");
+		const page1 = await getAllTasks(undefined, 20);
+		expect(page1.tasks).toHaveLength(20);
+		expect(page1.nextCursor).toBe("20");
+
+		const page2 = await getAllTasks(page1.nextCursor ?? undefined, 20);
+		expect(page2.tasks).toHaveLength(20);
+		expect(page2.nextCursor).toBe("40");
+
+		const page3 = await getAllTasks(page2.nextCursor ?? undefined, 20);
+		expect(page3.tasks).toHaveLength(20);
+		expect(page3.nextCursor).toBeNull();
+	});
+});
+
 describe("submitAnswer", () => {
 	it("sets answer text and moves task to completed", async () => {
 		const updated = await submitAnswer("task-1", "Ответ на вопрос", ["doc.pdf"]);

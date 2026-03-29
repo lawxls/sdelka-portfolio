@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
+import { getAllTasks, getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
 import type { Task, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
@@ -31,6 +31,23 @@ function useTasksByStatus(status: TaskStatus) {
 	const query = useInfiniteQuery({
 		queryKey: ["tasks", status],
 		queryFn: ({ pageParam }) => getTasks(status, pageParam),
+		initialPageParam: undefined as string | undefined,
+		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+	});
+
+	return {
+		tasks: query.data?.pages.flatMap((p) => p.tasks) ?? [],
+		hasNextPage: query.hasNextPage,
+		loadMore: query.fetchNextPage,
+		isLoading: query.isLoading,
+		isFetchingNextPage: query.isFetchingNextPage,
+	};
+}
+
+export function useAllTasks() {
+	const query = useInfiniteQuery({
+		queryKey: ["tasks", "all"],
+		queryFn: ({ pageParam }) => getAllTasks(pageParam),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
