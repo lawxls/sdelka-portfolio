@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError } from "@/data/api-error";
-import { parseApiError } from "@/data/auth-api";
+import { extractFormErrors } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
 import { useChangePassword, useSettings, useUpdateSettings } from "@/data/use-settings";
+import { formatDate } from "@/lib/format";
 
 type ProfileTab = "account" | "settings";
 
@@ -33,14 +33,6 @@ function parseTab(value: string | null): ProfileTab {
 	return value === "settings" ? "settings" : "account";
 }
 
-function formatDateJoined(dateStr: string): string {
-	return new Intl.DateTimeFormat("ru-RU", {
-		day: "numeric",
-		month: "long",
-		year: "numeric",
-	}).format(new Date(dateStr));
-}
-
 function getInitials(firstName: string, lastName: string): string {
 	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
@@ -52,16 +44,17 @@ function stripPhonePrefix(phone: string): string {
 function AccountForm({ data }: { data: UserSettings }) {
 	const updateSettings = useUpdateSettings();
 
+	const strippedPhone = stripPhonePrefix(data.phone);
 	const [firstName, setFirstName] = useState(data.first_name);
 	const [lastName, setLastName] = useState(data.last_name);
-	const [phone, setPhone] = useState(stripPhonePrefix(data.phone));
+	const [phone, setPhone] = useState(strippedPhone);
 	const [mailingAllowed, setMailingAllowed] = useState(data.mailing_allowed);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
 	const isDirty =
 		firstName !== data.first_name ||
 		lastName !== data.last_name ||
-		phone !== stripPhonePrefix(data.phone) ||
+		phone !== strippedPhone ||
 		mailingAllowed !== data.mailing_allowed;
 
 	function handleSubmit(e: React.FormEvent) {
@@ -71,7 +64,7 @@ function AccountForm({ data }: { data: UserSettings }) {
 		const patch: Record<string, unknown> = {};
 		if (firstName !== data.first_name) patch.first_name = firstName;
 		if (lastName !== data.last_name) patch.last_name = lastName;
-		if (phone !== stripPhonePrefix(data.phone)) patch.phone = `+7${phone}`;
+		if (phone !== strippedPhone) patch.phone = `+7${phone}`;
 		if (mailingAllowed !== data.mailing_allowed) patch.mailing_allowed = mailingAllowed;
 
 		updateSettings.mutate(patch, {
@@ -79,18 +72,12 @@ function AccountForm({ data }: { data: UserSettings }) {
 				toast.success("Изменения сохранены");
 			},
 			onError: (err) => {
-				if (err instanceof ApiError) {
-					const parsed = parseApiError(err.body);
-					if (Object.keys(parsed.fieldErrors).length > 0) {
-						setFieldErrors(parsed.fieldErrors);
-						return;
-					}
-					if (parsed.detail) {
-						toast.error(parsed.detail);
-						return;
-					}
+				const { error, fieldErrors: fields } = extractFormErrors(err);
+				if (Object.keys(fields).length > 0) {
+					setFieldErrors(fields);
+				} else if (error) {
+					toast.error(error);
 				}
-				toast.error("Произошла ошибка. Попробуйте ещё раз.");
 			},
 		});
 	}
@@ -171,18 +158,12 @@ function PasswordForm() {
 					toast.success("Пароль успешно изменён");
 				},
 				onError: (err) => {
-					if (err instanceof ApiError) {
-						const parsed = parseApiError(err.body);
-						if (Object.keys(parsed.fieldErrors).length > 0) {
-							setFieldErrors(parsed.fieldErrors);
-							return;
-						}
-						if (parsed.detail) {
-							toast.error(parsed.detail);
-							return;
-						}
+					const { error, fieldErrors: fields } = extractFormErrors(err);
+					if (Object.keys(fields).length > 0) {
+						setFieldErrors(fields);
+					} else if (error) {
+						toast.error(error);
 					}
-					toast.error("Произошла ошибка. Попробуйте ещё раз.");
 				},
 			},
 		);
@@ -284,7 +265,6 @@ export function ProfilePage() {
 
 	return (
 		<div className="mx-auto w-full max-w-2xl px-4 py-8">
-			{/* Avatar header */}
 			<div className="flex flex-col items-center gap-2">
 				<div
 					data-testid="profile-avatar"
@@ -296,11 +276,10 @@ export function ProfilePage() {
 					{data.first_name} {data.last_name}
 				</h1>
 				<p data-testid="profile-date-joined" className="text-sm text-muted-foreground">
-					Зарегистрирован {formatDateJoined(data.date_joined)}
+					Зарегистрирован {formatDate(data.date_joined)}
 				</p>
 			</div>
 
-			{/* Tabs */}
 			<div className="mt-6 flex gap-0 border-b border-border" role="tablist">
 				{TABS.map((tab) => (
 					<button
@@ -320,7 +299,6 @@ export function ProfilePage() {
 				))}
 			</div>
 
-			{/* Tab content */}
 			<div className="mt-6">
 				{activeTab === "account" && <AccountForm key={data.date_joined} data={data} />}
 				{activeTab === "settings" && <PasswordForm />}

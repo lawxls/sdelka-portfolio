@@ -1,28 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { clearTokens } from "./auth";
-import type { SettingsPatch } from "./settings-api";
 import { changePassword, fetchSettings, patchSettings } from "./settings-api";
 
 export function useSettings() {
-	const query = useQuery({
+	return useQuery({
 		queryKey: ["settings"],
 		queryFn: fetchSettings,
 	});
-
-	return {
-		data: query.data,
-		isLoading: query.isLoading,
-		error: query.error,
-		refetch: query.refetch,
-	};
 }
 
 export function useUpdateSettings() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: SettingsPatch) => patchSettings(data),
+		mutationFn: patchSettings,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["settings"] });
 		},
