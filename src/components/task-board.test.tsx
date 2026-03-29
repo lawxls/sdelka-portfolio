@@ -1,5 +1,6 @@
 import { DndContext } from "@dnd-kit/core";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Task } from "@/data/task-types";
 import { makeTask } from "@/test-utils";
@@ -9,7 +10,7 @@ function makeColumn(tasks: Task[] = [], isLoading = false) {
 	return { tasks, isLoading, hasNextPage: false, isFetchingNextPage: false, loadMore: () => {} };
 }
 
-function renderBoard(overrides: Partial<TaskBoardProps["columns"]> = {}) {
+function renderBoard(overrides: Partial<TaskBoardProps["columns"]> = {}, isMobile = false) {
 	const columns = {
 		assigned: makeColumn(),
 		in_progress: makeColumn(),
@@ -17,7 +18,7 @@ function renderBoard(overrides: Partial<TaskBoardProps["columns"]> = {}) {
 		archived: makeColumn(),
 		...overrides,
 	};
-	return render(<TaskBoard columns={columns} />);
+	return render(<TaskBoard columns={columns} isMobile={isMobile} />);
 }
 
 describe("TaskBoard", () => {
@@ -131,5 +132,50 @@ describe("TaskBoard", () => {
 			const col = screen.getByTestId(`column-${status}`);
 			expect(col.querySelector("[data-droppable-id]") ?? col.getAttribute("data-droppable-id")).toBeTruthy();
 		}
+	});
+});
+
+describe("TaskBoard mobile", () => {
+	it("renders tab bar with column names when isMobile", () => {
+		renderBoard({}, true);
+		expect(screen.getByRole("tablist")).toBeInTheDocument();
+		for (const label of ["Назначено", "В работе", "Завершено", "Архив"]) {
+			expect(screen.getByRole("tab", { name: new RegExp(label) })).toBeInTheDocument();
+		}
+	});
+
+	it("shows only active column cards when isMobile", () => {
+		renderBoard(
+			{
+				assigned: makeColumn([makeTask("t1", { title: "Alpha" })]),
+				in_progress: makeColumn([makeTask("t2", { title: "Beta" })]),
+			},
+			true,
+		);
+		// Default active tab is "assigned"
+		expect(screen.getByText("Alpha")).toBeInTheDocument();
+		expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+	});
+
+	it("switches column on tab click", async () => {
+		const user = userEvent.setup();
+		renderBoard(
+			{
+				assigned: makeColumn([makeTask("t1", { title: "Alpha" })]),
+				in_progress: makeColumn([makeTask("t2", { title: "Beta" })]),
+			},
+			true,
+		);
+
+		await user.click(screen.getByRole("tab", { name: /В работе/ }));
+
+		expect(screen.getByText("Beta")).toBeInTheDocument();
+		expect(screen.queryByText("Alpha")).not.toBeInTheDocument();
+	});
+
+	it("does not render 4-column grid when isMobile", () => {
+		renderBoard({}, true);
+		// Should not have 4 column sections visible
+		expect(screen.queryAllByTestId(/^column-/)).toHaveLength(1);
 	});
 });

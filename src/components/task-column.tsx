@@ -19,6 +19,7 @@ interface TaskColumnProps {
 	hasNextPage?: boolean;
 	isFetchingNextPage?: boolean;
 	loadMore?: () => void;
+	hideHeader?: boolean;
 }
 
 export function TaskColumn({
@@ -33,6 +34,7 @@ export function TaskColumn({
 	hasNextPage,
 	isFetchingNextPage,
 	loadMore,
+	hideHeader,
 }: TaskColumnProps) {
 	const { setNodeRef, isOver } = useDroppable({ id: `column-${status}` });
 	const showHighlight = isOver && isValidDrop;
@@ -43,12 +45,14 @@ export function TaskColumn({
 
 	return (
 		<section className="flex min-h-0 flex-col" data-testid={`column-${status}`}>
-			<div className="flex shrink-0 items-center gap-2 px-1 pb-2">
-				<h2 className="text-sm font-medium">{label}</h2>
-				<Badge variant="secondary" className="tabular-nums">
-					{tasks.length}
-				</Badge>
-			</div>
+			{!hideHeader && (
+				<div className="flex shrink-0 items-center gap-2 px-1 pb-2">
+					<h2 className="text-sm font-medium">{label}</h2>
+					<Badge variant="secondary" className="tabular-nums">
+						{tasks.length}
+					</Badge>
+				</div>
+			)}
 			<div
 				ref={setNodeRef}
 				data-droppable-id={`column-${status}`}

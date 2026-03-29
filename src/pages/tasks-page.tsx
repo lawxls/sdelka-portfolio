@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useProcurementItems, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
@@ -45,6 +46,7 @@ function parseSort(params: URLSearchParams): { field: TaskSortField; direction: 
 }
 
 export function TasksPage() {
+	const isMobile = useIsMobile();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const taskId = searchParams.get("task");
 	const view = (searchParams.get("view") ?? "board") as ViewMode;
@@ -239,6 +241,7 @@ export function TasksPage() {
 						onTaskClick={openTask}
 						activeTaskId={activeTask?.id}
 						activeTaskStatus={activeTask?.status}
+						isMobile={isMobile}
 					/>
 				) : (
 					<TaskTable onTaskClick={openTask} filterParams={filterParams} />
@@ -248,12 +251,15 @@ export function TasksPage() {
 					onClose={closeTask}
 					answerFirstMode={pendingDrag !== null}
 					onAnswerFirstComplete={handleAnswerFirstComplete}
+					isMobile={isMobile}
 				/>
 			</div>
 
-			<DragOverlay dropAnimation={reducedMotion ? null : undefined} modifiers={DRAG_OVERLAY_MODIFIERS}>
-				{activeTask ? <TaskCard task={activeTask} /> : null}
-			</DragOverlay>
+			{!isMobile && (
+				<DragOverlay dropAnimation={reducedMotion ? null : undefined} modifiers={DRAG_OVERLAY_MODIFIERS}>
+					{activeTask ? <TaskCard task={activeTask} /> : null}
+				</DragOverlay>
+			)}
 		</DndContext>
 	);
 }

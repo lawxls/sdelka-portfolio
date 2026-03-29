@@ -3,15 +3,20 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
 import { createTestQueryClient } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
 	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("@/hooks/use-is-mobile", () => ({
+	useIsMobile: vi.fn(() => false),
 }));
 
 let queryClient: QueryClient;
@@ -321,6 +326,62 @@ describe("TasksPage", () => {
 
 		await waitFor(() => {
 			expect(toast.info).toHaveBeenCalledWith("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
+		});
+	});
+
+	describe("mobile", () => {
+		beforeEach(() => {
+			vi.mocked(useIsMobile).mockReturnValue(true);
+		});
+
+		afterEach(() => {
+			vi.mocked(useIsMobile).mockReturnValue(false);
+		});
+
+		it("renders tab bar instead of 4-column grid on mobile", async () => {
+			renderPage();
+			await waitFor(() => {
+				expect(screen.getByRole("tablist")).toBeInTheDocument();
+			});
+		});
+
+		it("cards are not draggable on mobile", async () => {
+			renderPage();
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			const cards = screen.getAllByTestId(/^task-card-/);
+			for (const card of cards) {
+				expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
+			}
+		});
+
+		it("drawer opens as bottom sheet on mobile", async () => {
+			renderPage(["/tasks?task=task-1"]);
+			await waitFor(() => {
+				const sheetContent = document.querySelector("[data-slot='sheet-content']");
+				expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
+			});
+		});
+
+		it("tab switching shows different column cards on mobile", async () => {
+			renderPage();
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			// Default shows assigned column
+			expect(screen.getByRole("tab", { name: /Назначено/ })).toHaveAttribute("aria-selected", "true");
+
+			// Switch to В работе
+			await user.click(screen.getByRole("tab", { name: /В работе/ }));
+
+			await waitFor(() => {
+				expect(screen.getByRole("tab", { name: /В работе/ })).toHaveAttribute("aria-selected", "true");
+			});
 		});
 	});
 });

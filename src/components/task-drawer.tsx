@@ -22,9 +22,10 @@ interface TaskDrawerProps {
 	onClose: () => void;
 	answerFirstMode?: boolean;
 	onAnswerFirstComplete?: () => void;
+	isMobile?: boolean;
 }
 
-export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComplete }: TaskDrawerProps) {
+export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComplete, isMobile }: TaskDrawerProps) {
 	return (
 		<Sheet
 			open={taskId !== null}
@@ -32,7 +33,7 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 				if (!open) onClose();
 			}}
 		>
-			<SheetContent side="right">
+			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90dvh]" : undefined}>
 				{taskId && (
 					<TaskDrawerContent
 						key={taskId}

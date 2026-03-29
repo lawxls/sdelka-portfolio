@@ -146,4 +146,17 @@ describe("TaskDrawer", () => {
 		renderDrawer(null);
 		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();
 	});
+
+	it("renders as bottom sheet when isMobile", async () => {
+		render(
+			<QueryClientProvider client={queryClient}>
+				<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
+			</QueryClientProvider>,
+		);
+
+		await waitFor(() => {
+			const sheetContent = document.querySelector("[data-slot='sheet-content']");
+			expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
+		});
+	});
 });
