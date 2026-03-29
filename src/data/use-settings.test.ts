@@ -1,10 +1,10 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, test } from "vitest";
 import { setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import { useSettings } from "./use-settings";
+import { useSettings, useUpdateSettings } from "./use-settings";
 
 const MOCK_SETTINGS = {
 	first_name: "Иван",
@@ -62,5 +62,37 @@ describe("useSettings", () => {
 		});
 
 		expect(result.current.data).toBeUndefined();
+	});
+});
+
+describe("useUpdateSettings", () => {
+	test("calls PATCH and invalidates settings query on success", async () => {
+		let patchBody: Record<string, unknown> | null = null;
+		const updated = { ...MOCK_SETTINGS, first_name: "Пётр" };
+
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.patch("/api/v1/auth/settings", async ({ request }) => {
+				patchBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json(updated);
+			}),
+		);
+
+		const queryClient = createTestQueryClient();
+		queryClient.setQueryData(["settings"], MOCK_SETTINGS);
+
+		const { result } = renderHook(() => useUpdateSettings(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			await result.current.mutateAsync({ first_name: "Пётр" });
+		});
+
+		expect(patchBody).toEqual({ first_name: "Пётр" });
+
+		// Query should be invalidated (marked stale)
+		const state = queryClient.getQueryState(["settings"]);
+		expect(state?.isInvalidated).toBe(true);
 	});
 });

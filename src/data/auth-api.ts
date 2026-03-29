@@ -147,6 +147,8 @@ export function parseApiError(body: unknown): ParsedApiError {
 			result.detail = value.join(". ");
 		} else if (typeof value === "string") {
 			result.fieldErrors[key] = value;
+		} else if (Array.isArray(value) && value.length > 0) {
+			result.fieldErrors[key] = value.join(". ");
 		}
 	}
 	return result;

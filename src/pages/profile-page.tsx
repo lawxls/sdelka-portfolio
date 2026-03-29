@@ -1,8 +1,15 @@
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { AlertTriangle, CheckIcon, Loader2, RotateCcw } from "lucide-react";
+import { Checkbox } from "radix-ui";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSettings } from "@/data/use-settings";
+import { ApiError } from "@/data/api-error";
+import { parseApiError } from "@/data/auth-api";
+import type { UserSettings } from "@/data/settings-api";
+import { useSettings, useUpdateSettings } from "@/data/use-settings";
 
 type ProfileTab = "account" | "settings";
 
@@ -36,6 +43,108 @@ function formatDateJoined(dateStr: string): string {
 
 function getInitials(firstName: string, lastName: string): string {
 	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+}
+
+function stripPhonePrefix(phone: string): string {
+	return phone.startsWith("+7") ? phone.slice(2) : phone;
+}
+
+function AccountForm({ data }: { data: UserSettings }) {
+	const updateSettings = useUpdateSettings();
+
+	const [firstName, setFirstName] = useState(data.first_name);
+	const [lastName, setLastName] = useState(data.last_name);
+	const [phone, setPhone] = useState(stripPhonePrefix(data.phone));
+	const [mailingAllowed, setMailingAllowed] = useState(data.mailing_allowed);
+	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+	const isDirty =
+		firstName !== data.first_name ||
+		lastName !== data.last_name ||
+		phone !== stripPhonePrefix(data.phone) ||
+		mailingAllowed !== data.mailing_allowed;
+
+	function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		setFieldErrors({});
+
+		const patch: Record<string, unknown> = {};
+		if (firstName !== data.first_name) patch.first_name = firstName;
+		if (lastName !== data.last_name) patch.last_name = lastName;
+		if (phone !== stripPhonePrefix(data.phone)) patch.phone = `+7${phone}`;
+		if (mailingAllowed !== data.mailing_allowed) patch.mailing_allowed = mailingAllowed;
+
+		updateSettings.mutate(patch, {
+			onSuccess: () => {
+				toast.success("Изменения сохранены");
+			},
+			onError: (err) => {
+				if (err instanceof ApiError) {
+					const parsed = parseApiError(err.body);
+					if (Object.keys(parsed.fieldErrors).length > 0) {
+						setFieldErrors(parsed.fieldErrors);
+						return;
+					}
+					if (parsed.detail) {
+						toast.error(parsed.detail);
+						return;
+					}
+				}
+				toast.error("Произошла ошибка. Попробуйте ещё раз.");
+			},
+		});
+	}
+
+	return (
+		<form onSubmit={handleSubmit} className="space-y-4">
+			<FloatingInput
+				label="Имя"
+				name="firstName"
+				value={firstName}
+				onChange={(e) => setFirstName(e.target.value)}
+				error={fieldErrors.first_name}
+				autoComplete="given-name"
+			/>
+			<FloatingInput
+				label="Фамилия"
+				name="lastName"
+				value={lastName}
+				onChange={(e) => setLastName(e.target.value)}
+				error={fieldErrors.last_name}
+				autoComplete="family-name"
+			/>
+			<FloatingInput label="Email" name="email" type="email" value={data.email} readOnly autoComplete="email" />
+			<FloatingInput
+				label="Телефон"
+				name="phone"
+				value={phone}
+				onChange={(e) => setPhone(e.target.value)}
+				error={fieldErrors.phone}
+				prefix="+7"
+				inputMode="tel"
+				autoComplete="tel"
+			/>
+			<div className="flex items-center gap-2">
+				<Checkbox.Root
+					id="mailingAllowed"
+					checked={mailingAllowed}
+					onCheckedChange={(checked) => setMailingAllowed(checked === true)}
+					className="peer flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground"
+				>
+					<Checkbox.Indicator className="grid place-content-center text-current [&>svg]:size-3.5">
+						<CheckIcon />
+					</Checkbox.Indicator>
+				</Checkbox.Root>
+				<label htmlFor="mailingAllowed" className="cursor-pointer text-sm">
+					Получать сервисные уведомления на почту
+				</label>
+			</div>
+			<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
+				{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+				Сохранить
+			</Button>
+		</form>
+	);
 }
 
 function ProfileSkeleton() {
@@ -133,7 +242,7 @@ export function ProfilePage() {
 
 			{/* Tab content */}
 			<div className="mt-6">
-				{activeTab === "account" && <div data-testid="account-tab-content" />}
+				{activeTab === "account" && <AccountForm key={data.date_joined} data={data} />}
 				{activeTab === "settings" && <div data-testid="settings-tab-content" />}
 			</div>
 		</div>

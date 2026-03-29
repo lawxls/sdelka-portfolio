@@ -13,6 +13,7 @@ interface FloatingInputProps {
 	prefix?: string;
 	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 	required?: boolean;
+	readOnly?: boolean;
 }
 
 export function FloatingInput({
@@ -26,6 +27,7 @@ export function FloatingInput({
 	prefix,
 	inputMode,
 	required,
+	readOnly,
 }: FloatingInputProps) {
 	const isPassword = type === "password";
 	const [showPassword, setShowPassword] = useState(false);
@@ -48,6 +50,7 @@ export function FloatingInput({
 				autoComplete={autoComplete}
 				inputMode={inputMode}
 				required={required}
+				readOnly={readOnly}
 				spellCheck={false}
 				aria-invalid={error ? true : undefined}
 				className={cn(
@@ -57,6 +60,7 @@ export function FloatingInput({
 					"dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
 					prefix ? "pl-9 pr-3" : "px-3",
 					isPassword ? "pr-10" : "",
+					readOnly ? "cursor-default bg-muted text-muted-foreground" : "",
 					error ? "border-destructive" : "border-input",
 				)}
 			/>

@@ -3,11 +3,16 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { ProfilePage } from "./profile-page";
+
+vi.mock("sonner", () => ({
+	toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
 
 const MOCK_SETTINGS = {
 	first_name: "Иван",
@@ -181,20 +186,6 @@ describe("ProfilePage", () => {
 		});
 	});
 
-	test("Аккаунт tab shows placeholder content", async () => {
-		server.use(
-			http.get("/api/v1/auth/settings", () => {
-				return HttpResponse.json(MOCK_SETTINGS);
-			}),
-		);
-
-		renderProfile();
-
-		await waitFor(() => {
-			expect(screen.getByTestId("account-tab-content")).toBeInTheDocument();
-		});
-	});
-
 	test("Настройки tab shows placeholder content", async () => {
 		server.use(
 			http.get("/api/v1/auth/settings", () => {
@@ -207,5 +198,181 @@ describe("ProfilePage", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("settings-tab-content")).toBeInTheDocument();
 		});
+	});
+
+	test("account form renders fields populated with server data", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderProfile();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
+		});
+
+		expect(screen.getByLabelText("Фамилия")).toHaveValue("Иванов");
+		expect(screen.getByLabelText("Email")).toHaveValue("ivan@example.com");
+		expect(screen.getByLabelText("Email")).toHaveAttribute("readOnly");
+		expect(screen.getByLabelText("Телефон")).toHaveValue("9991234567");
+		expect(screen.getByLabelText("Получать сервисные уведомления на почту")).toBeChecked();
+	});
+
+	test("save button is disabled until a field is changed", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+		});
+
+		await user.clear(screen.getByLabelText("Имя"));
+		await user.type(screen.getByLabelText("Имя"), "Пётр");
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+	});
+
+	test("submitting sends only changed fields and shows success toast", async () => {
+		let patchBody: Record<string, unknown> | null = null;
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.patch("/api/v1/auth/settings", async ({ request }) => {
+				patchBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...MOCK_SETTINGS, ...patchBody });
+			}),
+		);
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
+		});
+
+		await user.clear(screen.getByLabelText("Имя"));
+		await user.type(screen.getByLabelText("Имя"), "Пётр");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(patchBody).toEqual({ first_name: "Пётр" });
+		});
+
+		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
+	});
+
+	test("save button disables again after successful save", async () => {
+		let current = { ...MOCK_SETTINGS };
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(current)),
+			http.patch("/api/v1/auth/settings", async ({ request }) => {
+				const body = (await request.json()) as Record<string, unknown>;
+				current = { ...current, ...(body as typeof current) };
+				return HttpResponse.json(current);
+			}),
+		);
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
+		});
+
+		await user.clear(screen.getByLabelText("Имя"));
+		await user.type(screen.getByLabelText("Имя"), "Пётр");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+		});
+	});
+
+	test("server field-level errors display inline", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.patch("/api/v1/auth/settings", () => {
+				return HttpResponse.json({ first_name: ["Слишком длинное имя"] }, { status: 400 });
+			}),
+		);
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
+		});
+
+		await user.clear(screen.getByLabelText("Имя"));
+		await user.type(screen.getByLabelText("Имя"), "Пётр");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Слишком длинное имя")).toBeInTheDocument();
+		});
+	});
+
+	test("non-field server error shows toast", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.patch("/api/v1/auth/settings", () => {
+				return HttpResponse.json({ detail: "Ошибка сервера" }, { status: 400 });
+			}),
+		);
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
+		});
+
+		await user.clear(screen.getByLabelText("Имя"));
+		await user.type(screen.getByLabelText("Имя"), "Пётр");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Ошибка сервера");
+		});
+	});
+
+	test("phone change prepends +7 in PATCH request", async () => {
+		let patchBody: Record<string, unknown> | null = null;
+		server.use(
+			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
+			http.patch("/api/v1/auth/settings", async ({ request }) => {
+				patchBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...MOCK_SETTINGS, ...patchBody });
+			}),
+		);
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByLabelText("Телефон")).toHaveValue("9991234567");
+		});
+
+		await user.clear(screen.getByLabelText("Телефон"));
+		await user.type(screen.getByLabelText("Телефон"), "1112223344");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(patchBody).toEqual({ phone: "+71112223344" });
+		});
+	});
+
+	test("toggling mailing checkbox marks form as dirty", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderProfile();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+		});
+
+		await user.click(screen.getByLabelText("Получать сервисные уведомления на почту"));
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 	});
 });
