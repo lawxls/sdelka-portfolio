@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { NAV_ITEMS } from "@/lib/nav-items";
+import { CompaniesPage } from "@/pages/companies-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
@@ -11,7 +12,7 @@ import { ProcurementPage } from "@/pages/procurement-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 
-const PLACEHOLDER_ROUTES = NAV_ITEMS.filter((item) => item.path !== "/procurement");
+const PLACEHOLDER_ROUTES = NAV_ITEMS.filter((item) => item.path !== "/procurement" && item.path !== "/companies");
 
 function RootRedirect() {
 	const { search } = useLocation();
@@ -35,6 +36,7 @@ function App() {
 				<Route path="/" element={<RootRedirect />} />
 				<Route element={<AppLayout />}>
 					<Route path="/procurement" element={<ProcurementPage />} />
+					<Route path="/companies" element={<CompaniesPage />} />
 					{PLACEHOLDER_ROUTES.map(({ path, label, icon }) => (
 						<Route
 							key={path}

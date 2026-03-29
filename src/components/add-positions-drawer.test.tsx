@@ -34,7 +34,7 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Добавить позиции")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Создать позиции" })).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Название позиции")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Название позиции *")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Описание")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Количество в год")).toBeInTheDocument();
 		expect(screen.getByPlaceholderText("Цена без НДС")).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe("AddPositionsDrawer", () => {
 
 	test("shows one empty position row by default with auto-focus on name", () => {
 		renderDrawer();
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		expect(nameInputs).toHaveLength(1);
 		expect(nameInputs[0]).toHaveValue("");
 		expect(nameInputs[0]).toHaveFocus();
@@ -78,12 +78,12 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(1);
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Filled");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Filled");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(2);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(2);
 	});
 
 	test("Добавить позицию shows error when name is empty", async () => {
@@ -92,7 +92,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(1);
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 	});
 
@@ -100,10 +100,10 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Filled");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Filled");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		expect(nameInputs[1]).toHaveFocus();
 	});
 
@@ -111,26 +111,26 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "First");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "First");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(2);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(2);
 
 		const deleteButtons = screen.getAllByRole("button", { name: "Удалить позицию" });
 		await user.click(deleteButtons[0]);
 
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(1);
 	});
 
 	test("delete on last row clears it instead of removing", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Something");
-		expect(screen.getByPlaceholderText("Название позиции")).toHaveValue("Something");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Something");
+		expect(screen.getByPlaceholderText("Название позиции *")).toHaveValue("Something");
 
 		await user.click(screen.getByRole("button", { name: "Удалить позицию" }));
 
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		expect(nameInputs).toHaveLength(1);
 		expect(nameInputs[0]).toHaveValue("");
 	});
@@ -181,22 +181,10 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Своими силами" })).toHaveAttribute("aria-pressed", "false");
 	});
 
-	test("analogues controls visible with neither selected by default", () => {
+	test("analogues checkbox visible and unchecked by default", () => {
 		renderDrawer();
-		expect(screen.getByText("Аналоги")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Допускаются" })).toHaveAttribute("aria-pressed", "false");
-		expect(screen.getByRole("button", { name: "Не допускаются" })).toHaveAttribute("aria-pressed", "false");
-	});
-
-	test("clicking active option deselects it", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		const btn = screen.getByRole("button", { name: "Допускаются" });
-		await user.click(btn);
-		expect(btn).toHaveAttribute("aria-pressed", "true");
-		await user.click(btn);
-		expect(btn).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByRole("checkbox", { name: "Аналоги допускаются" })).not.toBeChecked();
+		expect(screen.getByText("Допускаются аналоги")).toBeInTheDocument();
 	});
 
 	test("monitoring dropdown is always visible", () => {
@@ -220,7 +208,7 @@ describe("AddPositionsDrawer", () => {
 	test("hide company checkbox is visible and unchecked by default", () => {
 		renderDrawer();
 		expect(screen.getByText("Скрыть информацию о компании в запросе")).toBeInTheDocument();
-		expect(screen.getByRole("checkbox")).not.toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" })).not.toBeChecked();
 	});
 
 	// --- Submit ---
@@ -231,7 +219,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit, onOpenChange });
 
 		const user = userEvent.setup();
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура А500С");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Арматура А500С");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([
@@ -248,7 +236,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 
 		const user = userEvent.setup();
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Цемент М500");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Цемент М500");
 		await user.type(screen.getByPlaceholderText("Описание"), "Портландцемент");
 		await user.type(screen.getByPlaceholderText("Количество в год"), "120");
 
@@ -277,10 +265,10 @@ describe("AddPositionsDrawer", () => {
 
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Арматура");
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		await user.type(nameInputs[1], "Цемент");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
@@ -307,7 +295,7 @@ describe("AddPositionsDrawer", () => {
 
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Арматура");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Арматура");
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
@@ -324,7 +312,7 @@ describe("AddPositionsDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "A");
 		expect(screen.queryByText("Укажите название позиции")).not.toBeInTheDocument();
 	});
 
@@ -334,7 +322,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit, onOpenChange });
 
 		const user = userEvent.setup();
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Test");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Test");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalled();
@@ -371,7 +359,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit.mock.calls[0][0][0].unloading).toBeUndefined();
@@ -383,7 +371,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ unloading: "supplier" })]);
@@ -396,22 +384,22 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit.mock.calls[0][0][0].analoguesAllowed).toBeUndefined();
 	});
 
-	test("analogues included in submit when selected", async () => {
+	test("analogues included in submit when checked", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ analoguesAllowed: false })]);
+		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ analoguesAllowed: true })]);
 	});
 
 	// --- Monitoring ---
@@ -421,7 +409,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ priceMonitoringPeriod: "quarter" })]);
@@ -434,8 +422,8 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("checkbox"));
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.click(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" }));
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ hideCompanyInfo: true })]);
@@ -450,7 +438,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.type(screen.getByPlaceholderText("Введите комментарий…"), "Особые условия");
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ additionalInfo: "Особые условия" })]);
@@ -463,7 +451,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Plain");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Plain");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		const item = onSubmit.mock.calls[0][0][0];
@@ -485,12 +473,12 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "A");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "A");
 
 		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		await user.type(nameInputs[1], "B");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
@@ -507,17 +495,16 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: "Своими силами" }));
-		await user.click(screen.getByRole("button", { name: "Не допускаются" }));
+		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "X");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "X");
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// After reset, nothing selected
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "false");
 		expect(screen.getByRole("button", { name: "Своими силами" })).toHaveAttribute("aria-pressed", "false");
-		expect(screen.getByRole("button", { name: "Допускаются" })).toHaveAttribute("aria-pressed", "false");
-		expect(screen.getByRole("button", { name: "Не допускаются" })).toHaveAttribute("aria-pressed", "false");
-		expect(screen.getByRole("checkbox")).not.toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Аналоги допускаются" })).not.toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" })).not.toBeChecked();
 	});
 
 	// --- Validation & unsaved changes ---
@@ -526,15 +513,15 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Temp");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Temp");
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
-		const nameInputs = screen.getAllByPlaceholderText("Название позиции");
+		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		await user.type(nameInputs[1], "Filled");
 		await user.clear(nameInputs[0]);
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
-		expect(screen.getAllByPlaceholderText("Название позиции")[0]).toHaveFocus();
+		expect(screen.getAllByPlaceholderText("Название позиции *")[0]).toHaveFocus();
 	});
 
 	test("focus moves to first empty name on add row attempt", async () => {
@@ -543,7 +530,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
-		expect(screen.getByPlaceholderText("Название позиции")).toHaveFocus();
+		expect(screen.getByPlaceholderText("Название позиции *")).toHaveFocus();
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 	});
 
@@ -552,7 +539,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Something");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Something");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -564,13 +551,13 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "My item");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "My item");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
 		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Название позиции")).toHaveValue("My item");
+		expect(screen.getByPlaceholderText("Название позиции *")).toHaveValue("My item");
 		expect(onOpenChange).not.toHaveBeenCalledWith(false);
 	});
 
@@ -579,7 +566,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Something");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Something");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
@@ -614,7 +601,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("checkbox"));
+		await user.click(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" }));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -631,12 +618,12 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 
-	test("dirty detection: selecting analogues triggers confirmation", async () => {
+	test("dirty detection: checking analogues triggers confirmation", async () => {
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: "Допускаются" }));
+		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -658,10 +645,10 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название позиции"), "Discard me");
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Discard me");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
-		expect(screen.getByPlaceholderText("Название позиции")).toHaveValue("");
+		expect(screen.getByPlaceholderText("Название позиции *")).toHaveValue("");
 	});
 });

@@ -9,12 +9,13 @@ import {
 	useSensors,
 } from "@dnd-kit/core";
 import { PanelLeft } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
-import { DESKTOP_QUERY, FolderSidebar, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
+import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
+import { ProcurementSidebar } from "@/components/procurement-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import type {
 	SortState,
 	StatusFilter,
 } from "@/data/types";
+import { useProcurementCompanies } from "@/data/use-companies";
 import {
 	nextUnusedColor,
 	useCreateFolder,
@@ -97,8 +99,23 @@ export function ProcurementPage() {
 	};
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
+	const company = searchParams.get("company") ?? undefined;
 
-	// Server-backed item hooks
+	// Companies for multi-company sidebar
+	const { data: companies = [], isLoading: companiesLoading } = useProcurementCompanies();
+	const isMultiCompany = companies.length > 1;
+
+	// Show company badge when multi-company and no company selected
+	const showCompanyBadge = isMultiCompany && !company;
+
+	// Company name map for badges
+	const companyMap = useMemo(() => {
+		const map: Record<string, string> = {};
+		for (const c of companies) map[c.id] = c.name;
+		return map;
+	}, [companies]);
+
+	// Server-backed item hooks — scoped to selected company
 	const {
 		items,
 		hasNextPage,
@@ -107,11 +124,11 @@ export function ProcurementPage() {
 		isFetchingNextPage,
 		error: itemsError,
 		refetch: refetchItems,
-	} = useItems({ search, filters, sort, folder });
+	} = useItems({ search, filters, sort, folder, company });
 
-	// Server-backed folder hooks
-	const { data: folders = [], isLoading: foldersLoading } = useFolders();
-	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats();
+	// Server-backed folder hooks — scoped to selected company
+	const { data: folders = [], isLoading: foldersLoading } = useFolders(company);
+	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats(company);
 	const createFolderMutation = useCreateFolder();
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
@@ -134,7 +151,7 @@ export function ProcurementPage() {
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleExport() {
-		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort }));
+		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
 	}
 
 	function handleSearchChange(query: string) {
@@ -176,6 +193,20 @@ export function ProcurementPage() {
 				next.set("sort", field);
 				next.set("dir", "asc");
 			}
+			return next;
+		});
+	}
+
+	function handleCompanySelect(companyId: string | undefined) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (companyId) {
+				next.set("company", companyId);
+			} else {
+				next.delete("company");
+			}
+			// Changing company clears folder
+			next.delete("folder");
 			return next;
 		});
 	}
@@ -261,7 +292,7 @@ export function ProcurementPage() {
 				</header>
 
 				<div className="flex min-h-0 min-w-0 flex-1">
-					<FolderSidebar
+					<ProcurementSidebar
 						folders={folders}
 						counts={counts}
 						activeFolder={folder}
@@ -273,6 +304,11 @@ export function ProcurementPage() {
 						onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
 						onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
 						onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+						companies={companies}
+						companiesLoading={companiesLoading}
+						selectedCompany={company}
+						isMultiCompany={isMultiCompany}
+						onCompanySelect={handleCompanySelect}
 					/>
 					<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
 						<ProcurementTable
@@ -294,6 +330,8 @@ export function ProcurementPage() {
 							error={itemsError}
 							onRetry={() => refetchItems()}
 							isMobile={isMobile}
+							companyMap={companyMap}
+							showCompanyBadge={showCompanyBadge}
 						/>
 					</main>
 				</div>

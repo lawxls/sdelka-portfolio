@@ -26,6 +26,7 @@ const mockItems: ProcurementItem[] = [
 		bestPrice: 50000,
 		averagePrice: 52000,
 		folderId: null,
+		companyId: "company-1",
 	},
 	{
 		id: "2",
@@ -36,6 +37,7 @@ const mockItems: ProcurementItem[] = [
 		bestPrice: 35000,
 		averagePrice: 32000,
 		folderId: null,
+		companyId: "company-1",
 	},
 	{
 		id: "3",
@@ -46,6 +48,7 @@ const mockItems: ProcurementItem[] = [
 		bestPrice: null,
 		averagePrice: null,
 		folderId: null,
+		companyId: "company-1",
 	},
 	{
 		id: "4",
@@ -56,6 +59,7 @@ const mockItems: ProcurementItem[] = [
 		bestPrice: null,
 		averagePrice: null,
 		folderId: null,
+		companyId: "company-1",
 	},
 ];
 
@@ -377,7 +381,7 @@ describe("ProcurementTable context menu", () => {
 		render(<ProcurementTable {...contextMenuProps} />);
 		const row = screen.getByTestId("row-1");
 		fireEvent.contextMenu(row);
-		expect(screen.getByText("Переместить в раздел")).toBeInTheDocument();
+		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
@@ -387,9 +391,9 @@ describe("ProcurementTable context menu", () => {
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 
 		// Hover over submenu trigger to open it
-		fireEvent.click(screen.getByText("Переместить в раздел"));
+		fireEvent.click(screen.getByText("Переместить в категорию"));
 
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 
 	test("clicking delete opens AlertDialog", () => {

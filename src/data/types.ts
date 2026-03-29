@@ -74,6 +74,7 @@ export interface ProcurementItem {
 	bestPrice: number | null;
 	averagePrice: number | null;
 	folderId: string | null;
+	companyId: string;
 	description?: string;
 	unit?: Unit;
 	frequencyCount?: number;
@@ -159,4 +160,98 @@ export function getDeviation(item: ProcurementItem): number | null {
 export function getOverpayment(item: ProcurementItem): number | null {
 	if (item.bestPrice == null) return null;
 	return (item.currentPrice - item.bestPrice) * item.annualQuantity;
+}
+
+// --- Companies ---
+
+export type AddressType = "warehouse" | "office" | "production";
+
+export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
+	warehouse: "Склад",
+	office: "Офис",
+	production: "Производство",
+};
+
+export const ADDRESS_TYPES = Object.keys(ADDRESS_TYPE_LABELS) as AddressType[];
+
+export type EmployeeRole = "admin" | "user";
+
+export const ROLE_LABELS: Record<EmployeeRole, string> = {
+	admin: "Администратор",
+	user: "Пользователь",
+};
+
+export const ROLES = Object.keys(ROLE_LABELS) as EmployeeRole[];
+
+export interface Address {
+	id: string;
+	name: string;
+	type: AddressType;
+	postalCode: string;
+	address: string;
+	contactPerson: string;
+	phone: string;
+}
+
+export type PermissionLevel = "none" | "view" | "edit";
+
+export interface EmployeePermissions {
+	id: string;
+	employeeId: string;
+	analytics: PermissionLevel;
+	procurement: PermissionLevel;
+	companies: PermissionLevel;
+	tasks: PermissionLevel;
+}
+
+export interface Employee {
+	id: string;
+	firstName: string;
+	lastName: string;
+	patronymic: string;
+	position: string;
+	role: EmployeeRole;
+	phone: string;
+	email: string;
+	isResponsible: boolean;
+}
+
+export interface Company {
+	id: string;
+	name: string;
+	industry: string;
+	website: string;
+	description: string;
+	preferredPayment: string;
+	preferredDelivery: string;
+	additionalComments: string;
+	isMain: boolean;
+	employeeCount: number;
+	procurementItemCount: number;
+	addresses: Address[];
+	employees: (Employee & { permissions: EmployeePermissions })[];
+}
+
+export interface AddressSummary {
+	id: string;
+	name: string;
+	type: AddressType;
+	address: string;
+}
+
+export interface CompanySummary {
+	id: string;
+	name: string;
+	isMain: boolean;
+	responsibleEmployeeName: string;
+	addresses: AddressSummary[];
+	employeeCount: number;
+	procurementItemCount: number;
+}
+
+export type CompanySortField = "name" | "employeeCount" | "procurementItemCount";
+
+export interface CompanySortState {
+	field: CompanySortField;
+	direction: SortDirection;
 }

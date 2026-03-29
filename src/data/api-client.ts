@@ -2,9 +2,23 @@ import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
 import { getTenant } from "./tenant";
-import type { Folder, NewItemInput, ProcurementItem, Totals } from "./types";
+import type {
+	Address,
+	AddressType,
+	Company,
+	CompanySummary,
+	Employee,
+	EmployeePermissions,
+	EmployeeRole,
+	Folder,
+	NewItemInput,
+	PermissionLevel,
+	ProcurementItem,
+	Totals,
+} from "./types";
 
 const BASE = "/api/v1/company";
+const COMPANIES_BASE = "/api/v1/companies";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -75,15 +89,16 @@ function attemptRefresh(): Promise<void> {
 	return refreshPromise;
 }
 
-async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean } = {}): Promise<T> {
-	const headers = buildAuthHeaders(options.headers, options.skipAuth);
-	let response = await fetch(`${BASE}${path}`, { ...options, headers });
+async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean; base?: string } = {}): Promise<T> {
+	const { base = BASE, skipAuth, ...fetchOpts } = options;
+	const headers = buildAuthHeaders(fetchOpts.headers, skipAuth);
+	let response = await fetch(`${base}${path}`, { ...fetchOpts, headers });
 
-	if (response.status === 401 && !options.skipAuth && getRefreshToken()) {
+	if (response.status === 401 && !skipAuth && getRefreshToken()) {
 		try {
 			await attemptRefresh();
-			const retryHeaders = buildAuthHeaders(options.headers, options.skipAuth);
-			response = await fetch(`${BASE}${path}`, { ...options, headers: retryHeaders });
+			const retryHeaders = buildAuthHeaders(fetchOpts.headers, skipAuth);
+			response = await fetch(`${base}${path}`, { ...fetchOpts, headers: retryHeaders });
 		} catch {
 			// Refresh failed — fall through to ensureOk with original 401 response
 		}
@@ -105,15 +120,15 @@ export async function fetchCompanyInfo(): Promise<{ name: string }> {
 
 // --- Folders ---
 
-export async function fetchFolders(): Promise<{ folders: Folder[] }> {
-	return request("/folders/");
+export async function fetchFolders(params?: { company?: string }): Promise<{ folders: Folder[] }> {
+	return request(`/folders/${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
 }
 
-export async function fetchFolderStats(): Promise<{
+export async function fetchFolderStats(params?: { company?: string }): Promise<{
 	stats: Array<{ folderId: string | null; itemCount: number }>;
 	archiveCount: number;
 }> {
-	return request("/folders/stats");
+	return request(`/folders/stats${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
 }
 
 export async function createFolder(data: { name: string; color: string }): Promise<Folder> {
@@ -152,6 +167,7 @@ export interface FetchItemsParams {
 	status?: string;
 	deviation?: string;
 	folder?: string;
+	company?: string;
 	sort?: string;
 	dir?: string;
 	cursor?: string;
@@ -228,8 +244,199 @@ export interface FetchTotalsParams {
 	status?: string;
 	deviation?: string;
 	folder?: string;
+	company?: string;
 }
 
 export async function fetchTotals(params: FetchTotalsParams): Promise<Totals> {
 	return request(`/items/totals${buildQuery(params as Record<string, string | number | undefined>)}`);
+}
+
+// --- Companies ---
+
+export interface FetchCompaniesParams {
+	q?: string;
+	sort?: string;
+	dir?: string;
+	cursor?: string;
+	limit?: number;
+}
+
+export async function fetchCompanies(params: FetchCompaniesParams): Promise<{
+	companies: CompanySummary[];
+	nextCursor: string | null;
+}> {
+	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
+		base: COMPANIES_BASE,
+	});
+}
+
+export async function fetchCompany(id: string): Promise<Company> {
+	return request(`/${id}/`, { base: COMPANIES_BASE });
+}
+
+export interface UpdateCompanyData {
+	name?: string;
+	industry?: string;
+	website?: string;
+	description?: string;
+	preferredPayment?: string;
+	preferredDelivery?: string;
+	additionalComments?: string;
+}
+
+export async function updateCompany(id: string, data: UpdateCompanyData): Promise<Company> {
+	return request(`/${id}/`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteCompany(id: string): Promise<void> {
+	return request(`/${id}/`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
+	});
+}
+
+export interface CreateCompanyPayload {
+	name: string;
+	industry?: string;
+	website?: string;
+	description?: string;
+	preferredPayment?: string;
+	preferredDelivery?: string;
+	additionalComments?: string;
+	address: CreateAddressData;
+}
+
+export async function createCompany(data: CreateCompanyPayload): Promise<Company> {
+	return request("/", {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+// --- Addresses ---
+
+export interface CreateAddressData {
+	name: string;
+	type: AddressType;
+	postalCode: string;
+	address: string;
+	contactPerson: string;
+	phone: string;
+}
+
+export interface UpdateAddressData {
+	name?: string;
+	type?: AddressType;
+	postalCode?: string;
+	address?: string;
+	contactPerson?: string;
+	phone?: string;
+}
+
+export async function createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
+	return request(`/${companyId}/addresses`, {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address> {
+	return request(`/${companyId}/addresses/${addressId}`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteAddress(companyId: string, addressId: string): Promise<void> {
+	return request(`/${companyId}/addresses/${addressId}`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
+	});
+}
+
+// --- Employees ---
+
+export interface CreateEmployeeData {
+	firstName: string;
+	lastName: string;
+	patronymic: string;
+	position: string;
+	role: EmployeeRole;
+	phone: string;
+	email: string;
+	isResponsible: boolean;
+}
+
+export interface UpdateEmployeeData {
+	firstName?: string;
+	lastName?: string;
+	patronymic?: string;
+	position?: string;
+	role?: EmployeeRole;
+	phone?: string;
+	email?: string;
+	isResponsible?: boolean;
+}
+
+export interface UpdatePermissionsData {
+	analytics?: PermissionLevel;
+	procurement?: PermissionLevel;
+	companies?: PermissionLevel;
+	tasks?: PermissionLevel;
+}
+
+export async function createEmployee(
+	companyId: string,
+	data: CreateEmployeeData,
+): Promise<Employee & { permissions: EmployeePermissions }> {
+	return request(`/${companyId}/employees`, {
+		base: COMPANIES_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateEmployee(
+	companyId: string,
+	employeeId: string,
+	data: UpdateEmployeeData,
+): Promise<Employee & { permissions: EmployeePermissions }> {
+	return request(`/${companyId}/employees/${employeeId}`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteEmployee(companyId: string, employeeId: string): Promise<void> {
+	return request(`/${companyId}/employees/${employeeId}`, {
+		base: COMPANIES_BASE,
+		method: "DELETE",
+	});
+}
+
+export async function updateEmployeePermissions(
+	companyId: string,
+	employeeId: string,
+	data: UpdatePermissionsData,
+): Promise<EmployeePermissions> {
+	return request(`/${companyId}/employees/${employeeId}/permissions`, {
+		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
 }

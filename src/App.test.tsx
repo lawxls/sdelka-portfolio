@@ -193,12 +193,11 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/companies renders placeholder page with icon", async () => {
+	test("/companies renders companies page", async () => {
+		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [], nextCursor: null })));
 		renderApp(["/companies"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
-			expect(screen.getByText("В разработке")).toBeInTheDocument();
-			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
@@ -391,9 +390,9 @@ describe("ProcurementPage", () => {
 
 	test("renders sidebar with folders and counts", async () => {
 		await renderAppReady();
-		expect(screen.getByText("Разделы")).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Категории" })).toBeInTheDocument();
 		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-		expect(screen.getByText("Без раздела")).toBeInTheDocument();
+		expect(screen.getByText("Без категории")).toBeInTheDocument();
 		const sidebar = screen.getByTestId("sidebar");
 		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
 	});
@@ -437,9 +436,9 @@ describe("ProcurementPage", () => {
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		await user.click(within(sidebar).getByRole("button", { name: /Новый раздел/ }));
+		await user.click(within(sidebar).getByRole("button", { name: /Новая категория/ }));
 
-		const input = within(sidebar).getByRole("textbox", { name: "Название раздела" });
+		const input = within(sidebar).getByRole("textbox", { name: "Название категории" });
 		await user.type(input, "Тест раздел{Enter}");
 
 		await waitFor(() => {
@@ -453,11 +452,11 @@ describe("ProcurementPage", () => {
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
+		await user.click(screen.getByRole("button", { name: "Меню категории Металлопрокат" }));
 		await screen.findByText("Удалить");
 		fireEvent.click(screen.getByText("Удалить"));
 
-		await screen.findByText("Удалить раздел?");
+		await screen.findByText("Удалить категорию?");
 		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
 
 		// Folder gone from sidebar
@@ -472,7 +471,7 @@ describe("ProcurementPage", () => {
 		const user = userEvent.setup();
 		const sidebar = screen.getByTestId("sidebar");
 
-		await user.click(screen.getByRole("button", { name: "Меню раздела Металлопрокат" }));
+		await user.click(screen.getByRole("button", { name: "Меню категории Металлопрокат" }));
 		await screen.findByText("Переименовать");
 		fireEvent.click(screen.getByText("Переименовать"));
 
@@ -521,6 +520,7 @@ describe("ProcurementPage", () => {
 					bestPrice: 1,
 					averagePrice: 1,
 					folderId: null,
+					companyId: "company-1",
 				}}
 			/>,
 		);
@@ -546,7 +546,7 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getAllByPlaceholderText("Название позиции")).toHaveLength(1);
+		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(1);
 	});
 
 	test("Отмена closes drawer", async () => {
@@ -555,12 +555,12 @@ describe("ProcurementPage", () => {
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-		await user.type(screen.getAllByPlaceholderText("Название позиции")[0], "Should not appear");
+		await user.type(screen.getAllByPlaceholderText("Название позиции *")[0], "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
-		expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+		expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -641,8 +641,8 @@ describe("ProcurementPage", () => {
 		const row = screen.getByTestId("row-item-11");
 		fireEvent.contextMenu(row);
 
-		await screen.findByText("Переместить в раздел");
-		fireEvent.click(screen.getByText("Переместить в раздел"));
+		await screen.findByText("Переместить в категорию");
+		fireEvent.click(screen.getByText("Переместить в категорию"));
 
 		// Context menu submenu items are checkbox items — use role
 		const menuItems = await screen.findAllByRole("menuitemcheckbox");
@@ -664,14 +664,14 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Тестовая позиция");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer closes
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
 		});
 	});
 
@@ -688,14 +688,14 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Большая партия");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer closes
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
 		});
 	});
 
@@ -712,14 +712,14 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции")[0];
+		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Test");
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer still closes (form resets on submit before mutation resolves)
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
 		});
 	});
 
