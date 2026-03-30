@@ -41,6 +41,9 @@ function CompanyNavigator({
 				<button type="button" className={navItemClassName(allActive)} onClick={onSelectAll}>
 					<Layers className="size-4 shrink-0" aria-hidden="true" />
 					<span className="flex-1 text-left">Все закупки</span>
+					<span className="tabular-nums text-xs text-muted-foreground">
+						{companies.reduce((sum, c) => sum + c.procurementItemCount, 0)}
+					</span>
 				</button>
 			</div>
 

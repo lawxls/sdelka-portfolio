@@ -150,6 +150,7 @@ describe("ProcurementPage — multi-company, no selection", () => {
 		});
 
 		const nav = screen.getByTestId("company-navigator");
+		expect(within(nav).getByText("26")).toBeInTheDocument(); // total: 15+8+3
 		expect(within(nav).getByText("15")).toBeInTheDocument();
 		expect(within(nav).getByText("8")).toBeInTheDocument();
 		expect(within(nav).getByText("3")).toBeInTheDocument();
