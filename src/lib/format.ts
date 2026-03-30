@@ -55,6 +55,16 @@ export function formatShortDate(iso: string): string {
 	return shortDateFormatter.format(new Date(iso));
 }
 
+const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "numeric",
+	month: "long",
+	year: "numeric",
+});
+
+export function formatDate(iso: string): string {
+	return dateFormatter.format(new Date(iso));
+}
+
 const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {
 	day: "numeric",
 	month: "long",
@@ -65,6 +75,10 @@ const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {
 
 export function formatDateTime(iso: string): string {
 	return datetimeFormatter.format(new Date(iso));
+}
+
+export function getInitials(firstName: string, lastName: string): string {
+	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
 export function pluralizeRu(count: number, one: string, few: string, many: string): string {

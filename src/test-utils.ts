@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { UserSettings } from "@/data/settings-api";
 import type { Task } from "@/data/task-types";
 import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
 
@@ -103,6 +104,19 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 	};
 }
 
+export function makeSettings(overrides: Partial<UserSettings> = {}): UserSettings {
+	return {
+		first_name: "Иван",
+		last_name: "Иванов",
+		email: "ivan@example.com",
+		phone: "+79991234567",
+		avatar_icon: "blue",
+		date_joined: "2024-01-15T10:00:00Z",
+		mailing_allowed: true,
+		...overrides,
+	};
+}
+
 export function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
 		id,
@@ -111,7 +125,7 @@ export function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 		status: "assigned",
 		createdAt: "2026-03-15T10:00:00.000Z",
 		deadline: "2026-04-01T18:00:00.000Z",
-		assignee: { name: "Иванов Алексей", initials: "ИА" },
+		assignee: { name: "Иванов Алексей", initials: "ИА", avatar_icon: "blue" },
 		description: "Test description",
 		questionCount: 1,
 		answer: null,

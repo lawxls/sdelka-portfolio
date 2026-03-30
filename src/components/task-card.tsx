@@ -1,6 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Task } from "@/data/task-types";
+import { getAvatarColor } from "@/lib/avatar-colors";
 import { formatShortDate, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +56,10 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 				</div>
 				<span
 					role="img"
-					className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium"
+					className={cn(
+						"flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white",
+						getAvatarColor(task.assignee.avatar_icon),
+					)}
 					aria-label={task.assignee.name}
 				>
 					{task.assignee.initials}

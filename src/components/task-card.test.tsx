@@ -11,7 +11,7 @@ describe("TaskCard", () => {
 	const task = makeTask("t1", {
 		title: "Согласование цены",
 		procurementItemName: "Арматура А500С",
-		assignee: { name: "Иванов Алексей", initials: "ИА" },
+		assignee: { name: "Иванов Алексей", initials: "ИА", avatar_icon: "blue" },
 		createdAt: "2026-03-15T10:00:00.000Z",
 		deadline: "2099-04-15T18:00:00.000Z",
 		questionCount: 3,

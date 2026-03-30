@@ -4,18 +4,18 @@ import { describe, expect, test } from "vitest";
 import { FloatingInput } from "./floating-input";
 
 describe("FloatingInput", () => {
-	test("renders input with floating label", () => {
+	test("renders label above input", () => {
 		render(<FloatingInput label="Email" name="email" type="email" />);
 		expect(screen.getByLabelText("Email")).toBeInTheDocument();
 		expect(screen.getByLabelText("Email")).toHaveAttribute("type", "email");
+		expect(screen.getByText("Email")).toHaveClass("font-medium");
 	});
 
-	test("label floats when input has value", async () => {
+	test("input accepts typed value", async () => {
 		const user = userEvent.setup();
 		render(<FloatingInput label="Email" name="email" />);
 		const input = screen.getByLabelText("Email");
 		await user.type(input, "test@test.com");
-		// Input has value — placeholder-shown is false so label should float
 		expect(input).toHaveValue("test@test.com");
 	});
 

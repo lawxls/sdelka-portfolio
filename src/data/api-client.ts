@@ -89,7 +89,10 @@ function attemptRefresh(): Promise<void> {
 	return refreshPromise;
 }
 
-async function request<T>(path: string, options: RequestInit & { skipAuth?: boolean; base?: string } = {}): Promise<T> {
+export async function request<T>(
+	path: string,
+	options: RequestInit & { skipAuth?: boolean; base?: string } = {},
+): Promise<T> {
 	const { base = BASE, skipAuth, ...fetchOpts } = options;
 	const headers = buildAuthHeaders(fetchOpts.headers, skipAuth);
 	let response = await fetch(`${base}${path}`, { ...fetchOpts, headers });
