@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
@@ -11,6 +12,10 @@ import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
 import { makeCompany, makeCompanyDetail } from "@/test-utils";
 import { CompaniesPage } from "./companies-page";
+
+vi.mock("sonner", () => ({
+	toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
+}));
 
 const MOCK_COMPANIES: CompanySummary[] = [
 	makeCompany("company-1", {
@@ -376,6 +381,7 @@ async function renderPageReady(initialEntries?: string[]) {
 
 beforeEach(() => {
 	localStorage.clear();
+	vi.mocked(toast.error).mockClear();
 	setTokens("test-access", "test-refresh");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -1463,7 +1469,7 @@ describe("CompaniesPage company creation", () => {
 		expect(capturedBody).not.toHaveProperty("employee");
 	});
 
-	test("form clears on close and reopen", async () => {
+	test("form resets mutation state on close and reopen", async () => {
 		await renderPageReady();
 		const user = userEvent.setup();
 
@@ -1492,5 +1498,109 @@ describe("CompaniesPage company creation", () => {
 		});
 
 		expect(screen.getByLabelText("Название компании")).toHaveValue("");
+	});
+});
+
+describe("Domain error toasts", () => {
+	test("delete company shows error toast on 403 (main company)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/", () => {
+				return HttpResponse.json({ detail: "Cannot delete main company" }, { status: 403 });
+			}),
+		);
+
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		fireEvent.contextMenu(screen.getByTestId("row-company-2"));
+		await waitFor(() => expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument());
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+		await waitFor(() => expect(screen.getByText("Удалить компанию?")).toBeInTheDocument());
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete main company");
+		});
+	});
+
+	test("delete company shows error toast on 409 (active items)", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		fireEvent.contextMenu(screen.getByTestId("row-company-2"));
+		await waitFor(() => expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument());
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+		await waitFor(() => expect(screen.getByText("Удалить компанию?")).toBeInTheDocument());
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Company has active procurement items");
+		});
+	});
+
+	test("delete address shows error toast on 409 (last address)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/addresses/:addressId/", () => {
+				return HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=addresses"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		const addressCard = screen.getByTestId("address-addr-detail-1");
+		await user.click(within(addressCard).getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete the last address");
+		});
+	});
+
+	test("delete employee shows error toast on 409 (only responsible)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/employees/:employeeId/", () => {
+				return HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=employees"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId("employee-toggle-2"));
+		await waitFor(() => expect(screen.getByLabelText("Редактировать сотрудника")).toBeInTheDocument());
+		await user.click(screen.getByLabelText("Редактировать сотрудника"));
+		await waitFor(() => expect(screen.getByLabelText("Удалить сотрудника")).toBeInTheDocument());
+		await user.click(screen.getByLabelText("Удалить сотрудника"));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete the only responsible employee");
+		});
+	});
+
+	test("create employee shows error toast on 400 (duplicate email)", async () => {
+		server.use(
+			http.post("/api/v1/companies/:id/employees/", () => {
+				return HttpResponse.json({ email: ["User with this email already exists"] }, { status: 400 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=employees"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить сотрудника/ }));
+		await waitFor(() => expect(screen.getByTestId("employee-add-form")).toBeInTheDocument());
+
+		const form = screen.getByTestId("employee-add-form");
+		await user.type(within(form).getByLabelText("Фамилия"), "Тестов");
+		await user.type(within(form).getByLabelText("Имя"), "Тест");
+		await user.type(within(form).getByLabelText("Электронная почта"), "test@example.com");
+		await user.click(within(form).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("User with this email already exists");
+		});
 	});
 });
