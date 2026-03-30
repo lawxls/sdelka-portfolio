@@ -285,7 +285,7 @@ describe("useCreateAddress", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.post("/api/v1/companies/c1/addresses", async ({ request }) => {
+			http.post("/api/v1/companies/c1/addresses/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json(newAddress);
 			}),
@@ -317,7 +317,7 @@ describe("useUpdateAddress", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.patch("/api/v1/companies/c1/addresses/:addressId", async ({ request }) => {
+			http.patch("/api/v1/companies/c1/addresses/:addressId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json({ ...company.addresses[0], ...capturedBody });
 			}),
@@ -371,7 +371,7 @@ describe("useDeleteAddress", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.delete("/api/v1/companies/c1/addresses/:addressId", ({ params }) => {
+			http.delete("/api/v1/companies/c1/addresses/:addressId/", ({ params }) => {
 				deletedId = params.addressId as string;
 				return new HttpResponse(null, { status: 204 });
 			}),
@@ -399,7 +399,7 @@ describe("useDeleteAddress", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.delete("/api/v1/companies/c1/addresses/:addressId", () =>
+			http.delete("/api/v1/companies/c1/addresses/:addressId/", () =>
 				HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 }),
 			),
 		);
@@ -446,7 +446,7 @@ describe("useCreateEmployee", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.post("/api/v1/companies/c1/employees", async ({ request }) => {
+			http.post("/api/v1/companies/c1/employees/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json(newEmployee);
 			}),
@@ -478,7 +478,7 @@ describe("useUpdateEmployee", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.patch("/api/v1/companies/c1/employees/:employeeId", async ({ request }) => {
+			http.patch("/api/v1/companies/c1/employees/:employeeId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json({ ...company.employees[0], ...capturedBody });
 			}),
@@ -553,7 +553,7 @@ describe("useDeleteEmployee", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.delete("/api/v1/companies/c1/employees/:employeeId", ({ params }) => {
+			http.delete("/api/v1/companies/c1/employees/:employeeId/", ({ params }) => {
 				deletedId = params.employeeId as string;
 				return new HttpResponse(null, { status: 204 });
 			}),
@@ -581,7 +581,7 @@ describe("useDeleteEmployee", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.delete("/api/v1/companies/c1/employees/:employeeId", () =>
+			http.delete("/api/v1/companies/c1/employees/:employeeId/", () =>
 				HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 }),
 			),
 		);
@@ -609,7 +609,7 @@ describe("useUpdateEmployeePermissions", () => {
 
 		server.use(
 			http.get("/api/v1/companies/c1/", () => HttpResponse.json(company)),
-			http.patch("/api/v1/companies/c1/employees/:employeeId/permissions", async ({ request }) => {
+			http.patch("/api/v1/companies/c1/employees/:employeeId/permissions/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json({ ...company.employees[0].permissions, ...capturedBody });
 			}),

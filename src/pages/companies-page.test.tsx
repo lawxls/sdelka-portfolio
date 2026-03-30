@@ -195,13 +195,13 @@ function setupHandlers() {
 			const body = (await request.json()) as Record<string, unknown>;
 			return HttpResponse.json({ ...companyDetail, ...body });
 		}),
-		http.post("/api/v1/companies/:id/addresses", async ({ request }) => {
+		http.post("/api/v1/companies/:id/addresses/", async ({ request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const newAddr = { id: `addr-new-${Date.now()}`, ...body };
 			companyDetail = { ...companyDetail, addresses: [...companyDetail.addresses, newAddr as Address] };
 			return HttpResponse.json(newAddr);
 		}),
-		http.patch("/api/v1/companies/:id/addresses/:addressId", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/addresses/:addressId/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const addr = companyDetail.addresses.find((a) => a.id === params.addressId);
 			if (!addr) return HttpResponse.json({}, { status: 404 });
@@ -212,7 +212,7 @@ function setupHandlers() {
 			};
 			return HttpResponse.json(updated);
 		}),
-		http.delete("/api/v1/companies/:id/addresses/:addressId", ({ params }) => {
+		http.delete("/api/v1/companies/:id/addresses/:addressId/", ({ params }) => {
 			if (companyDetail.addresses.length <= 1) {
 				return HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 });
 			}
@@ -222,7 +222,7 @@ function setupHandlers() {
 			};
 			return new HttpResponse(null, { status: 204 });
 		}),
-		http.post("/api/v1/companies/:id/employees", async ({ request }) => {
+		http.post("/api/v1/companies/:id/employees/", async ({ request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const newId = Date.now();
 			const newEmp = {
@@ -243,7 +243,7 @@ function setupHandlers() {
 			};
 			return HttpResponse.json(newEmp);
 		}),
-		http.patch("/api/v1/companies/:id/employees/:employeeId", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/employees/:employeeId/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const empId = Number(params.employeeId);
 			const emp = companyDetail.employees.find((e) => e.id === empId);
@@ -266,7 +266,7 @@ function setupHandlers() {
 			}
 			return HttpResponse.json(companyDetail.employees.find((e) => e.id === empId));
 		}),
-		http.delete("/api/v1/companies/:id/employees/:employeeId", ({ params }) => {
+		http.delete("/api/v1/companies/:id/employees/:employeeId/", ({ params }) => {
 			const empId = Number(params.employeeId);
 			const emp = companyDetail.employees.find((e) => e.id === empId);
 			if (emp?.isResponsible && companyDetail.employees.filter((e) => e.isResponsible).length <= 1) {
@@ -278,7 +278,7 @@ function setupHandlers() {
 			};
 			return new HttpResponse(null, { status: 204 });
 		}),
-		http.patch("/api/v1/companies/:id/employees/:employeeId/permissions", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/employees/:employeeId/permissions/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const empId = Number(params.employeeId);
 			companyDetail = {
@@ -805,7 +805,7 @@ describe("CompaniesPage Адреса tab", () => {
 	test("edit save sends PATCH with changed fields", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/addresses/:addressId", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/addresses/:addressId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json({ ...MOCK_ADDRESSES[0], ...capturedBody });
 			}),
@@ -952,7 +952,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("explicit save sends PATCH with changed fields", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				const emp = companyDetail.employees.find((e) => e.id === 1);
 				return HttpResponse.json({ ...emp, ...capturedBody });
@@ -981,7 +981,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("permission segment toggle sends immediate PATCH", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				const emp = companyDetail.employees.find((e) => e.id === 2);
 				return HttpResponse.json({ ...emp?.permissions, ...capturedBody });
@@ -1019,7 +1019,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("isResponsible checkbox has radio behavior", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ params, request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				const empId = Number(params.employeeId);
 				// Apply isResponsible radio behavior in mock
@@ -1104,12 +1104,12 @@ describe("CompaniesPage Сотрудники tab", () => {
 		let permsCaptured: Record<string, unknown> | undefined;
 		let profileCaptured: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions/", async ({ request }) => {
 				permsCaptured = (await request.json()) as Record<string, unknown>;
 				const emp = companyDetail.employees.find((e) => e.id === 2);
 				return HttpResponse.json({ ...emp?.permissions, ...permsCaptured });
 			}),
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ params, request }) => {
 				profileCaptured = (await request.json()) as Record<string, unknown>;
 				const empId = Number(params.employeeId);
 				const emp = companyDetail.employees.find((e) => e.id === empId);

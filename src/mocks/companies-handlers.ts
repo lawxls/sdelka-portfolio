@@ -122,7 +122,7 @@ export const companiesHandlers = [
 
 	// --- Addresses ---
 
-	http.post("/api/v1/companies/:id/addresses", async ({ params, request }) => {
+	http.post("/api/v1/companies/:id/addresses/", async ({ params, request }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
@@ -131,7 +131,7 @@ export const companiesHandlers = [
 		return HttpResponse.json(newAddr);
 	}),
 
-	http.patch("/api/v1/companies/:id/addresses/:addressId", async ({ params, request }) => {
+	http.patch("/api/v1/companies/:id/addresses/:addressId/", async ({ params, request }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
@@ -145,7 +145,7 @@ export const companiesHandlers = [
 		return HttpResponse.json(updated);
 	}),
 
-	http.delete("/api/v1/companies/:id/addresses/:addressId", ({ params }) => {
+	http.delete("/api/v1/companies/:id/addresses/:addressId/", ({ params }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		if (detail.addresses.length <= 1) {
@@ -160,7 +160,7 @@ export const companiesHandlers = [
 
 	// --- Employees ---
 
-	http.post("/api/v1/companies/:id/employees", async ({ params, request }) => {
+	http.post("/api/v1/companies/:id/employees/", async ({ params, request }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
@@ -181,7 +181,7 @@ export const companiesHandlers = [
 		return HttpResponse.json(newEmp);
 	}),
 
-	http.patch("/api/v1/companies/:id/employees/:employeeId", async ({ params, request }) => {
+	http.patch("/api/v1/companies/:id/employees/:employeeId/", async ({ params, request }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
@@ -204,7 +204,7 @@ export const companiesHandlers = [
 		return HttpResponse.json(employees.find((e) => e.id === empId));
 	}),
 
-	http.delete("/api/v1/companies/:id/employees/:employeeId", ({ params }) => {
+	http.delete("/api/v1/companies/:id/employees/:employeeId/", ({ params }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const empId = Number(params.employeeId);
@@ -219,7 +219,7 @@ export const companiesHandlers = [
 		return new HttpResponse(null, { status: 204 });
 	}),
 
-	http.patch("/api/v1/companies/:id/employees/:employeeId/permissions", async ({ params, request }) => {
+	http.patch("/api/v1/companies/:id/employees/:employeeId/permissions/", async ({ params, request }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
