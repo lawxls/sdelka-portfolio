@@ -22,6 +22,7 @@ export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
 export interface TaskAssignee {
 	name: string;
 	initials: string;
+	avatar_icon: string;
 }
 
 export type TaskSortField = "createdAt" | "deadline" | "questionCount";

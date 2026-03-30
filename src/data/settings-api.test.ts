@@ -2,7 +2,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, test } from "vitest";
 import { setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
-import { mockHostname } from "@/test-utils";
+import { makeSettings, mockHostname } from "@/test-utils";
 import { changePassword, fetchSettings, patchSettings } from "./settings-api";
 
 beforeEach(() => {
@@ -21,15 +21,7 @@ describe("fetchSettings", () => {
 					authorization: request.headers.get("Authorization") ?? "",
 					tenant: request.headers.get("X-Tenant") ?? "",
 				};
-				return HttpResponse.json({
-					first_name: "Иван",
-					last_name: "Иванов",
-					email: "ivan@example.com",
-					phone: "+79991234567",
-					avatar_icon: "blue",
-					date_joined: "2024-01-15T10:00:00Z",
-					mailing_allowed: true,
-				});
+				return HttpResponse.json(makeSettings());
 			}),
 		);
 
@@ -37,15 +29,7 @@ describe("fetchSettings", () => {
 
 		expect(capturedHeaders.authorization).toBe("Bearer test-access");
 		expect(capturedHeaders.tenant).toBe("acme");
-		expect(result).toEqual({
-			first_name: "Иван",
-			last_name: "Иванов",
-			email: "ivan@example.com",
-			phone: "+79991234567",
-			avatar_icon: "blue",
-			date_joined: "2024-01-15T10:00:00Z",
-			mailing_allowed: true,
-		});
+		expect(result).toEqual(makeSettings());
 	});
 
 	test("throws on non-OK response", async () => {
@@ -59,15 +43,7 @@ describe("fetchSettings", () => {
 	});
 });
 
-const MOCK_SETTINGS = {
-	first_name: "Иван",
-	last_name: "Иванов",
-	email: "ivan@example.com",
-	phone: "+79991234567",
-	avatar_icon: "blue",
-	date_joined: "2024-01-15T10:00:00Z",
-	mailing_allowed: true,
-};
+const MOCK_SETTINGS = makeSettings();
 
 describe("patchSettings", () => {
 	test("calls PATCH /api/v1/auth/settings with auth headers and only provided fields", async () => {

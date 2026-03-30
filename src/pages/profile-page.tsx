@@ -9,7 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { extractFormErrors } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
 import { useChangePassword, useSettings, useUpdateSettings } from "@/data/use-settings";
-import { formatDate } from "@/lib/format";
+import { getAvatarColor } from "@/lib/avatar-colors";
+import { formatDate, getInitials } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type ProfileTab = "account" | "settings";
 
@@ -18,23 +20,8 @@ const TABS: { key: ProfileTab; label: string }[] = [
 	{ key: "settings", label: "Настройки" },
 ];
 
-const AVATAR_COLORS: Record<string, string> = {
-	red: "bg-folder-red",
-	orange: "bg-folder-orange",
-	yellow: "bg-folder-yellow",
-	green: "bg-folder-green",
-	blue: "bg-folder-blue",
-	purple: "bg-folder-purple",
-	pink: "bg-folder-pink",
-	teal: "bg-folder-teal",
-};
-
 function parseTab(value: string | null): ProfileTab {
 	return value === "settings" ? "settings" : "account";
-}
-
-function getInitials(firstName: string, lastName: string): string {
-	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
 function stripPhonePrefix(phone: string): string {
@@ -269,14 +256,17 @@ export function ProfilePage() {
 	}
 
 	const initials = getInitials(data.first_name, data.last_name);
-	const avatarColor = AVATAR_COLORS[data.avatar_icon] ?? "bg-folder-blue";
+	const avatarColor = getAvatarColor(data.avatar_icon);
 
 	return (
 		<div className="mx-auto w-full max-w-2xl px-4 py-8">
 			<div className="flex flex-col items-center gap-2">
 				<div
 					data-testid="profile-avatar"
-					className={`flex size-20 items-center justify-center rounded-full text-2xl font-semibold text-white ${avatarColor}`}
+					className={cn(
+						"flex size-20 items-center justify-center rounded-full text-2xl font-semibold text-white",
+						avatarColor,
+					)}
 				>
 					{initials}
 				</div>

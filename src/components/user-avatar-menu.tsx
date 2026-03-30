@@ -8,6 +8,10 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { clearTokens } from "@/data/auth";
+import { useSettings } from "@/data/use-settings";
+import { getAvatarColor } from "@/lib/avatar-colors";
+import { getInitials } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface UserAvatarMenuProps {
 	side?: "top" | "right" | "bottom" | "left";
@@ -17,6 +21,10 @@ interface UserAvatarMenuProps {
 
 export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-7" }: UserAvatarMenuProps) {
 	const navigate = useNavigate();
+	const { data: settings } = useSettings();
+
+	const initials = settings ? getInitials(settings.first_name, settings.last_name) : null;
+	const avatarColor = settings ? getAvatarColor(settings.avatar_icon) : "";
 
 	return (
 		<DropdownMenu>
@@ -26,7 +34,19 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					aria-label="Меню пользователя"
 					className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 				>
-					<CircleUser className={iconClassName} />
+					{initials ? (
+						<span
+							className={cn(
+								"flex items-center justify-center rounded-full text-xs font-semibold text-white",
+								avatarColor,
+								iconClassName,
+							)}
+						>
+							{initials}
+						</span>
+					) : (
+						<CircleUser className={iconClassName} />
+					)}
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side={side} align={align} className="w-56">

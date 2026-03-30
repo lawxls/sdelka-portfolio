@@ -7,22 +7,14 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
 import { server } from "@/test-msw";
-import { mockHostname } from "@/test-utils";
+import { makeSettings, mockHostname } from "@/test-utils";
 import { ProfilePage } from "./profile-page";
 
 vi.mock("sonner", () => ({
 	toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-const MOCK_SETTINGS = {
-	first_name: "Иван",
-	last_name: "Иванов",
-	email: "ivan@example.com",
-	phone: "+79991234567",
-	avatar_icon: "blue",
-	date_joined: "2024-01-15T10:00:00Z",
-	mailing_allowed: true,
-};
+const MOCK_SETTINGS = makeSettings();
 
 let queryClient: QueryClient;
 

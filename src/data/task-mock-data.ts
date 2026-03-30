@@ -1,10 +1,10 @@
 import type { Task, TaskAssignee, TaskFilterParams, TaskStatus } from "./task-types";
 
 const ASSIGNEES: TaskAssignee[] = [
-	{ name: "Иванов Алексей", initials: "ИА" },
-	{ name: "Петрова Мария", initials: "ПМ" },
-	{ name: "Козлов Дмитрий", initials: "КД" },
-	{ name: "Сидорова Елена", initials: "СЕ" },
+	{ name: "Иванов Алексей", initials: "ИА", avatar_icon: "blue" },
+	{ name: "Петрова Мария", initials: "ПМ", avatar_icon: "pink" },
+	{ name: "Козлов Дмитрий", initials: "КД", avatar_icon: "green" },
+	{ name: "Сидорова Елена", initials: "СЕ", avatar_icon: "purple" },
 ];
 
 const TASK_TITLES = [

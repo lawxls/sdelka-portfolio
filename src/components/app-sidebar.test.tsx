@@ -1,28 +1,46 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { server } from "@/test-msw";
+import { createTestQueryClient, makeSettings } from "@/test-utils";
 import { AppSidebar } from "./app-sidebar";
 
+const MOCK_SETTINGS = makeSettings({ last_name: "Петров", date_joined: "2025-01-15T10:00:00Z" });
+
+beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+
+beforeEach(() => {
+	server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+});
+
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 function renderSidebar(initialEntry = "/procurement") {
+	const queryClient = createTestQueryClient();
 	return render(
-		<MemoryRouter initialEntries={[initialEntry]}>
-			<TooltipProvider>
-				<SidebarProvider open={false} onOpenChange={() => {}}>
-					<div className="flex">
-						<AppSidebar />
-						<Routes>
-							<Route path="/procurement" element={<div>procurement-content</div>} />
-							<Route path="/analytics" element={<div>analytics-content</div>} />
-							<Route path="/companies" element={<div>companies-content</div>} />
-							<Route path="/tasks" element={<div>tasks-content</div>} />
-						</Routes>
-					</div>
-				</SidebarProvider>
-			</TooltipProvider>
-		</MemoryRouter>,
+		<QueryClientProvider client={queryClient}>
+			<MemoryRouter initialEntries={[initialEntry]}>
+				<TooltipProvider>
+					<SidebarProvider open={false} onOpenChange={() => {}}>
+						<div className="flex">
+							<AppSidebar />
+							<Routes>
+								<Route path="/procurement" element={<div>procurement-content</div>} />
+								<Route path="/analytics" element={<div>analytics-content</div>} />
+								<Route path="/companies" element={<div>companies-content</div>} />
+								<Route path="/tasks" element={<div>tasks-content</div>} />
+							</Routes>
+						</div>
+					</SidebarProvider>
+				</TooltipProvider>
+			</MemoryRouter>
+		</QueryClientProvider>,
 	);
 }
 
