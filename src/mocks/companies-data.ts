@@ -25,7 +25,7 @@ const MOCK_ADDRESSES: Address[] = [
 
 const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 	{
-		id: "emp-1",
+		id: 1,
 		firstName: "Иван",
 		lastName: "Иванов",
 		patronymic: "Иванович",
@@ -36,7 +36,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		isResponsible: true,
 		permissions: {
 			id: "perm-1",
-			employeeId: "emp-1",
+			employeeId: 1,
 			analytics: "edit",
 			procurement: "edit",
 			companies: "edit",
@@ -44,7 +44,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		},
 	},
 	{
-		id: "emp-2",
+		id: 2,
 		firstName: "Пётр",
 		lastName: "Петров",
 		patronymic: "Петрович",
@@ -55,7 +55,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		isResponsible: false,
 		permissions: {
 			id: "perm-2",
-			employeeId: "emp-2",
+			employeeId: 2,
 			analytics: "none",
 			procurement: "view",
 			companies: "none",
@@ -106,7 +106,7 @@ function makeCompanyDetail(id: string, overrides: Partial<Company> = {}): Compan
 		],
 		employees: [
 			{
-				id: `emp-${id}`,
+				id: 1,
 				firstName: "Иван",
 				lastName: "Иванов",
 				patronymic: "Иванович",
@@ -117,7 +117,7 @@ function makeCompanyDetail(id: string, overrides: Partial<Company> = {}): Compan
 				isResponsible: true,
 				permissions: {
 					id: `perm-${id}`,
-					employeeId: `emp-${id}`,
+					employeeId: 1,
 					analytics: "edit",
 					procurement: "edit",
 					companies: "edit",

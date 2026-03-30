@@ -425,7 +425,7 @@ describe("useCreateEmployee", () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		const company = makeCompanyDetail("c1");
 		const newEmployee = {
-			id: "emp-new",
+			id: 99,
 			firstName: "Пётр",
 			lastName: "Петров",
 			patronymic: "Петрович",
@@ -436,7 +436,7 @@ describe("useCreateEmployee", () => {
 			isResponsible: false,
 			permissions: {
 				id: "perm-new",
-				employeeId: "emp-new",
+				employeeId: 99,
 				analytics: "none" as const,
 				procurement: "none" as const,
 				companies: "none" as const,
@@ -511,7 +511,7 @@ describe("useDeleteEmployee", () => {
 		const company = makeCompanyDetail("c1", {
 			employees: [
 				{
-					id: "emp-1",
+					id: 1,
 					firstName: "Иван",
 					lastName: "Иванов",
 					patronymic: "Иванович",
@@ -522,7 +522,7 @@ describe("useDeleteEmployee", () => {
 					isResponsible: true,
 					permissions: {
 						id: "p1",
-						employeeId: "emp-1",
+						employeeId: 1,
 						analytics: "edit",
 						procurement: "edit",
 						companies: "edit",
@@ -530,7 +530,7 @@ describe("useDeleteEmployee", () => {
 					},
 				},
 				{
-					id: "emp-2",
+					id: 2,
 					firstName: "Пётр",
 					lastName: "Петров",
 					patronymic: "Петрович",
@@ -541,7 +541,7 @@ describe("useDeleteEmployee", () => {
 					isResponsible: false,
 					permissions: {
 						id: "p2",
-						employeeId: "emp-2",
+						employeeId: 2,
 						analytics: "none",
 						procurement: "none",
 						companies: "none",
@@ -569,11 +569,11 @@ describe("useDeleteEmployee", () => {
 
 		await waitFor(() => expect(result.current.detail.data).toBeDefined());
 
-		result.current.remove.mutate("emp-2");
+		result.current.remove.mutate(2);
 
 		await waitFor(() => expect(result.current.remove.isSuccess).toBe(true));
 
-		expect(deletedId).toBe("emp-2");
+		expect(deletedId).toBe("2");
 	});
 
 	it("returns error when deleting only responsible employee (409)", async () => {

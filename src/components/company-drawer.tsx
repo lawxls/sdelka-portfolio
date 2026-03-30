@@ -727,7 +727,7 @@ function EmployeesTab({
 	companyId: string;
 	initialAddForm?: boolean;
 }) {
-	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [expandedId, setExpandedId] = useState<number | null>(null);
 	const [showAddForm, setShowAddForm] = useState(initialAddForm ?? false);
 
 	const createMutation = useCreateEmployee(companyId);
@@ -744,7 +744,7 @@ function EmployeesTab({
 	}
 
 	function handleUpdate(
-		employeeId: string,
+		employeeId: number,
 		original: Employee & { permissions: EmployeePermissions },
 		form: EmployeeFormState,
 	) {
@@ -772,15 +772,15 @@ function EmployeesTab({
 		);
 	}
 
-	function handleDelete(employeeId: string) {
+	function handleDelete(employeeId: number) {
 		deleteMutation.mutate(employeeId);
 	}
 
-	function handlePermissionChange(employeeId: string, module: keyof UpdatePermissionsData, level: PermissionLevel) {
+	function handlePermissionChange(employeeId: number, module: keyof UpdatePermissionsData, level: PermissionLevel) {
 		permsMutation.mutate({ employeeId, data: { [module]: level } });
 	}
 
-	function handleResponsibleChange(employeeId: string) {
+	function handleResponsibleChange(employeeId: number) {
 		updateMutation.mutate({ employeeId, data: { isResponsible: true } });
 	}
 

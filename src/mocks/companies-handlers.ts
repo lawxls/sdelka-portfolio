@@ -164,12 +164,13 @@ export const companiesHandlers = [
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
+		const newId = Date.now();
 		const newEmp = {
-			id: `emp-new-${Date.now()}`,
+			id: newId,
 			...body,
 			permissions: {
-				id: `perm-new-${Date.now()}`,
-				employeeId: `emp-new-${Date.now()}`,
+				id: `perm-new-${newId}`,
+				employeeId: newId,
 				analytics: body.role === "admin" ? "edit" : "none",
 				procurement: body.role === "admin" ? "edit" : "none",
 				companies: body.role === "admin" ? "edit" : "none",
@@ -184,34 +185,36 @@ export const companiesHandlers = [
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
-		const emp = detail.employees.find((e) => e.id === params.employeeId);
+		const empId = Number(params.employeeId);
+		const emp = detail.employees.find((e) => e.id === empId);
 		if (!emp) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 
 		let employees: (Employee & { permissions: EmployeePermissions })[];
 		if (body.isResponsible === true) {
 			employees = detail.employees.map((e) =>
-				e.id === params.employeeId ? { ...e, ...body, isResponsible: true } : { ...e, isResponsible: false },
+				e.id === empId ? { ...e, ...body, isResponsible: true } : { ...e, isResponsible: false },
 			) as (Employee & { permissions: EmployeePermissions })[];
 		} else {
-			employees = detail.employees.map((e) => (e.id === params.employeeId ? { ...e, ...body } : e)) as (Employee & {
+			employees = detail.employees.map((e) => (e.id === empId ? { ...e, ...body } : e)) as (Employee & {
 				permissions: EmployeePermissions;
 			})[];
 		}
 
 		setCompanyDetail(params.id as string, { ...detail, employees });
-		return HttpResponse.json(employees.find((e) => e.id === params.employeeId));
+		return HttpResponse.json(employees.find((e) => e.id === empId));
 	}),
 
 	http.delete("/api/v1/companies/:id/employees/:employeeId", ({ params }) => {
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
-		const emp = detail.employees.find((e) => e.id === params.employeeId);
+		const empId = Number(params.employeeId);
+		const emp = detail.employees.find((e) => e.id === empId);
 		if (emp?.isResponsible && detail.employees.filter((e) => e.isResponsible).length <= 1) {
 			return HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 });
 		}
 		setCompanyDetail(params.id as string, {
 			...detail,
-			employees: detail.employees.filter((e) => e.id !== params.employeeId),
+			employees: detail.employees.filter((e) => e.id !== empId),
 		});
 		return new HttpResponse(null, { status: 204 });
 	}),
@@ -220,10 +223,11 @@ export const companiesHandlers = [
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
+		const empId = Number(params.employeeId);
 		const employees = detail.employees.map((e) =>
-			e.id === params.employeeId ? { ...e, permissions: { ...e.permissions, ...body } } : e,
+			e.id === empId ? { ...e, permissions: { ...e.permissions, ...body } } : e,
 		);
 		setCompanyDetail(params.id as string, { ...detail, employees });
-		return HttpResponse.json(employees.find((e) => e.id === params.employeeId)?.permissions);
+		return HttpResponse.json(employees.find((e) => e.id === empId)?.permissions);
 	}),
 ];

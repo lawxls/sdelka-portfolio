@@ -415,7 +415,7 @@ export async function createEmployee(
 
 export async function updateEmployee(
 	companyId: string,
-	employeeId: string,
+	employeeId: number,
 	data: UpdateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
 	return request(`/${companyId}/employees/${employeeId}`, {
@@ -426,7 +426,7 @@ export async function updateEmployee(
 	});
 }
 
-export async function deleteEmployee(companyId: string, employeeId: string): Promise<void> {
+export async function deleteEmployee(companyId: string, employeeId: number): Promise<void> {
 	return request(`/${companyId}/employees/${employeeId}`, {
 		base: COMPANIES_BASE,
 		method: "DELETE",
@@ -435,7 +435,7 @@ export async function deleteEmployee(companyId: string, employeeId: string): Pro
 
 export async function updateEmployeePermissions(
 	companyId: string,
-	employeeId: string,
+	employeeId: number,
 	data: UpdatePermissionsData,
 ): Promise<EmployeePermissions> {
 	return request(`/${companyId}/employees/${employeeId}/permissions`, {

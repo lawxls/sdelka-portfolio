@@ -199,7 +199,7 @@ export type PermissionLevel = "none" | "view" | "edit";
 
 export interface EmployeePermissions {
 	id: string;
-	employeeId: string;
+	employeeId: number;
 	analytics: PermissionLevel;
 	procurement: PermissionLevel;
 	companies: PermissionLevel;
@@ -207,7 +207,7 @@ export interface EmployeePermissions {
 }
 
 export interface Employee {
-	id: string;
+	id: number;
 	firstName: string;
 	lastName: string;
 	patronymic: string;
