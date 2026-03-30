@@ -416,6 +416,29 @@ describe("CompaniesPage", () => {
 		expect(within(row).getByText("Ответственный: Иванов Иван")).toBeInTheDocument();
 	});
 
+	test("renders gracefully when responsibleEmployeeName is null", async () => {
+		server.use(
+			http.get("/api/v1/companies/", () => {
+				return HttpResponse.json({
+					companies: [
+						makeCompany("company-1", {
+							name: "Сделка",
+							isMain: true,
+							responsibleEmployeeName: null,
+							employeeCount: 12,
+							procurementItemCount: 25,
+						}),
+					],
+					nextCursor: null,
+				});
+			}),
+		);
+		await renderPageReady();
+		const row = screen.getByTestId("row-company-1");
+		expect(within(row).getByText("Сделка")).toBeInTheDocument();
+		expect(within(row).getByText("Ответственный: Не назначен")).toBeInTheDocument();
+	});
+
 	test("renders row number and address field in first row", async () => {
 		await renderPageReady();
 		const row = screen.getByTestId("row-company-1");

@@ -246,7 +246,7 @@ export interface CompanySummary {
 	id: string;
 	name: string;
 	isMain: boolean;
-	responsibleEmployeeName: string;
+	responsibleEmployeeName: string | null;
 	addresses: AddressSummary[];
 	employeeCount: number;
 	procurementItemCount: number;

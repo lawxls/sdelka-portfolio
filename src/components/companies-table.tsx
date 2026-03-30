@@ -288,7 +288,7 @@ export function CompaniesTable({
 														<span>{company.name}</span>
 													</div>
 													<div className="mt-0.5 text-xs text-muted-foreground">
-														Ответственный: {company.responsibleEmployeeName}
+														Ответственный: {company.responsibleEmployeeName ?? "Не назначен"}
 													</div>
 												</TableCell>
 												<TableCell>
@@ -370,7 +370,9 @@ function CompanyCard({ company, onClick }: { company: CompanySummary; onClick?: 
 					<div className="flex items-center gap-2">
 						<span className="font-medium text-sm">{company.name}</span>
 					</div>
-					<div className="mt-0.5 text-xs text-muted-foreground">Ответственный: {company.responsibleEmployeeName}</div>
+					<div className="mt-0.5 text-xs text-muted-foreground">
+						Ответственный: {company.responsibleEmployeeName ?? "Не назначен"}
+					</div>
 				</div>
 			</div>
 
