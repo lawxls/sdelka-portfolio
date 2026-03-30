@@ -299,7 +299,7 @@ function setupHandlers() {
 			const body = (await request.json()) as Record<string, unknown>;
 			const id = `company-new-${Date.now()}`;
 			const created = makeCompanyDetail(id, { name: body.name as string });
-			const summary = makeCompany(id, { name: body.name as string, responsibleEmployeeName: "" });
+			const summary = makeCompany(id, { name: body.name as string, responsibleEmployeeName: null });
 			companyList = [...companyList, summary];
 			return HttpResponse.json(created);
 		}),
@@ -1549,7 +1549,7 @@ describe("Domain error toasts", () => {
 		await waitFor(() => expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument());
 
 		const user = userEvent.setup();
-		const addressCard = screen.getByTestId("address-addr-detail-1");
+		const addressCard = screen.getByTestId("address-addr-detail-2");
 		await user.click(within(addressCard).getByRole("button", { name: "Удалить" }));
 
 		await waitFor(() => {

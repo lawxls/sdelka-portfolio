@@ -26,6 +26,7 @@ import { ADDRESS_TYPE_LABELS } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
+const UNASSIGNED_LABEL = "Не назначен";
 
 function SortIcon({ field, sort }: { field: CompanySortField; sort: CompanySortState | null }) {
 	if (sort?.field !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" aria-hidden="true" />;
@@ -288,7 +289,7 @@ export function CompaniesTable({
 														<span>{company.name}</span>
 													</div>
 													<div className="mt-0.5 text-xs text-muted-foreground">
-														Ответственный: {company.responsibleEmployeeName ?? "Не назначен"}
+														Ответственный: {company.responsibleEmployeeName ?? UNASSIGNED_LABEL}
 													</div>
 												</TableCell>
 												<TableCell>
@@ -371,7 +372,7 @@ function CompanyCard({ company, onClick }: { company: CompanySummary; onClick?: 
 						<span className="font-medium text-sm">{company.name}</span>
 					</div>
 					<div className="mt-0.5 text-xs text-muted-foreground">
-						Ответственный: {company.responsibleEmployeeName ?? "Не назначен"}
+						Ответственный: {company.responsibleEmployeeName ?? UNASSIGNED_LABEL}
 					</div>
 				</div>
 			</div>
