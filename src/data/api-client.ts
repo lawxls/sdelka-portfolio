@@ -332,6 +332,7 @@ export interface CreateAddressData {
 	address: string;
 	contactPerson: string;
 	phone: string;
+	isMain?: boolean;
 }
 
 export interface UpdateAddressData {
@@ -341,6 +342,7 @@ export interface UpdateAddressData {
 	address?: string;
 	contactPerson?: string;
 	phone?: string;
+	isMain?: boolean;
 }
 
 export async function createAddress(companyId: string, data: CreateAddressData): Promise<Address> {

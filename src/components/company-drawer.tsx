@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ViewField } from "@/components/view-field";
 import type {
 	CreateAddressData,
 	CreateEmployeeData,
@@ -396,6 +397,7 @@ const EMPTY_ADDRESS_FORM: AddressFormState = {
 	address: "",
 	contactPerson: "",
 	phone: "",
+	isMain: false,
 };
 
 interface AddressFormState {
@@ -405,6 +407,7 @@ interface AddressFormState {
 	address: string;
 	contactPerson: string;
 	phone: string;
+	isMain: boolean;
 }
 
 function AddressesTab({ company, companyId }: { company: Company; companyId: string }) {
@@ -423,13 +426,27 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 	}
 
 	function handleUpdate(addressId: string, original: Address, form: AddressFormState) {
-		const changed: Record<string, string> = {};
+		const changed: Record<string, string | boolean> = {};
 		for (const key of Object.keys(form) as (keyof AddressFormState)[]) {
-			if (form[key] !== original[key]) changed[key] = form[key];
+			if (form[key] !== original[key]) changed[key] = form[key] as string | boolean;
 		}
 		if (Object.keys(changed).length === 0) {
 			setEditingId(null);
 			return;
+		}
+		// If setting this address as main, unset the previous main first, then apply the update
+		if (changed.isMain === true) {
+			const prevMain = company.addresses.find((a) => a.isMain && a.id !== addressId);
+			if (prevMain) {
+				updateMutation.mutate(
+					{ addressId: prevMain.id, data: { isMain: false } },
+					{
+						onSuccess: () =>
+							updateMutation.mutate({ addressId, data: changed }, { onSuccess: () => setEditingId(null) }),
+					},
+				);
+				return;
+			}
 		}
 		updateMutation.mutate({ addressId, data: changed }, { onSuccess: () => setEditingId(null) });
 	}
@@ -456,7 +473,7 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 							key={addr.id}
 							address={addr}
 							isEditing={editingId === addr.id}
-							canDelete={!isLastAddress}
+							canDelete={!isLastAddress && !addr.isMain}
 							onEdit={() => setEditingId(addr.id)}
 							onCancel={() => setEditingId(null)}
 							onSave={(form) => handleUpdate(addr.id, addr, form)}
@@ -501,6 +518,7 @@ function AddressCard({
 						address: address.address,
 						contactPerson: address.contactPerson,
 						phone: address.phone,
+						isMain: address.isMain,
 					}}
 					onSave={onSave}
 					onCancel={onCancel}
@@ -517,6 +535,7 @@ function AddressCard({
 					<div className="flex items-center gap-2">
 						<span className="text-sm font-medium">{address.name}</span>
 						<Badge variant="secondary">{ADDRESS_TYPE_LABELS[address.type]}</Badge>
+						{address.isMain && <Badge variant="outline">Основной</Badge>}
 					</div>
 					<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
 						<ViewField label="Индекс" value={address.postalCode} />
@@ -549,15 +568,6 @@ function AddressCard({
 					</Button>
 				</div>
 			</div>
-		</div>
-	);
-}
-
-function ViewField({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="flex flex-col gap-0.5">
-			<span className="text-xs text-muted-foreground">{label}</span>
-			<span className={`text-sm ${value ? "" : "text-muted-foreground/50"}`}>{value || "\u2014"}</span>
 		</div>
 	);
 }
@@ -648,6 +658,15 @@ function AddressForm({
 					inputMode="tel"
 				/>
 			</FieldRow>
+			{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally */}
+			<label className="flex items-center gap-2">
+				<Checkbox
+					checked={form.isMain}
+					onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isMain: checked === true }))}
+					aria-label="Основной адрес"
+				/>
+				<span className="text-sm">Основной адрес</span>
+			</label>
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="outline" onClick={onCancel}>
 					Отмена

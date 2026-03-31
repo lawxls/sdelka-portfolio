@@ -354,6 +354,7 @@ describe("useDeleteAddress", () => {
 					address: "",
 					contactPerson: "",
 					phone: "",
+					isMain: true,
 				},
 				{
 					id: "addr-2",
@@ -363,6 +364,7 @@ describe("useDeleteAddress", () => {
 					address: "",
 					contactPerson: "",
 					phone: "",
+					isMain: false,
 				},
 			],
 		});

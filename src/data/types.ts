@@ -191,6 +191,7 @@ export interface Address {
 	address: string;
 	contactPerson: string;
 	phone: string;
+	isMain: boolean;
 }
 
 export type PermissionLevel = "none" | "view" | "edit";
@@ -237,6 +238,7 @@ export interface AddressSummary {
 	name: string;
 	type: AddressType;
 	address: string;
+	isMain: boolean;
 }
 
 export interface CompanySummary {

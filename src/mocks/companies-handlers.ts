@@ -83,7 +83,7 @@ export const companiesHandlers = [
 			isMain: false,
 			employeeCount: 0,
 			procurementItemCount: 0,
-			addresses: [{ id: `addr-${id}`, ...addr }] as Address[],
+			addresses: [{ id: `addr-${id}`, isMain: true, ...addr }] as Address[],
 			employees: [] as (Employee & { permissions: EmployeePermissions })[],
 		};
 
@@ -93,7 +93,15 @@ export const companiesHandlers = [
 			name: body.name as string,
 			isMain: false,
 			responsibleEmployeeName: "",
-			addresses: [{ id: `addr-${id}`, name: addr.name, type: addr.type as Address["type"], address: addr.address }],
+			addresses: [
+				{
+					id: `addr-${id}`,
+					name: addr.name,
+					type: addr.type as Address["type"],
+					address: addr.address,
+					isMain: true,
+				},
+			],
 			employeeCount: 0,
 			procurementItemCount: 0,
 		});
@@ -118,7 +126,7 @@ export const companiesHandlers = [
 		const detail = getCompanyDetail(params.id as string);
 		if (!detail) return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		const body = (await request.json()) as Record<string, unknown>;
-		const newAddr = { id: `addr-new-${Date.now()}`, ...body } as Address;
+		const newAddr = { id: `addr-new-${Date.now()}`, isMain: false, ...body } as Address;
 		setCompanyDetail(params.id as string, { ...detail, addresses: [...detail.addresses, newAddr] });
 		return HttpResponse.json(newAddr);
 	}),

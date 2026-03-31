@@ -49,7 +49,9 @@ export function makeCompany(id: string, overrides: Partial<CompanySummary> = {})
 		name: `Company ${id}`,
 		isMain: false,
 		responsibleEmployeeName: "Иванов Иван",
-		addresses: [{ id: `addr-${id}`, name: "Офис", type: "office", address: "г. Москва, ул. Тестовая, д. 1" }],
+		addresses: [
+			{ id: `addr-${id}`, name: "Офис", type: "office", address: "г. Москва, ул. Тестовая, д. 1", isMain: true },
+		],
 		employeeCount: 5,
 		procurementItemCount: 10,
 		...overrides,
@@ -78,6 +80,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 				address: "г. Москва, ул. Тестовая, д. 1",
 				contactPerson: "Иванов",
 				phone: "+71234567890",
+				isMain: true,
 			},
 		],
 		employees: [
