@@ -85,7 +85,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 		],
 		employees: [
 			{
-				id: `emp-${id}`,
+				id: 1,
 				firstName: "Иван",
 				lastName: "Иванов",
 				patronymic: "Иванович",
@@ -96,7 +96,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 				isResponsible: true,
 				permissions: {
 					id: `perm-${id}`,
-					employeeId: `emp-${id}`,
+					employeeId: 1,
 					analytics: "edit",
 					procurement: "edit",
 					companies: "edit",

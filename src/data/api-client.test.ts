@@ -3,8 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import {
+	createAddress,
+	createEmployee,
 	createFolder,
 	createItemsBatch,
+	deleteAddress,
+	deleteEmployee,
 	deleteFolder,
 	deleteItem,
 	exportItems,
@@ -14,6 +18,9 @@ import {
 	fetchItems,
 	fetchTotals,
 	parseDecimals,
+	updateAddress,
+	updateEmployee,
+	updateEmployeePermissions,
 	updateFolder,
 	updateItem,
 } from "./api-client";
@@ -607,5 +614,204 @@ describe("401 refresh interceptor", () => {
 		expect(result.filename).toBe("items.xlsx");
 		expect(requestCount).toBe(2);
 		expect(localStorage.getItem("auth-access-token")).toBe("new-access-token");
+	});
+});
+
+describe("createAddress", () => {
+	it("sends POST to /api/v1/companies/{id}/addresses/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.post("/api/v1/companies/:companyId/addresses/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					id: "addr-1",
+					name: "Main",
+					type: "office",
+					postalCode: "123456",
+					address: "123 Main St",
+					contactPerson: "John",
+					phone: "+71234567890",
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await createAddress("comp-1", {
+			name: "Main",
+			type: "office",
+			postalCode: "123456",
+			address: "123 Main St",
+			contactPerson: "John",
+			phone: "+71234567890",
+		});
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/addresses/");
+		expect(result.id).toBe("addr-1");
+	});
+});
+
+describe("updateAddress", () => {
+	it("sends PATCH to /api/v1/companies/{id}/addresses/{addressId}/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.patch("/api/v1/companies/:companyId/addresses/:addressId/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					id: "addr-1",
+					name: "Updated",
+					type: "office",
+					postalCode: "123456",
+					address: "123 Main St",
+					contactPerson: "John",
+					phone: "+71234567890",
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await updateAddress("comp-1", "addr-1", { name: "Updated" });
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/addresses/addr-1/");
+		expect(result.name).toBe("Updated");
+	});
+});
+
+describe("deleteAddress", () => {
+	it("sends DELETE to /api/v1/companies/{id}/addresses/{addressId}/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/companies/:companyId/addresses/:addressId/", ({ request }) => {
+				capturedUrl = request.url;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		await deleteAddress("comp-1", "addr-1");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/addresses/addr-1/");
+	});
+});
+
+describe("createEmployee", () => {
+	it("sends POST to /api/v1/companies/{id}/employees/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.post("/api/v1/companies/:companyId/employees/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					id: 1,
+					firstName: "Ivan",
+					lastName: "Petrov",
+					patronymic: "",
+					position: "Manager",
+					role: "user",
+					phone: "+71234567890",
+					email: "ivan@test.com",
+					isResponsible: false,
+					permissions: {
+						id: "perm-1",
+						employeeId: 1,
+						analytics: "none",
+						procurement: "none",
+						companies: "none",
+						tasks: "none",
+					},
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await createEmployee("comp-1", {
+			firstName: "Ivan",
+			lastName: "Petrov",
+			patronymic: "",
+			position: "Manager",
+			role: "user",
+			phone: "+71234567890",
+			email: "ivan@test.com",
+			isResponsible: false,
+		});
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/employees/");
+		expect(result.id).toBe(1);
+	});
+});
+
+describe("updateEmployee", () => {
+	it("sends PATCH to /api/v1/companies/{id}/employees/{employeeId}/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.patch("/api/v1/companies/:companyId/employees/:employeeId/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					id: 1,
+					firstName: "Updated",
+					lastName: "Petrov",
+					patronymic: "",
+					position: "Manager",
+					role: "user",
+					phone: "+71234567890",
+					email: "ivan@test.com",
+					isResponsible: false,
+					permissions: {
+						id: "perm-1",
+						employeeId: 1,
+						analytics: "none",
+						procurement: "none",
+						companies: "none",
+						tasks: "none",
+					},
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await updateEmployee("comp-1", 1, { firstName: "Updated" });
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/employees/1/");
+		expect(result.firstName).toBe("Updated");
+	});
+});
+
+describe("deleteEmployee", () => {
+	it("sends DELETE to /api/v1/companies/{id}/employees/{employeeId}/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/companies/:companyId/employees/:employeeId/", ({ request }) => {
+				capturedUrl = request.url;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		await deleteEmployee("comp-1", 1);
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/employees/1/");
+	});
+});
+
+describe("updateEmployeePermissions", () => {
+	it("sends PATCH to /api/v1/companies/{id}/employees/{employeeId}/permissions/ with trailing slash", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.patch("/api/v1/companies/:companyId/employees/:employeeId/permissions/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					id: "perm-1",
+					employeeId: 1,
+					analytics: "edit",
+					procurement: "none",
+					companies: "none",
+					tasks: "none",
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await updateEmployeePermissions("comp-1", 1, { analytics: "edit" });
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/employees/1/permissions/");
+		expect(result.analytics).toBe("edit");
 	});
 });

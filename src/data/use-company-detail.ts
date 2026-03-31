@@ -129,7 +129,7 @@ export function useUpdateEmployee(companyId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ employeeId, data }: { employeeId: string; data: UpdateEmployeeData }) =>
+		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdateEmployeeData }) =>
 			updateEmployee(companyId, employeeId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
@@ -142,7 +142,7 @@ export function useDeleteEmployee(companyId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (employeeId: string) => deleteEmployee(companyId, employeeId),
+		mutationFn: (employeeId: number) => deleteEmployee(companyId, employeeId),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -154,7 +154,7 @@ export function useUpdateEmployeePermissions(companyId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ employeeId, data }: { employeeId: string; data: UpdatePermissionsData }) =>
+		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdatePermissionsData }) =>
 			updateEmployeePermissions(companyId, employeeId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });

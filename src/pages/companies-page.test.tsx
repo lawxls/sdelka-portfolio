@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
@@ -11,6 +12,10 @@ import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
 import { makeCompany, makeCompanyDetail } from "@/test-utils";
 import { CompaniesPage } from "./companies-page";
+
+vi.mock("sonner", () => ({
+	toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
+}));
 
 const MOCK_COMPANIES: CompanySummary[] = [
 	makeCompany("company-1", {
@@ -124,7 +129,7 @@ const MOCK_ADDRESSES: Address[] = [
 
 const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 	{
-		id: "emp-1",
+		id: 1,
 		firstName: "Иван",
 		lastName: "Иванов",
 		patronymic: "Иванович",
@@ -135,7 +140,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		isResponsible: true,
 		permissions: {
 			id: "perm-1",
-			employeeId: "emp-1",
+			employeeId: 1,
 			analytics: "edit",
 			procurement: "edit",
 			companies: "edit",
@@ -143,7 +148,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		},
 	},
 	{
-		id: "emp-2",
+		id: 2,
 		firstName: "Пётр",
 		lastName: "Петров",
 		patronymic: "Петрович",
@@ -154,7 +159,7 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 		isResponsible: false,
 		permissions: {
 			id: "perm-2",
-			employeeId: "emp-2",
+			employeeId: 2,
 			analytics: "none",
 			procurement: "view",
 			companies: "none",
@@ -195,13 +200,13 @@ function setupHandlers() {
 			const body = (await request.json()) as Record<string, unknown>;
 			return HttpResponse.json({ ...companyDetail, ...body });
 		}),
-		http.post("/api/v1/companies/:id/addresses", async ({ request }) => {
+		http.post("/api/v1/companies/:id/addresses/", async ({ request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const newAddr = { id: `addr-new-${Date.now()}`, ...body };
 			companyDetail = { ...companyDetail, addresses: [...companyDetail.addresses, newAddr as Address] };
 			return HttpResponse.json(newAddr);
 		}),
-		http.patch("/api/v1/companies/:id/addresses/:addressId", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/addresses/:addressId/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const addr = companyDetail.addresses.find((a) => a.id === params.addressId);
 			if (!addr) return HttpResponse.json({}, { status: 404 });
@@ -212,7 +217,7 @@ function setupHandlers() {
 			};
 			return HttpResponse.json(updated);
 		}),
-		http.delete("/api/v1/companies/:id/addresses/:addressId", ({ params }) => {
+		http.delete("/api/v1/companies/:id/addresses/:addressId/", ({ params }) => {
 			if (companyDetail.addresses.length <= 1) {
 				return HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 });
 			}
@@ -222,14 +227,15 @@ function setupHandlers() {
 			};
 			return new HttpResponse(null, { status: 204 });
 		}),
-		http.post("/api/v1/companies/:id/employees", async ({ request }) => {
+		http.post("/api/v1/companies/:id/employees/", async ({ request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
+			const newId = Date.now();
 			const newEmp = {
-				id: `emp-new-${Date.now()}`,
+				id: newId,
 				...body,
 				permissions: {
-					id: `perm-new-${Date.now()}`,
-					employeeId: `emp-new-${Date.now()}`,
+					id: `perm-new-${newId}`,
+					employeeId: newId,
 					analytics: body.role === "admin" ? "edit" : "none",
 					procurement: body.role === "admin" ? "edit" : "none",
 					companies: body.role === "admin" ? "edit" : "none",
@@ -242,55 +248,58 @@ function setupHandlers() {
 			};
 			return HttpResponse.json(newEmp);
 		}),
-		http.patch("/api/v1/companies/:id/employees/:employeeId", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/employees/:employeeId/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
-			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+			const empId = Number(params.employeeId);
+			const emp = companyDetail.employees.find((e) => e.id === empId);
 			if (!emp) return HttpResponse.json({}, { status: 404 });
 			// Handle isResponsible radio behavior
 			if (body.isResponsible === true) {
 				companyDetail = {
 					...companyDetail,
 					employees: companyDetail.employees.map((e) =>
-						e.id === params.employeeId ? { ...e, ...body, isResponsible: true } : { ...e, isResponsible: false },
+						e.id === empId ? { ...e, ...body, isResponsible: true } : { ...e, isResponsible: false },
 					) as (Employee & { permissions: EmployeePermissions })[],
 				};
 			} else {
 				companyDetail = {
 					...companyDetail,
-					employees: companyDetail.employees.map((e) =>
-						e.id === params.employeeId ? { ...e, ...body } : e,
-					) as (Employee & { permissions: EmployeePermissions })[],
+					employees: companyDetail.employees.map((e) => (e.id === empId ? { ...e, ...body } : e)) as (Employee & {
+						permissions: EmployeePermissions;
+					})[],
 				};
 			}
-			return HttpResponse.json(companyDetail.employees.find((e) => e.id === params.employeeId));
+			return HttpResponse.json(companyDetail.employees.find((e) => e.id === empId));
 		}),
-		http.delete("/api/v1/companies/:id/employees/:employeeId", ({ params }) => {
-			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+		http.delete("/api/v1/companies/:id/employees/:employeeId/", ({ params }) => {
+			const empId = Number(params.employeeId);
+			const emp = companyDetail.employees.find((e) => e.id === empId);
 			if (emp?.isResponsible && companyDetail.employees.filter((e) => e.isResponsible).length <= 1) {
 				return HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 });
 			}
 			companyDetail = {
 				...companyDetail,
-				employees: companyDetail.employees.filter((e) => e.id !== params.employeeId),
+				employees: companyDetail.employees.filter((e) => e.id !== empId),
 			};
 			return new HttpResponse(null, { status: 204 });
 		}),
-		http.patch("/api/v1/companies/:id/employees/:employeeId/permissions", async ({ params, request }) => {
+		http.patch("/api/v1/companies/:id/employees/:employeeId/permissions/", async ({ params, request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
+			const empId = Number(params.employeeId);
 			companyDetail = {
 				...companyDetail,
 				employees: companyDetail.employees.map((e) =>
-					e.id === params.employeeId ? { ...e, permissions: { ...e.permissions, ...body } } : e,
+					e.id === empId ? { ...e, permissions: { ...e.permissions, ...body } } : e,
 				),
 			};
-			const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+			const emp = companyDetail.employees.find((e) => e.id === empId);
 			return HttpResponse.json(emp?.permissions);
 		}),
 		http.post("/api/v1/companies/", async ({ request }) => {
 			const body = (await request.json()) as Record<string, unknown>;
 			const id = `company-new-${Date.now()}`;
 			const created = makeCompanyDetail(id, { name: body.name as string });
-			const summary = makeCompany(id, { name: body.name as string, responsibleEmployeeName: "" });
+			const summary = makeCompany(id, { name: body.name as string, responsibleEmployeeName: null });
 			companyList = [...companyList, summary];
 			return HttpResponse.json(created);
 		}),
@@ -372,6 +381,7 @@ async function renderPageReady(initialEntries?: string[]) {
 
 beforeEach(() => {
 	localStorage.clear();
+	vi.mocked(toast.error).mockClear();
 	setTokens("test-access", "test-refresh");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -410,6 +420,29 @@ describe("CompaniesPage", () => {
 		const row = screen.getByTestId("row-company-1");
 		expect(within(row).getByText("Сделка")).toBeInTheDocument();
 		expect(within(row).getByText("Ответственный: Иванов Иван")).toBeInTheDocument();
+	});
+
+	test("renders gracefully when responsibleEmployeeName is null", async () => {
+		server.use(
+			http.get("/api/v1/companies/", () => {
+				return HttpResponse.json({
+					companies: [
+						makeCompany("company-1", {
+							name: "Сделка",
+							isMain: true,
+							responsibleEmployeeName: null,
+							employeeCount: 12,
+							procurementItemCount: 25,
+						}),
+					],
+					nextCursor: null,
+				});
+			}),
+		);
+		await renderPageReady();
+		const row = screen.getByTestId("row-company-1");
+		expect(within(row).getByText("Сделка")).toBeInTheDocument();
+		expect(within(row).getByText("Ответственный: Не назначен")).toBeInTheDocument();
 	});
 
 	test("renders row number and address field in first row", async () => {
@@ -778,7 +811,7 @@ describe("CompaniesPage Адреса tab", () => {
 	test("edit save sends PATCH with changed fields", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/addresses/:addressId", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/addresses/:addressId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				return HttpResponse.json({ ...MOCK_ADDRESSES[0], ...capturedBody });
 			}),
@@ -887,7 +920,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("responsible employee shows badge", async () => {
 		await openEmployeesTab();
 
-		const card = screen.getByTestId("employee-emp-1");
+		const card = screen.getByTestId("employee-1");
 		expect(within(card).getByText("Ответственный")).toBeInTheDocument();
 	});
 
@@ -895,9 +928,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 
-		const card = screen.getByTestId("employee-emp-1");
+		const card = screen.getByTestId("employee-1");
 		// View mode fields
 		expect(within(card).getByText("+71234567890")).toBeInTheDocument();
 		expect(within(card).getByText("ivan@example.com")).toBeInTheDocument();
@@ -915,19 +948,19 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 		expect(screen.getByTestId("permissions-matrix")).toBeInTheDocument();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 		expect(screen.queryByTestId("permissions-matrix")).not.toBeInTheDocument();
 	});
 
 	test("explicit save sends PATCH with changed fields", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
-				const emp = companyDetail.employees.find((e) => e.id === "emp-1");
+				const emp = companyDetail.employees.find((e) => e.id === 1);
 				return HttpResponse.json({ ...emp, ...capturedBody });
 			}),
 		);
@@ -935,9 +968,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 
-		const card = screen.getByTestId("employee-emp-1");
+		const card = screen.getByTestId("employee-1");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 
 		const posInput = within(card).getByLabelText("Должность");
@@ -954,9 +987,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("permission segment toggle sends immediate PATCH", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions/", async ({ request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
-				const emp = companyDetail.employees.find((e) => e.id === "emp-2");
+				const emp = companyDetail.employees.find((e) => e.id === 2);
 				return HttpResponse.json({ ...emp?.permissions, ...capturedBody });
 			}),
 		);
@@ -964,9 +997,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
 
-		const card = screen.getByTestId("employee-emp-2");
+		const card = screen.getByTestId("employee-2");
 		await user.click(within(card).getByRole("button", { name: "Редактировать права доступа" }));
 		await user.click(within(card).getByTestId("perm-analytics-edit"));
 
@@ -979,7 +1012,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 
 		const matrix = screen.getByTestId("permissions-matrix");
 		expect(within(matrix).getByTestId("perm-row-analytics")).toBeInTheDocument();
@@ -992,18 +1025,19 @@ describe("CompaniesPage Сотрудники tab", () => {
 	test("isResponsible checkbox has radio behavior", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ params, request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
+				const empId = Number(params.employeeId);
 				// Apply isResponsible radio behavior in mock
 				if (capturedBody.isResponsible === true) {
 					companyDetail = {
 						...companyDetail,
 						employees: companyDetail.employees.map((e) =>
-							e.id === params.employeeId ? { ...e, isResponsible: true } : { ...e, isResponsible: false },
+							e.id === empId ? { ...e, isResponsible: true } : { ...e, isResponsible: false },
 						) as (Employee & { permissions: EmployeePermissions })[],
 					};
 				}
-				return HttpResponse.json(companyDetail.employees.find((e) => e.id === params.employeeId));
+				return HttpResponse.json(companyDetail.employees.find((e) => e.id === empId));
 			}),
 		);
 
@@ -1011,9 +1045,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		const user = userEvent.setup();
 
 		// Expand second employee (not responsible), enter edit mode, click responsible checkbox
-		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
 
-		const card = screen.getByTestId("employee-emp-2");
+		const card = screen.getByTestId("employee-2");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		await user.click(within(card).getByRole("checkbox", { name: "Ответственный" }));
 
@@ -1027,9 +1061,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		const user = userEvent.setup();
 
 		// Expand the responsible employee (emp-1) and enter edit mode
-		await user.click(screen.getByTestId("employee-toggle-emp-1"));
+		await user.click(screen.getByTestId("employee-toggle-1"));
 
-		const card = screen.getByTestId("employee-emp-1");
+		const card = screen.getByTestId("employee-1");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		expect(within(card).getByRole("button", { name: "Удалить сотрудника" })).toBeDisabled();
 	});
@@ -1061,9 +1095,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 
 		expect(screen.getByText("Петров Пётр Петрович")).toBeInTheDocument();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
 
-		const card = screen.getByTestId("employee-emp-2");
+		const card = screen.getByTestId("employee-2");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		await user.click(within(card).getByRole("button", { name: "Удалить сотрудника" }));
 
@@ -1076,14 +1110,15 @@ describe("CompaniesPage Сотрудники tab", () => {
 		let permsCaptured: Record<string, unknown> | undefined;
 		let profileCaptured: Record<string, unknown> | undefined;
 		server.use(
-			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions", async ({ request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/permissions/", async ({ request }) => {
 				permsCaptured = (await request.json()) as Record<string, unknown>;
-				const emp = companyDetail.employees.find((e) => e.id === "emp-2");
+				const emp = companyDetail.employees.find((e) => e.id === 2);
 				return HttpResponse.json({ ...emp?.permissions, ...permsCaptured });
 			}),
-			http.patch("/api/v1/companies/company-1/employees/:employeeId", async ({ params, request }) => {
+			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ params, request }) => {
 				profileCaptured = (await request.json()) as Record<string, unknown>;
-				const emp = companyDetail.employees.find((e) => e.id === params.employeeId);
+				const empId = Number(params.employeeId);
+				const emp = companyDetail.employees.find((e) => e.id === empId);
 				return HttpResponse.json({ ...emp, ...profileCaptured });
 			}),
 		);
@@ -1091,9 +1126,9 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-emp-2"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
 
-		const card = screen.getByTestId("employee-emp-2");
+		const card = screen.getByTestId("employee-2");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 
 		// Change role to admin via select
@@ -1434,7 +1469,7 @@ describe("CompaniesPage company creation", () => {
 		expect(capturedBody).not.toHaveProperty("employee");
 	});
 
-	test("form clears on close and reopen", async () => {
+	test("form resets mutation state on close and reopen", async () => {
 		await renderPageReady();
 		const user = userEvent.setup();
 
@@ -1463,5 +1498,109 @@ describe("CompaniesPage company creation", () => {
 		});
 
 		expect(screen.getByLabelText("Название компании")).toHaveValue("");
+	});
+});
+
+describe("Domain error toasts", () => {
+	test("delete company shows error toast on 403 (main company)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/", () => {
+				return HttpResponse.json({ detail: "Cannot delete main company" }, { status: 403 });
+			}),
+		);
+
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		fireEvent.contextMenu(screen.getByTestId("row-company-2"));
+		await waitFor(() => expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument());
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+		await waitFor(() => expect(screen.getByText("Удалить компанию?")).toBeInTheDocument());
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete main company");
+		});
+	});
+
+	test("delete company shows error toast on 409 (active items)", async () => {
+		await renderPageReady();
+		const user = userEvent.setup();
+
+		fireEvent.contextMenu(screen.getByTestId("row-company-2"));
+		await waitFor(() => expect(screen.getByRole("menuitem", { name: "Удалить" })).toBeInTheDocument());
+		await user.click(screen.getByRole("menuitem", { name: "Удалить" }));
+		await waitFor(() => expect(screen.getByText("Удалить компанию?")).toBeInTheDocument());
+		await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Company has active procurement items");
+		});
+	});
+
+	test("delete address shows error toast on 409 (last address)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/addresses/:addressId/", () => {
+				return HttpResponse.json({ detail: "Cannot delete the last address" }, { status: 409 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=addresses"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-addresses")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		const addressCard = screen.getByTestId("address-addr-detail-2");
+		await user.click(within(addressCard).getByRole("button", { name: "Удалить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete the last address");
+		});
+	});
+
+	test("delete employee shows error toast on 409 (only responsible)", async () => {
+		server.use(
+			http.delete("/api/v1/companies/:id/employees/:employeeId/", () => {
+				return HttpResponse.json({ detail: "Cannot delete the only responsible employee" }, { status: 409 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=employees"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId("employee-toggle-2"));
+		await waitFor(() => expect(screen.getByLabelText("Редактировать сотрудника")).toBeInTheDocument());
+		await user.click(screen.getByLabelText("Редактировать сотрудника"));
+		await waitFor(() => expect(screen.getByLabelText("Удалить сотрудника")).toBeInTheDocument());
+		await user.click(screen.getByLabelText("Удалить сотрудника"));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Cannot delete the only responsible employee");
+		});
+	});
+
+	test("create employee shows error toast on 400 (duplicate email)", async () => {
+		server.use(
+			http.post("/api/v1/companies/:id/employees/", () => {
+				return HttpResponse.json({ email: ["User with this email already exists"] }, { status: 400 });
+			}),
+		);
+
+		renderPage(["/companies?company=company-1&tab=employees"]);
+		await waitFor(() => expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument());
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить сотрудника/ }));
+		await waitFor(() => expect(screen.getByTestId("employee-add-form")).toBeInTheDocument());
+
+		const form = screen.getByTestId("employee-add-form");
+		await user.type(within(form).getByLabelText("Фамилия"), "Тестов");
+		await user.type(within(form).getByLabelText("Имя"), "Тест");
+		await user.type(within(form).getByLabelText("Электронная почта"), "test@example.com");
+		await user.click(within(form).getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("User with this email already exists");
+		});
 	});
 });

@@ -161,11 +161,8 @@ export function CompaniesPage() {
 			},
 			onError: (err) => {
 				setCompanyToDelete(null);
-				if (err instanceof ApiError && err.status === 409) {
-					toast.error("Невозможно удалить компанию с активными закупками");
-				} else {
-					toast.error("Не удалось удалить компанию");
-				}
+				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
+				toast.error(detail ?? "Не удалось удалить компанию");
 			},
 		});
 	}

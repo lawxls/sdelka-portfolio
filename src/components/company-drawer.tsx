@@ -12,6 +12,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,6 +30,7 @@ import type {
 	UpdateEmployeeData,
 	UpdatePermissionsData,
 } from "@/data/api-client";
+import { ApiError } from "@/data/api-error";
 import type {
 	Address,
 	AddressType,
@@ -451,7 +453,12 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 	}
 
 	function handleDelete(addressId: string) {
-		deleteMutation.mutate(addressId);
+		deleteMutation.mutate(addressId, {
+			onError: (err) => {
+				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
+				toast.error(detail ?? "Не удалось удалить адрес");
+			},
+		});
 	}
 
 	return (
@@ -727,7 +734,7 @@ function EmployeesTab({
 	companyId: string;
 	initialAddForm?: boolean;
 }) {
-	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [expandedId, setExpandedId] = useState<number | null>(null);
 	const [showAddForm, setShowAddForm] = useState(initialAddForm ?? false);
 
 	const createMutation = useCreateEmployee(companyId);
@@ -740,11 +747,25 @@ function EmployeesTab({
 	function handleCreate(form: EmployeeFormState) {
 		createMutation.mutate(form as CreateEmployeeData, {
 			onSuccess: () => setShowAddForm(false),
+			onError: (err) => {
+				if (err instanceof ApiError) {
+					const body = err.body as Record<string, unknown> | null;
+					const msg =
+						typeof body?.detail === "string"
+							? body.detail
+							: Object.values(body ?? {})
+									.flat()
+									.find((v): v is string => typeof v === "string");
+					toast.error(msg ?? "Не удалось создать сотрудника");
+				} else {
+					toast.error("Не удалось создать сотрудника");
+				}
+			},
 		});
 	}
 
 	function handleUpdate(
-		employeeId: string,
+		employeeId: number,
 		original: Employee & { permissions: EmployeePermissions },
 		form: EmployeeFormState,
 	) {
@@ -772,15 +793,20 @@ function EmployeesTab({
 		);
 	}
 
-	function handleDelete(employeeId: string) {
-		deleteMutation.mutate(employeeId);
+	function handleDelete(employeeId: number) {
+		deleteMutation.mutate(employeeId, {
+			onError: (err) => {
+				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
+				toast.error(detail ?? "Не удалось удалить сотрудника");
+			},
+		});
 	}
 
-	function handlePermissionChange(employeeId: string, module: keyof UpdatePermissionsData, level: PermissionLevel) {
+	function handlePermissionChange(employeeId: number, module: keyof UpdatePermissionsData, level: PermissionLevel) {
 		permsMutation.mutate({ employeeId, data: { [module]: level } });
 	}
 
-	function handleResponsibleChange(employeeId: string) {
+	function handleResponsibleChange(employeeId: number) {
 		updateMutation.mutate({ employeeId, data: { isResponsible: true } });
 	}
 

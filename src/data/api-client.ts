@@ -346,7 +346,7 @@ export interface UpdateAddressData {
 }
 
 export async function createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
-	return request(`/${companyId}/addresses`, {
+	return request(`/${companyId}/addresses/`, {
 		base: COMPANIES_BASE,
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -355,7 +355,7 @@ export async function createAddress(companyId: string, data: CreateAddressData):
 }
 
 export async function updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address> {
-	return request(`/${companyId}/addresses/${addressId}`, {
+	return request(`/${companyId}/addresses/${addressId}/`, {
 		base: COMPANIES_BASE,
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
@@ -364,7 +364,7 @@ export async function updateAddress(companyId: string, addressId: string, data: 
 }
 
 export async function deleteAddress(companyId: string, addressId: string): Promise<void> {
-	return request(`/${companyId}/addresses/${addressId}`, {
+	return request(`/${companyId}/addresses/${addressId}/`, {
 		base: COMPANIES_BASE,
 		method: "DELETE",
 	});
@@ -405,7 +405,7 @@ export async function createEmployee(
 	companyId: string,
 	data: CreateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
-	return request(`/${companyId}/employees`, {
+	return request(`/${companyId}/employees/`, {
 		base: COMPANIES_BASE,
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -415,10 +415,10 @@ export async function createEmployee(
 
 export async function updateEmployee(
 	companyId: string,
-	employeeId: string,
+	employeeId: number,
 	data: UpdateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
-	return request(`/${companyId}/employees/${employeeId}`, {
+	return request(`/${companyId}/employees/${employeeId}/`, {
 		base: COMPANIES_BASE,
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
@@ -426,8 +426,8 @@ export async function updateEmployee(
 	});
 }
 
-export async function deleteEmployee(companyId: string, employeeId: string): Promise<void> {
-	return request(`/${companyId}/employees/${employeeId}`, {
+export async function deleteEmployee(companyId: string, employeeId: number): Promise<void> {
+	return request(`/${companyId}/employees/${employeeId}/`, {
 		base: COMPANIES_BASE,
 		method: "DELETE",
 	});
@@ -435,10 +435,10 @@ export async function deleteEmployee(companyId: string, employeeId: string): Pro
 
 export async function updateEmployeePermissions(
 	companyId: string,
-	employeeId: string,
+	employeeId: number,
 	data: UpdatePermissionsData,
 ): Promise<EmployeePermissions> {
-	return request(`/${companyId}/employees/${employeeId}/permissions`, {
+	return request(`/${companyId}/employees/${employeeId}/permissions/`, {
 		base: COMPANIES_BASE,
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
