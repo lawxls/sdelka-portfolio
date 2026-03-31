@@ -392,6 +392,150 @@ describe("TasksPage", () => {
 		});
 	});
 
+	describe("item search filter", () => {
+		const items = [
+			{
+				id: "item-1",
+				name: "Арматура А500С",
+				status: "searching",
+				annualQuantity: 100,
+				currentPrice: 50,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "item-2",
+				name: "Кабель ВВГнг 3×2.5",
+				status: "searching",
+				annualQuantity: 200,
+				currentPrice: 60,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+		];
+
+		beforeEach(() => {
+			server.use(
+				http.get("/api/v1/company/items/", ({ request }) => {
+					const url = new URL(request.url);
+					const q = url.searchParams.get("q");
+					if (q) {
+						const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
+						return HttpResponse.json({ items: filtered, nextCursor: null });
+					}
+					return HttpResponse.json({ items, nextCursor: null });
+				}),
+			);
+		});
+
+		it("typing in item search shows results from API", async () => {
+			renderPage();
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			await user.click(screen.getByRole("button", { name: "Фильтр" }));
+			await user.type(screen.getByPlaceholderText("Поиск позиции…"), "Кабель");
+
+			await waitFor(() => {
+				expect(screen.getByText("Кабель ВВГнг 3×2.5")).toBeInTheDocument();
+			});
+		});
+
+		it("selecting an item passes item UUID to board API", async () => {
+			let capturedItem: string | null = null;
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedItem = url.searchParams.get("item");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage();
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			await user.click(screen.getByRole("button", { name: "Фильтр" }));
+			await user.type(screen.getByPlaceholderText("Поиск позиции…"), "Кабель");
+
+			await waitFor(() => {
+				expect(screen.getByText("Кабель ВВГнг 3×2.5")).toBeInTheDocument();
+			});
+
+			await user.click(screen.getByText("Кабель ВВГнг 3×2.5"));
+
+			await waitFor(() => {
+				expect(capturedItem).toBe("item-2");
+			});
+		});
+
+		it("clearing item selection removes item param from API", async () => {
+			let capturedItem: string | null = "initial";
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedItem = url.searchParams.get("item");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage(["/tasks?item=item-1"]);
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			await user.click(screen.getByRole("button", { name: "Фильтр" }));
+			await user.click(screen.getByText("Все"));
+
+			await waitFor(() => {
+				expect(capturedItem).toBeNull();
+			});
+		});
+
+		it("item param persists from URL on initial load", async () => {
+			let capturedItem: string | null = null;
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedItem = url.searchParams.get("item");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage(["/tasks?item=item-1"]);
+
+			await waitFor(() => {
+				expect(capturedItem).toBe("item-1");
+			});
+		});
+
+		it("no items shown until user types", async () => {
+			renderPage();
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+
+			await user.click(screen.getByRole("button", { name: "Фильтр" }));
+
+			// "Кабель" only exists in the items search results, not in task cards
+			expect(screen.queryByText("Кабель ВВГнг 3×2.5")).not.toBeInTheDocument();
+		});
+	});
+
 	describe("mobile", () => {
 		beforeEach(() => {
 			vi.mocked(useIsMobile).mockReturnValue(true);

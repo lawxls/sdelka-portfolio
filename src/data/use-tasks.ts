@@ -1,6 +1,13 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { changeTaskStatus, fetchTask, fetchTaskBoard, fetchTasks, uploadTaskAttachments } from "./api-client";
+import {
+	changeTaskStatus,
+	fetchItems,
+	fetchTask,
+	fetchTaskBoard,
+	fetchTasks,
+	uploadTaskAttachments,
+} from "./api-client";
 import { ApiError } from "./api-error";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
@@ -228,4 +235,17 @@ export function useSubmitAnswer() {
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
+}
+
+export function useItemSearch(query: string) {
+	const result = useQuery({
+		queryKey: ["items", "search", query],
+		queryFn: () => fetchItems({ q: query }),
+		enabled: query.length > 0,
+	});
+
+	return {
+		data: result.data?.items.map((item) => ({ id: item.id, name: item.name })),
+		isLoading: result.isLoading && query.length > 0,
+	};
 }

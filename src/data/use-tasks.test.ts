@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { Task } from "./task-types";
-import { useAllTasks, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
+import { useAllTasks, useItemSearch, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -556,5 +556,66 @@ describe("useSubmitAnswer", () => {
 		expect(completed?.pages[0].tasks).toHaveLength(0);
 
 		expect(toast.error).toHaveBeenCalledWith("Task is locked");
+	});
+});
+
+describe("useItemSearch", () => {
+	it("fetches items from API with q param when query is non-empty", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/company/items/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					items: [
+						{
+							id: "item-1",
+							name: "Арматура А500С",
+							status: "searching",
+							annualQuantity: 100,
+							currentPrice: 50,
+							bestPrice: null,
+							averagePrice: null,
+							folderId: null,
+							companyId: "c1",
+						},
+						{
+							id: "item-2",
+							name: "Арматура А400",
+							status: "searching",
+							annualQuantity: 200,
+							currentPrice: 60,
+							bestPrice: null,
+							averagePrice: null,
+							folderId: null,
+							companyId: "c1",
+						},
+					],
+					nextCursor: null,
+				});
+			}),
+		);
+
+		const { result } = renderHook(() => useItemSearch("арматур"), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.data).toHaveLength(2);
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("арматур");
+		expect(result.current.data?.[0]).toEqual({ id: "item-1", name: "Арматура А500С" });
+		expect(result.current.data?.[1]).toEqual({ id: "item-2", name: "Арматура А400" });
+	});
+
+	it("does not fetch when query is empty", () => {
+		const { result } = renderHook(() => useItemSearch(""), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		expect(result.current.isLoading).toBe(false);
+		expect(result.current.data).toBeUndefined();
 	});
 });

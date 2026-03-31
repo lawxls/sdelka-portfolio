@@ -10,12 +10,13 @@ describe("TaskToolbar", () => {
 	const defaultProps = {
 		onSearchChange: vi.fn(),
 		onItemFilter: vi.fn(),
+		onItemSearch: vi.fn(),
 		onSort: vi.fn(),
 		onCompanySelect: vi.fn(),
 		sort: null as { field: string; direction: "asc" | "desc" } | null,
 		activeItem: undefined as string | undefined,
 		activeCompany: undefined as string | undefined,
-		procurementItems: ["Арматура А500С", "Кабель ВВГнг 3×2.5", "Цемент М500"],
+		itemSearchResults: [] as Array<{ id: string; name: string }>,
 		companies: [] as CompanySummary[],
 	};
 
@@ -78,29 +79,67 @@ describe("TaskToolbar", () => {
 		expect(screen.getByRole("button", { name: "Фильтр" })).toBeInTheDocument();
 	});
 
-	it("shows procurement items in filter popover", async () => {
+	it("shows search input in filter popover", async () => {
 		const user = userEvent.setup();
 		renderToolbar();
+
+		await user.click(screen.getByRole("button", { name: "Фильтр" }));
+
+		expect(screen.getByPlaceholderText("Поиск позиции…")).toBeInTheDocument();
+	});
+
+	it("calls onItemSearch when typing in item search", async () => {
+		const user = userEvent.setup();
+		renderToolbar();
+
+		await user.click(screen.getByRole("button", { name: "Фильтр" }));
+		await user.type(screen.getByPlaceholderText("Поиск позиции…"), "армат");
+
+		await waitFor(() => {
+			expect(defaultProps.onItemSearch).toHaveBeenCalledWith("армат");
+		});
+	});
+
+	it("shows item search results and calls onItemFilter with UUID on click", async () => {
+		const user = userEvent.setup();
+		renderToolbar({
+			itemSearchResults: [
+				{ id: "item-uuid-1", name: "Арматура А500С" },
+				{ id: "item-uuid-2", name: "Арматура А400" },
+			],
+		});
 
 		await user.click(screen.getByRole("button", { name: "Фильтр" }));
 
 		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
-		expect(screen.getByText("Кабель ВВГнг 3×2.5")).toBeInTheDocument();
-		expect(screen.getByText("Цемент М500")).toBeInTheDocument();
+		expect(screen.getByText("Арматура А400")).toBeInTheDocument();
+
+		await user.click(screen.getByText("Арматура А500С"));
+
+		expect(defaultProps.onItemFilter).toHaveBeenCalledWith("item-uuid-1");
 	});
 
-	it("calls onItemFilter when item clicked", async () => {
+	it("shows clear button and calls onItemFilter with undefined when cleared", async () => {
+		const user = userEvent.setup();
+		renderToolbar({ activeItem: "item-uuid-1" });
+
+		await user.click(screen.getByRole("button", { name: "Фильтр" }));
+		await user.click(screen.getByText("Все"));
+
+		expect(defaultProps.onItemFilter).toHaveBeenCalledWith(undefined);
+	});
+
+	it("does not show clear button when no item selected", async () => {
 		const user = userEvent.setup();
 		renderToolbar();
 
 		await user.click(screen.getByRole("button", { name: "Фильтр" }));
-		await user.click(screen.getByText("Арматура А500С"));
 
-		expect(defaultProps.onItemFilter).toHaveBeenCalledWith("Арматура А500С");
+		expect(screen.queryByText("Все")).not.toBeInTheDocument();
 	});
 
 	it("shows active filter indicator dot", () => {
-		renderToolbar({ activeItem: "Арматура А500С" });
+		renderToolbar({ activeItem: "item-uuid-1" });
 		const filterBtn = screen.getByRole("button", { name: "Фильтр" });
 		expect(filterBtn.querySelector("[data-indicator]")).toBeInTheDocument();
 	});

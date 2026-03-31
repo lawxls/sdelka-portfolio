@@ -16,7 +16,8 @@ interface TaskToolbarProps {
 	onSort: (field: TaskSortField) => void;
 	activeItem?: string;
 	onItemFilter: (item: string | undefined) => void;
-	procurementItems: string[];
+	onItemSearch: (query: string) => void;
+	itemSearchResults: Array<{ id: string; name: string }>;
 	companies?: CompanySummary[];
 	activeCompany?: string;
 	onCompanySelect?: (companyId: string | undefined) => void;
@@ -39,7 +40,8 @@ export function TaskToolbar({
 	onSort,
 	activeItem,
 	onItemFilter,
-	procurementItems,
+	onItemSearch,
+	itemSearchResults,
 	companies = [],
 	activeCompany,
 	onCompanySelect,
@@ -125,26 +127,36 @@ export function TaskToolbar({
 					</TooltipTrigger>
 					<TooltipContent>Фильтр по позиции</TooltipContent>
 				</Tooltip>
-				<PopoverContent align="end" className="max-h-72 w-56 overflow-y-auto">
+				<PopoverContent align="end" className="w-56">
 					<div className="flex flex-col gap-1">
-						<button
-							type="button"
-							className={cn(FILTER_BTN, !activeItem && FILTER_BTN_ACTIVE)}
-							onClick={() => onItemFilter(undefined)}
-						>
-							Все
-						</button>
-						<div className="my-1 h-px bg-border" />
-						{procurementItems.map((item) => (
-							<button
-								key={item}
-								type="button"
-								className={cn(FILTER_BTN, activeItem === item && FILTER_BTN_ACTIVE)}
-								onClick={() => onItemFilter(activeItem === item ? undefined : item)}
-							>
-								{item}
-							</button>
-						))}
+						{activeItem && (
+							<>
+								<button type="button" className={FILTER_BTN} onClick={() => onItemFilter(undefined)}>
+									Все
+								</button>
+								<div className="my-1 h-px bg-border" />
+							</>
+						)}
+						<Input
+							type="search"
+							placeholder="Поиск позиции…"
+							onChange={(e) => onItemSearch(e.target.value)}
+							className="mb-1"
+							spellCheck={false}
+							autoComplete="off"
+						/>
+						<div className="max-h-48 overflow-y-auto">
+							{itemSearchResults.map((item) => (
+								<button
+									key={item.id}
+									type="button"
+									className={cn(FILTER_BTN, activeItem === item.id && FILTER_BTN_ACTIVE)}
+									onClick={() => onItemFilter(item.id)}
+								>
+									{item.name}
+								</button>
+							))}
+						</div>
 					</div>
 				</PopoverContent>
 			</Popover>

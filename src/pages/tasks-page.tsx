@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useItemSearch, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
@@ -57,6 +57,8 @@ export function TasksPage() {
 	const sort = parseSort(searchParams);
 
 	const { data: companies = [] } = useProcurementCompanies();
+	const [itemSearchQuery, setItemSearchQuery] = useState("");
+	const itemSearch = useItemSearch(itemSearchQuery);
 
 	const filterParams: TaskFilterParams = {
 		...(search && { q: search }),
@@ -188,7 +190,8 @@ export function TasksPage() {
 						onSort={handleSort}
 						activeItem={activeItem}
 						onItemFilter={handleItemFilter}
-						procurementItems={[]}
+						onItemSearch={setItemSearchQuery}
+						itemSearchResults={itemSearch.data ?? []}
 						companies={companies}
 						activeCompany={company}
 						onCompanySelect={handleCompanySelect}
