@@ -175,14 +175,17 @@ export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
 
 export const ADDRESS_TYPES = Object.keys(ADDRESS_TYPE_LABELS) as AddressType[];
 
-export type EmployeeRole = "admin" | "user";
+export type EmployeeRole = "owner" | "admin" | "user";
 
 export const ROLE_LABELS: Record<EmployeeRole, string> = {
+	owner: "Владелец",
 	admin: "Администратор",
 	user: "Пользователь",
 };
 
-export const ROLES = Object.keys(ROLE_LABELS) as EmployeeRole[];
+export const PRIVILEGED_ROLES: ReadonlySet<EmployeeRole> = new Set(["admin", "owner"]);
+
+export const ASSIGNABLE_ROLES: EmployeeRole[] = ["admin", "user"];
 
 export interface Address {
 	id: string;

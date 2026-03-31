@@ -146,7 +146,7 @@ function setupHandlers() {
 				nextCursor: null,
 			}),
 		),
-		http.get("/api/v1/tasks/board/", () =>
+		http.get("/api/v1/company/tasks/board/", () =>
 			HttpResponse.json({
 				assigned: { results: [], next: null, count: 0 },
 				in_progress: { results: [], next: null, count: 0 },
@@ -154,8 +154,8 @@ function setupHandlers() {
 				archived: { results: [], next: null, count: 0 },
 			}),
 		),
-		http.get("/api/v1/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
-		http.get("/api/v1/tasks/:id/", () => HttpResponse.json({ detail: "Not found" }, { status: 404 })),
+		http.get("/api/v1/company/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
+		http.get("/api/v1/company/tasks/:id/", () => HttpResponse.json({ detail: "Not found" }, { status: 404 })),
 	);
 }
 

@@ -166,6 +166,25 @@ const MOCK_EMPLOYEES: (Employee & { permissions: EmployeePermissions })[] = [
 			tasks: "none",
 		},
 	},
+	{
+		id: 3,
+		firstName: "Сергей",
+		lastName: "Сергеев",
+		patronymic: "Сергеевич",
+		position: "Основатель",
+		role: "owner",
+		phone: "+79009876543",
+		email: "sergey@example.com",
+		isResponsible: false,
+		permissions: {
+			id: "perm-3",
+			employeeId: 3,
+			analytics: "edit",
+			procurement: "edit",
+			companies: "edit",
+			tasks: "edit",
+		},
+	},
 ];
 
 const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
@@ -186,11 +205,16 @@ const MOCK_COMPANY_DETAIL: Company = makeCompanyDetail("company-1", {
 let companyList: CompanySummary[];
 let companyDetail: Company;
 let queryClient: QueryClient;
+let currentMe = { id: 1, role: "admin" };
 
 function setupHandlers() {
 	companyList = [...MOCK_COMPANIES];
 	companyDetail = { ...MOCK_COMPANY_DETAIL, addresses: [...MOCK_ADDRESSES], employees: [...MOCK_EMPLOYEES] };
+	currentMe = { id: 1, role: "admin" };
 	server.use(
+		http.get("/api/v1/company/me/", () => {
+			return HttpResponse.json(currentMe);
+		}),
 		http.get("/api/v1/companies/:id/", ({ params }) => {
 			if (params.id === "company-1") return HttpResponse.json(companyDetail);
 			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
@@ -911,10 +935,13 @@ describe("CompaniesPage Сотрудники tab", () => {
 		const tab = screen.getByTestId("tab-content-employees");
 		expect(within(tab).getByText("Иванов Иван Иванович")).toBeInTheDocument();
 		expect(within(tab).getByText("Петров Пётр Петрович")).toBeInTheDocument();
+		expect(within(tab).getByText("Сергеев Сергей Сергеевич")).toBeInTheDocument();
 		expect(within(tab).getByText("Директор")).toBeInTheDocument();
 		expect(within(tab).getByText("Менеджер")).toBeInTheDocument();
+		expect(within(tab).getByText("Основатель")).toBeInTheDocument();
 		expect(within(tab).getByText("Администратор")).toBeInTheDocument();
 		expect(within(tab).getByText("Пользователь")).toBeInTheDocument();
+		expect(within(tab).getByText("Владелец")).toBeInTheDocument();
 	});
 
 	test("responsible employee shows badge", async () => {
@@ -934,6 +961,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 		// View mode fields
 		expect(within(card).getByText("+71234567890")).toBeInTheDocument();
 		expect(within(card).getByText("ivan@example.com")).toBeInTheDocument();
+		expect(within(card).getByText("Да")).toBeInTheDocument(); // Ответственный
 		expect(within(card).getByRole("button", { name: "Редактировать сотрудника" })).toBeInTheDocument();
 
 		// Permissions matrix
@@ -1012,7 +1040,7 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByTestId("employee-toggle-1"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
 
 		const matrix = screen.getByTestId("permissions-matrix");
 		expect(within(matrix).getByTestId("perm-row-analytics")).toBeInTheDocument();
@@ -1022,13 +1050,45 @@ describe("CompaniesPage Сотрудники tab", () => {
 		expect(within(matrix).getByRole("button", { name: "Редактировать права доступа" })).toBeInTheDocument();
 	});
 
-	test("isResponsible checkbox has radio behavior", async () => {
+	test("admin employee does not show edit button in permissions matrix", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-1"));
+
+		const card = screen.getByTestId("employee-1");
+		const matrix = within(card).getByTestId("permissions-matrix");
+		expect(within(matrix).queryByRole("button", { name: "Редактировать права доступа" })).not.toBeInTheDocument();
+	});
+
+	test("owner employee does not show edit button in permissions matrix", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-3"));
+
+		const card = screen.getByTestId("employee-3");
+		const matrix = within(card).getByTestId("permissions-matrix");
+		expect(within(matrix).queryByRole("button", { name: "Редактировать права доступа" })).not.toBeInTheDocument();
+	});
+
+	test("owner employee has disabled role select in edit mode", async () => {
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByTestId("employee-toggle-3"));
+
+		const card = screen.getByTestId("employee-3");
+		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
+		expect(within(card).getByRole("combobox", { name: "Роль" })).toBeDisabled();
+	});
+
+	test("isResponsible checkbox sends PATCH only on save, not on toggle", async () => {
 		let capturedBody: Record<string, unknown> | undefined;
 		server.use(
 			http.patch("/api/v1/companies/company-1/employees/:employeeId/", async ({ params, request }) => {
 				capturedBody = (await request.json()) as Record<string, unknown>;
 				const empId = Number(params.employeeId);
-				// Apply isResponsible radio behavior in mock
 				if (capturedBody.isResponsible === true) {
 					companyDetail = {
 						...companyDetail,
@@ -1044,28 +1104,49 @@ describe("CompaniesPage Сотрудники tab", () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		// Expand second employee (not responsible), enter edit mode, click responsible checkbox
 		await user.click(screen.getByTestId("employee-toggle-2"));
 
 		const card = screen.getByTestId("employee-2");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
 		await user.click(within(card).getByRole("checkbox", { name: "Ответственный" }));
 
+		// No request yet — checkbox only updates local form state
+		expect(capturedBody).toBeUndefined();
+
+		await user.click(within(card).getByRole("button", { name: "Сохранить" }));
+
 		await waitFor(() => {
 			expect(capturedBody).toEqual({ isResponsible: true });
 		});
 	});
 
-	test("cannot delete only responsible employee", async () => {
+	test("isResponsible checkbox cannot be unset", async () => {
 		await openEmployeesTab();
 		const user = userEvent.setup();
 
-		// Expand the responsible employee (emp-1) and enter edit mode
 		await user.click(screen.getByTestId("employee-toggle-1"));
 
 		const card = screen.getByTestId("employee-1");
 		await user.click(within(card).getByRole("button", { name: "Редактировать сотрудника" }));
-		expect(within(card).getByRole("button", { name: "Удалить сотрудника" })).toBeDisabled();
+		expect(within(card).getByRole("checkbox", { name: "Ответственный" })).toBeDisabled();
+	});
+
+	test("user role cannot edit other employees, only their own", async () => {
+		currentMe = { id: 2, role: "user" };
+
+		await openEmployeesTab();
+		const user = userEvent.setup();
+
+		// Expand employee-1 (not the current user) — no edit button
+		await user.click(screen.getByTestId("employee-toggle-1"));
+		const card1 = screen.getByTestId("employee-1");
+		expect(within(card1).queryByRole("button", { name: "Редактировать сотрудника" })).not.toBeInTheDocument();
+
+		// Collapse and expand employee-2 (current user) — edit button present
+		await user.click(screen.getByTestId("employee-toggle-1"));
+		await user.click(screen.getByTestId("employee-toggle-2"));
+		const card2 = screen.getByTestId("employee-2");
+		expect(within(card2).getByRole("button", { name: "Редактировать сотрудника" })).toBeInTheDocument();
 	});
 
 	test("add employee form creates new employee", async () => {

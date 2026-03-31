@@ -40,7 +40,7 @@ import type {
 	EmployeeRole,
 	PermissionLevel,
 } from "@/data/types";
-import { ADDRESS_TYPE_LABELS, ADDRESS_TYPES, ROLE_LABELS, ROLES } from "@/data/types";
+import { ADDRESS_TYPE_LABELS, ADDRESS_TYPES, ASSIGNABLE_ROLES, PRIVILEGED_ROLES, ROLE_LABELS } from "@/data/types";
 import {
 	useCompanyDetail,
 	useCreateAddress,
@@ -52,6 +52,7 @@ import {
 	useUpdateEmployee,
 	useUpdateEmployeePermissions,
 } from "@/data/use-company-detail";
+import { useMe } from "@/data/use-me";
 
 export type CompanyTab = "general" | "addresses" | "employees";
 
@@ -740,8 +741,7 @@ function EmployeesTab({
 	const updateMutation = useUpdateEmployee(companyId);
 	const deleteMutation = useDeleteEmployee(companyId);
 	const permsMutation = useUpdateEmployeePermissions(companyId);
-
-	const responsibleCount = company.employees.filter((e) => e.isResponsible).length;
+	const { data: me } = useMe();
 
 	function handleCreate(form: EmployeeFormState) {
 		createMutation.mutate(form as CreateEmployeeData, {
@@ -804,9 +804,7 @@ function EmployeesTab({
 		permsMutation.mutate({ employeeId, data: { [module]: level } });
 	}
 
-	function handleResponsibleChange(employeeId: number) {
-		updateMutation.mutate({ employeeId, data: { isResponsible: true } });
-	}
+	const isUserRole = me?.role === "user";
 
 	return (
 		<div className="flex flex-col gap-3 py-4" data-testid="tab-content-employees">
@@ -827,13 +825,12 @@ function EmployeesTab({
 							key={emp.id}
 							employee={emp}
 							isExpanded={expandedId === emp.id}
-							canDelete={!(emp.isResponsible && responsibleCount <= 1) && company.employees.length > 1}
-							canUnsetResponsible={responsibleCount > 1 || !emp.isResponsible}
+							canDelete={company.employees.length > 1}
+							canEdit={!isUserRole || emp.id === me?.id}
 							onToggle={() => setExpandedId(expandedId === emp.id ? null : emp.id)}
 							onSave={(form) => handleUpdate(emp.id, emp, form)}
 							onDelete={() => handleDelete(emp.id)}
 							onPermissionChange={(mod, level) => handlePermissionChange(emp.id, mod, level)}
-							onResponsibleChange={() => handleResponsibleChange(emp.id)}
 						/>
 					))}
 					<Button type="button" variant="outline" className="w-full" onClick={() => setShowAddForm(true)}>
@@ -850,22 +847,20 @@ function EmployeeCard({
 	employee,
 	isExpanded,
 	canDelete,
-	canUnsetResponsible,
+	canEdit,
 	onToggle,
 	onSave,
 	onDelete,
 	onPermissionChange,
-	onResponsibleChange,
 }: {
 	employee: Employee & { permissions: EmployeePermissions };
 	isExpanded: boolean;
 	canDelete: boolean;
-	canUnsetResponsible: boolean;
+	canEdit: boolean;
 	onToggle: () => void;
 	onSave: (form: EmployeeFormState) => void;
 	onDelete: () => void;
 	onPermissionChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
-	onResponsibleChange: () => void;
 }) {
 	return (
 		<div data-testid={`employee-${employee.id}`} className="rounded-lg border border-border">
@@ -901,11 +896,10 @@ function EmployeeCard({
 					<EmployeeExpandedContent
 						employee={employee}
 						canDelete={canDelete}
-						canUnsetResponsible={canUnsetResponsible}
+						canEdit={canEdit}
 						onSave={onSave}
 						onDelete={onDelete}
 						onPermissionChange={onPermissionChange}
-						onResponsibleChange={onResponsibleChange}
 					/>
 				</div>
 			)}
@@ -916,19 +910,17 @@ function EmployeeCard({
 function EmployeeExpandedContent({
 	employee,
 	canDelete,
-	canUnsetResponsible,
+	canEdit,
 	onSave,
 	onDelete,
 	onPermissionChange,
-	onResponsibleChange,
 }: {
 	employee: Employee & { permissions: EmployeePermissions };
 	canDelete: boolean;
-	canUnsetResponsible: boolean;
+	canEdit: boolean;
 	onSave: (form: EmployeeFormState) => void;
 	onDelete: () => void;
 	onPermissionChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
-	onResponsibleChange: () => void;
 }) {
 	const [editing, setEditing] = useState(false);
 	const [form, setForm] = useState<EmployeeFormState>({
@@ -1005,12 +997,12 @@ function EmployeeExpandedContent({
 							/>
 						</FieldRow>
 						<FieldRow label="Роль">
-							<Select value={form.role} onValueChange={(v) => update("role", v)}>
+							<Select value={form.role} onValueChange={(v) => update("role", v)} disabled={employee.role === "owner"}>
 								<SelectTrigger aria-label="Роль">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{ROLES.map((r) => (
+									{(employee.role === "owner" ? (["owner"] as const) : ASSIGNABLE_ROLES).map((r) => (
 										<SelectItem key={r} value={r}>
 											{ROLE_LABELS[r]}
 										</SelectItem>
@@ -1041,11 +1033,10 @@ function EmployeeExpandedContent({
 						<div className="flex items-center gap-2">
 							<Checkbox
 								id={`responsible-${employee.id}`}
-								checked={employee.isResponsible}
-								disabled={employee.isResponsible && !canUnsetResponsible}
+								checked={form.isResponsible}
+								disabled={form.isResponsible}
 								onCheckedChange={() => {
-									if (!employee.isResponsible) {
-										onResponsibleChange();
+									if (!form.isResponsible) {
 										update("isResponsible", true);
 									}
 								}}
@@ -1081,19 +1072,22 @@ function EmployeeExpandedContent({
 				</>
 			) : (
 				<div className="relative">
-					<button
-						type="button"
-						className="absolute top-0 right-0 inline-flex items-center justify-center size-6 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
-						onClick={handleEdit}
-						aria-label="Редактировать сотрудника"
-					>
-						<Pencil className="size-3" aria-hidden="true" />
-					</button>
+					{canEdit && (
+						<button
+							type="button"
+							className="absolute top-0 right-0 inline-flex items-center justify-center size-6 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
+							onClick={handleEdit}
+							aria-label="Редактировать сотрудника"
+						>
+							<Pencil className="size-3" aria-hidden="true" />
+						</button>
+					)}
 					<div className="grid grid-cols-2 gap-x-4 gap-y-3 pr-8">
 						<ViewField label="Телефон" value={employee.phone} />
 						<ViewField label="Электронная почта" value={employee.email} />
 						<ViewField label="Должность" value={employee.position} />
 						<ViewField label="Роль" value={ROLE_LABELS[employee.role]} />
+						<ViewField label="Ответственный" value={employee.isResponsible ? "Да" : "Нет"} />
 					</div>
 				</div>
 			)}
@@ -1102,7 +1096,11 @@ function EmployeeExpandedContent({
 
 			<div className="flex flex-col gap-2">
 				<h4 className="text-xs font-medium text-muted-foreground">Права доступа</h4>
-				<PermissionsMatrix permissions={employee.permissions} onChange={onPermissionChange} />
+				<PermissionsMatrix
+					permissions={employee.permissions}
+					onChange={onPermissionChange}
+					readOnly={PRIVILEGED_ROLES.has(employee.role)}
+				/>
 			</div>
 		</div>
 	);
@@ -1123,9 +1121,11 @@ const PERM_COLOR: Record<PermissionLevel, string> = {
 function PermissionsMatrix({
 	permissions,
 	onChange,
+	readOnly = false,
 }: {
 	permissions: EmployeePermissions;
 	onChange: (module: keyof UpdatePermissionsData, level: PermissionLevel) => void;
+	readOnly?: boolean;
 }) {
 	const [editing, setEditing] = useState(false);
 
@@ -1147,14 +1147,16 @@ function PermissionsMatrix({
 						</Tooltip>
 					);
 				})}
-				<button
-					type="button"
-					className="inline-flex items-center justify-center size-6 rounded text-muted-foreground/60 hover:text-foreground transition-colors ml-0.5"
-					onClick={() => setEditing(true)}
-					aria-label="Редактировать права доступа"
-				>
-					<Pencil className="size-3" aria-hidden="true" />
-				</button>
+				{!readOnly && (
+					<button
+						type="button"
+						className="inline-flex items-center justify-center size-6 rounded text-muted-foreground/60 hover:text-foreground transition-colors ml-0.5"
+						onClick={() => setEditing(true)}
+						aria-label="Редактировать права доступа"
+					>
+						<Pencil className="size-3" aria-hidden="true" />
+					</button>
+				)}
 			</div>
 		);
 	}
@@ -1284,7 +1286,7 @@ function EmployeeForm({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{ROLES.map((r) => (
+						{ASSIGNABLE_ROLES.map((r) => (
 							<SelectItem key={r} value={r}>
 								{ROLE_LABELS[r]}
 							</SelectItem>
