@@ -61,6 +61,7 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 	self: "Своими силами",
 };
 
+export const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 export const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];

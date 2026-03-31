@@ -400,7 +400,8 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		expect(screen.getByText("Условия")).toBeInTheDocument();
-		expect(screen.getByText("Системные данные")).toBeInTheDocument();
+		expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
+		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
@@ -450,18 +451,14 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(panel).getByText("Арматура А500С")).toBeInTheDocument();
 	});
 
-	test("details tab shows system data as read-only without edit button", async () => {
+	test("details tab has edit buttons for all four sections", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Системные данные")).toBeInTheDocument();
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		// Status label appears in both header and details panel
-		const detailsPanel = screen.getByTestId("tab-panel-details");
-		expect(within(detailsPanel).getByText("Ищем поставщиков")).toBeInTheDocument();
-		// System section has no edit button — only info and conditions sections do
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
-		expect(editButtons).toHaveLength(2);
+		expect(editButtons).toHaveLength(4);
 	});
 });

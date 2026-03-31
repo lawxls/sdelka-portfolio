@@ -40,24 +40,29 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
 		expect(screen.getByText("1200")).toBeInTheDocument();
 
-		// Edit buttons for info and conditions
+		// Edit buttons for all editable sections
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Редактировать условия" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать параметры запроса" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать дополнительно" })).toBeInTheDocument();
 
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("system data section has no edit button", async () => {
+	test("shows all four sections", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Системные данные")).toBeInTheDocument();
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
+		expect(screen.getByText("Условия")).toBeInTheDocument();
+		expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
+		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
-		expect(editButtons).toHaveLength(2);
+		expect(editButtons).toHaveLength(4);
 	});
 
 	test("shows loading skeleton while fetching", () => {
@@ -85,10 +90,9 @@ describe("DetailsTabPanel", () => {
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		expect(screen.getByLabelText("Годовой объём")).toHaveValue(1200);
+		expect(screen.getByLabelText("Количество")).toHaveValue(1200);
 		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
 		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
-		expect(screen.getByLabelText("Частота поставок")).toHaveValue(2);
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 	});
@@ -103,9 +107,11 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать условия" }));
 
-		// item-1 has paymentType: "deferred", deliveryType: "warehouse"
+		// item-1 has paymentType: "deferred", deliveryType: "warehouse", unloading: "supplier"
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByRole("button", { name: "До склада" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByLabelText("Частота поставок")).toHaveValue(2);
 	});
 
 	test("save info section triggers mutation with changed values", async () => {
@@ -168,5 +174,39 @@ describe("DetailsTabPanel", () => {
 		await user.click(saveButton);
 
 		expect(saveButton).toBeDisabled();
+	});
+
+	test("conditions section shows frequency with period", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Условия")).toBeInTheDocument();
+		});
+
+		// item-1 has frequencyCount: 2, frequencyPeriod: "quarter"
+		expect(screen.getByText("2 раз / квартал")).toBeInTheDocument();
+		expect(screen.getByText("Силами поставщика")).toBeInTheDocument();
+	});
+
+	test("request params section shows monitoring and toggles", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
+		});
+
+		// item-1 has priceMonitoringPeriod: "quarter", analoguesAllowed: true
+		expect(screen.getByText("Квартал")).toBeInTheDocument();
+		expect(screen.getByText("Да")).toBeInTheDocument();
+	});
+
+	test("additional section shows comment", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+		});
+
+		expect(screen.getByText("Требуется сертификат соответствия ГОСТ")).toBeInTheDocument();
 	});
 });
