@@ -16,6 +16,17 @@ export const SUPPLIER_STATUS_LABELS: Record<SupplierStatus, string> = {
 	отказ: "Отказ",
 };
 
+export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; className: string }> = {
+	письмо_не_отправлено: { label: SUPPLIER_STATUS_LABELS.письмо_не_отправлено, className: "text-muted-foreground" },
+	ждем_ответа: { label: SUPPLIER_STATUS_LABELS.ждем_ответа, className: "text-violet-600 dark:text-violet-400" },
+	переговоры: { label: SUPPLIER_STATUS_LABELS.переговоры, className: "text-blue-600 dark:text-blue-400" },
+	получено_кп: {
+		label: SUPPLIER_STATUS_LABELS.получено_кп,
+		className: "text-[oklch(0.50_0.18_122)] dark:text-primary",
+	},
+	отказ: { label: SUPPLIER_STATUS_LABELS.отказ, className: "text-destructive" },
+};
+
 export interface SupplierDocument {
 	name: string;
 	type: string;

@@ -10,7 +10,7 @@ export function SegmentedControl<T extends string>({
 	onChange: (v: T) => void;
 }) {
 	return (
-		<div className="flex rounded-lg border border-input">
+		<div className="flex w-fit rounded-lg border border-input">
 			{options.map((opt) => (
 				<button
 					key={opt}
