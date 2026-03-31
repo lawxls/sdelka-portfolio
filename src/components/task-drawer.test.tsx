@@ -35,12 +35,12 @@ beforeEach(() => {
 	localStorage.setItem("auth-refresh-token", "test-refresh");
 
 	server.use(
-		http.get("/api/v1/tasks/:id/", ({ params }) => {
+		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
 			if (params.id === "task-1") return HttpResponse.json(unansweredTask);
 			if (params.id === "task-51") return HttpResponse.json(completedTask);
 			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		}),
-		http.patch("/api/v1/tasks/:id/status/", () => {
+		http.patch("/api/v1/company/tasks/:id/status/", () => {
 			return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Done" });
 		}),
 	);
@@ -180,7 +180,7 @@ describe("TaskDrawer", () => {
 	it("shows API error detail in toast when status change fails", async () => {
 		const { toast } = await import("sonner");
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
 			}),
 		);
@@ -202,7 +202,7 @@ describe("TaskDrawer", () => {
 	it("submitting answer with files uploads attachments then changes status", async () => {
 		const callOrder: string[] = [];
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				callOrder.push("upload");
 				return HttpResponse.json([
 					{
@@ -216,7 +216,7 @@ describe("TaskDrawer", () => {
 					},
 				]);
 			}),
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				callOrder.push("status");
 				return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Принято" });
 			}),
@@ -245,7 +245,7 @@ describe("TaskDrawer", () => {
 	it("submitting answer without files only calls status endpoint", async () => {
 		let uploadCalled = false;
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				uploadCalled = true;
 				return HttpResponse.json([]);
 			}),
@@ -274,7 +274,7 @@ describe("TaskDrawer", () => {
 		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();
 	});
 
-	it("renders as bottom sheet when isMobile", async () => {
+	it("renders as full-screen bottom sheet when isMobile", async () => {
 		render(
 			<QueryClientProvider client={queryClient}>
 				<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
@@ -284,6 +284,7 @@ describe("TaskDrawer", () => {
 		await waitFor(() => {
 			const sheetContent = document.querySelector("[data-slot='sheet-content']");
 			expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
+			expect(sheetContent?.getAttribute("data-size")).toBe("full");
 		});
 	});
 });

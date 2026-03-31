@@ -42,10 +42,18 @@ function seedTasks(status: string, tasks: Task[]) {
 	});
 }
 
+function seedBoardCache(columns: Partial<Record<string, Task[]>>) {
+	const data: Record<string, { results: Task[]; next: null; count: number }> = {};
+	for (const [status, tasks] of Object.entries(columns)) {
+		data[status] = { results: tasks ?? [], next: null, count: tasks?.length ?? 0 };
+	}
+	queryClient.setQueryData(["tasks-board", {}], data);
+}
+
 describe("useTaskColumns", () => {
 	it("fetches tasks from board endpoint for all 4 statuses", async () => {
 		server.use(
-			http.get("/api/v1/tasks/board/", () => {
+			http.get("/api/v1/company/tasks/board/", () => {
 				return HttpResponse.json({
 					assigned: { results: [task1], next: null, count: 1 },
 					in_progress: { results: [task2], next: null, count: 1 },
@@ -71,7 +79,7 @@ describe("useTaskColumns", () => {
 
 	it("returns loading state initially", async () => {
 		server.use(
-			http.get("/api/v1/tasks/board/", async () => {
+			http.get("/api/v1/company/tasks/board/", async () => {
 				await new Promise((r) => setTimeout(r, 10000));
 				return HttpResponse.json({});
 			}),
@@ -85,7 +93,7 @@ describe("useTaskColumns", () => {
 
 	it("reports hasNextPage from board endpoint cursor", async () => {
 		server.use(
-			http.get("/api/v1/tasks/board/", () => {
+			http.get("/api/v1/company/tasks/board/", () => {
 				return HttpResponse.json({
 					assigned: { results: [task1], next: "cursor-abc", count: 25 },
 					in_progress: { results: [], next: null, count: 0 },
@@ -111,7 +119,7 @@ describe("useTaskColumns", () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/board/", ({ request }) => {
+			http.get("/api/v1/company/tasks/board/", ({ request }) => {
 				capturedUrl = request.url;
 				return HttpResponse.json({
 					assigned: { results: [], next: null, count: 0 },
@@ -135,12 +143,53 @@ describe("useTaskColumns", () => {
 		expect(url.searchParams.get("sort")).toBe("deadline_at");
 		expect(url.searchParams.get("dir")).toBe("asc");
 	});
+
+	it("loads next page for a column when loadMore is called", async () => {
+		server.use(
+			http.get("/api/v1/company/tasks/board/", ({ request }) => {
+				const url = new URL(request.url);
+				const column = url.searchParams.get("column");
+				const cursor = url.searchParams.get("cursor");
+				if (column === "assigned" && cursor === "cursor-2") {
+					return HttpResponse.json({ results: [task2], next: null });
+				}
+				return HttpResponse.json({
+					assigned: { results: [task1], next: "cursor-2", count: 2 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				});
+			}),
+		);
+
+		const { result } = renderHook(() => useTaskColumns(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.assigned.tasks).toHaveLength(1);
+		});
+
+		expect(result.current.assigned.hasNextPage).toBe(true);
+
+		act(() => {
+			result.current.assigned.loadMore();
+		});
+
+		await waitFor(() => {
+			expect(result.current.assigned.tasks).toHaveLength(2);
+		});
+
+		expect(result.current.assigned.hasNextPage).toBe(false);
+		expect(result.current.assigned.tasks[0].id).toBe("t1");
+		expect(result.current.assigned.tasks[1].id).toBe("t2");
+	});
 });
 
 describe("useAllTasks", () => {
 	it("fetches tasks from list endpoint with page-number pagination", async () => {
 		server.use(
-			http.get("/api/v1/tasks/", ({ request }) => {
+			http.get("/api/v1/company/tasks/", ({ request }) => {
 				const url = new URL(request.url);
 				const page = Number(url.searchParams.get("page") ?? "1");
 				if (page === 1) {
@@ -173,7 +222,7 @@ describe("useAllTasks", () => {
 
 	it("returns loading state initially", async () => {
 		server.use(
-			http.get("/api/v1/tasks/", async () => {
+			http.get("/api/v1/company/tasks/", async () => {
 				await new Promise((r) => setTimeout(r, 10000));
 				return HttpResponse.json({});
 			}),
@@ -189,7 +238,7 @@ describe("useAllTasks", () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/", ({ request }) => {
+			http.get("/api/v1/company/tasks/", ({ request }) => {
 				capturedUrl = request.url;
 				return HttpResponse.json({ count: 0, results: [], next: null, previous: null });
 			}),
@@ -213,7 +262,7 @@ describe("useAllTasks", () => {
 describe("useTask", () => {
 	it("fetches single task by id from detail endpoint", async () => {
 		server.use(
-			http.get("/api/v1/tasks/:id/", () => {
+			http.get("/api/v1/company/tasks/:id/", () => {
 				return HttpResponse.json(task1);
 			}),
 		);
@@ -243,7 +292,7 @@ describe("useTask", () => {
 describe("useUpdateTaskStatus", () => {
 	it("optimistically moves task between columns", async () => {
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", async () => {
+			http.patch("/api/v1/company/tasks/:id/status/", async () => {
 				await new Promise((r) => setTimeout(r, 5000));
 				return HttpResponse.json(makeTask("t1", { status: "in_progress" }));
 			}),
@@ -274,7 +323,7 @@ describe("useUpdateTaskStatus", () => {
 	it("rolls back on error and shows API detail in toast", async () => {
 		const { toast } = await import("sonner");
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
 			}),
 		);
@@ -305,7 +354,7 @@ describe("useUpdateTaskStatus", () => {
 	it("shows generic error toast when API returns no detail", async () => {
 		const { toast } = await import("sonner");
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json(null, { status: 500 });
 			}),
 		);
@@ -327,10 +376,142 @@ describe("useUpdateTaskStatus", () => {
 	});
 });
 
+describe("useUpdateTaskStatus - board cache", () => {
+	it("optimistically moves task between columns in board cache", async () => {
+		server.use(
+			http.patch("/api/v1/company/tasks/:id/status/", async () => {
+				await new Promise((r) => setTimeout(r, 5000));
+				return HttpResponse.json(makeTask("t1", { status: "in_progress" }));
+			}),
+		);
+
+		seedBoardCache({
+			assigned: [makeTask("t1", { status: "assigned" })],
+			in_progress: [makeTask("t2", { status: "in_progress" })],
+		});
+
+		const { result } = renderHook(() => useUpdateTaskStatus(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		act(() => {
+			result.current.mutate({ id: "t1", status: "in_progress" });
+		});
+
+		await waitFor(() => {
+			const board = queryClient.getQueryData<{ assigned?: { results: Task[] } }>(["tasks-board", {}]);
+			expect(board?.assigned?.results).toHaveLength(0);
+		});
+
+		const board = queryClient.getQueryData<{ in_progress?: { results: Task[] } }>(["tasks-board", {}]);
+		expect(board?.in_progress?.results).toHaveLength(2);
+		expect(board?.in_progress?.results?.[0]?.id).toBe("t1");
+		expect(board?.in_progress?.results?.[0]?.status).toBe("in_progress");
+	});
+
+	it("rolls back board cache on error and shows API detail in toast", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
+			}),
+		);
+
+		seedBoardCache({
+			assigned: [makeTask("t1", { status: "assigned" })],
+			in_progress: [],
+		});
+
+		const { result } = renderHook(() => useUpdateTaskStatus(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", status: "in_progress" });
+			} catch {}
+		});
+
+		const board = queryClient.getQueryData<{ assigned?: { results: Task[] }; in_progress?: { results: Task[] } }>([
+			"tasks-board",
+			{},
+		]);
+		expect(board?.assigned?.results).toHaveLength(1);
+		expect(board?.in_progress?.results).toHaveLength(0);
+		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+	});
+});
+
+describe("useSubmitAnswer - board cache", () => {
+	it("optimistically moves task to completed column in board cache", async () => {
+		server.use(
+			http.patch("/api/v1/company/tasks/:id/status/", async () => {
+				await new Promise((r) => setTimeout(r, 5000));
+				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
+			}),
+		);
+
+		seedBoardCache({
+			assigned: [makeTask("t1", { status: "assigned" })],
+			completed: [],
+		});
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		act(() => {
+			result.current.mutate({ id: "t1", answer: "My answer" });
+		});
+
+		await waitFor(() => {
+			const board = queryClient.getQueryData<{ assigned?: { results: Task[] } }>(["tasks-board", {}]);
+			expect(board?.assigned?.results).toHaveLength(0);
+		});
+
+		const board = queryClient.getQueryData<{ completed?: { results: Task[] } }>(["tasks-board", {}]);
+		expect(board?.completed?.results).toHaveLength(1);
+		expect(board?.completed?.results?.[0]?.id).toBe("t1");
+		expect(board?.completed?.results?.[0]?.completedResponse).toBe("My answer");
+	});
+
+	it("rolls back board cache on error and shows API detail in toast", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Task is already completed." }, { status: 400 });
+			}),
+		);
+
+		seedBoardCache({
+			assigned: [makeTask("t1", { status: "assigned" })],
+			completed: [],
+		});
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", answer: "My answer" });
+			} catch {}
+		});
+
+		const board = queryClient.getQueryData<{ assigned?: { results: Task[] }; completed?: { results: Task[] } }>([
+			"tasks-board",
+			{},
+		]);
+		expect(board?.assigned?.results).toHaveLength(1);
+		expect(board?.completed?.results).toHaveLength(0);
+		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
+	});
+});
+
 describe("useSubmitAnswer", () => {
 	it("optimistically moves task to completed column", async () => {
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", async () => {
+			http.patch("/api/v1/company/tasks/:id/status/", async () => {
 				await new Promise((r) => setTimeout(r, 5000));
 				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
 			}),
@@ -361,7 +542,7 @@ describe("useSubmitAnswer", () => {
 	it("rolls back on error and shows API detail in toast", async () => {
 		const { toast } = await import("sonner");
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json({ detail: "Task is already completed." }, { status: 400 });
 			}),
 		);
@@ -391,7 +572,7 @@ describe("useSubmitAnswer", () => {
 	it("shows generic error toast when API returns no detail", async () => {
 		const { toast } = await import("sonner");
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json(null, { status: 500 });
 			}),
 		);
@@ -416,7 +597,7 @@ describe("useSubmitAnswer", () => {
 		const callOrder: string[] = [];
 
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				callOrder.push("upload");
 				return HttpResponse.json([
 					{
@@ -430,7 +611,7 @@ describe("useSubmitAnswer", () => {
 					},
 				]);
 			}),
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				callOrder.push("status");
 				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
 			}),
@@ -456,11 +637,11 @@ describe("useSubmitAnswer", () => {
 		let uploadCalled = false;
 
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				uploadCalled = true;
 				return HttpResponse.json([]);
 			}),
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
 			}),
 		);
@@ -484,10 +665,10 @@ describe("useSubmitAnswer", () => {
 		let statusCalled = false;
 
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				return HttpResponse.json({ detail: "File too large" }, { status: 400 });
 			}),
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				statusCalled = true;
 				return HttpResponse.json(makeTask("t1", { status: "completed" }));
 			}),
@@ -516,7 +697,7 @@ describe("useSubmitAnswer", () => {
 		const { toast } = await import("sonner");
 
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", () => {
+			http.post("/api/v1/company/tasks/:id/attachments/", () => {
 				return HttpResponse.json([
 					{
 						id: "att-1",
@@ -529,7 +710,7 @@ describe("useSubmitAnswer", () => {
 					},
 				]);
 			}),
-			http.patch("/api/v1/tasks/:id/status/", () => {
+			http.patch("/api/v1/company/tasks/:id/status/", () => {
 				return HttpResponse.json({ detail: "Task is locked" }, { status: 400 });
 			}),
 		);

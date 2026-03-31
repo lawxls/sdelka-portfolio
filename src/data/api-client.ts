@@ -20,7 +20,7 @@ import type {
 
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
-const TASKS_BASE = "/api/v1/tasks";
+const TASKS_BASE = "/api/v1/company/tasks";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -446,6 +446,17 @@ export async function updateEmployeePermissions(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(data),
 	});
+}
+
+// --- Me ---
+
+export interface CurrentEmployee {
+	id: number;
+	role: EmployeeRole;
+}
+
+export async function fetchMe(): Promise<CurrentEmployee> {
+	return request("/me/");
 }
 
 // --- Tasks ---

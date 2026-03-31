@@ -155,7 +155,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 				if (!nextOpen) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : ""}>
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined}>
 				{supplier && (
 					<div className="flex h-full flex-col overflow-hidden">
 						<Tooltip>

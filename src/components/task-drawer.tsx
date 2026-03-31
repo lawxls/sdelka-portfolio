@@ -26,7 +26,7 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 				if (!open) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : undefined}>
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined}>
 				{taskId && (
 					<TaskDrawerContent
 						key={taskId}
@@ -71,7 +71,7 @@ function TaskDrawerContent({
 
 	// local const so TS narrows `task` inside closures below the early-return guard
 	const currentTask = task;
-	const isAnswered = currentTask.completedResponse != null;
+	const isAnswered = !!currentTask.completedResponse;
 
 	function handleStatusChange(value: string) {
 		const newStatus = value as TaskStatus;

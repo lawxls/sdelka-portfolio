@@ -56,9 +56,9 @@ beforeEach(() => {
 
 	// Default MSW handlers
 	server.use(
-		http.get("/api/v1/tasks/board/", () => HttpResponse.json(boardResponse())),
-		http.get("/api/v1/tasks/", () => HttpResponse.json(listResponse())),
-		http.get("/api/v1/tasks/:id/", ({ params }) => {
+		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(boardResponse())),
+		http.get("/api/v1/company/tasks/", () => HttpResponse.json(listResponse())),
+		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
 			const all = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
 			const task = all.find((t) => t.id === params.id);
 			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
@@ -227,7 +227,7 @@ describe("TasksPage", () => {
 
 	it("search input filters displayed tasks in board view", async () => {
 		server.use(
-			http.get("/api/v1/tasks/board/", ({ request }) => {
+			http.get("/api/v1/company/tasks/board/", ({ request }) => {
 				const url = new URL(request.url);
 				const q = url.searchParams.get("q");
 				if (q) {
@@ -327,7 +327,7 @@ describe("TasksPage", () => {
 		it("selecting company passes company param to board API", async () => {
 			let capturedCompany: string | null = null;
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedCompany = url.searchParams.get("company");
 					return HttpResponse.json(boardResponse());
@@ -352,7 +352,7 @@ describe("TasksPage", () => {
 		it("clearing company selection removes company param", async () => {
 			let capturedCompany: string | null = "initial";
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedCompany = url.searchParams.get("company");
 					return HttpResponse.json(boardResponse());
@@ -377,7 +377,7 @@ describe("TasksPage", () => {
 		it("company param persists from URL on initial load", async () => {
 			let capturedCompany: string | null = null;
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedCompany = url.searchParams.get("company");
 					return HttpResponse.json(boardResponse());
@@ -451,7 +451,7 @@ describe("TasksPage", () => {
 		it("selecting an item passes item UUID to board API", async () => {
 			let capturedItem: string | null = null;
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedItem = url.searchParams.get("item");
 					return HttpResponse.json(boardResponse());
@@ -482,7 +482,7 @@ describe("TasksPage", () => {
 		it("clearing item selection removes item param from API", async () => {
 			let capturedItem: string | null = "initial";
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedItem = url.searchParams.get("item");
 					return HttpResponse.json(boardResponse());
@@ -507,7 +507,7 @@ describe("TasksPage", () => {
 		it("item param persists from URL on initial load", async () => {
 			let capturedItem: string | null = null;
 			server.use(
-				http.get("/api/v1/tasks/board/", ({ request }) => {
+				http.get("/api/v1/company/tasks/board/", ({ request }) => {
 					const url = new URL(request.url);
 					capturedItem = url.searchParams.get("item");
 					return HttpResponse.json(boardResponse());
@@ -533,6 +533,32 @@ describe("TasksPage", () => {
 
 			// "Кабель" only exists in the items search results, not in task cards
 			expect(screen.queryByText("Кабель ВВГнг 3×2.5")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("mobile table view", () => {
+		beforeEach(() => {
+			vi.mocked(useIsMobile).mockReturnValue(true);
+		});
+
+		afterEach(() => {
+			vi.mocked(useIsMobile).mockReturnValue(false);
+		});
+
+		it("shows cards instead of table in table view on mobile", async () => {
+			renderPage(["/tasks?view=table"]);
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
+			});
+
+			await user.click(screen.getByRole("button", { name: "Таблица" }));
+
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-table-card-/).length).toBeGreaterThan(0);
+			});
+			expect(screen.queryByRole("table")).not.toBeInTheDocument();
 		});
 	});
 
@@ -564,11 +590,12 @@ describe("TasksPage", () => {
 			}
 		});
 
-		it("drawer opens as bottom sheet on mobile", async () => {
+		it("drawer opens as full-screen bottom sheet on mobile", async () => {
 			renderPage(["/tasks?task=task-a-1"]);
 			await waitFor(() => {
 				const sheetContent = document.querySelector("[data-slot='sheet-content']");
 				expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
+				expect(sheetContent?.getAttribute("data-size")).toBe("full");
 			});
 		});
 

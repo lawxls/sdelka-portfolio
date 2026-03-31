@@ -842,12 +842,12 @@ const MOCK_TASK = {
 };
 
 describe("fetchTaskBoard", () => {
-	it("sends GET /api/v1/tasks/board/ with auth headers and query params", async () => {
+	it("sends GET /api/v1/company/tasks/board/ with auth headers and query params", async () => {
 		let capturedHeaders: Headers | undefined;
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/board/", ({ request }) => {
+			http.get("/api/v1/company/tasks/board/", ({ request }) => {
 				capturedHeaders = request.headers;
 				capturedUrl = request.url;
 				return HttpResponse.json({
@@ -876,7 +876,7 @@ describe("fetchTaskBoard", () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/board/", ({ request }) => {
+			http.get("/api/v1/company/tasks/board/", ({ request }) => {
 				capturedUrl = request.url;
 				return HttpResponse.json({
 					results: [MOCK_TASK],
@@ -894,11 +894,11 @@ describe("fetchTaskBoard", () => {
 });
 
 describe("fetchTasks", () => {
-	it("sends GET /api/v1/tasks/ with page-number pagination and query params", async () => {
+	it("sends GET /api/v1/company/tasks/ with page-number pagination and query params", async () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/", ({ request }) => {
+			http.get("/api/v1/company/tasks/", ({ request }) => {
 				capturedUrl = request.url;
 				return HttpResponse.json({
 					count: 100,
@@ -924,11 +924,11 @@ describe("fetchTasks", () => {
 });
 
 describe("fetchTask", () => {
-	it("sends GET /api/v1/tasks/{id}/ with auth headers", async () => {
+	it("sends GET /api/v1/company/tasks/{id}/ with auth headers", async () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.get("/api/v1/tasks/:id/", ({ request }) => {
+			http.get("/api/v1/company/tasks/:id/", ({ request }) => {
 				capturedUrl = request.url;
 				return HttpResponse.json(MOCK_TASK);
 			}),
@@ -936,7 +936,7 @@ describe("fetchTask", () => {
 
 		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await fetchTask("task-uuid-1");
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/");
 		expect(result.id).toBe("task-uuid-1");
 		expect(result.name).toBe("Согласование цены");
 		expect(result.item.name).toBe("Арматура А500С");
@@ -944,12 +944,12 @@ describe("fetchTask", () => {
 });
 
 describe("changeTaskStatus", () => {
-	it("sends PATCH /api/v1/tasks/{id}/status/ with status and optional completedResponse", async () => {
+	it("sends PATCH /api/v1/company/tasks/{id}/status/ with status and optional completedResponse", async () => {
 		let capturedUrl: string | undefined;
 		let capturedBody: unknown;
 
 		server.use(
-			http.patch("/api/v1/tasks/:id/status/", async ({ request }) => {
+			http.patch("/api/v1/company/tasks/:id/status/", async ({ request }) => {
 				capturedUrl = request.url;
 				capturedBody = await request.json();
 				return HttpResponse.json({ ...MOCK_TASK, status: "completed", completedResponse: "Done" });
@@ -958,19 +958,19 @@ describe("changeTaskStatus", () => {
 
 		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await changeTaskStatus("task-uuid-1", { status: "completed", completedResponse: "Done" });
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/status/");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/status/");
 		expect(capturedBody).toEqual({ status: "completed", completedResponse: "Done" });
 		expect(result.status).toBe("completed");
 	});
 });
 
 describe("uploadTaskAttachments", () => {
-	it("sends POST /api/v1/tasks/{id}/attachments/ with multipart form data", async () => {
+	it("sends POST /api/v1/company/tasks/{id}/attachments/ with multipart form data", async () => {
 		let capturedUrl: string | undefined;
 		let capturedContentType: string | null | undefined;
 
 		server.use(
-			http.post("/api/v1/tasks/:id/attachments/", ({ request }) => {
+			http.post("/api/v1/company/tasks/:id/attachments/", ({ request }) => {
 				capturedUrl = request.url;
 				capturedContentType = request.headers.get("content-type");
 				return HttpResponse.json([
@@ -990,7 +990,7 @@ describe("uploadTaskAttachments", () => {
 		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const files = [new File(["content"], "doc.pdf", { type: "application/pdf" })];
 		const result = await uploadTaskAttachments("task-uuid-1", files);
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/attachments/");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/attachments/");
 		expect(capturedContentType).toContain("multipart/form-data");
 		expect(result).toHaveLength(1);
 		expect(result[0].fileName).toBe("doc.pdf");
@@ -998,11 +998,11 @@ describe("uploadTaskAttachments", () => {
 });
 
 describe("deleteTaskAttachment", () => {
-	it("sends DELETE /api/v1/tasks/{id}/attachments/{attachmentId}/ and returns void", async () => {
+	it("sends DELETE /api/v1/company/tasks/{id}/attachments/{attachmentId}/ and returns void", async () => {
 		let capturedUrl: string | undefined;
 
 		server.use(
-			http.delete("/api/v1/tasks/:id/attachments/:attachmentId/", ({ request }) => {
+			http.delete("/api/v1/company/tasks/:id/attachments/:attachmentId/", ({ request }) => {
 				capturedUrl = request.url;
 				return new HttpResponse(null, { status: 204 });
 			}),
@@ -1010,7 +1010,7 @@ describe("deleteTaskAttachment", () => {
 
 		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
 		const result = await deleteTaskAttachment("task-uuid-1", "att-1");
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/attachments/att-1/");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/attachments/att-1/");
 		expect(result).toBeUndefined();
 	});
 });

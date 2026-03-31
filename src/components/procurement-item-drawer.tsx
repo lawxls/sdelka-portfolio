@@ -102,7 +102,11 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 					if (!nextOpen) handleClose();
 				}}
 			>
-				<SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-dvh" : "!w-2/3 !max-w-none"}>
+				<SheetContent
+					side={isMobile ? "bottom" : "right"}
+					size={isMobile ? "full" : undefined}
+					className={isMobile ? undefined : "!w-2/3 !max-w-none"}
+				>
 					{itemId && (
 						<ProcurementItemDrawerContent
 							key={itemId}

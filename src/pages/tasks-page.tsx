@@ -224,7 +224,7 @@ export function TasksPage() {
 						isMobile={isMobile}
 					/>
 				) : (
-					<TaskTable onTaskClick={openTask} filterParams={filterParams} />
+					<TaskTable onTaskClick={openTask} filterParams={filterParams} isMobile={isMobile} />
 				)}
 				<TaskDrawer
 					taskId={taskId}

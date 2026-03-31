@@ -31,7 +31,7 @@ beforeEach(() => {
 	localStorage.setItem("auth-refresh-token", "test-refresh");
 
 	server.use(
-		http.get("/api/v1/tasks/", () => {
+		http.get("/api/v1/company/tasks/", () => {
 			return HttpResponse.json({
 				count: tasks.length,
 				results: tasks,
@@ -46,11 +46,11 @@ afterEach(() => {
 	localStorage.clear();
 });
 
-function renderTable(onTaskClick = vi.fn()) {
+function renderTable(onTaskClick = vi.fn(), isMobile = false) {
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter>
-				<TaskTable onTaskClick={onTaskClick} />
+				<TaskTable onTaskClick={onTaskClick} isMobile={isMobile} />
 			</MemoryRouter>
 		</QueryClientProvider>,
 	);
@@ -111,12 +111,54 @@ describe("TaskTable", () => {
 
 	it("shows loading skeletons initially", () => {
 		server.use(
-			http.get("/api/v1/tasks/", async () => {
+			http.get("/api/v1/company/tasks/", async () => {
 				await new Promise((r) => setTimeout(r, 10000));
 				return HttpResponse.json({});
 			}),
 		);
 		renderTable();
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
+	});
+});
+
+describe("TaskTable mobile", () => {
+	it("renders cards instead of table on mobile", async () => {
+		renderTable(vi.fn(), true);
+		await waitFor(() => {
+			expect(screen.getAllByTestId(/^task-table-card-/).length).toBeGreaterThan(0);
+		});
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	});
+
+	it("renders task name and status badge in card", async () => {
+		renderTable(vi.fn(), true);
+		await waitFor(() => {
+			expect(screen.getAllByText("Согласование цены на арматуру").length).toBeGreaterThan(0);
+		});
+		expect(screen.getAllByText("Назначено").length).toBeGreaterThan(0);
+	});
+
+	it("calls onTaskClick when card is clicked", async () => {
+		const onTaskClick = vi.fn();
+		renderTable(onTaskClick, true);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("task-table-card-task-1")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByTestId("task-table-card-task-1"));
+		expect(onTaskClick).toHaveBeenCalledWith("task-1");
+	});
+
+	it("shows skeleton cards while loading", () => {
+		server.use(
+			http.get("/api/v1/company/tasks/", async () => {
+				await new Promise((r) => setTimeout(r, 10000));
+				return HttpResponse.json({});
+			}),
+		);
+		renderTable(vi.fn(), true);
+		expect(screen.getAllByTestId("skeleton-card").length).toBeGreaterThan(0);
 	});
 });

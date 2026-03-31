@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { TaskBoardResponse } from "./api-client";
 import {
 	changeTaskStatus,
 	fetchItems,
@@ -37,6 +38,8 @@ function addTaskToCache(cache: TasksCache, task: Task): TasksCache {
 
 export function useTaskColumns(params?: TaskFilterParams) {
 	const queryParams = params ?? {};
+	const queryClient = useQueryClient();
+
 	const boardQuery = useQuery({
 		queryKey: ["tasks-board", queryParams],
 		queryFn: () =>
@@ -49,14 +52,41 @@ export function useTaskColumns(params?: TaskFilterParams) {
 			}),
 	});
 
-	const boardData = boardQuery.data;
+	function loadMore(status: TaskStatus) {
+		const current = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", queryParams]);
+		const cursor = current?.[status]?.next;
+		if (!cursor) return;
+
+		fetchTaskBoard({
+			q: queryParams.q,
+			item: queryParams.item,
+			company: queryParams.company,
+			sort: queryParams.sort,
+			dir: queryParams.dir,
+			column: status,
+			cursor,
+		})
+			.then((page) => {
+				queryClient.setQueryData<TaskBoardResponse>(["tasks-board", queryParams], (old) => {
+					const col = old?.[status];
+					if (!col) return old;
+					return {
+						...old,
+						[status]: { ...col, results: [...col.results, ...(page.results ?? [])], next: page.next ?? null },
+					};
+				});
+			})
+			.catch((err: unknown) => {
+				toast.error(getErrorDetail(err) ?? "Ошибка загрузки");
+			});
+	}
 
 	function columnState(status: TaskStatus) {
-		const column = boardData?.[status];
+		const column = boardQuery.data?.[status];
 		return {
 			tasks: column?.results ?? [],
 			hasNextPage: column?.next != null,
-			loadMore: () => {},
+			loadMore: () => loadMore(status),
 			isLoading: boardQuery.isLoading,
 			isFetchingNextPage: false,
 		};
@@ -105,24 +135,41 @@ export function useTask(id: string | null) {
 	});
 }
 
+type FoundTask = { task: Task; oldStatus: TaskStatus; queryKey: readonly unknown[]; isBoardCache: boolean };
+
 function findTaskInCaches(queryClient: ReturnType<typeof useQueryClient>) {
-	return (id: string): { task: Task; oldStatus: TaskStatus; queryKey: readonly unknown[] } | undefined => {
+	return (id: string): FoundTask | undefined => {
 		for (const s of TASK_STATUSES) {
 			const entries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", s] });
 			for (const [key, data] of entries) {
 				if (!data) continue;
 				for (const page of data.pages) {
 					const found = page.tasks.find((t) => t.id === id);
-					if (found) return { task: found, oldStatus: s, queryKey: key };
+					if (found) return { task: found, oldStatus: s, queryKey: key, isBoardCache: false };
 				}
 			}
 		}
+
+		const boardEntries = queryClient.getQueriesData<TaskBoardResponse>({ queryKey: ["tasks-board"] });
+		for (const [key, data] of boardEntries) {
+			if (!data) continue;
+			for (const s of TASK_STATUSES) {
+				const col = data[s];
+				if (!col) continue;
+				const found = col.results.find((t) => t.id === id);
+				if (found) return { task: found, oldStatus: s, queryKey: key, isBoardCache: true };
+			}
+		}
+
 		return undefined;
 	};
 }
 
 async function cancelAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>) {
-	await queryClient.cancelQueries({ queryKey: ["tasks"] });
+	await Promise.all([
+		queryClient.cancelQueries({ queryKey: ["tasks"] }),
+		queryClient.cancelQueries({ queryKey: ["tasks-board"] }),
+	]);
 }
 
 function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>, taskId?: string) {
@@ -132,7 +179,7 @@ function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>
 }
 
 type OptimisticContext = {
-	snapshots: Array<{ key: readonly unknown[]; data: TasksCache }>;
+	snapshots: Array<{ key: readonly unknown[]; data: unknown }>;
 };
 
 function rollbackTaskSnapshots(queryClient: ReturnType<typeof useQueryClient>, context: OptimisticContext | undefined) {
@@ -153,21 +200,40 @@ export function useUpdateTaskStatus() {
 
 			const found = findTask(id);
 			if (!found) return;
-			const { task, queryKey: sourceKey } = found;
+			const { task, oldStatus, queryKey: sourceKey, isBoardCache } = found;
 
 			const snapshots: OptimisticContext["snapshots"] = [];
 
-			const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
-			if (sourceData) {
-				snapshots.push({ key: sourceKey, data: sourceData });
-				queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
-			}
+			if (isBoardCache) {
+				const boardData = queryClient.getQueryData<TaskBoardResponse>(sourceKey);
+				if (boardData) {
+					snapshots.push({ key: sourceKey, data: boardData });
+					queryClient.setQueryData<TaskBoardResponse>(sourceKey, (old) => {
+						if (!old) return old;
+						const srcCol = old[oldStatus];
+						const tgtCol = old[newStatus];
+						return {
+							...old,
+							[oldStatus]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
+							[newStatus]: tgtCol
+								? { ...tgtCol, results: [{ ...task, status: newStatus }, ...tgtCol.results] }
+								: tgtCol,
+						};
+					});
+				}
+			} else {
+				const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
+				if (sourceData) {
+					snapshots.push({ key: sourceKey, data: sourceData });
+					queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
+				}
 
-			const targetEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", newStatus] });
-			for (const [key, data] of targetEntries) {
-				if (data) {
-					snapshots.push({ key, data });
-					queryClient.setQueryData<TasksCache>(key, addTaskToCache(data, { ...task, status: newStatus }));
+				const targetEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", newStatus] });
+				for (const [key, data] of targetEntries) {
+					if (data) {
+						snapshots.push({ key, data });
+						queryClient.setQueryData<TasksCache>(key, addTaskToCache(data, { ...task, status: newStatus }));
+					}
 				}
 			}
 
@@ -197,25 +263,49 @@ export function useSubmitAnswer() {
 
 			const found = findTask(id);
 			if (!found) return;
-			const { task, oldStatus, queryKey: sourceKey } = found;
+			const { task, oldStatus, queryKey: sourceKey, isBoardCache } = found;
 
 			const snapshots: OptimisticContext["snapshots"] = [];
 
-			const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
-			if (sourceData) {
-				snapshots.push({ key: sourceKey, data: sourceData });
-				queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
-			}
+			if (isBoardCache) {
+				const boardData = queryClient.getQueryData<TaskBoardResponse>(sourceKey);
+				if (boardData) {
+					snapshots.push({ key: sourceKey, data: boardData });
+					if (oldStatus !== "completed") {
+						queryClient.setQueryData<TaskBoardResponse>(sourceKey, (old) => {
+							if (!old) return old;
+							const srcCol = old[oldStatus];
+							const completedCol = old.completed;
+							return {
+								...old,
+								[oldStatus]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
+								completed: completedCol
+									? {
+											...completedCol,
+											results: [{ ...task, status: "completed", completedResponse: answer }, ...completedCol.results],
+										}
+									: completedCol,
+							};
+						});
+					}
+				}
+			} else {
+				const sourceData = queryClient.getQueryData<TasksCache>(sourceKey);
+				if (sourceData) {
+					snapshots.push({ key: sourceKey, data: sourceData });
+					queryClient.setQueryData<TasksCache>(sourceKey, removeTaskFromCache(sourceData, id));
+				}
 
-			if (oldStatus !== "completed") {
-				const completedEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", "completed"] });
-				for (const [key, data] of completedEntries) {
-					if (data) {
-						snapshots.push({ key, data });
-						queryClient.setQueryData<TasksCache>(
-							key,
-							addTaskToCache(data, { ...task, status: "completed", completedResponse: answer }),
-						);
+				if (oldStatus !== "completed") {
+					const completedEntries = queryClient.getQueriesData<TasksCache>({ queryKey: ["tasks", "completed"] });
+					for (const [key, data] of completedEntries) {
+						if (data) {
+							snapshots.push({ key, data });
+							queryClient.setQueryData<TasksCache>(
+								key,
+								addTaskToCache(data, { ...task, status: "completed", completedResponse: answer }),
+							);
+						}
 					}
 				}
 			}
