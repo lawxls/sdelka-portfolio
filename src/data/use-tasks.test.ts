@@ -411,4 +411,150 @@ describe("useSubmitAnswer", () => {
 
 		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
+
+	it("uploads attachments before changing status when files provided", async () => {
+		const callOrder: string[] = [];
+
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				callOrder.push("upload");
+				return HttpResponse.json([
+					{
+						id: "att-1",
+						fileName: "doc.pdf",
+						fileSize: 1024,
+						fileType: "pdf",
+						contentType: "application/pdf",
+						fileUrl: "/files/doc.pdf",
+						uploadedAt: "2026-03-15T10:00:00.000Z",
+					},
+				]);
+			}),
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				callOrder.push("status");
+				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		const files = [new File(["content"], "doc.pdf", { type: "application/pdf" })];
+
+		await act(async () => {
+			await result.current.mutateAsync({ id: "t1", answer: "My answer", files });
+		});
+
+		expect(callOrder).toEqual(["upload", "status"]);
+	});
+
+	it("skips attachment upload when no files provided", async () => {
+		let uploadCalled = false;
+
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				uploadCalled = true;
+				return HttpResponse.json([]);
+			}),
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			await result.current.mutateAsync({ id: "t1", answer: "My answer" });
+		});
+
+		expect(uploadCalled).toBe(false);
+	});
+
+	it("does not change status when attachment upload fails", async () => {
+		const { toast } = await import("sonner");
+		let statusCalled = false;
+
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				return HttpResponse.json({ detail: "File too large" }, { status: 400 });
+			}),
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				statusCalled = true;
+				return HttpResponse.json(makeTask("t1", { status: "completed" }));
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		const files = [new File(["x".repeat(100)], "big.pdf")];
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", answer: "My answer", files });
+			} catch {}
+		});
+
+		expect(statusCalled).toBe(false);
+		expect(toast.error).toHaveBeenCalledWith("File too large");
+	});
+
+	it("rolls back optimistic update when status change fails after successful upload", async () => {
+		const { toast } = await import("sonner");
+
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				return HttpResponse.json([
+					{
+						id: "att-1",
+						fileName: "doc.pdf",
+						fileSize: 1024,
+						fileType: "pdf",
+						contentType: "application/pdf",
+						fileUrl: "/files/doc.pdf",
+						uploadedAt: "2026-03-15T10:00:00.000Z",
+					},
+				]);
+			}),
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Task is locked" }, { status: 400 });
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		const files = [new File(["content"], "doc.pdf")];
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", answer: "My answer", files });
+			} catch {}
+		});
+
+		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
+		expect(assigned?.pages[0].tasks).toHaveLength(1);
+
+		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
+		expect(completed?.pages[0].tasks).toHaveLength(0);
+
+		expect(toast.error).toHaveBeenCalledWith("Task is locked");
+	});
 });

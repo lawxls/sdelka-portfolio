@@ -199,6 +199,76 @@ describe("TaskDrawer", () => {
 		});
 	});
 
+	it("submitting answer with files uploads attachments then changes status", async () => {
+		const callOrder: string[] = [];
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				callOrder.push("upload");
+				return HttpResponse.json([
+					{
+						id: "att-1",
+						fileName: "report.pdf",
+						fileSize: 2048,
+						fileType: "pdf",
+						contentType: "application/pdf",
+						fileUrl: "/files/report.pdf",
+						uploadedAt: "2026-03-15T10:00:00.000Z",
+					},
+				]);
+			}),
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				callOrder.push("status");
+				return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Принято" });
+			}),
+		);
+
+		const onClose = vi.fn();
+		renderDrawer("task-1", onClose);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
+		});
+
+		const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+		await user.upload(fileInput, new File(["data"], "report.pdf", { type: "application/pdf" }));
+		await user.type(screen.getByPlaceholderText("Введите ответ…"), "Принято");
+		await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+		await waitFor(() => {
+			expect(onClose).toHaveBeenCalled();
+		});
+
+		expect(callOrder).toEqual(["upload", "status"]);
+	});
+
+	it("submitting answer without files only calls status endpoint", async () => {
+		let uploadCalled = false;
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", () => {
+				uploadCalled = true;
+				return HttpResponse.json([]);
+			}),
+		);
+
+		const onClose = vi.fn();
+		renderDrawer("task-1", onClose);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
+		});
+
+		await user.type(screen.getByPlaceholderText("Введите ответ…"), "Принято в работу");
+		await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+		await waitFor(() => {
+			expect(onClose).toHaveBeenCalled();
+		});
+
+		expect(uploadCalled).toBe(false);
+	});
+
 	it("does not render drawer content when taskId is null", () => {
 		renderDrawer(null);
 		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();

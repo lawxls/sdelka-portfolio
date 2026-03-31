@@ -86,7 +86,7 @@ function TaskDrawerContent({
 	function handleSubmitAnswer() {
 		if (!answerText.trim()) return;
 		submitAnswerMutation.mutate(
-			{ id: currentTask.id, answer: answerText.trim(), attachments: files.map((f) => f.name) },
+			{ id: currentTask.id, answer: answerText.trim(), files: files.length > 0 ? files : undefined },
 			{
 				onSuccess: () => {
 					toast.success("Ответ отправлен");

@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { changeTaskStatus, fetchTask, fetchTaskBoard, fetchTasks } from "./api-client";
+import { changeTaskStatus, fetchTask, fetchTaskBoard, fetchTasks, uploadTaskAttachments } from "./api-client";
 import { ApiError } from "./api-error";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
@@ -185,8 +185,12 @@ export function useSubmitAnswer() {
 	const findTask = findTaskInCaches(queryClient);
 
 	return useMutation({
-		mutationFn: ({ id, answer }: { id: string; answer: string; attachments?: string[] }) =>
-			changeTaskStatus(id, { status: "completed", completedResponse: answer }),
+		mutationFn: async ({ id, answer, files }: { id: string; answer: string; files?: File[] }) => {
+			if (files && files.length > 0) {
+				await uploadTaskAttachments(id, files);
+			}
+			return changeTaskStatus(id, { status: "completed", completedResponse: answer });
+		},
 		onMutate: async ({ id, answer }) => {
 			await cancelAllTaskQueries(queryClient);
 
