@@ -884,11 +884,11 @@ describe("CompaniesPage Сотрудники tab", () => {
 		expect(within(tab).getByText("Пользователь")).toBeInTheDocument();
 	});
 
-	test("responsible employee shows star indicator", async () => {
+	test("responsible employee shows badge", async () => {
 		await openEmployeesTab();
 
 		const card = screen.getByTestId("employee-emp-1");
-		expect(within(card).getByLabelText("Ответственный")).toBeInTheDocument();
+		expect(within(card).getByText("Ответственный")).toBeInTheDocument();
 	});
 
 	test("expand card shows profile fields in view mode and permissions matrix", async () => {
