@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
@@ -33,7 +34,8 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			tco: 2700,
 			deferralDays: 30,
 			rating: 85,
-			aiComment: "Надёжный поставщик с конкурентными ценами.",
+			aiDescription: "Надёжный поставщик с конкурентными ценами.",
+			aiRecommendations: "Рекомендуется для долгосрочного сотрудничества.",
 			positionOffers: [
 				{ name: "Арматура А500С ∅12", quantity: 100, pricePerUnit: 1200, total: 120_000 },
 				{ name: "Проволока вязальная", quantity: 50, pricePerUnit: 800, total: 40_000 },
@@ -44,7 +46,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			],
 			chatHistory: [
 				{
-					sender: "Отдел закупок",
+					sender: "Агент",
 					timestamp: "2026-02-20T10:00:00.000Z",
 					body: "Добрый день! Просим направить КП.",
 					isOurs: true,
@@ -62,90 +64,85 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 	};
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<SupplierDetailDrawer {...defaultProps} {...props} />
+			<TooltipProvider>
+				<SupplierDetailDrawer {...defaultProps} {...props} />
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
 
 describe("SupplierDetailDrawer", () => {
-	test("renders company name and address", () => {
+	test("renders company name and status inline", () => {
 		renderDrawer();
-		// Company name appears in both header and chat — verify title specifically
 		expect(screen.getAllByText("ООО «Альфа-Трейд»").length).toBeGreaterThanOrEqual(1);
-		expect(screen.getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
+		expect(screen.getByText("Получено КП")).toBeInTheDocument();
+		// Bullet separator between name and status
+		expect(screen.getByText("·")).toBeInTheDocument();
 	});
 
-	test("renders website", () => {
+	test("renders address and website", () => {
 		renderDrawer();
+		expect(screen.getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
 		expect(screen.getByText("alfa-trade.ru")).toBeInTheDocument();
 	});
 
-	test("renders TCO breakdown: price/unit, delivery cost, total TCO", () => {
+	test("renders TCO section with correct labels", () => {
 		renderDrawer();
-		// Section label
-		expect(screen.getByText("Стоимость")).toBeInTheDocument();
-		// Values — check labels and amounts
-		expect(screen.getByText("Цена за единицу")).toBeInTheDocument();
-		expect(screen.getByText("Стоимость доставки")).toBeInTheDocument();
-		expect(screen.getByText("Итого TCO")).toBeInTheDocument();
+		expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+		expect(screen.getByText("Цена за ед.")).toBeInTheDocument();
+		expect(screen.getByText("Доставка")).toBeInTheDocument();
+		expect(screen.getByText("Отсрочка")).toBeInTheDocument();
+		expect(screen.getByText("TCO (итого)")).toBeInTheDocument();
 	});
 
-	test("renders deferral days separately", () => {
+	test("renders deferral days", () => {
 		renderDrawer();
-		expect(screen.getByText("Отсрочка")).toBeInTheDocument();
 		expect(screen.getByText(/30\s*дней/)).toBeInTheDocument();
 	});
 
-	test("renders rating as percentage", () => {
+	test("does not render rating section", () => {
 		renderDrawer();
-		expect(screen.getByText("Рейтинг")).toBeInTheDocument();
-		expect(screen.getByText("85%")).toBeInTheDocument();
+		expect(screen.queryByText("Рейтинг")).not.toBeInTheDocument();
+		expect(screen.queryByText("85%")).not.toBeInTheDocument();
 	});
 
-	test("renders AI comment", () => {
+	test("renders agent comment with description and recommendations", () => {
 		renderDrawer();
-		expect(screen.getByText("AI-комментарий")).toBeInTheDocument();
+		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
+		expect(screen.getByText("Описание")).toBeInTheDocument();
 		expect(screen.getByText("Надёжный поставщик с конкурентными ценами.")).toBeInTheDocument();
+		expect(screen.getByText("Рекомендации")).toBeInTheDocument();
+		expect(screen.getByText("Рекомендуется для долгосрочного сотрудничества.")).toBeInTheDocument();
 	});
 
-	test("renders position offers table", () => {
+	test("renders documents section with renamed title", () => {
 		renderDrawer();
-		expect(screen.getByText("Позиции предложения")).toBeInTheDocument();
-		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
-		expect(screen.getByText("Проволока вязальная")).toBeInTheDocument();
-		// 4 column headers
-		expect(screen.getByText("Наименование")).toBeInTheDocument();
-		expect(screen.getByText("Кол-во")).toBeInTheDocument();
-	});
-
-	test("renders documents list", () => {
-		renderDrawer();
-		expect(screen.getByText("Документы")).toBeInTheDocument();
+		expect(screen.getByText("Документы из диалога")).toBeInTheDocument();
 		expect(screen.getByText("Коммерческое предложение.pdf")).toBeInTheDocument();
 		expect(screen.getByText("Прайс-лист 2026.xlsx")).toBeInTheDocument();
-		// File sizes formatted
 		expect(screen.getByText("239 КБ")).toBeInTheDocument();
 		expect(screen.getByText("87 КБ")).toBeInTheDocument();
 	});
 
-	test("renders chat history with message bubbles", () => {
+	test("renders email-style history with sender and timestamp", () => {
 		renderDrawer();
-		expect(screen.getByText("Переписка")).toBeInTheDocument();
+		expect(screen.getByText("История общения")).toBeInTheDocument();
 		expect(screen.getByText("Добрый день! Просим направить КП.")).toBeInTheDocument();
 		expect(screen.getByText("Здравствуйте! КП направлено.")).toBeInTheDocument();
-		// Sender names within chat bubbles
-		expect(screen.getByText("Отдел закупок")).toBeInTheDocument();
-		// Company name appears in both header and chat — verify chat sender via bubble
-		const theirBubble = screen.getByText("Здравствуйте! КП направлено.").closest("[data-chat-msg]") as HTMLElement;
-		expect(within(theirBubble).getByText("ООО «Альфа-Трейд»")).toBeInTheDocument();
+		// Sender names in email headers
+		expect(screen.getByText("Агент")).toBeInTheDocument();
+		const theirEmail = screen.getByText("Здравствуйте! КП направлено.").closest("[data-email-msg]") as HTMLElement;
+		expect(within(theirEmail).getByText("ООО «Альфа-Трейд»")).toBeInTheDocument();
 	});
 
-	test("our messages align right, supplier messages align left", () => {
+	test("email messages use article elements with border styling", () => {
 		renderDrawer();
-		const ourMsg = screen.getByText("Добрый день! Просим направить КП.").closest("[data-chat-msg]") as HTMLElement;
-		const theirMsg = screen.getByText("Здравствуйте! КП направлено.").closest("[data-chat-msg]") as HTMLElement;
-		expect(ourMsg).toHaveAttribute("data-chat-msg", "ours");
-		expect(theirMsg).toHaveAttribute("data-chat-msg", "theirs");
+		const ourMsg = screen.getByText("Добрый день! Просим направить КП.").closest("[data-email-msg]") as HTMLElement;
+		const theirMsg = screen.getByText("Здравствуйте! КП направлено.").closest("[data-email-msg]") as HTMLElement;
+		expect(ourMsg.tagName).toBe("ARTICLE");
+		expect(theirMsg.tagName).toBe("ARTICLE");
+		expect(ourMsg).toHaveAttribute("data-email-msg", "ours");
+		expect(theirMsg).toHaveAttribute("data-email-msg", "theirs");
 	});
 
 	test("does not render when open is false", () => {
@@ -161,18 +158,6 @@ describe("SupplierDetailDrawer", () => {
 		expect(onClose).toHaveBeenCalled();
 	});
 
-	test("renders empty position offers gracefully", () => {
-		renderDrawer({
-			supplier: makeSupplier("s2", {
-				companyName: "ООО «Бета»",
-				status: "ждем_ответа",
-				positionOffers: [],
-			}),
-		});
-		// Should not render offers section when empty
-		expect(screen.queryByText("Позиции предложения")).not.toBeInTheDocument();
-	});
-
 	test("renders empty documents gracefully", () => {
 		renderDrawer({
 			supplier: makeSupplier("s3", {
@@ -180,7 +165,7 @@ describe("SupplierDetailDrawer", () => {
 				documents: [],
 			}),
 		});
-		expect(screen.queryByText("Документы")).not.toBeInTheDocument();
+		expect(screen.queryByText("Документы из диалога")).not.toBeInTheDocument();
 	});
 
 	test("renders empty chat history gracefully", () => {
@@ -190,6 +175,6 @@ describe("SupplierDetailDrawer", () => {
 				chatHistory: [],
 			}),
 		});
-		expect(screen.queryByText("Переписка")).not.toBeInTheDocument();
+		expect(screen.queryByText("История общения")).not.toBeInTheDocument();
 	});
 });

@@ -1,5 +1,16 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ListFilter, Search, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	Download,
+	ListFilter,
+	LoaderCircle,
+	Search,
+	Trash2,
+} from "lucide-react";
 import { useRef } from "react";
+import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -11,15 +22,16 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatCurrency, formatRating, stripProtocol } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -35,21 +47,34 @@ interface SuppliersTableProps {
 	onStatusFilter: (status: SupplierStatus) => void;
 	selectedIds: Set<string>;
 	onSelectionChange: (idOrAll: string) => void;
+	onArchive: () => void;
+	isArchiving: boolean;
 	onDelete: () => void;
 	isDeleting: boolean;
 	onRowClick?: (supplierId: string) => void;
+	hasNextPage?: boolean;
+	loadMore?: () => void;
+	isFetchingNextPage?: boolean;
 }
 
 const SORTABLE_COLUMNS: { label: string; field: SupplierSortField }[] = [
-	{ label: "Компания", field: "companyName" },
-	{ label: "Цена/ед.", field: "pricePerUnit" },
+	{ label: "КОМПАНИЯ", field: "companyName" },
+	{ label: "ЦЕНА/ЕД.", field: "pricePerUnit" },
 	{ label: "TCO", field: "tco" },
-	{ label: "Рейтинг", field: "rating" },
+	{ label: "РЕЙТИНГ", field: "rating" },
 ];
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
+
+function ratingColor(value: number): string {
+	if (value >= 80) return "text-[oklch(0.50_0.18_142)]";
+	if (value >= 60) return "text-[oklch(0.55_0.15_120)]";
+	if (value >= 40) return "text-[oklch(0.60_0.15_85)]";
+	if (value >= 20) return "text-[oklch(0.55_0.18_50)]";
+	return "text-[oklch(0.55_0.20_25)]";
+}
 
 function SortIcon({ sort, field }: { sort: SupplierSortState; field: SupplierSortField }) {
 	if (sort?.field !== field) return <ArrowUpDown className="ml-1 size-3.5" aria-hidden="true" />;
@@ -68,10 +93,16 @@ export function SuppliersTable({
 	onStatusFilter,
 	selectedIds,
 	onSelectionChange,
+	onArchive,
+	isArchiving,
 	onDelete,
 	isDeleting,
 	onRowClick,
+	hasNextPage,
+	loadMore,
+	isFetchingNextPage,
 }: SuppliersTableProps) {
+	const sentinelRef = useIntersectionObserver(() => loadMore?.());
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
 
@@ -84,47 +115,26 @@ export function SuppliersTable({
 	const hasSelection = selectedIds.size > 0;
 	const allSelected = suppliers.length > 0 && selectedIds.size === suppliers.length;
 
-	if (isLoading) {
-		return (
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="w-10" />
-						<TableHead>Компания</TableHead>
-						<TableHead>Email</TableHead>
-						<TableHead>Сайт</TableHead>
-						<TableHead>Цена/ед.</TableHead>
-						<TableHead>TCO</TableHead>
-						<TableHead>Рейтинг</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{Array.from({ length: 5 }, (_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows never reorder
-						<TableRow key={i}>
-							{Array.from({ length: 7 }, (_, j) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cells
-								<TableCell key={j}>
-									<Skeleton className="h-4 w-20" />
-								</TableCell>
-							))}
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-		);
-	}
-
-	if (suppliers.length === 0 && !search && activeStatuses.length === 0) {
+	if (!isLoading && suppliers.length === 0 && !search && activeStatuses.length === 0) {
 		return <p className="py-8 text-center text-sm text-muted-foreground">Нет поставщиков</p>;
 	}
 
 	return (
 		<div className="flex flex-col gap-3">
-			{/* Toolbar: selection actions or search/filter */}
 			{hasSelection ? (
-				<div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2">
+				<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
 					<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={isArchiving}
+						onClick={onArchive}
+						aria-label="Архивировать"
+					>
+						<Archive className="mr-1 size-4" aria-hidden="true" />
+						Архивировать
+					</Button>
 					<AlertDialog>
 						<AlertDialogTrigger asChild>
 							<Button type="button" variant="destructive" size="sm" disabled={isDeleting} aria-label="Удалить">
@@ -151,8 +161,8 @@ export function SuppliersTable({
 					</AlertDialog>
 				</div>
 			) : (
-				<div className="flex items-center gap-2">
-					<div className="relative flex-1">
+				<div className="flex items-center gap-2 px-3">
+					<div className="relative max-w-56">
 						<Search
 							className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
 							aria-hidden="true"
@@ -162,23 +172,34 @@ export function SuppliersTable({
 							placeholder="Поиск…"
 							defaultValue={search}
 							onChange={handleSearchInput}
-							className="pl-8"
+							className="h-8 pl-8 text-sm"
 							spellCheck={false}
 							autoComplete="off"
 						/>
 					</div>
 					<Popover>
-						<PopoverTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтр по статусу" className="relative">
-								<ListFilter aria-hidden="true" />
-								{activeStatuses.length > 0 && (
-									<span
-										className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
-										data-testid="filter-indicator"
-									/>
-								)}
-							</Button>
-						</PopoverTrigger>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<PopoverTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										aria-label="Фильтр по статусу"
+										className="relative"
+									>
+										<ListFilter aria-hidden="true" />
+										{activeStatuses.length > 0 && (
+											<span
+												className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
+												data-testid="filter-indicator"
+											/>
+										)}
+									</Button>
+								</PopoverTrigger>
+							</TooltipTrigger>
+							<TooltipContent>Фильтр по статусу</TooltipContent>
+						</Tooltip>
 						<PopoverContent align="end" className="w-56">
 							<div className="flex flex-col gap-1">
 								{SUPPLIER_STATUSES.map((status) => (
@@ -195,6 +216,22 @@ export function SuppliersTable({
 							</div>
 						</PopoverContent>
 					</Popover>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
+								<Download aria-hidden="true" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Скачать таблицу</TooltipContent>
+					</Tooltip>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Архив">
+								<Archive aria-hidden="true" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Архив</TooltipContent>
+					</Tooltip>
 				</div>
 			)}
 
@@ -208,8 +245,20 @@ export function SuppliersTable({
 								aria-label="Выбрать все"
 							/>
 						</TableHead>
-						{SORTABLE_COLUMNS.map((col) => (
-							<TableHead key={col.field}>
+						<TableHead>
+							<button
+								type="button"
+								className="inline-flex items-center font-medium hover:text-foreground"
+								onClick={() => onSort("companyName")}
+							>
+								КОМПАНИЯ
+								<SortIcon sort={sort} field="companyName" />
+							</button>
+						</TableHead>
+						<TableHead>EMAIL</TableHead>
+						<TableHead>САЙТ</TableHead>
+						{SORTABLE_COLUMNS.filter((col) => col.field !== "companyName").map((col) => (
+							<TableHead key={col.field} className="text-right">
 								<button
 									type="button"
 									className="inline-flex items-center font-medium hover:text-foreground"
@@ -220,12 +269,22 @@ export function SuppliersTable({
 								</button>
 							</TableHead>
 						))}
-						<TableHead>Email</TableHead>
-						<TableHead>Сайт</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{suppliers.length === 0 ? (
+					{isLoading ? (
+						Array.from({ length: 5 }, (_, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows never reorder
+							<TableRow key={i}>
+								{Array.from({ length: 7 }, (_, j) => (
+									// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cells
+									<TableCell key={j}>
+										<Skeleton className="h-4 w-20" />
+									</TableCell>
+								))}
+							</TableRow>
+						))
+					) : suppliers.length === 0 ? (
 						<TableRow>
 							<TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
 								Ничего не найдено
@@ -248,21 +307,40 @@ export function SuppliersTable({
 								<TableCell>
 									<div className="flex flex-col gap-1">
 										<span className="font-medium">{supplier.companyName}</span>
-										<Badge variant="outline" className="w-fit text-xs">
-											{SUPPLIER_STATUS_LABELS[supplier.status]}
-										</Badge>
+										<SupplierStatusIndicator status={supplier.status} className="text-xs" />
 									</div>
 								</TableCell>
-								<TableCell className="tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
-								<TableCell className="tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
-								<TableCell className="tabular-nums">{formatRating(supplier.rating)}</TableCell>
-								<TableCell>{supplier.email}</TableCell>
-								<TableCell>{stripProtocol(supplier.website)}</TableCell>
+								<TableCell className="cursor-text select-text" onClick={(e) => e.stopPropagation()}>
+									{supplier.email}
+								</TableCell>
+								<TableCell onClick={(e) => e.stopPropagation()}>
+									<a
+										href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+									>
+										{stripProtocol(supplier.website)}
+									</a>
+								</TableCell>
+								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
+								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
+								<TableCell
+									className={`text-right tabular-nums ${supplier.rating != null ? ratingColor(supplier.rating) : ""}`}
+								>
+									{formatRating(supplier.rating)}
+								</TableCell>
 							</TableRow>
 						))
 					)}
 				</TableBody>
 			</Table>
+			{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
+			{isFetchingNextPage && (
+				<div className="flex justify-center py-4" data-testid="loading-more-spinner">
+					<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
+				</div>
+			)}
 		</div>
 	);
 }

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
@@ -57,12 +58,16 @@ function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>>
 		onStatusFilter: vi.fn(),
 		selectedIds: new Set<string>(),
 		onSelectionChange: vi.fn(),
+		onArchive: vi.fn(),
+		isArchiving: false,
 		onDelete: vi.fn(),
 		isDeleting: false,
 	};
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<SuppliersTable {...defaultProps} {...props} />
+			<TooltipProvider>
+				<SuppliersTable {...defaultProps} {...props} />
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -72,12 +77,12 @@ describe("SuppliersTable", () => {
 		renderTable();
 		const headers = screen.getAllByRole("columnheader");
 		const headerTexts = headers.map((h) => h.textContent?.trim());
-		expect(headerTexts).toContain("Компания");
-		expect(headerTexts).toContain("Email");
-		expect(headerTexts).toContain("Сайт");
-		expect(headerTexts).toContain("Цена/ед.");
+		expect(headerTexts).toContain("КОМПАНИЯ");
+		expect(headerTexts).toContain("EMAIL");
+		expect(headerTexts).toContain("САЙТ");
+		expect(headerTexts).toContain("ЦЕНА/ЕД.");
 		expect(headerTexts).toContain("TCO");
-		expect(headerTexts).toContain("Рейтинг");
+		expect(headerTexts).toContain("РЕЙТИНГ");
 	});
 
 	test("renders supplier rows with company name and status badge", () => {

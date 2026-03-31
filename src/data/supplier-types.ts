@@ -55,6 +55,8 @@ export interface SupplierFilterParams {
 	statuses?: SupplierStatus[];
 	sort?: SupplierSortField;
 	dir?: "asc" | "desc";
+	cursor?: string;
+	limit?: number;
 }
 
 export interface Supplier {
@@ -70,7 +72,8 @@ export interface Supplier {
 	rating: number | null;
 	deliveryCost: number;
 	deferralDays: number;
-	aiComment: string;
+	aiDescription: string;
+	aiRecommendations: string;
 	documents: SupplierDocument[];
 	chatHistory: SupplierChatMessage[];
 	positionOffers: SupplierPositionOffer[];

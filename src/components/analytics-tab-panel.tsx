@@ -14,11 +14,11 @@ const CHART_LABELS: Record<SupplierStatus, string> = {
 };
 
 const CHART_COLORS: Record<SupplierStatus, string> = {
-	письмо_не_отправлено: "var(--color-chart-1)",
-	ждем_ответа: "var(--color-chart-2)",
-	переговоры: "var(--color-chart-3)",
-	получено_кп: "var(--color-chart-4)",
-	отказ: "var(--color-chart-5)",
+	письмо_не_отправлено: "oklch(0.70 0.10 250)",
+	ждем_ответа: "oklch(0.60 0.22 295)",
+	переговоры: "oklch(0.62 0.20 250)",
+	получено_кп: "oklch(0.60 0.20 145)",
+	отказ: "oklch(0.65 0.22 25)",
 };
 
 export interface StatusCount {
@@ -62,25 +62,25 @@ export function AnalyticsTabPanel({ itemId }: { itemId: string }) {
 	const total = suppliers.length;
 
 	return (
-		<div data-testid="analytics-chart" className="flex flex-col items-center gap-6">
-			<div className="relative">
-				<ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[280px]">
+		<div data-testid="analytics-chart" className="flex items-center gap-10 rounded-lg border p-6">
+			<div className="relative shrink-0">
+				<ChartContainer config={chartConfig} className="aspect-square h-[400px] w-[400px]">
 					<PieChart>
 						<ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-						<Pie data={statusCounts} dataKey="count" nameKey="status" innerRadius={60} strokeWidth={2} />
+						<Pie data={statusCounts} dataKey="count" nameKey="status" innerRadius={100} strokeWidth={2} />
 					</PieChart>
 				</ChartContainer>
 				<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-					<span className="text-2xl font-bold">{total}</span>
-					<span className="text-xs text-muted-foreground">Поставщиков</span>
+					<span className="text-4xl font-bold">{total}</span>
+					<span className="text-sm text-muted-foreground">Поставщиков</span>
 				</div>
 			</div>
-			<div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+			<div className="flex flex-1 flex-col gap-4">
 				{statusCounts.map((item) => (
-					<div key={item.status} className="flex items-center gap-1.5 text-sm">
-						<div className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: item.fill }} />
-						<span className="text-muted-foreground">{item.label}</span>
-						<span className="tabular-nums font-medium">{item.count}</span>
+					<div key={item.status} className="flex items-center gap-3">
+						<div className="size-3 shrink-0 rounded-full" style={{ backgroundColor: item.fill }} />
+						<span className="text-sm text-muted-foreground">{item.label}</span>
+						<span className="text-lg tabular-nums font-semibold">{item.count}</span>
 					</div>
 				))}
 			</div>

@@ -49,12 +49,20 @@ const WEBSITES = [
 	"optsnab.ru",
 ];
 
-const AI_COMMENTS = [
-	"Поставщик демонстрирует стабильные сроки поставки и конкурентные цены. Рекомендуется для долгосрочного сотрудничества.",
-	"Высокое качество продукции, однако сроки поставки выше среднего. Подходит для некритичных позиций.",
+const AI_DESCRIPTIONS = [
+	"Поставщик демонстрирует стабильные сроки поставки и конкурентные цены. Работает на рынке более 10 лет.",
+	"Высокое качество продукции, однако сроки поставки выше среднего. Сертифицирован по ISO 9001.",
 	"Новый поставщик на рынке. Агрессивная ценовая политика, но недостаточно данных для оценки надёжности.",
 	"Крупный игрок с широким ассортиментом. Цены выше рынка, но высокий уровень сервиса.",
 	"Региональный поставщик с быстрой доставкой в пределах ЦФО. Ограниченный ассортимент.",
+];
+
+const AI_RECOMMENDATIONS = [
+	"Рекомендуется для долгосрочного сотрудничества. Запросить скидку при объёме от 500 ед.",
+	"Подходит для некритичных позиций. Уточнить возможность ускоренной доставки.",
+	"Провести пробную закупку малого объёма для проверки качества и сроков.",
+	"Рассмотреть как резервного поставщика. Торговаться по цене — есть потенциал снижения.",
+	"Использовать для срочных заказов в ЦФО. Не подходит для крупных партий.",
 ];
 
 const DOCUMENT_NAMES = [
@@ -101,7 +109,7 @@ function makeChatHistory(seed: number): SupplierChatMessage[] {
 	const base = new Date("2026-02-15T10:00:00.000Z");
 	return [
 		{
-			sender: "Отдел закупок",
+			sender: "Агент",
 			timestamp: new Date(base.getTime() + seed * 86_400_000).toISOString(),
 			body: "Добрый день! Просим направить КП на запрашиваемые позиции.",
 			isOurs: true,
@@ -129,15 +137,18 @@ function makePositionOffers(seed: number): SupplierPositionOffer[] {
 	});
 }
 
+const LARGE_DATASET_ITEMS = new Set(["420c4c41-550e-4d0f-9f65-4de16b365534"]);
+
 function createSuppliersForItem(itemId: string): Supplier[] {
 	// Use a simple hash of itemId to seed deterministic but bounded data
 	let hash = 0;
 	for (const ch of itemId) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
 	const seed = Math.abs(hash) % 1000;
+	const count = LARGE_DATASET_ITEMS.has(itemId) ? 200 : 10;
 
-	return Array.from({ length: 10 }, (_, i) => {
+	return Array.from({ length: count }, (_, i) => {
 		const idx = seed + i;
-		const status = STATUS_PATTERN[i];
+		const status = STATUS_PATTERN[i % STATUS_PATTERN.length];
 		const isKp = status === "получено_кп";
 		const pricePerUnit = isKp ? 800 + ((idx * 137) % 1200) : null;
 		const deliveryCost = 1000 + ((idx * 53) % 3000);
@@ -157,7 +168,8 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			rating,
 			deliveryCost,
 			deferralDays: 10 + ((idx * 7) % 50),
-			aiComment: AI_COMMENTS[idx % AI_COMMENTS.length],
+			aiDescription: AI_DESCRIPTIONS[idx % AI_DESCRIPTIONS.length],
+			aiRecommendations: AI_RECOMMENDATIONS[idx % AI_RECOMMENDATIONS.length],
 			documents: makeDocuments(idx),
 			chatHistory: makeChatHistory(idx),
 			positionOffers: isKp ? makePositionOffers(idx) : [],
@@ -246,11 +258,29 @@ export async function getSupplier(itemId: string, supplierId: string): Promise<S
 	return suppliers.find((s) => s.id === supplierId) ?? null;
 }
 
-export async function getSuppliers(itemId: string, params?: SupplierFilterParams): Promise<{ suppliers: Supplier[] }> {
+export async function getAllSuppliers(itemId: string): Promise<{ suppliers: Supplier[] }> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	return { suppliers };
+}
+
+const DEFAULT_PAGE_SIZE = 30;
+
+export async function getSuppliers(
+	itemId: string,
+	params?: SupplierFilterParams,
+): Promise<{ suppliers: Supplier[]; nextCursor: string | null }> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
 	const filtered = applySupplierFilters(suppliers, params);
-	return { suppliers: filtered };
+
+	const limit = params?.limit ?? DEFAULT_PAGE_SIZE;
+	const cursorIdx = params?.cursor ? filtered.findIndex((s) => s.id === params.cursor) : 0;
+	const start = cursorIdx === -1 ? 0 : cursorIdx;
+	const page = filtered.slice(start, start + limit);
+	const nextCursor = start + limit < filtered.length ? filtered[start + limit].id : null;
+
+	return { suppliers: page, nextCursor };
 }
 
 export async function deleteSuppliers(itemId: string, supplierIds: string[]): Promise<void> {

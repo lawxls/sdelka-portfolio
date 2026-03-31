@@ -47,9 +47,14 @@ const MOCK_ITEMS: Record<string, ProcurementItem> = {
 	},
 };
 
-// --- Mutable store ---
+// --- Mutable store (lazily populated per item) ---
 
 let store: Map<string, ProcurementItem> = new Map(Object.entries(MOCK_ITEMS));
+
+/** Seed the store with an item fetched from the API so detail/edit works. */
+export function seedItemDetail(item: ProcurementItem) {
+	if (!store.has(item.id)) store.set(item.id, item);
+}
 
 export function _resetItemDetailStore() {
 	store = new Map(Object.entries(MOCK_ITEMS));
