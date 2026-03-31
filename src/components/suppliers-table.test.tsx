@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { makeSupplier } from "@/test-utils";
 
 import { SuppliersTable } from "./suppliers-table";
@@ -339,5 +340,82 @@ describe("SuppliersTable toolbar", () => {
 	test("shows correct selected count", () => {
 		renderTable({ selectedIds: new Set(["s1", "s2"]) });
 		expect(screen.getByText(/выбрано: 2/i)).toBeInTheDocument();
+	});
+});
+
+describe("SuppliersTable mobile cards", () => {
+	let mobileSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		mobileSpy = vi.spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(true);
+	});
+
+	afterEach(() => {
+		mobileSpy.mockRestore();
+	});
+
+	test("renders cards instead of table on mobile", () => {
+		renderTable();
+		// No table element
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+		// Cards present
+		const cards = screen.getAllByTestId("supplier-card");
+		expect(cards).toHaveLength(3);
+	});
+
+	test("each card shows company name and status", () => {
+		renderTable();
+		const cards = screen.getAllByTestId("supplier-card");
+
+		expect(within(cards[0]).getByText("ООО «Альфа»")).toBeInTheDocument();
+		expect(within(cards[0]).getByText("Получено КП")).toBeInTheDocument();
+
+		expect(within(cards[1]).getByText("ООО «Бета»")).toBeInTheDocument();
+		expect(within(cards[1]).getByText("Ждём ответа")).toBeInTheDocument();
+	});
+
+	test("card shows formatted price, tco, and rating for КП supplier", () => {
+		renderTable();
+		const cards = screen.getAllByTestId("supplier-card");
+		const kpCard = cards[0]; // s1 has pricePerUnit=1200, tco=2700, rating=85
+
+		const priceTexts = within(kpCard).getAllByText(/₽/);
+		expect(priceTexts.length).toBeGreaterThan(0);
+		expect(within(kpCard).getByText("85%")).toBeInTheDocument();
+	});
+
+	test("card shows em-dash for missing price/tco/rating", () => {
+		renderTable();
+		const cards = screen.getAllByTestId("supplier-card");
+		const nonKpCard = cards[1]; // s2 has null price/tco/rating
+
+		const dashes = within(nonKpCard).getAllByText("\u2014");
+		expect(dashes.length).toBe(3);
+	});
+
+	test("clicking a card calls onRowClick", async () => {
+		const user = userEvent.setup();
+		const onRowClick = vi.fn();
+		renderTable({ onRowClick });
+
+		const cards = screen.getAllByTestId("supplier-card");
+		await user.click(cards[0]);
+		expect(onRowClick).toHaveBeenCalledWith("s1");
+	});
+
+	test("shows empty state on mobile", () => {
+		renderTable({ suppliers: [] });
+		expect(screen.getByText(/нет поставщиков/i)).toBeInTheDocument();
+	});
+
+	test("shows loading skeletons on mobile", () => {
+		renderTable({ suppliers: [], isLoading: true });
+		const skeletons = screen.getAllByTestId("supplier-card-skeleton");
+		expect(skeletons.length).toBeGreaterThan(0);
+	});
+
+	test("renders search input on mobile", () => {
+		renderTable();
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 	});
 });

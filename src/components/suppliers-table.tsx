@@ -32,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Supplier, SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatCurrency, formatRating, stripProtocol } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -102,6 +103,7 @@ export function SuppliersTable({
 	loadMore,
 	isFetchingNextPage,
 }: SuppliersTableProps) {
+	const isMobile = useIsMobile();
 	const sentinelRef = useIntersectionObserver(() => loadMore?.());
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	useMountEffect(() => () => clearTimeout(debounceRef.current));
@@ -119,121 +121,186 @@ export function SuppliersTable({
 		return <p className="py-8 text-center text-sm text-muted-foreground">Нет поставщиков</p>;
 	}
 
-	return (
-		<div className="flex flex-col gap-3">
-			{hasSelection ? (
-				<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
-					<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						disabled={isArchiving}
-						onClick={onArchive}
-						aria-label="Архивировать"
-					>
-						<Archive className="mr-1 size-4" aria-hidden="true" />
-						Архивировать
+	const toolbar = hasSelection ? (
+		<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
+			<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				disabled={isArchiving}
+				onClick={onArchive}
+				aria-label="Архивировать"
+			>
+				<Archive className="mr-1 size-4" aria-hidden="true" />
+				Архивировать
+			</Button>
+			<AlertDialog>
+				<AlertDialogTrigger asChild>
+					<Button type="button" variant="destructive" size="sm" disabled={isDeleting} aria-label="Удалить">
+						<Trash2 className="mr-1 size-4" aria-hidden="true" />
+						Удалить
 					</Button>
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button type="button" variant="destructive" size="sm" disabled={isDeleting} aria-label="Удалить">
-								<Trash2 className="mr-1 size-4" aria-hidden="true" />
-								Удалить
+				</AlertDialogTrigger>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Удалить поставщиков?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{selectedIds.size === 1
+								? "Выбранный поставщик будет удалён. Это действие нельзя отменить."
+								: `Выбранные поставщики (${selectedIds.size}) будут удалены. Это действие нельзя отменить.`}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={onDelete}>
+							Удалить
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	) : (
+		<div className="flex items-center gap-2 px-3">
+			<div className="relative max-w-56">
+				<Search
+					className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+					aria-hidden="true"
+				/>
+				<Input
+					type="search"
+					placeholder="Поиск…"
+					defaultValue={search}
+					onChange={handleSearchInput}
+					className="h-8 pl-8 text-sm"
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</div>
+			<Popover>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтр по статусу" className="relative">
+								<ListFilter aria-hidden="true" />
+								{activeStatuses.length > 0 && (
+									<span
+										className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
+										data-testid="filter-indicator"
+									/>
+								)}
 							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent size="sm">
-							<AlertDialogHeader>
-								<AlertDialogTitle>Удалить поставщиков?</AlertDialogTitle>
-								<AlertDialogDescription>
-									{selectedIds.size === 1
-										? "Выбранный поставщик будет удалён. Это действие нельзя отменить."
-										: `Выбранные поставщики (${selectedIds.size}) будут удалены. Это действие нельзя отменить.`}
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>Отмена</AlertDialogCancel>
-								<AlertDialogAction variant="destructive" onClick={onDelete}>
-									Удалить
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-				</div>
-			) : (
-				<div className="flex items-center gap-2 px-3">
-					<div className="relative max-w-56">
-						<Search
-							className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-							aria-hidden="true"
-						/>
-						<Input
-							type="search"
-							placeholder="Поиск…"
-							defaultValue={search}
-							onChange={handleSearchInput}
-							className="h-8 pl-8 text-sm"
-							spellCheck={false}
-							autoComplete="off"
-						/>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Фильтр по статусу</TooltipContent>
+				</Tooltip>
+				<PopoverContent align="end" className="w-56">
+					<div className="flex flex-col gap-1">
+						{SUPPLIER_STATUSES.map((status) => (
+							<button
+								key={status}
+								type="button"
+								aria-label={SUPPLIER_STATUS_LABELS[status]}
+								className={cn(FILTER_BTN, activeStatuses.includes(status) && FILTER_BTN_ACTIVE)}
+								onClick={() => onStatusFilter(status)}
+							>
+								{SUPPLIER_STATUS_LABELS[status]}
+							</button>
+						))}
 					</div>
-					<Popover>
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<PopoverTrigger asChild>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon-sm"
-										aria-label="Фильтр по статусу"
-										className="relative"
-									>
-										<ListFilter aria-hidden="true" />
-										{activeStatuses.length > 0 && (
-											<span
-												className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
-												data-testid="filter-indicator"
-											/>
-										)}
-									</Button>
-								</PopoverTrigger>
-							</TooltipTrigger>
-							<TooltipContent>Фильтр по статусу</TooltipContent>
-						</Tooltip>
-						<PopoverContent align="end" className="w-56">
-							<div className="flex flex-col gap-1">
-								{SUPPLIER_STATUSES.map((status) => (
-									<button
-										key={status}
-										type="button"
-										aria-label={SUPPLIER_STATUS_LABELS[status]}
-										className={cn(FILTER_BTN, activeStatuses.includes(status) && FILTER_BTN_ACTIVE)}
-										onClick={() => onStatusFilter(status)}
-									>
-										{SUPPLIER_STATUS_LABELS[status]}
-									</button>
-								))}
-							</div>
-						</PopoverContent>
-					</Popover>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
-								<Download aria-hidden="true" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Скачать таблицу</TooltipContent>
-					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Архив">
-								<Archive aria-hidden="true" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Архив</TooltipContent>
-					</Tooltip>
+				</PopoverContent>
+			</Popover>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
+						<Download aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Скачать таблицу</TooltipContent>
+			</Tooltip>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button type="button" variant="ghost" size="icon-sm" aria-label="Архив">
+						<Archive aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Архив</TooltipContent>
+			</Tooltip>
+		</div>
+	);
+
+	const sentinel = (
+		<>
+			{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
+			{isFetchingNextPage && (
+				<div className="flex justify-center py-4" data-testid="loading-more-spinner">
+					<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
 				</div>
 			)}
+		</>
+	);
+
+	if (isMobile) {
+		return (
+			<div className="flex flex-col gap-3">
+				{toolbar}
+				{isLoading ? (
+					<div className="flex flex-col gap-3 px-3">
+						{Array.from({ length: 4 }, (_, i) => (
+							// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cards never reorder
+							<div key={i} data-testid="supplier-card-skeleton" className="rounded-lg border p-4">
+								<Skeleton className="mb-2 h-5 w-32" />
+								<Skeleton className="mb-3 h-4 w-20" />
+								<div className="grid grid-cols-3 gap-2">
+									<Skeleton className="h-4 w-full" />
+									<Skeleton className="h-4 w-full" />
+									<Skeleton className="h-4 w-full" />
+								</div>
+							</div>
+						))}
+					</div>
+				) : suppliers.length === 0 ? (
+					<p className="py-8 text-center text-sm text-muted-foreground">Ничего не найдено</p>
+				) : (
+					<div className="flex flex-col gap-3 px-3">
+						{suppliers.map((supplier) => (
+							<button
+								key={supplier.id}
+								type="button"
+								data-testid="supplier-card"
+								className="rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
+								onClick={() => onRowClick?.(supplier.id)}
+							>
+								<div className="mb-1 font-medium">{supplier.companyName}</div>
+								<SupplierStatusIndicator status={supplier.status} className="mb-3 text-xs" />
+								<div className="grid grid-cols-3 gap-x-4 text-sm">
+									<div>
+										<div className="text-muted-foreground">Цена/ед.</div>
+										<div className="tabular-nums">{formatCurrency(supplier.pricePerUnit)}</div>
+									</div>
+									<div>
+										<div className="text-muted-foreground">TCO</div>
+										<div className="tabular-nums">{formatCurrency(supplier.tco)}</div>
+									</div>
+									<div>
+										<div className="text-muted-foreground">Рейтинг</div>
+										<div className={`tabular-nums ${supplier.rating != null ? ratingColor(supplier.rating) : ""}`}>
+											{formatRating(supplier.rating)}
+										</div>
+									</div>
+								</div>
+							</button>
+						))}
+					</div>
+				)}
+				{sentinel}
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col gap-3">
+			{toolbar}
 
 			<Table>
 				<TableHeader>
@@ -335,12 +402,7 @@ export function SuppliersTable({
 					)}
 				</TableBody>
 			</Table>
-			{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
-			{isFetchingNextPage && (
-				<div className="flex justify-center py-4" data-testid="loading-more-spinner">
-					<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
-				</div>
-			)}
+			{sentinel}
 		</div>
 	);
 }
