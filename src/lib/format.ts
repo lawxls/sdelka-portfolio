@@ -90,6 +90,11 @@ export function stripProtocol(url: string): string {
 	return url.replace(/^https?:\/\//, "");
 }
 
+export function formatAssigneeName(assignee: { firstName: string; lastName: string } | null): string {
+	if (!assignee) return "Не назначен";
+	return `${assignee.lastName} ${assignee.firstName}`;
+}
+
 export function pluralizeRu(count: number, one: string, few: string, many: string): string {
 	const mod100 = count % 100;
 	const mod10 = count % 10;

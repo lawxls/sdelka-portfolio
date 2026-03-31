@@ -8,4 +8,12 @@ export class ApiError extends Error {
 		this.status = status;
 		this.body = body;
 	}
+
+	get detail(): string | undefined {
+		return (this.body as { detail?: string } | null)?.detail;
+	}
+}
+
+export function getErrorDetail(err: unknown): string | undefined {
+	return err instanceof ApiError ? err.detail : undefined;
 }

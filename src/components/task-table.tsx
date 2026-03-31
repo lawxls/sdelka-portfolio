@@ -7,7 +7,7 @@ import type { TaskFilterParams } from "@/data/task-types";
 import { STATUS_ICONS, STATUS_LABELS } from "@/data/task-types";
 import { useAllTasks } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
-import { formatShortDate } from "@/lib/format";
+import { formatAssigneeName, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE_VARIANT = {
@@ -83,9 +83,7 @@ export function TaskTable({ onTaskClick, filterParams }: TaskTableProps) {
 							tasks.map((task, index) => {
 								const isOverdue = new Date(task.deadlineAt) < now;
 								const StatusIcon = STATUS_ICONS[task.status];
-								const assigneeName = task.assignee
-									? `${task.assignee.lastName} ${task.assignee.firstName}`
-									: "Не назначен";
+								const assigneeName = formatAssigneeName(task.assignee);
 								return (
 									<TableRow
 										key={task.id}

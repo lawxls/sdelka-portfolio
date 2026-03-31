@@ -2,7 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Task } from "@/data/task-types";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatShortDate, pluralizeRu } from "@/lib/format";
+import { formatAssigneeName, formatShortDate, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
@@ -15,11 +15,6 @@ interface TaskCardProps {
 function getAssigneeInitials(assignee: Task["assignee"]): string {
 	if (!assignee) return "?";
 	return `${assignee.lastName[0]}${assignee.firstName[0]}`;
-}
-
-function getAssigneeDisplayName(assignee: Task["assignee"]): string {
-	if (!assignee) return "Не назначен";
-	return `${assignee.lastName} ${assignee.firstName}`;
 }
 
 export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps) {
@@ -71,7 +66,7 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 							"flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white",
 							getAvatarColor(task.assignee.avatarIcon),
 						)}
-						aria-label={getAssigneeDisplayName(task.assignee)}
+						aria-label={formatAssigneeName(task.assignee)}
 					>
 						{getAssigneeInitials(task.assignee)}
 					</span>

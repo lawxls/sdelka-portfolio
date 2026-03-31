@@ -8,7 +8,7 @@ import {
 	fetchTasks,
 	uploadTaskAttachments,
 } from "./api-client";
-import { ApiError } from "./api-error";
+import { getErrorDetail } from "./api-error";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
@@ -88,14 +88,9 @@ export function useAllTasks(params?: TaskFilterParams) {
 		getNextPageParam: (lastPage, _allPages, lastPageParam) => (lastPage.next ? lastPageParam + 1 : undefined),
 	});
 
-	// Extract page number from next URL or compute from pagination
-	const pages = query.data?.pages ?? [];
-	const lastPage = pages[pages.length - 1];
-	const hasNextPage = lastPage?.next != null;
-
 	return {
-		tasks: pages.flatMap((p) => p.results),
-		hasNextPage,
+		tasks: query.data?.pages.flatMap((p) => p.results) ?? [],
+		hasNextPage: query.hasNextPage,
 		loadMore: query.fetchNextPage,
 		isLoading: query.isLoading,
 		isFetchingNextPage: query.isFetchingNextPage,
@@ -180,8 +175,7 @@ export function useUpdateTaskStatus() {
 		},
 		onError: (err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
-			toast.error(detail ?? "Не удалось обновить статус задачи");
+			toast.error(getErrorDetail(err) ?? "Не удалось обновить статус задачи");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
@@ -230,8 +224,7 @@ export function useSubmitAnswer() {
 		},
 		onError: (err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
-			toast.error(detail ?? "Не удалось отправить ответ");
+			toast.error(getErrorDetail(err) ?? "Не удалось отправить ответ");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});

@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CreateCompanyPayload } from "@/data/api-client";
-import { ApiError } from "@/data/api-error";
+import { getErrorDetail } from "@/data/api-error";
 import type { CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
 import { useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
@@ -161,8 +161,7 @@ export function CompaniesPage() {
 			},
 			onError: (err) => {
 				setCompanyToDelete(null);
-				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
-				toast.error(detail ?? "Не удалось удалить компанию");
+				toast.error(getErrorDetail(err) ?? "Не удалось удалить компанию");
 			},
 		});
 	}
