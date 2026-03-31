@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import * as mockParser from "@/data/mock-file-parser";
-import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { DragItemOverlay } from "@/pages/procurement-page";
@@ -147,6 +146,16 @@ function setupHandlers() {
 				nextCursor: null,
 			}),
 		),
+		http.get("/api/v1/tasks/board/", () =>
+			HttpResponse.json({
+				assigned: { results: [], next: null, count: 0 },
+				in_progress: { results: [], next: null, count: 0 },
+				completed: { results: [], next: null, count: 0 },
+				archived: { results: [], next: null, count: 0 },
+			}),
+		),
+		http.get("/api/v1/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
+		http.get("/api/v1/tasks/:id/", () => HttpResponse.json({ detail: "Not found" }, { status: 404 })),
 	);
 }
 
@@ -183,8 +192,6 @@ beforeEach(() => {
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	setupHandlers();
-	_resetTaskStore();
-	_setMockDelay(0, 0);
 });
 
 // ---- Route tests (TDD) ----

@@ -30,7 +30,7 @@ import type {
 	UpdateEmployeeData,
 	UpdatePermissionsData,
 } from "@/data/api-client";
-import { ApiError } from "@/data/api-error";
+import { ApiError, getErrorDetail } from "@/data/api-error";
 import type {
 	Address,
 	AddressType,
@@ -455,8 +455,7 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 	function handleDelete(addressId: string) {
 		deleteMutation.mutate(addressId, {
 			onError: (err) => {
-				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
-				toast.error(detail ?? "Не удалось удалить адрес");
+				toast.error(getErrorDetail(err) ?? "Не удалось удалить адрес");
 			},
 		});
 	}
@@ -796,8 +795,7 @@ function EmployeesTab({
 	function handleDelete(employeeId: number) {
 		deleteMutation.mutate(employeeId, {
 			onError: (err) => {
-				const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
-				toast.error(detail ?? "Не удалось удалить сотрудника");
+				toast.error(getErrorDetail(err) ?? "Не удалось удалить сотрудника");
 			},
 		});
 	}

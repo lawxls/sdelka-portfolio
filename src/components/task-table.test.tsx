@@ -2,22 +2,48 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
-import { createTestQueryClient } from "@/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test-msw";
+import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskTable } from "./task-table";
 
 vi.mock("sonner", () => ({
 	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
 }));
 
+const tasks = [
+	makeTask("task-1", {
+		name: "Согласование цены на арматуру",
+		item: { id: "i-1", name: "Арматура А500С", companyId: "c-1" },
+		status: "assigned",
+	}),
+	makeTask("task-2", { name: "Запрос КП", status: "in_progress" }),
+];
+
 let queryClient: QueryClient;
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
-	_resetTaskStore();
-	_setMockDelay(0, 0);
+	mockHostname("acme.localhost");
+	localStorage.setItem("auth-access-token", "test-token");
+	localStorage.setItem("auth-refresh-token", "test-refresh");
+
+	server.use(
+		http.get("/api/v1/tasks/", () => {
+			return HttpResponse.json({
+				count: tasks.length,
+				results: tasks,
+				next: null,
+				previous: null,
+			});
+		}),
+	);
+});
+
+afterEach(() => {
+	localStorage.clear();
 });
 
 function renderTable(onTaskClick = vi.fn()) {
@@ -84,7 +110,12 @@ describe("TaskTable", () => {
 	});
 
 	it("shows loading skeletons initially", () => {
-		_setMockDelay(10000, 10000);
+		server.use(
+			http.get("/api/v1/tasks/", async () => {
+				await new Promise((r) => setTimeout(r, 10000));
+				return HttpResponse.json({});
+			}),
+		);
 		renderTable();
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
 	});

@@ -9,15 +9,15 @@ const fmt = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" })
 
 describe("TaskCard", () => {
 	const task = makeTask("t1", {
-		title: "Согласование цены",
-		procurementItemName: "Арматура А500С",
-		assignee: { name: "Иванов Алексей", initials: "ИА", avatar_icon: "blue" },
+		name: "Согласование цены",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "c-1" },
+		assignee: { id: "u-1", firstName: "Алексей", lastName: "Иванов", email: "a@test.com", avatarIcon: "blue" },
 		createdAt: "2026-03-15T10:00:00.000Z",
-		deadline: "2099-04-15T18:00:00.000Z",
+		deadlineAt: "2099-04-15T18:00:00.000Z",
 		questionCount: 3,
 	});
 
-	it("renders title and procurement item name", () => {
+	it("renders name and item name", () => {
 		render(<TaskCard task={task} />, { wrapper: TooltipWrapper });
 		expect(screen.getByText("Согласование цены")).toBeInTheDocument();
 		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe("TaskCard", () => {
 
 	it("highlights overdue deadline in red", () => {
 		const overdueTask = makeTask("t-overdue", {
-			deadline: "2020-01-01T00:00:00.000Z",
+			deadlineAt: "2020-01-01T00:00:00.000Z",
 		});
 		render(<TaskCard task={overdueTask} />, { wrapper: TooltipWrapper });
 		const deadline = screen.getByTestId("deadline-t-overdue");
@@ -103,5 +103,11 @@ describe("TaskCard", () => {
 		render(<TaskCard task={task} onClick={() => {}} isDragging />, { wrapper: TooltipWrapper });
 		const card = screen.getByTestId("task-card-t1");
 		expect(card.className).toContain("opacity-50");
+	});
+
+	it("renders placeholder for null assignee", () => {
+		const unassigned = makeTask("t-none", { assignee: null });
+		render(<TaskCard task={unassigned} />, { wrapper: TooltipWrapper });
+		expect(screen.getByLabelText("Не назначен")).toHaveTextContent("?");
 	});
 });

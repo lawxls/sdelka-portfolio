@@ -20,13 +20,14 @@ import { TaskToolbar } from "@/components/task-toolbar";
 import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
-import { useProcurementItems, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useProcurementCompanies } from "@/data/use-companies";
+import { useItemSearch, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
 
-const SORT_FIELDS = new Set<string>(["createdAt", "deadline", "questionCount"]);
+const SORT_FIELDS = new Set<string>(["created_at", "deadline_at", "question_count"]);
 
 function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskId: string): Task | undefined {
 	for (const status of TASK_STATUSES) {
@@ -52,16 +53,21 @@ export function TasksPage() {
 	const view = (searchParams.get("view") ?? "board") as ViewMode;
 	const search = searchParams.get("q") ?? "";
 	const activeItem = searchParams.get("item") ?? undefined;
+	const company = searchParams.get("company") ?? undefined;
 	const sort = parseSort(searchParams);
+
+	const { data: companies = [] } = useProcurementCompanies();
+	const [itemSearchQuery, setItemSearchQuery] = useState("");
+	const itemSearch = useItemSearch(itemSearchQuery);
 
 	const filterParams: TaskFilterParams = {
 		...(search && { q: search }),
 		...(activeItem && { item: activeItem }),
+		...(company && { company }),
 		...(sort && { sort: sort.field, dir: sort.direction }),
 	};
 
 	const columns = useTaskColumns(filterParams);
-	const { data: procurementItems = [] } = useProcurementItems();
 	const updateStatus = useUpdateTaskStatus();
 
 	// Drag state
@@ -105,6 +111,10 @@ export function TasksPage() {
 
 	function handleItemFilter(item: string | undefined) {
 		updateParams((p) => (item ? p.set("item", item) : p.delete("item")));
+	}
+
+	function handleCompanySelect(companyId: string | undefined) {
+		updateParams((p) => (companyId ? p.set("company", companyId) : p.delete("company")));
 	}
 
 	function handleSort(field: TaskSortField) {
@@ -180,7 +190,11 @@ export function TasksPage() {
 						onSort={handleSort}
 						activeItem={activeItem}
 						onItemFilter={handleItemFilter}
-						procurementItems={procurementItems}
+						onItemSearch={setItemSearchQuery}
+						itemSearchResults={itemSearch.data ?? []}
+						companies={companies}
+						activeCompany={company}
+						onCompanySelect={handleCompanySelect}
 					/>
 					<div className="flex items-center gap-1">
 						<Button

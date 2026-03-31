@@ -71,7 +71,7 @@ function TaskDrawerContent({
 
 	// local const so TS narrows `task` inside closures below the early-return guard
 	const currentTask = task;
-	const isAnswered = currentTask.answer != null;
+	const isAnswered = currentTask.completedResponse != null;
 
 	function handleStatusChange(value: string) {
 		const newStatus = value as TaskStatus;
@@ -86,7 +86,7 @@ function TaskDrawerContent({
 	function handleSubmitAnswer() {
 		if (!answerText.trim()) return;
 		submitAnswerMutation.mutate(
-			{ id: currentTask.id, answer: answerText.trim(), attachments: files.map((f) => f.name) },
+			{ id: currentTask.id, answer: answerText.trim(), files: files.length > 0 ? files : undefined },
 			{
 				onSuccess: () => {
 					toast.success("Ответ отправлен");
@@ -116,8 +116,8 @@ function TaskDrawerContent({
 		<>
 			<SheetHeader className="flex-row items-start justify-between gap-4 pr-12">
 				<div className="min-w-0 flex-1">
-					<SheetTitle>{task.title}</SheetTitle>
-					<SheetDescription>{task.procurementItemName}</SheetDescription>
+					<SheetTitle>{task.name}</SheetTitle>
+					<SheetDescription>{task.item.name}</SheetDescription>
 				</div>
 				{isAnswered ? (
 					<Badge variant="secondary">{STATUS_LABELS[task.status]}</Badge>
@@ -151,7 +151,7 @@ function TaskDrawerContent({
 				{isAnswered ? (
 					<div className="rounded-lg bg-muted p-3">
 						<p className="text-xs font-medium text-muted-foreground">Ответ</p>
-						<p className="mt-1 text-sm">{task.answer}</p>
+						<p className="mt-1 text-sm">{task.completedResponse}</p>
 					</div>
 				) : (
 					<div className="space-y-3">

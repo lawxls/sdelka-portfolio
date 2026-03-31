@@ -19,31 +19,59 @@ export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
 	archived: Archive,
 };
 
-export interface TaskAssignee {
+export interface TaskItem {
+	id: string;
 	name: string;
-	initials: string;
-	avatar_icon: string;
+	companyId: string;
 }
 
-export type TaskSortField = "createdAt" | "deadline" | "questionCount";
+export interface TaskAssignee {
+	id: string;
+	firstName: string;
+	lastName: string;
+	email: string;
+	avatarIcon: string;
+}
+
+export interface Attachment {
+	id: string;
+	fileName: string;
+	fileSize: number;
+	fileType: string;
+	contentType: string;
+	fileUrl: string;
+	uploadedAt: string;
+}
+
+export interface SupplierQuestion {
+	id: string;
+	question: string;
+	answer: string | null;
+}
+
+export type TaskSortField = "created_at" | "deadline_at" | "question_count";
 
 export interface TaskFilterParams {
 	q?: string;
 	item?: string;
+	company?: string;
 	sort?: TaskSortField;
 	dir?: "asc" | "desc";
 }
 
 export interface Task {
 	id: string;
-	title: string;
-	procurementItemName: string;
+	name: string;
 	status: TaskStatus;
+	item: TaskItem;
+	assignee: TaskAssignee | null;
 	createdAt: string;
-	deadline: string;
-	assignee: TaskAssignee;
+	deadlineAt: string;
 	description: string;
 	questionCount: number;
-	answer: string | null;
-	attachments: string[];
+	completedResponse: string | null;
+	attachments: Attachment[];
+	statusBeforeArchive: TaskStatus | null;
+	supplierQuestions: SupplierQuestion[];
+	updatedAt: string;
 }

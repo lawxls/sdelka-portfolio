@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import {
+	changeTaskStatus,
 	createAddress,
 	createEmployee,
 	createFolder,
@@ -11,11 +12,15 @@ import {
 	deleteEmployee,
 	deleteFolder,
 	deleteItem,
+	deleteTaskAttachment,
 	exportItems,
 	fetchCompanyInfo,
 	fetchFolderStats,
 	fetchFolders,
 	fetchItems,
+	fetchTask,
+	fetchTaskBoard,
+	fetchTasks,
 	fetchTotals,
 	parseDecimals,
 	updateAddress,
@@ -23,6 +28,7 @@ import {
 	updateEmployeePermissions,
 	updateFolder,
 	updateItem,
+	uploadTaskAttachments,
 } from "./api-client";
 import { clearTokens, setTokens } from "./auth";
 
@@ -813,5 +819,198 @@ describe("updateEmployeePermissions", () => {
 		const result = await updateEmployeePermissions("comp-1", 1, { analytics: "edit" });
 		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/companies/comp-1/employees/1/permissions/");
 		expect(result.analytics).toBe("edit");
+	});
+});
+
+// --- Tasks ---
+
+const MOCK_TASK = {
+	id: "task-uuid-1",
+	name: "Согласование цены",
+	status: "assigned",
+	item: { id: "item-1", name: "Арматура А500С", companyId: "comp-1" },
+	assignee: { id: "user-1", firstName: "Алексей", lastName: "Иванов", email: "a@test.com", avatarIcon: "blue" },
+	createdAt: "2026-03-15T10:00:00.000Z",
+	deadlineAt: "2026-04-01T18:00:00.000Z",
+	description: "Test",
+	questionCount: 2,
+	completedResponse: null,
+	attachments: [],
+	statusBeforeArchive: null,
+	supplierQuestions: [],
+	updatedAt: "2026-03-15T10:00:00.000Z",
+};
+
+describe("fetchTaskBoard", () => {
+	it("sends GET /api/v1/tasks/board/ with auth headers and query params", async () => {
+		let capturedHeaders: Headers | undefined;
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/board/", ({ request }) => {
+				capturedHeaders = request.headers;
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					assigned: { results: [MOCK_TASK], next: "cursor-1", count: 25 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await fetchTaskBoard({ q: "test", sort: "created_at", dir: "asc" });
+		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
+		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("test");
+		expect(url.searchParams.get("sort")).toBe("created_at");
+		expect(result.assigned?.results).toHaveLength(1);
+		expect(result.assigned?.results[0].name).toBe("Согласование цены");
+		expect(result.assigned?.next).toBe("cursor-1");
+		expect(result.assigned?.count).toBe(25);
+	});
+
+	it("sends column and cursor params for per-column pagination", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/board/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					results: [MOCK_TASK],
+					next: null,
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		await fetchTaskBoard({ column: "assigned", cursor: "abc123" });
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("column")).toBe("assigned");
+		expect(url.searchParams.get("cursor")).toBe("abc123");
+	});
+});
+
+describe("fetchTasks", () => {
+	it("sends GET /api/v1/tasks/ with page-number pagination and query params", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					count: 100,
+					results: [MOCK_TASK],
+					next: "http://api/tasks/?page=2",
+					previous: null,
+				});
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await fetchTasks({ page: 1, page_size: 20, q: "test", sort: "deadline_at", dir: "desc" });
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("page")).toBe("1");
+		expect(url.searchParams.get("page_size")).toBe("20");
+		expect(url.searchParams.get("q")).toBe("test");
+		expect(url.searchParams.get("sort")).toBe("deadline_at");
+		expect(url.searchParams.get("dir")).toBe("desc");
+		expect(result.results).toHaveLength(1);
+		expect(result.count).toBe(100);
+		expect(result.next).toBeTruthy();
+	});
+});
+
+describe("fetchTask", () => {
+	it("sends GET /api/v1/tasks/{id}/ with auth headers", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/:id/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json(MOCK_TASK);
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await fetchTask("task-uuid-1");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/");
+		expect(result.id).toBe("task-uuid-1");
+		expect(result.name).toBe("Согласование цены");
+		expect(result.item.name).toBe("Арматура А500С");
+	});
+});
+
+describe("changeTaskStatus", () => {
+	it("sends PATCH /api/v1/tasks/{id}/status/ with status and optional completedResponse", async () => {
+		let capturedUrl: string | undefined;
+		let capturedBody: unknown;
+
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", async ({ request }) => {
+				capturedUrl = request.url;
+				capturedBody = await request.json();
+				return HttpResponse.json({ ...MOCK_TASK, status: "completed", completedResponse: "Done" });
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await changeTaskStatus("task-uuid-1", { status: "completed", completedResponse: "Done" });
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/status/");
+		expect(capturedBody).toEqual({ status: "completed", completedResponse: "Done" });
+		expect(result.status).toBe("completed");
+	});
+});
+
+describe("uploadTaskAttachments", () => {
+	it("sends POST /api/v1/tasks/{id}/attachments/ with multipart form data", async () => {
+		let capturedUrl: string | undefined;
+		let capturedContentType: string | null | undefined;
+
+		server.use(
+			http.post("/api/v1/tasks/:id/attachments/", ({ request }) => {
+				capturedUrl = request.url;
+				capturedContentType = request.headers.get("content-type");
+				return HttpResponse.json([
+					{
+						id: "att-1",
+						fileName: "doc.pdf",
+						fileSize: 1024,
+						fileType: "pdf",
+						contentType: "application/pdf",
+						fileUrl: "/files/doc.pdf",
+						uploadedAt: "2026-03-15T10:00:00.000Z",
+					},
+				]);
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const files = [new File(["content"], "doc.pdf", { type: "application/pdf" })];
+		const result = await uploadTaskAttachments("task-uuid-1", files);
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/attachments/");
+		expect(capturedContentType).toContain("multipart/form-data");
+		expect(result).toHaveLength(1);
+		expect(result[0].fileName).toBe("doc.pdf");
+	});
+});
+
+describe("deleteTaskAttachment", () => {
+	it("sends DELETE /api/v1/tasks/{id}/attachments/{attachmentId}/ and returns void", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.delete("/api/v1/tasks/:id/attachments/:attachmentId/", ({ request }) => {
+				capturedUrl = request.url;
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+		const result = await deleteTaskAttachment("task-uuid-1", "att-1");
+		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/tasks/task-uuid-1/attachments/att-1/");
+		expect(result).toBeUndefined();
 	});
 });
