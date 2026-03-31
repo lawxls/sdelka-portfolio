@@ -9,7 +9,6 @@ import {
 	LoaderCircle,
 	Pencil,
 	Plus,
-	Star,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -857,9 +856,7 @@ function EmployeeCard({
 						<span className="text-sm font-medium">
 							{employee.lastName} {employee.firstName} {employee.patronymic}
 						</span>
-						{employee.isResponsible && (
-							<Star className="size-3.5 fill-yellow-400 text-yellow-400" aria-label="Ответственный" />
-						)}
+						{employee.isResponsible && <Badge variant="outline">Ответственный</Badge>}
 					</div>
 					<div className="flex items-center gap-2 text-xs text-muted-foreground">
 						<span>{employee.position}</span>
