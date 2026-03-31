@@ -31,13 +31,13 @@ describe("TaskBoard", () => {
 
 	it("shows card count badges for each column", () => {
 		renderBoard({
-			assigned: makeColumn([makeTask("t1", { title: "Alpha" }), makeTask("t2", { title: "Beta" })]),
-			in_progress: makeColumn([makeTask("t3", { title: "Gamma" })]),
+			assigned: makeColumn([makeTask("t1", { name: "Alpha" }), makeTask("t2", { name: "Beta" })]),
+			in_progress: makeColumn([makeTask("t3", { name: "Gamma" })]),
 			completed: makeColumn([]),
 			archived: makeColumn([
-				makeTask("t4", { title: "Delta" }),
-				makeTask("t5", { title: "Epsilon" }),
-				makeTask("t6", { title: "Zeta" }),
+				makeTask("t4", { name: "Delta" }),
+				makeTask("t5", { name: "Epsilon" }),
+				makeTask("t6", { name: "Zeta" }),
 			]),
 		});
 
@@ -56,8 +56,8 @@ describe("TaskBoard", () => {
 
 	it("renders task cards in correct columns", () => {
 		renderBoard({
-			assigned: makeColumn([makeTask("t1", { title: "Task Alpha" })]),
-			in_progress: makeColumn([makeTask("t2", { title: "Task Beta" })]),
+			assigned: makeColumn([makeTask("t1", { name: "Task Alpha" })]),
+			in_progress: makeColumn([makeTask("t2", { name: "Task Beta" })]),
 		});
 
 		const assignedCol = screen.getByTestId("column-assigned");
@@ -85,7 +85,7 @@ describe("TaskBoard", () => {
 					columns={{
 						assigned: makeColumn([makeTask("t1", { status: "assigned" })]),
 						in_progress: makeColumn([makeTask("t2", { status: "in_progress" })]),
-						completed: makeColumn([makeTask("t3", { status: "completed", answer: "Done" })]),
+						completed: makeColumn([makeTask("t3", { status: "completed", completedResponse: "Done" })]),
 						archived: makeColumn([makeTask("t4", { status: "archived" })]),
 					}}
 				/>
@@ -105,7 +105,7 @@ describe("TaskBoard", () => {
 					columns={{
 						assigned: makeColumn(),
 						in_progress: makeColumn(),
-						completed: makeColumn([makeTask("t3", { status: "completed", answer: "Done" })]),
+						completed: makeColumn([makeTask("t3", { status: "completed", completedResponse: "Done" })]),
 						archived: makeColumn(),
 					}}
 				/>
@@ -150,8 +150,8 @@ describe("TaskBoard mobile", () => {
 	it("shows only active column cards when isMobile", () => {
 		renderBoard(
 			{
-				assigned: makeColumn([makeTask("t1", { title: "Alpha" })]),
-				in_progress: makeColumn([makeTask("t2", { title: "Beta" })]),
+				assigned: makeColumn([makeTask("t1", { name: "Alpha" })]),
+				in_progress: makeColumn([makeTask("t2", { name: "Beta" })]),
 			},
 			true,
 		);
@@ -164,8 +164,8 @@ describe("TaskBoard mobile", () => {
 		const user = userEvent.setup();
 		renderBoard(
 			{
-				assigned: makeColumn([makeTask("t1", { title: "Alpha" })]),
-				in_progress: makeColumn([makeTask("t2", { title: "Beta" })]),
+				assigned: makeColumn([makeTask("t1", { name: "Alpha" })]),
+				in_progress: makeColumn([makeTask("t2", { name: "Beta" })]),
 			},
 			true,
 		);

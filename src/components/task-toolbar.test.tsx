@@ -65,7 +65,7 @@ describe("TaskToolbar", () => {
 		await user.click(screen.getByRole("button", { name: "Сортировка" }));
 		await user.click(screen.getByText("Дедлайн"));
 
-		expect(defaultProps.onSort).toHaveBeenCalledWith("deadline");
+		expect(defaultProps.onSort).toHaveBeenCalledWith("deadline_at");
 	});
 
 	it("renders filter button", () => {
@@ -101,7 +101,7 @@ describe("TaskToolbar", () => {
 	});
 
 	it("shows active sort indicator dot", () => {
-		renderToolbar({ sort: { field: "deadline", direction: "asc" } });
+		renderToolbar({ sort: { field: "deadline_at", direction: "asc" } });
 		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
 		expect(sortBtn.querySelector("[data-indicator]")).toBeInTheDocument();
 	});

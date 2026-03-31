@@ -1,18 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createQueryWrapper, createTestQueryClient, makeTask } from "@/test-utils";
-import * as taskMockData from "./task-mock-data";
-import { _resetTaskStore, _setMockDelay } from "./task-mock-data";
+import { server } from "@/test-msw";
+import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { Task } from "./task-types";
-import {
-	useAllTasks,
-	useProcurementItems,
-	useSubmitAnswer,
-	useTask,
-	useTaskColumns,
-	useUpdateTaskStatus,
-} from "./use-tasks";
+import { useAllTasks, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -27,13 +20,20 @@ let queryClient: QueryClient;
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
-	_resetTaskStore();
-	_setMockDelay(0, 0);
+	mockHostname("acme.localhost");
+	localStorage.setItem("auth-access-token", "test-token");
+	localStorage.setItem("auth-refresh-token", "test-refresh");
 });
 
 afterEach(() => {
+	localStorage.clear();
 	vi.restoreAllMocks();
 });
+
+const task1 = makeTask("t1", { status: "assigned" });
+const task2 = makeTask("t2", { status: "in_progress" });
+const task3 = makeTask("t3", { status: "completed", completedResponse: "Done" });
+const task4 = makeTask("t4", { status: "archived" });
 
 function seedTasks(status: string, tasks: Task[]) {
 	queryClient.setQueryData(["tasks", status, {}], {
@@ -43,33 +43,58 @@ function seedTasks(status: string, tasks: Task[]) {
 }
 
 describe("useTaskColumns", () => {
-	it("fetches tasks for all 4 statuses", async () => {
+	it("fetches tasks from board endpoint for all 4 statuses", async () => {
+		server.use(
+			http.get("/api/v1/tasks/board/", () => {
+				return HttpResponse.json({
+					assigned: { results: [task1], next: null, count: 1 },
+					in_progress: { results: [task2], next: null, count: 1 },
+					completed: { results: [task3], next: null, count: 1 },
+					archived: { results: [task4], next: null, count: 1 },
+				});
+			}),
+		);
+
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.assigned.tasks.length).toBeGreaterThan(0);
-			expect(result.current.in_progress.tasks.length).toBeGreaterThan(0);
-			expect(result.current.completed.tasks.length).toBeGreaterThan(0);
-			expect(result.current.archived.tasks.length).toBeGreaterThan(0);
+			expect(result.current.assigned.tasks).toHaveLength(1);
 		});
 
-		expect(result.current.assigned.tasks.every((t) => t.status === "assigned")).toBe(true);
-		expect(result.current.in_progress.tasks.every((t) => t.status === "in_progress")).toBe(true);
-		expect(result.current.completed.tasks.every((t) => t.status === "completed")).toBe(true);
-		expect(result.current.archived.tasks.every((t) => t.status === "archived")).toBe(true);
+		expect(result.current.assigned.tasks[0].id).toBe("t1");
+		expect(result.current.in_progress.tasks[0].id).toBe("t2");
+		expect(result.current.completed.tasks[0].id).toBe("t3");
+		expect(result.current.archived.tasks[0].id).toBe("t4");
 	});
 
-	it("returns loading state initially", () => {
-		_setMockDelay(10000, 10000);
+	it("returns loading state initially", async () => {
+		server.use(
+			http.get("/api/v1/tasks/board/", async () => {
+				await new Promise((r) => setTimeout(r, 10000));
+				return HttpResponse.json({});
+			}),
+		);
+
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 		expect(result.current.assigned.isLoading).toBe(true);
 	});
 
-	it("reports hasNextPage correctly", async () => {
+	it("reports hasNextPage from board endpoint cursor", async () => {
+		server.use(
+			http.get("/api/v1/tasks/board/", () => {
+				return HttpResponse.json({
+					assigned: { results: [task1], next: "cursor-abc", count: 25 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				});
+			}),
+		);
+
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
@@ -78,34 +103,122 @@ describe("useTaskColumns", () => {
 			expect(result.current.assigned.isLoading).toBe(false);
 		});
 
-		// 25 tasks per status, default limit 20 → first page has more
 		expect(result.current.assigned.hasNextPage).toBe(true);
+		expect(result.current.in_progress.hasNextPage).toBe(false);
 	});
 
-	it("loadMore fetches remaining tasks for a column", async () => {
-		const { result } = renderHook(() => useTaskColumns(), {
+	it("passes search and sort params to board endpoint", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/board/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({
+					assigned: { results: [], next: null, count: 0 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				});
+			}),
+		);
+
+		renderHook(() => useTaskColumns({ q: "арматур", sort: "deadline_at", dir: "asc" }), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.assigned.tasks).toHaveLength(20);
+			expect(capturedUrl).toBeDefined();
 		});
-		expect(result.current.assigned.hasNextPage).toBe(true);
 
-		await act(async () => {
-			await result.current.assigned.loadMore();
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("арматур");
+		expect(url.searchParams.get("sort")).toBe("deadline_at");
+		expect(url.searchParams.get("dir")).toBe("asc");
+	});
+});
+
+describe("useAllTasks", () => {
+	it("fetches tasks from list endpoint with page-number pagination", async () => {
+		server.use(
+			http.get("/api/v1/tasks/", ({ request }) => {
+				const url = new URL(request.url);
+				const page = Number(url.searchParams.get("page") ?? "1");
+				if (page === 1) {
+					return HttpResponse.json({
+						count: 3,
+						results: [task1, task2],
+						next: "http://api/tasks/?page=2",
+						previous: null,
+					});
+				}
+				return HttpResponse.json({
+					count: 3,
+					results: [task3],
+					next: null,
+					previous: "http://api/tasks/?page=1",
+				});
+			}),
+		);
+
+		const { result } = renderHook(() => useAllTasks(), {
+			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.assigned.tasks).toHaveLength(25);
+			expect(result.current.tasks).toHaveLength(2);
 		});
-		expect(result.current.assigned.hasNextPage).toBe(false);
+
+		expect(result.current.hasNextPage).toBe(true);
+	});
+
+	it("returns loading state initially", async () => {
+		server.use(
+			http.get("/api/v1/tasks/", async () => {
+				await new Promise((r) => setTimeout(r, 10000));
+				return HttpResponse.json({});
+			}),
+		);
+
+		const { result } = renderHook(() => useAllTasks(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+		expect(result.current.isLoading).toBe(true);
+	});
+
+	it("passes filter params to list endpoint", async () => {
+		let capturedUrl: string | undefined;
+
+		server.use(
+			http.get("/api/v1/tasks/", ({ request }) => {
+				capturedUrl = request.url;
+				return HttpResponse.json({ count: 0, results: [], next: null, previous: null });
+			}),
+		);
+
+		renderHook(() => useAllTasks({ q: "test", sort: "created_at", dir: "desc" }), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(capturedUrl).toBeDefined();
+		});
+
+		const url = new URL(capturedUrl as string);
+		expect(url.searchParams.get("q")).toBe("test");
+		expect(url.searchParams.get("sort")).toBe("created_at");
+		expect(url.searchParams.get("dir")).toBe("desc");
 	});
 });
 
 describe("useTask", () => {
-	it("returns a single task by id", async () => {
-		const { result } = renderHook(() => useTask("task-1"), {
+	it("fetches single task by id from detail endpoint", async () => {
+		server.use(
+			http.get("/api/v1/tasks/:id/", () => {
+				return HttpResponse.json(task1);
+			}),
+		);
+
+		const { result } = renderHook(() => useTask("t1"), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
@@ -113,8 +226,8 @@ describe("useTask", () => {
 			expect(result.current.data).toBeTruthy();
 		});
 
-		expect(result.current.data?.id).toBe("task-1");
-		expect(result.current.data?.title).toBeTruthy();
+		expect(result.current.data?.id).toBe("t1");
+		expect(result.current.data?.name).toBeTruthy();
 	});
 
 	it("does not fetch when id is null", () => {
@@ -127,117 +240,17 @@ describe("useTask", () => {
 	});
 });
 
-describe("useAllTasks", () => {
-	it("fetches all tasks in a single paginated list", async () => {
-		const { result } = renderHook(() => useAllTasks(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.tasks.length).toBeGreaterThan(0);
-		});
-
-		// All 60 tasks fetched (limit 20 default = first page of 20)
-		expect(result.current.tasks).toHaveLength(20);
-		// Should have more pages
-		expect(result.current.hasNextPage).toBe(true);
-	});
-
-	it("returns loading state initially", () => {
-		_setMockDelay(10000, 10000);
-		const { result } = renderHook(() => useAllTasks(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-		expect(result.current.isLoading).toBe(true);
-	});
-});
-
-describe("useTaskColumns with filter params", () => {
-	it("passes search param to API and returns filtered results", async () => {
-		const { result } = renderHook(() => useTaskColumns({ q: "арматур" }), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.assigned.isLoading).toBe(false);
-		});
-
-		// Only tasks matching "арматур" in title or item name
-		for (const task of result.current.assigned.tasks) {
-			const matches =
-				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
-			expect(matches).toBe(true);
-		}
-	});
-
-	it("includes filter params in query key for cache isolation", async () => {
-		// Fetch with no filter
-		renderHook(() => useTaskColumns(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			const data = queryClient.getQueriesData({ queryKey: ["tasks", "assigned"] });
-			expect(data.length).toBeGreaterThan(0);
-		});
-
-		// Fetch with search filter — should create a separate cache entry
-		renderHook(() => useTaskColumns({ q: "арматур" }), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			const allEntries = queryClient.getQueriesData({ queryKey: ["tasks", "assigned"] });
-			expect(allEntries.length).toBe(2);
-		});
-	});
-});
-
-describe("useAllTasks with filter params", () => {
-	it("passes filter params to API", async () => {
-		const { result } = renderHook(() => useAllTasks({ q: "арматур" }), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.tasks.length).toBeGreaterThan(0);
-		});
-
-		for (const task of result.current.tasks) {
-			const matches =
-				task.title.toLowerCase().includes("арматур") || task.procurementItemName.toLowerCase().includes("арматур");
-			expect(matches).toBe(true);
-		}
-	});
-});
-
-describe("useProcurementItems", () => {
-	it("returns unique sorted procurement item names", async () => {
-		const { result } = renderHook(() => useProcurementItems(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.data?.length).toBeGreaterThan(0);
-		});
-
-		const items = result.current.data ?? [];
-		expect(items.length).toBeGreaterThan(0);
-		expect(new Set(items).size).toBe(items.length);
-		for (let i = 1; i < items.length; i++) {
-			expect(items[i - 1].localeCompare(items[i], "ru")).toBeLessThanOrEqual(0);
-		}
-	});
-});
-
 describe("useUpdateTaskStatus", () => {
 	it("optimistically moves task between columns", async () => {
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", async () => {
+				await new Promise((r) => setTimeout(r, 5000));
+				return HttpResponse.json(makeTask("t1", { status: "in_progress" }));
+			}),
+		);
+
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("in_progress", [makeTask("t2", { status: "in_progress" })]);
-
-		vi.spyOn(taskMockData, "updateTaskStatus").mockImplementation(
-			() => new Promise((resolve) => setTimeout(() => resolve(makeTask("t1", { status: "in_progress" })), 5000)),
-		);
 
 		const { result } = renderHook(() => useUpdateTaskStatus(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -260,10 +273,14 @@ describe("useUpdateTaskStatus", () => {
 
 	it("rolls back on error", async () => {
 		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Status change not allowed" }, { status: 400 });
+			}),
+		);
+
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("in_progress", []);
-
-		vi.spyOn(taskMockData, "updateTaskStatus").mockRejectedValue(new Error("Network error"));
 
 		const { result } = renderHook(() => useUpdateTaskStatus(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -281,75 +298,6 @@ describe("useUpdateTaskStatus", () => {
 
 		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(0);
-
-		expect(toast.error).toHaveBeenCalled();
-	});
-});
-
-describe("useSubmitAnswer", () => {
-	it("optimistically moves task to completed with answer", async () => {
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("completed", []);
-
-		vi.spyOn(taskMockData, "submitAnswer").mockImplementation(
-			() =>
-				new Promise((resolve) =>
-					setTimeout(
-						() =>
-							resolve(
-								makeTask("t1", {
-									status: "completed",
-									answer: "Ответ",
-									attachments: ["file.pdf"],
-								}),
-							),
-						5000,
-					),
-				),
-		);
-
-		const { result } = renderHook(() => useSubmitAnswer(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		act(() => {
-			result.current.mutate({ id: "t1", answer: "Ответ", attachments: ["file.pdf"] });
-		});
-
-		await waitFor(() => {
-			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
-			expect(assigned?.pages[0].tasks).toHaveLength(0);
-		});
-
-		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
-		expect(completed?.pages[0].tasks).toHaveLength(1);
-		expect(completed?.pages[0].tasks[0].answer).toBe("Ответ");
-		expect(completed?.pages[0].tasks[0].attachments).toEqual(["file.pdf"]);
-		expect(completed?.pages[0].tasks[0].status).toBe("completed");
-	});
-
-	it("rolls back on error", async () => {
-		const { toast } = await import("sonner");
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("completed", []);
-
-		vi.spyOn(taskMockData, "submitAnswer").mockRejectedValue(new Error("Network error"));
-
-		const { result } = renderHook(() => useSubmitAnswer(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "t1", answer: "Ответ" });
-			} catch {}
-		});
-
-		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
-		expect(assigned?.pages[0].tasks).toHaveLength(1);
-
-		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
-		expect(completed?.pages[0].tasks).toHaveLength(0);
 
 		expect(toast.error).toHaveBeenCalled();
 	});

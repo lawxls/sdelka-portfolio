@@ -1,6 +1,7 @@
 import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
+import type { Attachment, Task, TaskStatus } from "./task-types";
 import { getTenant } from "./tenant";
 import type {
 	Address,
@@ -19,6 +20,7 @@ import type {
 
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
+const TASKS_BASE = "/api/v1/tasks";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -443,5 +445,98 @@ export async function updateEmployeePermissions(
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(data),
+	});
+}
+
+// --- Tasks ---
+
+export interface BoardColumn {
+	results: Task[];
+	next: string | null;
+	count: number;
+}
+
+export interface TaskBoardResponse {
+	// Full board (initial load)
+	assigned?: BoardColumn;
+	in_progress?: BoardColumn;
+	completed?: BoardColumn;
+	archived?: BoardColumn;
+	// Per-column pagination
+	results?: Task[];
+	next?: string | null;
+}
+
+export interface FetchTaskBoardParams {
+	q?: string;
+	item?: string;
+	company?: string;
+	sort?: string;
+	dir?: string;
+	column?: string;
+	cursor?: string;
+}
+
+export async function fetchTaskBoard(params: FetchTaskBoardParams = {}): Promise<TaskBoardResponse> {
+	return request(`/board/${buildQuery(params as Record<string, string | number | undefined>)}`, {
+		base: TASKS_BASE,
+	});
+}
+
+export interface FetchTasksParams {
+	page?: number;
+	page_size?: number;
+	q?: string;
+	item?: string;
+	company?: string;
+	sort?: string;
+	dir?: string;
+}
+
+export interface TaskListResponse {
+	count: number;
+	results: Task[];
+	next: string | null;
+	previous: string | null;
+}
+
+export async function fetchTasks(params: FetchTasksParams = {}): Promise<TaskListResponse> {
+	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
+		base: TASKS_BASE,
+	});
+}
+
+export async function fetchTask(id: string): Promise<Task> {
+	return request(`/${id}/`, { base: TASKS_BASE });
+}
+
+export async function changeTaskStatus(
+	id: string,
+	data: { status: TaskStatus; completedResponse?: string },
+): Promise<Task> {
+	return request(`/${id}/status/`, {
+		base: TASKS_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+export async function uploadTaskAttachments(id: string, files: File[]): Promise<Attachment[]> {
+	const formData = new FormData();
+	for (const file of files) {
+		formData.append("files", file);
+	}
+	return request(`/${id}/attachments/`, {
+		base: TASKS_BASE,
+		method: "POST",
+		body: formData,
+	});
+}
+
+export async function deleteTaskAttachment(id: string, attachmentId: string): Promise<void> {
+	return request(`/${id}/attachments/${attachmentId}/`, {
+		base: TASKS_BASE,
+		method: "DELETE",
 	});
 }

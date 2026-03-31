@@ -81,8 +81,11 @@ export function TaskTable({ onTaskClick, filterParams }: TaskTableProps) {
 							))}
 						{!isLoading &&
 							tasks.map((task, index) => {
-								const isOverdue = new Date(task.deadline) < now;
+								const isOverdue = new Date(task.deadlineAt) < now;
 								const StatusIcon = STATUS_ICONS[task.status];
+								const assigneeName = task.assignee
+									? `${task.assignee.lastName} ${task.assignee.firstName}`
+									: "Не назначен";
 								return (
 									<TableRow
 										key={task.id}
@@ -91,17 +94,17 @@ export function TaskTable({ onTaskClick, filterParams }: TaskTableProps) {
 									>
 										<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
 										<TableCell>
-											<div className="font-medium">{task.title}</div>
+											<div className="font-medium">{task.name}</div>
 											<Badge variant={STATUS_BADGE_VARIANT[task.status]} className="mt-1">
 												<StatusIcon className="size-3" aria-hidden="true" />
 												{STATUS_LABELS[task.status]}
 											</Badge>
 										</TableCell>
-										<TableCell>{task.procurementItemName}</TableCell>
-										<TableCell>{task.assignee.name}</TableCell>
+										<TableCell>{task.item.name}</TableCell>
+										<TableCell>{assigneeName}</TableCell>
 										<TableCell>
-											<time dateTime={task.deadline} className={cn(isOverdue && "font-medium text-destructive")}>
-												{formatShortDate(task.deadline)}
+											<time dateTime={task.deadlineAt} className={cn(isOverdue && "font-medium text-destructive")}>
+												{formatShortDate(task.deadlineAt)}
 											</time>
 										</TableCell>
 										<TableCell>

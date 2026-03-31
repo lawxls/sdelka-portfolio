@@ -19,9 +19,9 @@ interface TaskToolbarProps {
 }
 
 const SORT_PRESETS: { label: string; field: TaskSortField }[] = [
-	{ label: "Дата создания", field: "createdAt" },
-	{ label: "Дедлайн", field: "deadline" },
-	{ label: "Кол-во вопросов", field: "questionCount" },
+	{ label: "Дата создания", field: "created_at" },
+	{ label: "Дедлайн", field: "deadline_at" },
+	{ label: "Кол-во вопросов", field: "question_count" },
 ];
 
 const FILTER_BTN =

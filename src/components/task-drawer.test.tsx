@@ -2,17 +2,52 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { _resetTaskStore, _setMockDelay } from "@/data/task-mock-data";
-import { createTestQueryClient } from "@/test-utils";
+import { HttpResponse, http } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test-msw";
+import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
+
+vi.mock("sonner", () => ({
+	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
+
+const unansweredTask = makeTask("task-1", {
+	name: "Согласование цены на арматуру",
+	item: { id: "i-1", name: "Арматура А500С", companyId: "c-1" },
+	createdAt: "2026-03-01T10:00:00.000Z",
+	description: "Поставщик прислал обновлённое КП. Необходимо проверить соответствие спецификации и подтвердить объёмы.",
+	status: "assigned",
+});
+
+const completedTask = makeTask("task-51", {
+	name: "Завершённая задача",
+	status: "completed",
+	completedResponse: "Согласовано. Условия поставки подтверждены, договор направлен на подпись.",
+});
 
 let queryClient: QueryClient;
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
-	_resetTaskStore();
-	_setMockDelay(0, 0);
+	mockHostname("acme.localhost");
+	localStorage.setItem("auth-access-token", "test-token");
+	localStorage.setItem("auth-refresh-token", "test-refresh");
+
+	server.use(
+		http.get("/api/v1/tasks/:id/", ({ params }) => {
+			if (params.id === "task-1") return HttpResponse.json(unansweredTask);
+			if (params.id === "task-51") return HttpResponse.json(completedTask);
+			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
+		}),
+		http.patch("/api/v1/tasks/:id/status/", () => {
+			return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Done" });
+		}),
+	);
+});
+
+afterEach(() => {
+	localStorage.clear();
 });
 
 function renderDrawer(taskId: string | null, onClose = vi.fn()) {
@@ -35,7 +70,7 @@ const datetimeFmt = new Intl.DateTimeFormat("ru-RU", {
 });
 
 describe("TaskDrawer", () => {
-	it("displays task title, item name, created date, and description", async () => {
+	it("displays task name, item name, created date, and description", async () => {
 		renderDrawer("task-1");
 
 		await waitFor(() => {

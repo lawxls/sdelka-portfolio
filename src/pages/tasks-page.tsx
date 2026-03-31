@@ -20,13 +20,13 @@ import { TaskToolbar } from "@/components/task-toolbar";
 import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
-import { useProcurementItems, useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 
 const DRAG_OVERLAY_MODIFIERS = [anchorDragOverlayToCursor];
 
-const SORT_FIELDS = new Set<string>(["createdAt", "deadline", "questionCount"]);
+const SORT_FIELDS = new Set<string>(["created_at", "deadline_at", "question_count"]);
 
 function findTaskInColumns(columns: Record<TaskStatus, { tasks: Task[] }>, taskId: string): Task | undefined {
 	for (const status of TASK_STATUSES) {
@@ -61,7 +61,6 @@ export function TasksPage() {
 	};
 
 	const columns = useTaskColumns(filterParams);
-	const { data: procurementItems = [] } = useProcurementItems();
 	const updateStatus = useUpdateTaskStatus();
 
 	// Drag state
@@ -180,7 +179,7 @@ export function TasksPage() {
 						onSort={handleSort}
 						activeItem={activeItem}
 						onItemFilter={handleItemFilter}
-						procurementItems={procurementItems}
+						procurementItems={[]}
 					/>
 					<div className="flex items-center gap-1">
 						<Button

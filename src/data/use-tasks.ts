@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getAllTasks, getProcurementItems, getTask, getTasks, submitAnswer, updateTaskStatus } from "./task-mock-data";
+import { changeTaskStatus, fetchTask, fetchTaskBoard, fetchTasks } from "./api-client";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
@@ -27,62 +27,78 @@ function addTaskToCache(cache: TasksCache, task: Task): TasksCache {
 	};
 }
 
-function useTasksByStatus(status: TaskStatus, params?: TaskFilterParams) {
-	const query = useInfiniteQuery({
-		queryKey: ["tasks", status, params ?? {}],
-		queryFn: ({ pageParam }) => getTasks(status, pageParam, 20, params),
-		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+export function useTaskColumns(params?: TaskFilterParams) {
+	const queryParams = params ?? {};
+	const boardQuery = useQuery({
+		queryKey: ["tasks-board", queryParams],
+		queryFn: () =>
+			fetchTaskBoard({
+				q: queryParams.q,
+				item: queryParams.item,
+				company: queryParams.company,
+				sort: queryParams.sort,
+				dir: queryParams.dir,
+			}),
 	});
 
+	const boardData = boardQuery.data;
+
+	function columnState(status: TaskStatus) {
+		const column = boardData?.[status];
+		return {
+			tasks: column?.results ?? [],
+			hasNextPage: column?.next != null,
+			loadMore: () => {},
+			isLoading: boardQuery.isLoading,
+			isFetchingNextPage: false,
+		};
+	}
+
 	return {
-		tasks: query.data?.pages.flatMap((p) => p.tasks) ?? [],
-		hasNextPage: query.hasNextPage,
-		loadMore: query.fetchNextPage,
-		isLoading: query.isLoading,
-		isFetchingNextPage: query.isFetchingNextPage,
+		assigned: columnState("assigned"),
+		in_progress: columnState("in_progress"),
+		completed: columnState("completed"),
+		archived: columnState("archived"),
 	};
 }
 
 export function useAllTasks(params?: TaskFilterParams) {
+	const queryParams = params ?? {};
 	const query = useInfiniteQuery({
-		queryKey: ["tasks", "all", params ?? {}],
-		queryFn: ({ pageParam }) => getAllTasks(pageParam, 20, params),
-		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+		queryKey: ["tasks", "all", queryParams],
+		queryFn: ({ pageParam }) =>
+			fetchTasks({
+				page: pageParam,
+				page_size: 20,
+				q: queryParams.q,
+				item: queryParams.item,
+				company: queryParams.company,
+				sort: queryParams.sort,
+				dir: queryParams.dir,
+			}),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage, _allPages, lastPageParam) => (lastPage.next ? lastPageParam + 1 : undefined),
 	});
 
+	// Extract page number from next URL or compute from pagination
+	const pages = query.data?.pages ?? [];
+	const lastPage = pages[pages.length - 1];
+	const hasNextPage = lastPage?.next != null;
+
 	return {
-		tasks: query.data?.pages.flatMap((p) => p.tasks) ?? [],
-		hasNextPage: query.hasNextPage,
+		tasks: pages.flatMap((p) => p.results),
+		hasNextPage,
 		loadMore: query.fetchNextPage,
 		isLoading: query.isLoading,
 		isFetchingNextPage: query.isFetchingNextPage,
 	};
-}
-
-export function useTaskColumns(params?: TaskFilterParams) {
-	const assigned = useTasksByStatus("assigned", params);
-	const in_progress = useTasksByStatus("in_progress", params);
-	const completed = useTasksByStatus("completed", params);
-	const archived = useTasksByStatus("archived", params);
-
-	return { assigned, in_progress, completed, archived };
 }
 
 export function useTask(id: string | null) {
 	return useQuery({
 		queryKey: ["task", id],
-		queryFn: () => getTask(id as string),
+		queryFn: () => fetchTask(id as string),
 		enabled: id !== null,
-	});
-}
-
-export function useProcurementItems() {
-	return useQuery({
-		queryKey: ["tasks", "procurementItems"],
-		queryFn: () => getProcurementItems(),
-		staleTime: Number.POSITIVE_INFINITY,
 	});
 }
 
@@ -108,6 +124,7 @@ async function cancelAllTaskQueries(queryClient: ReturnType<typeof useQueryClien
 
 function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>, taskId?: string) {
 	queryClient.invalidateQueries({ queryKey: ["tasks"] });
+	queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
 	if (taskId) queryClient.invalidateQueries({ queryKey: ["task", taskId] });
 }
 
@@ -127,7 +144,7 @@ export function useUpdateTaskStatus() {
 	const findTask = findTaskInCaches(queryClient);
 
 	return useMutation({
-		mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => updateTaskStatus(id, status),
+		mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => changeTaskStatus(id, { status }),
 		onMutate: async ({ id, status: newStatus }) => {
 			await cancelAllTaskQueries(queryClient);
 
@@ -166,9 +183,9 @@ export function useSubmitAnswer() {
 	const findTask = findTaskInCaches(queryClient);
 
 	return useMutation({
-		mutationFn: ({ id, answer, attachments }: { id: string; answer: string; attachments?: string[] }) =>
-			submitAnswer(id, answer, attachments),
-		onMutate: async ({ id, answer, attachments = [] }) => {
+		mutationFn: ({ id, answer }: { id: string; answer: string; attachments?: string[] }) =>
+			changeTaskStatus(id, { status: "completed", completedResponse: answer }),
+		onMutate: async ({ id, answer }) => {
 			await cancelAllTaskQueries(queryClient);
 
 			const found = findTask(id);
@@ -190,7 +207,7 @@ export function useSubmitAnswer() {
 						snapshots.push({ key, data });
 						queryClient.setQueryData<TasksCache>(
 							key,
-							addTaskToCache(data, { ...task, status: "completed", answer, attachments }),
+							addTaskToCache(data, { ...task, status: "completed", completedResponse: answer }),
 						);
 					}
 				}

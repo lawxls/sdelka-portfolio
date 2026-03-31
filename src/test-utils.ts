@@ -147,16 +147,19 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 export function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
 		id,
-		title: `Task ${id}`,
-		procurementItemName: "Арматура А500С",
+		name: `Task ${id}`,
 		status: "assigned",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		assignee: { id: "user-1", firstName: "Алексей", lastName: "Иванов", email: "ivanov@test.com", avatarIcon: "blue" },
 		createdAt: "2026-03-15T10:00:00.000Z",
-		deadline: "2026-04-01T18:00:00.000Z",
-		assignee: { name: "Иванов Алексей", initials: "ИА", avatar_icon: "blue" },
+		deadlineAt: "2026-04-01T18:00:00.000Z",
 		description: "Test description",
 		questionCount: 1,
-		answer: null,
+		completedResponse: null,
 		attachments: [],
+		statusBeforeArchive: null,
+		supplierQuestions: [],
+		updatedAt: "2026-03-15T10:00:00.000Z",
 		...overrides,
 	};
 }

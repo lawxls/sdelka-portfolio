@@ -12,12 +12,22 @@ interface TaskCardProps {
 	isDragging?: boolean;
 }
 
+function getAssigneeInitials(assignee: Task["assignee"]): string {
+	if (!assignee) return "?";
+	return `${assignee.lastName[0]}${assignee.firstName[0]}`;
+}
+
+function getAssigneeDisplayName(assignee: Task["assignee"]): string {
+	if (!assignee) return "Не назначен";
+	return `${assignee.lastName} ${assignee.firstName}`;
+}
+
 export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps) {
 	const { attributes, listeners, setNodeRef } = useDraggable({
 		id: task.id,
 		disabled: !draggable,
 	});
-	const isOverdue = new Date(task.deadline) < new Date();
+	const isOverdue = new Date(task.deadlineAt) < new Date();
 
 	return (
 		<article
@@ -48,22 +58,32 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 				<div className="min-w-0">
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<p className="line-clamp-2 min-h-[2lh] text-sm font-medium">{task.title}</p>
+							<p className="line-clamp-2 min-h-[2lh] text-sm font-medium">{task.name}</p>
 						</TooltipTrigger>
-						<TooltipContent side="top">{task.title}</TooltipContent>
+						<TooltipContent side="top">{task.name}</TooltipContent>
 					</Tooltip>
-					<p className="truncate text-xs text-muted-foreground">{task.procurementItemName}</p>
+					<p className="truncate text-xs text-muted-foreground">{task.item.name}</p>
 				</div>
-				<span
-					role="img"
-					className={cn(
-						"flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white",
-						getAvatarColor(task.assignee.avatar_icon),
-					)}
-					aria-label={task.assignee.name}
-				>
-					{task.assignee.initials}
-				</span>
+				{task.assignee ? (
+					<span
+						role="img"
+						className={cn(
+							"flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white",
+							getAvatarColor(task.assignee.avatarIcon),
+						)}
+						aria-label={getAssigneeDisplayName(task.assignee)}
+					>
+						{getAssigneeInitials(task.assignee)}
+					</span>
+				) : (
+					<span
+						role="img"
+						className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground"
+						aria-label="Не назначен"
+					>
+						?
+					</span>
+				)}
 			</div>
 			<div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
 				<div className="flex items-center gap-3">
@@ -72,8 +92,8 @@ export function TaskCard({ task, onClick, draggable, isDragging }: TaskCardProps
 					</span>
 					<span className={cn(isOverdue && "font-medium text-destructive")}>
 						Дедлайн{" "}
-						<time dateTime={task.deadline} data-testid={`deadline-${task.id}`}>
-							{formatShortDate(task.deadline)}
+						<time dateTime={task.deadlineAt} data-testid={`deadline-${task.id}`}>
+							{formatShortDate(task.deadlineAt)}
 						</time>
 					</span>
 				</div>
