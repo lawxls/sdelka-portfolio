@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Task } from "@/data/task-types";
 import { makeTask, TooltipWrapper } from "@/test-utils";
-import { TaskBoard, type TaskBoardProps } from "./task-board";
+import { isValidTransition, TaskBoard, type TaskBoardProps } from "./task-board";
 
 function makeColumn(tasks: Task[] = [], isLoading = false) {
 	return { tasks, isLoading, hasNextPage: false, isFetchingNextPage: false, loadMore: () => {} };
@@ -135,6 +135,32 @@ describe("TaskBoard", () => {
 			const col = screen.getByTestId(`column-${status}`);
 			expect(col.querySelector("[data-droppable-id]") ?? col.getAttribute("data-droppable-id")).toBeTruthy();
 		}
+	});
+});
+
+describe("isValidTransition", () => {
+	it("allows assigned → in_progress, completed, archived", () => {
+		expect(isValidTransition("assigned", "in_progress")).toBe(true);
+		expect(isValidTransition("assigned", "completed")).toBe(true);
+		expect(isValidTransition("assigned", "archived")).toBe(true);
+	});
+
+	it("allows in_progress → assigned, completed, archived", () => {
+		expect(isValidTransition("in_progress", "assigned")).toBe(true);
+		expect(isValidTransition("in_progress", "completed")).toBe(true);
+		expect(isValidTransition("in_progress", "archived")).toBe(true);
+	});
+
+	it("blocks all transitions from completed", () => {
+		expect(isValidTransition("completed", "assigned")).toBe(false);
+		expect(isValidTransition("completed", "in_progress")).toBe(false);
+		expect(isValidTransition("completed", "archived")).toBe(false);
+	});
+
+	it("allows archived → assigned, in_progress only", () => {
+		expect(isValidTransition("archived", "assigned")).toBe(true);
+		expect(isValidTransition("archived", "in_progress")).toBe(true);
+		expect(isValidTransition("archived", "completed")).toBe(false);
 	});
 });
 

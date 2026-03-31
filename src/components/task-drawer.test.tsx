@@ -177,6 +177,28 @@ describe("TaskDrawer", () => {
 		expect(screen.queryByText("report.xlsx")).not.toBeInTheDocument();
 	});
 
+	it("shows API error detail in toast when status change fails", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
+			}),
+		);
+		renderDrawer("task-1");
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("combobox", { name: "Статус задачи" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("combobox", { name: "Статус задачи" }));
+		await user.click(screen.getByRole("option", { name: "В работе" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+		});
+	});
+
 	it("does not render drawer content when taskId is null", () => {
 		renderDrawer(null);
 		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();

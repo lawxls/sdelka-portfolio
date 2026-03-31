@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { changeTaskStatus, fetchTask, fetchTaskBoard, fetchTasks } from "./api-client";
+import { ApiError } from "./api-error";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 
@@ -170,9 +171,10 @@ export function useUpdateTaskStatus() {
 
 			return { snapshots };
 		},
-		onError: (_err, _vars, context) => {
+		onError: (err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			toast.error("Не удалось обновить статус задачи");
+			const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
+			toast.error(detail ?? "Не удалось обновить статус задачи");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
@@ -215,9 +217,10 @@ export function useSubmitAnswer() {
 
 			return { snapshots };
 		},
-		onError: (_err, _vars, context) => {
+		onError: (err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			toast.error("Не удалось отправить ответ");
+			const detail = err instanceof ApiError ? (err.body as { detail?: string })?.detail : undefined;
+			toast.error(detail ?? "Не удалось отправить ответ");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});

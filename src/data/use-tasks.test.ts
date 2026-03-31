@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { Task } from "./task-types";
-import { useAllTasks, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
+import { useAllTasks, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -271,11 +271,11 @@ describe("useUpdateTaskStatus", () => {
 		expect(inProgress?.pages[0].tasks[0].status).toBe("in_progress");
 	});
 
-	it("rolls back on error", async () => {
+	it("rolls back on error and shows API detail in toast", async () => {
 		const { toast } = await import("sonner");
 		server.use(
 			http.patch("/api/v1/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Status change not allowed" }, { status: 400 });
+				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
 			}),
 		);
 
@@ -299,6 +299,116 @@ describe("useUpdateTaskStatus", () => {
 		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(0);
 
-		expect(toast.error).toHaveBeenCalled();
+		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+	});
+
+	it("shows generic error toast when API returns no detail", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json(null, { status: 500 });
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("in_progress", []);
+
+		const { result } = renderHook(() => useUpdateTaskStatus(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", status: "in_progress" });
+			} catch {}
+		});
+
+		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
+	});
+});
+
+describe("useSubmitAnswer", () => {
+	it("optimistically moves task to completed column", async () => {
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", async () => {
+				await new Promise((r) => setTimeout(r, 5000));
+				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		act(() => {
+			result.current.mutate({ id: "t1", answer: "My answer" });
+		});
+
+		await waitFor(() => {
+			const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
+			expect(assigned?.pages[0].tasks).toHaveLength(0);
+		});
+
+		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
+		expect(completed?.pages[0].tasks).toHaveLength(1);
+		expect(completed?.pages[0].tasks[0].id).toBe("t1");
+		expect(completed?.pages[0].tasks[0].status).toBe("completed");
+	});
+
+	it("rolls back on error and shows API detail in toast", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json({ detail: "Task is already completed." }, { status: 400 });
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", answer: "My answer" });
+			} catch {}
+		});
+
+		const assigned = queryClient.getQueryData<TasksCache>(["tasks", "assigned", {}]);
+		expect(assigned?.pages[0].tasks).toHaveLength(1);
+
+		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
+		expect(completed?.pages[0].tasks).toHaveLength(0);
+
+		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
+	});
+
+	it("shows generic error toast when API returns no detail", async () => {
+		const { toast } = await import("sonner");
+		server.use(
+			http.patch("/api/v1/tasks/:id/status/", () => {
+				return HttpResponse.json(null, { status: 500 });
+			}),
+		);
+
+		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
+		seedTasks("completed", []);
+
+		const { result } = renderHook(() => useSubmitAnswer(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await act(async () => {
+			try {
+				await result.current.mutateAsync({ id: "t1", answer: "My answer" });
+			} catch {}
+		});
+
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 });
