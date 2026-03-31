@@ -123,6 +123,30 @@ function setupHandlers() {
 			itemList = [...itemList, ...created];
 			return HttpResponse.json({ items: created, isAsync: false }, { status: 201 });
 		}),
+		http.get("/api/v1/companies/", () =>
+			HttpResponse.json({
+				companies: [
+					{
+						id: "company-1",
+						name: "Тестовая компания",
+						isMain: true,
+						responsibleEmployeeName: "Иванов",
+						addresses: [
+							{
+								id: "addr-1",
+								name: "Офис",
+								type: "office",
+								address: "г. Москва, ул. Тестовая, д. 1",
+								isMain: true,
+							},
+						],
+						employeeCount: 1,
+						procurementItemCount: 0,
+					},
+				],
+				nextCursor: null,
+			}),
+		),
 	);
 }
 
@@ -689,6 +713,10 @@ describe("ProcurementPage", () => {
 		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Тестовая позиция");
 
+		const companyTrigger = await screen.findByLabelText("Компания");
+		await user.click(companyTrigger);
+		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
+
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer closes
@@ -713,6 +741,10 @@ describe("ProcurementPage", () => {
 		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Большая партия");
 
+		const companyTrigger = await screen.findByLabelText("Компания");
+		await user.click(companyTrigger);
+		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
+
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// Drawer closes
@@ -736,6 +768,10 @@ describe("ProcurementPage", () => {
 
 		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
 		await user.type(nameInput, "Test");
+
+		const companyTrigger = await screen.findByLabelText("Компания");
+		await user.click(companyTrigger);
+		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 

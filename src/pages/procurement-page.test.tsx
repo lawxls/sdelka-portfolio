@@ -288,3 +288,51 @@ describe("ProcurementPage — URL state", () => {
 		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 });
+
+describe("ProcurementPage — item drawer", () => {
+	test("clicking a procurement row opens the item drawer", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+
+		await waitFor(() => {
+			expect(screen.getByText("Труба стальная")).toBeInTheDocument();
+		});
+
+		const user = userEvent.setup();
+		await user.click(screen.getByText("Труба стальная"));
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		// Drawer shows item name as title
+		expect(screen.getAllByText("Труба стальная").length).toBeGreaterThanOrEqual(2);
+		// Tabs are rendered
+		expect(screen.getByRole("tablist")).toBeInTheDocument();
+	});
+
+	test("?item= URL param opens drawer on page load", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?item=i1"]);
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+		expect(screen.getByRole("tablist")).toBeInTheDocument();
+	});
+
+	test("close button removes drawer and ?item= param", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?item=i1"]);
+
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Close" }));
+
+		await waitFor(() => {
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+	});
+});

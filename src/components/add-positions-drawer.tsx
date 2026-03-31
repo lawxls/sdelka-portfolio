@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { OptionalSegmentedControl, SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +41,7 @@ import {
 	UNITS,
 	UNLOADING_LABELS,
 } from "@/data/types";
+import { useProcurementCompanies } from "@/data/use-companies";
 import { formatCurrency, formatFileSize, formatGroupedInteger } from "@/lib/format";
 
 interface PositionRow {
@@ -77,7 +79,6 @@ interface DeliveryState {
 	paymentDeferralDays: string;
 	paymentMethod: PaymentMethod;
 	deliveryType: DeliveryType;
-	deliveryAddress: string;
 	unloading: UnloadingType | null;
 	analoguesAllowed: boolean | null;
 	additionalInfo: string;
@@ -90,76 +91,11 @@ function createDefaultDelivery(): DeliveryState {
 		paymentDeferralDays: "",
 		paymentMethod: "bank_transfer",
 		deliveryType: "warehouse",
-		deliveryAddress: "",
 		unloading: null,
 		analoguesAllowed: null,
 		additionalInfo: "",
 		monitoringPeriod: "quarter",
 	};
-}
-
-function SegmentedControl<T extends string>({
-	options,
-	labels,
-	value,
-	onChange,
-}: {
-	options: readonly T[];
-	labels: Record<T, string>;
-	value: T;
-	onChange: (v: T) => void;
-}) {
-	return (
-		<div className="flex rounded-lg border border-input">
-			{options.map((opt) => (
-				<button
-					key={opt}
-					type="button"
-					aria-pressed={value === opt}
-					className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
-						value === opt
-							? "bg-primary text-primary-foreground"
-							: "bg-background text-muted-foreground hover:text-foreground"
-					}`}
-					onClick={() => onChange(opt)}
-				>
-					{labels[opt]}
-				</button>
-			))}
-		</div>
-	);
-}
-
-function OptionalSegmentedControl<T extends string>({
-	options,
-	labels,
-	value,
-	onChange,
-}: {
-	options: readonly T[];
-	labels: Record<T, string>;
-	value: T | null;
-	onChange: (v: T | null) => void;
-}) {
-	return (
-		<div className={`flex rounded-lg border border-input${value === null ? " divide-x divide-input" : ""}`}>
-			{options.map((opt) => (
-				<button
-					key={opt}
-					type="button"
-					aria-pressed={value === opt}
-					className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
-						value === opt
-							? "bg-primary text-primary-foreground"
-							: "bg-background text-muted-foreground hover:text-foreground"
-					}`}
-					onClick={() => onChange(value === opt ? null : opt)}
-				>
-					{labels[opt]}
-				</button>
-			))}
-		</div>
-	);
 }
 
 function HintTooltip({ text }: { text: string }) {
@@ -199,20 +135,27 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
 	const [files, setFiles] = useState<File[]>([]);
 	const [showConfirm, setShowConfirm] = useState(false);
+	const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+	const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+	const [companyError, setCompanyError] = useState<string>("");
 	const pendingFocusKey = useRef<string | null>(null);
 	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const { data: companies } = useProcurementCompanies();
+	const selectedCompany = selectedCompanyId ? companies.find((c) => c.id === selectedCompanyId) : undefined;
 
 	const isDirty =
 		positions.some((p) => p.name || p.description || p.quantity || p.unit || p.price) ||
 		frequencyCount !== "1" ||
 		frequencyPeriod !== "month" ||
 		hideCompanyInfo ||
+		selectedCompanyId !== "" ||
+		selectedAddressId !== "" ||
 		delivery.paymentType !== "prepayment" ||
 		delivery.paymentDeferralDays !== "" ||
 		delivery.paymentMethod !== "bank_transfer" ||
 		delivery.deliveryType !== "warehouse" ||
-		delivery.deliveryAddress !== "" ||
 		delivery.unloading !== null ||
 		delivery.analoguesAllowed !== null ||
 		delivery.additionalInfo !== "" ||
@@ -224,6 +167,9 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		setFrequencyCount("1");
 		setFrequencyPeriod("month");
 		setHideCompanyInfo(false);
+		setSelectedCompanyId("");
+		setSelectedAddressId("");
+		setCompanyError("");
 		setDelivery(createDefaultDelivery());
 		setFiles([]);
 	}
@@ -252,8 +198,11 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		fields.paymentMethod = delivery.paymentMethod;
 
 		fields.deliveryType = delivery.deliveryType;
-		if (delivery.deliveryType === "warehouse" && delivery.deliveryAddress.trim()) {
-			fields.deliveryAddress = delivery.deliveryAddress.trim();
+		if (selectedAddressId && selectedCompany) {
+			const addr = selectedCompany.addresses.find((a) => a.id === selectedAddressId);
+			if (addr) {
+				fields.deliveryAddress = addr.address;
+			}
 		}
 
 		if (delivery.unloading !== null) {
@@ -293,6 +242,15 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 	function handleSubmit() {
 		if (!validatePositions()) return;
+
+		if (!selectedCompanyId) {
+			setCompanyError("Выберите компанию");
+			return;
+		}
+		if (!selectedAddressId) {
+			setCompanyError("Выберите адрес");
+			return;
+		}
 
 		const deliveryFields = buildSharedFields();
 
@@ -392,15 +350,15 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			<Sheet open={open} onOpenChange={handleOpenChange}>
 				<SheetContent
 					showCloseButton={false}
-					className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
+					className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 				>
-					<SheetHeader className="max-md:border-b max-md:border-border">
+					<SheetHeader className="border-b pb-4">
 						<SheetTitle>Добавить позиции</SheetTitle>
 						<SheetDescription className="sr-only">Создание новых позиций закупок</SheetDescription>
 					</SheetHeader>
 
 					<div className="flex-1 overflow-y-auto px-4">
-						<div className="flex flex-col gap-3">
+						<div className="flex flex-col gap-3 pt-4">
 							{positions.map((pos, i) => (
 								<div key={pos.key} data-testid={`position-row-${i}`} className="rounded-lg border border-border p-3">
 									<div className="mb-2 flex items-center justify-between">
@@ -512,6 +470,68 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 						<TooltipProvider>
 							<div className="mt-3">
+								{/* ── Компания ── */}
+								<SectionGroupHeader title="Компания" />
+
+								<div className="border-t border-border py-3 flex flex-col gap-3">
+									<div>
+										<Select
+											value={selectedCompanyId || undefined}
+											onValueChange={(v) => {
+												setSelectedCompanyId(v);
+												setCompanyError("");
+												const company = companies.find((c) => c.id === v);
+												const mainAddr = company?.addresses.find((a) => a.isMain);
+												setSelectedAddressId(mainAddr?.id ?? "");
+											}}
+										>
+											<SelectTrigger
+												aria-label="Компания"
+												aria-invalid={companyError && !selectedCompanyId ? true : undefined}
+												className={companyError && !selectedCompanyId ? "border-destructive" : undefined}
+											>
+												<SelectValue placeholder="Выберите компанию *" />
+											</SelectTrigger>
+											<SelectContent position="popper">
+												{companies.map((c) => (
+													<SelectItem key={c.id} value={c.id}>
+														{c.name}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									{selectedCompany && selectedCompany.addresses.length > 0 && (
+										<div>
+											<Select
+												value={selectedAddressId || undefined}
+												onValueChange={(v) => {
+													setSelectedAddressId(v);
+													setCompanyError("");
+												}}
+											>
+												<SelectTrigger
+													aria-label="Адрес компании"
+													aria-invalid={companyError && selectedCompanyId && !selectedAddressId ? true : undefined}
+													className={
+														companyError && selectedCompanyId && !selectedAddressId ? "border-destructive" : undefined
+													}
+												>
+													<SelectValue placeholder="Выберите адрес *" />
+												</SelectTrigger>
+												<SelectContent position="popper">
+													{selectedCompany.addresses.map((a) => (
+														<SelectItem key={a.id} value={a.id}>
+															{a.name} — {a.address}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									)}
+									{companyError && <p className="text-sm text-destructive">{companyError}</p>}
+								</div>
+
 								{/* ── Условия поставки ── */}
 								<SectionGroupHeader title="Условия поставки" />
 
@@ -580,16 +600,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 										value={delivery.deliveryType}
 										onChange={(v) => updateDelivery("deliveryType", v)}
 									/>
-									{delivery.deliveryType === "warehouse" && (
-										<Input
-											placeholder="Адрес доставки"
-											value={delivery.deliveryAddress}
-											onChange={(e) => updateDelivery("deliveryAddress", e.target.value)}
-											spellCheck={false}
-											autoComplete="off"
-											className="min-w-48"
-										/>
-									)}
 								</SectionLabel>
 
 								<SectionLabel label="Разгрузка">
@@ -722,7 +732,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 						</TooltipProvider>
 					</div>
 
-					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t border-border bg-background">
+					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
 						<Button type="button" variant="ghost" onClick={handleCancel}>
 							Отмена
 						</Button>

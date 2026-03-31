@@ -64,7 +64,7 @@ export function CompanyCreationSheet({ open, onOpenChange, onSubmit, isPending }
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
 				showCloseButton={false}
-				className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
+				className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 			>
 				{open && <CreationForm onSubmit={onSubmit} onCancel={() => onOpenChange(false)} isPending={isPending} />}
 			</SheetContent>
@@ -138,7 +138,7 @@ function CreationForm({
 
 	return (
 		<>
-			<SheetHeader className="max-md:border-b max-md:border-border">
+			<SheetHeader className="border-b pb-4">
 				<SheetTitle>Новая компания</SheetTitle>
 				<SheetDescription className="sr-only">Создание новой компании</SheetDescription>
 			</SheetHeader>
@@ -318,7 +318,7 @@ function CreationForm({
 				</div>
 			</div>
 
-			<SheetFooter className="sticky bottom-0 flex-row justify-between border-t border-border bg-background">
+			<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
 				<Button type="button" variant="ghost" onClick={onCancel}>
 					Отмена
 				</Button>

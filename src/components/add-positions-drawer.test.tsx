@@ -1,8 +1,37 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, test, vi } from "vitest";
-import type { NewItemInput } from "@/data/types";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { AddressSummary, NewItemInput } from "@/data/types";
+import { server } from "@/test-msw";
+import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
 import { AddPositionsDrawer } from "./add-positions-drawer";
+
+const TEST_ADDRESSES: AddressSummary[] = [
+	{ id: "addr-1", name: "Главный офис", type: "office", address: "г. Москва, ул. Ленина, д. 15", isMain: true },
+	{ id: "addr-2", name: "Склад", type: "warehouse", address: "г. Москва, ул. Складская, д. 1", isMain: false },
+];
+
+beforeEach(() => {
+	server.use(
+		http.get("/api/v1/companies/", () =>
+			HttpResponse.json({
+				companies: [
+					{
+						id: "company-1",
+						name: "Тестовая компания",
+						isMain: true,
+						responsibleEmployeeName: "Иванов",
+						addresses: TEST_ADDRESSES,
+						employeeCount: 1,
+						procurementItemCount: 0,
+					},
+				],
+				nextCursor: null,
+			}),
+		),
+	);
+});
 
 function renderDrawer(
 	overrides: Partial<{
@@ -16,7 +45,16 @@ function renderDrawer(
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
 		onSubmit: overrides.onSubmit ?? vi.fn(),
 	};
-	return { ...render(<AddPositionsDrawer {...props} />), ...props };
+	return {
+		...render(<AddPositionsDrawer {...props} />, { wrapper: createQueryWrapper(createTestQueryClient()) }),
+		...props,
+	};
+}
+
+async function selectCompany(user: ReturnType<typeof userEvent.setup>) {
+	const trigger = await screen.findByLabelText("Компания");
+	await user.click(trigger);
+	await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 }
 
 const ALWAYS_INCLUDED_DEFAULTS = {
@@ -220,11 +258,13 @@ describe("AddPositionsDrawer", () => {
 
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Арматура А500С");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([
 			{
 				name: "Арматура А500С",
+				deliveryAddress: "г. Москва, ул. Ленина, д. 15",
 				...ALWAYS_INCLUDED_DEFAULTS,
 			},
 		]);
@@ -245,6 +285,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.type(screen.getByPlaceholderText("Цена без НДС"), "5500");
 
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([
@@ -254,6 +295,7 @@ describe("AddPositionsDrawer", () => {
 				unit: "т",
 				annualQuantity: 120,
 				currentPrice: 5500,
+				deliveryAddress: "г. Москва, ул. Ленина, д. 15",
 				...ALWAYS_INCLUDED_DEFAULTS,
 			},
 		]);
@@ -271,6 +313,7 @@ describe("AddPositionsDrawer", () => {
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		await user.type(nameInputs[1], "Цемент");
 
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([
@@ -323,6 +366,7 @@ describe("AddPositionsDrawer", () => {
 
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Test");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalled();
@@ -342,13 +386,8 @@ describe("AddPositionsDrawer", () => {
 
 	// --- Delivery ---
 
-	test("delivery address only shown when До склада selected", async () => {
+	test("delivery section has no address input", () => {
 		renderDrawer();
-		const user = userEvent.setup();
-
-		expect(screen.getByPlaceholderText("Адрес доставки")).toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Самовывоз" }));
 		expect(screen.queryByPlaceholderText("Адрес доставки")).not.toBeInTheDocument();
 	});
 
@@ -360,6 +399,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit.mock.calls[0][0][0].unloading).toBeUndefined();
@@ -372,6 +412,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ unloading: "supplier" })]);
@@ -385,6 +426,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit.mock.calls[0][0][0].analoguesAllowed).toBeUndefined();
@@ -397,6 +439,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ analoguesAllowed: true })]);
@@ -410,6 +453,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ priceMonitoringPeriod: "quarter" })]);
@@ -424,6 +468,7 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" }));
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ hideCompanyInfo: true })]);
@@ -439,6 +484,7 @@ describe("AddPositionsDrawer", () => {
 		await user.type(screen.getByPlaceholderText("Введите комментарий…"), "Особые условия");
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ additionalInfo: "Особые условия" })]);
@@ -452,6 +498,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Plain");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		const item = onSubmit.mock.calls[0][0][0];
@@ -481,6 +528,7 @@ describe("AddPositionsDrawer", () => {
 		const nameInputs = screen.getAllByPlaceholderText("Название позиции *");
 		await user.type(nameInputs[1], "B");
 
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		const items = onSubmit.mock.calls[0][0];
@@ -498,6 +546,7 @@ describe("AddPositionsDrawer", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "X");
+		await selectCompany(user);
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 
 		// After reset, nothing selected
@@ -607,15 +656,9 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 
-	test("dirty detection: delivery address typed triggers confirmation", async () => {
-		const onOpenChange = vi.fn();
-		renderDrawer({ onOpenChange });
-		const user = userEvent.setup();
-
-		await user.type(screen.getByPlaceholderText("Адрес доставки"), "ул. Ленина 1");
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	test("company selector is visible", () => {
+		renderDrawer();
+		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
 	});
 
 	test("dirty detection: checking analogues triggers confirmation", async () => {

@@ -18,14 +18,27 @@ const MOCK_COMPANIES: CompanySummary[] = [
 		isMain: true,
 		responsibleEmployeeName: "Иванов Иван",
 		addresses: [
-			{ id: "addr-1", name: "Главный офис", type: "office", address: "г. Москва, ул. Ленина, д. 15, оф. 301" },
+			{
+				id: "addr-1",
+				name: "Главный офис",
+				type: "office",
+				address: "г. Москва, ул. Ленина, д. 15, оф. 301",
+				isMain: true,
+			},
 			{
 				id: "addr-2",
 				name: "Склад №1",
 				type: "warehouse",
 				address: "Московская обл., г. Подольск, ул. Складская, д. 10",
+				isMain: false,
 			},
-			{ id: "addr-3", name: "Цех", type: "production", address: "Московская обл., г. Химки, ул. Промышленная, д. 5" },
+			{
+				id: "addr-3",
+				name: "Цех",
+				type: "production",
+				address: "Московская обл., г. Химки, ул. Промышленная, д. 5",
+				isMain: false,
+			},
 		],
 		employeeCount: 12,
 		procurementItemCount: 25,
@@ -33,7 +46,15 @@ const MOCK_COMPANIES: CompanySummary[] = [
 	makeCompany("company-2", {
 		name: "СтройМастер",
 		responsibleEmployeeName: "Петров Пётр",
-		addresses: [{ id: "addr-4", name: "Центральный", type: "warehouse", address: "г. Казань, ул. Центральная, д. 3" }],
+		addresses: [
+			{
+				id: "addr-4",
+				name: "Центральный",
+				type: "warehouse",
+				address: "г. Казань, ул. Центральная, д. 3",
+				isMain: true,
+			},
+		],
 		employeeCount: 5,
 		procurementItemCount: 10,
 	}),
@@ -41,8 +62,20 @@ const MOCK_COMPANIES: CompanySummary[] = [
 		name: "ТехноСервис",
 		responsibleEmployeeName: "Сидоров Алексей",
 		addresses: [
-			{ id: "addr-5", name: "Головной", type: "office", address: "г. Новосибирск, пр. Мира, д. 20, оф. 5" },
-			{ id: "addr-6", name: "Запасной", type: "warehouse", address: "г. Новосибирск, ул. Запасная, д. 8" },
+			{
+				id: "addr-5",
+				name: "Головной",
+				type: "office",
+				address: "г. Новосибирск, пр. Мира, д. 20, оф. 5",
+				isMain: true,
+			},
+			{
+				id: "addr-6",
+				name: "Запасной",
+				type: "warehouse",
+				address: "г. Новосибирск, ул. Запасная, д. 8",
+				isMain: false,
+			},
 		],
 		employeeCount: 8,
 		procurementItemCount: 15,
@@ -57,6 +90,7 @@ const MOCK_COMPANIES: CompanySummary[] = [
 					name: `Адрес ${i + 4}`,
 					type: "office",
 					address: `г. Москва, ул. Тестовая, д. ${i + 4}`,
+					isMain: true,
 				},
 			],
 			employeeCount: i + 1,
@@ -74,6 +108,7 @@ const MOCK_ADDRESSES: Address[] = [
 		address: "г. Москва, ул. Ленина, д. 15, оф. 301",
 		contactPerson: "Иванов",
 		phone: "+71234567890",
+		isMain: true,
 	},
 	{
 		id: "addr-detail-2",
@@ -83,6 +118,7 @@ const MOCK_ADDRESSES: Address[] = [
 		address: "Московская обл., г. Подольск, ул. Складская, д. 10",
 		contactPerson: "Петров",
 		phone: "+79876543210",
+		isMain: false,
 	},
 ];
 
@@ -848,11 +884,11 @@ describe("CompaniesPage Сотрудники tab", () => {
 		expect(within(tab).getByText("Пользователь")).toBeInTheDocument();
 	});
 
-	test("responsible employee shows star indicator", async () => {
+	test("responsible employee shows badge", async () => {
 		await openEmployeesTab();
 
 		const card = screen.getByTestId("employee-emp-1");
-		expect(within(card).getByLabelText("Ответственный")).toBeInTheDocument();
+		expect(within(card).getByText("Ответственный")).toBeInTheDocument();
 	});
 
 	test("expand card shows profile fields in view mode and permissions matrix", async () => {
