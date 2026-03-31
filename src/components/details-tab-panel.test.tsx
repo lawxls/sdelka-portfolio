@@ -29,32 +29,35 @@ afterEach(() => {
 });
 
 describe("DetailsTabPanel", () => {
-	test("renders editable fields with current item values", async () => {
+	test("renders read-only sections with item values", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		expect(screen.getByLabelText("Годовой объём")).toHaveValue(1200);
-		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
+		// Values displayed as text
+		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
+		expect(screen.getByText("1200")).toBeInTheDocument();
+
+		// Edit buttons for info and conditions
+		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать условия" })).toBeInTheDocument();
+
+		// No save button in read-only mode
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("renders read-only fields that are not editable", async () => {
+	test("system data section has no edit button", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toBeInTheDocument();
+			expect(screen.getByText("Системные данные")).toBeInTheDocument();
 		});
 
-		const statusField = screen.getByLabelText("Статус");
-		expect(statusField).toHaveAttribute("readonly");
-
-		const bestPriceField = screen.getByLabelText("Лучшая цена");
-		expect(bestPriceField).toHaveAttribute("readonly");
-
-		const avgPriceField = screen.getByLabelText("Средняя цена");
-		expect(avgPriceField).toHaveAttribute("readonly");
+		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
+		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
+		expect(editButtons).toHaveLength(2);
 	});
 
 	test("shows loading skeleton while fetching", () => {
@@ -71,56 +74,78 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
 	});
 
-	test("unit select shows current value", async () => {
-		renderPanel();
-		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		});
-		// Unit trigger should show the current unit
-		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
-	});
-
-	test("payment type shows current value", async () => {
-		renderPanel();
-		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		});
-		// item-1 has paymentType: "deferred"
-		const deferredButton = screen.getByRole("button", { name: "Отсрочка" });
-		expect(deferredButton).toHaveAttribute("aria-pressed", "true");
-	});
-
-	test("delivery type shows current value", async () => {
-		renderPanel();
-		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		});
-		// item-1 has deliveryType: "warehouse"
-		const warehouseButton = screen.getByRole("button", { name: "До склада" });
-		expect(warehouseButton).toHaveAttribute("aria-pressed", "true");
-	});
-
-	test("save button triggers mutation with changed values", async () => {
+	test("clicking edit info shows form fields", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		// Edit the name
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		expect(screen.getByLabelText("Годовой объём")).toHaveValue(1200);
+		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
+		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
+		expect(screen.getByLabelText("Частота поставок")).toHaveValue(2);
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+	});
+
+	test("clicking edit conditions shows segmented controls", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Условия")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать условия" }));
+
+		// item-1 has paymentType: "deferred", deliveryType: "warehouse"
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByRole("button", { name: "До склада" })).toHaveAttribute("aria-pressed", "true");
+	});
+
+	test("save info section triggers mutation with changed values", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+
 		const nameInput = screen.getByLabelText("Название");
 		await user.clear(nameInput);
 		await user.type(nameInput, "Новое название");
 
-		// Click save
-		const saveButton = screen.getByRole("button", { name: "Сохранить" });
-		await user.click(saveButton);
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-		// After mutation succeeds, the value should persist
+		// After save, returns to read-only with updated value
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Новое название");
+			expect(screen.getByText("Новое название")).toBeInTheDocument();
 		});
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
+	});
+
+	test("cancel reverts to read-only view", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+		expect(screen.getByLabelText("Название")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
 	});
 
 	test("save button shows loading state during request", async () => {
@@ -128,10 +153,11 @@ describe("DetailsTabPanel", () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		// Set a delay so mutation takes time
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+
 		_setItemDetailMockDelay(5000, 5000);
 
 		const nameInput = screen.getByLabelText("Название");
@@ -141,16 +167,6 @@ describe("DetailsTabPanel", () => {
 		const saveButton = screen.getByRole("button", { name: "Сохранить" });
 		await user.click(saveButton);
 
-		// Button should be disabled during save
 		expect(saveButton).toBeDisabled();
-	});
-
-	test("frequency count shows current value", async () => {
-		renderPanel();
-		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		});
-		// item-1 has frequencyCount: 2
-		expect(screen.getByLabelText("Частота поставок")).toHaveValue(2);
 	});
 });

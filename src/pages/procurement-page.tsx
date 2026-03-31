@@ -253,7 +253,7 @@ export function ProcurementPage() {
 	}
 
 	const selectedItemId = searchParams.get("item");
-	const selectedItemName = selectedItemId ? items.find((i) => i.id === selectedItemId)?.name : undefined;
+	const selectedItem = selectedItemId ? items.find((i) => i.id === selectedItemId) : undefined;
 
 	function handleRowClick(item: ProcurementItem) {
 		setSearchParams(
@@ -365,7 +365,7 @@ export function ProcurementPage() {
 				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
 			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
-			<ProcurementItemDrawer itemName={selectedItemName} />
+			<ProcurementItemDrawer item={selectedItem} />
 		</DndContext>
 	);
 }

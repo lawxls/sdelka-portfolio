@@ -1,10 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+
+import type { ProcurementItem } from "@/data/types";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
@@ -21,6 +24,18 @@ vi.mock("recharts", async () => {
 	};
 });
 
+const TEST_ITEM: ProcurementItem = {
+	id: "item-1",
+	name: "Арматура А500С",
+	status: "searching",
+	annualQuantity: 1200,
+	currentPrice: 4500,
+	bestPrice: 3800,
+	averagePrice: 4100,
+	folderId: null,
+	companyId: "company-1",
+};
+
 let queryClient: QueryClient;
 
 function UrlSpy() {
@@ -31,10 +46,12 @@ function UrlSpy() {
 function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={initialEntries}>
-				<ProcurementItemDrawer itemName="Арматура А500С" />
-				<UrlSpy />
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={initialEntries}>
+					<ProcurementItemDrawer item={TEST_ITEM} />
+					<UrlSpy />
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -154,8 +171,8 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
 		});
-		// Table headers present
-		expect(screen.getByText("Компания")).toBeInTheDocument();
+		// Table headers present (uppercase)
+		expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
 		expect(screen.getByText("TCO")).toBeInTheDocument();
 		// Supplier data loaded (10 suppliers for item-1)
 		await waitFor(() => {
@@ -249,11 +266,11 @@ describe("ProcurementItemDrawer", () => {
 		});
 		// Supplier detail drawer should render with company info
 		await waitFor(() => {
-			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
 		});
 	});
 
-	test("supplier detail drawer shows TCO breakdown, rating, AI comment", async () => {
+	test("supplier detail drawer shows TCO breakdown, agent comment", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
@@ -264,14 +281,12 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getAllByRole("row")[1]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
 		});
-		// "Рейтинг" exists both as table column header and detail section — check section heading via h3
-		expect(screen.getByRole("heading", { name: "Рейтинг" })).toBeInTheDocument();
-		expect(screen.getByText("AI-комментарий")).toBeInTheDocument();
+		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
 	});
 
-	test("supplier detail drawer shows documents and chat history", async () => {
+	test("supplier detail drawer shows documents and email history", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
@@ -281,9 +296,9 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getAllByRole("row")[1]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Документы")).toBeInTheDocument();
+			expect(screen.getByText("Документы из диалога")).toBeInTheDocument();
 		});
-		expect(screen.getByText("Переписка")).toBeInTheDocument();
+		expect(screen.getByText("История общения")).toBeInTheDocument();
 	});
 
 	test("closing supplier drawer removes &supplier= from URL", async () => {
@@ -313,7 +328,7 @@ describe("ProcurementItemDrawer", () => {
 	test("?supplier= deep link opens supplier detail drawer", async () => {
 		renderDrawer(["/procurement?item=item-1&supplier=supplier-item-1-1"]);
 		await waitFor(() => {
-			expect(screen.getByText("Стоимость")).toBeInTheDocument();
+			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
 		});
 	});
 
@@ -328,9 +343,10 @@ describe("ProcurementItemDrawer", () => {
 		// Legend labels should be present
 		expect(screen.getByText("Отправлено RFQ")).toBeInTheDocument();
 		expect(screen.getByText("Прислали КП")).toBeInTheDocument();
-		// Total count should be displayed
-		expect(screen.getByText("10")).toBeInTheDocument();
-		expect(screen.getByText("Поставщиков")).toBeInTheDocument();
+		// Total count should be displayed in the chart center
+		const chart = screen.getByTestId("analytics-chart");
+		expect(within(chart).getByText("10")).toBeInTheDocument();
+		expect(within(chart).getByText("Поставщиков")).toBeInTheDocument();
 	});
 
 	test("analytics tab deep link via ?tab=analytics loads chart", async () => {
@@ -356,38 +372,54 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
 	});
 
-	test("details tab renders editable form with item data", async () => {
+	test("details tab shows read-only view with sections and edit buttons", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 
 		await user.click(screen.getByRole("tab", { name: "Детальная информация" }));
 
-		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
-		});
+		const panel = await waitFor(() => screen.getByTestId("tab-panel-details"));
 
-		expect(screen.getByLabelText("Годовой объём")).toHaveValue(1200);
-		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
-		expect(screen.getByLabelText("Статус")).toHaveAttribute("readonly");
+		// Read-only values displayed
+		expect(within(panel).getByText("Основная информация")).toBeInTheDocument();
+		expect(within(panel).getByText("1200")).toBeInTheDocument();
+
+		// Edit buttons present for info and conditions
+		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать условия" })).toBeInTheDocument();
+
+		// No save button visible in read-only mode
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("details tab deep link via ?tab=details loads form", async () => {
+	test("details tab deep link via ?tab=details shows read-only sections", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
 
-		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+		expect(screen.getByText("Условия")).toBeInTheDocument();
+		expect(screen.getByText("Системные данные")).toBeInTheDocument();
+		// No save button in read-only mode
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("details tab save button updates item", async () => {
+	test("details tab edit info section, save updates item", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+			expect(screen.getByText("Основная информация")).toBeInTheDocument();
 		});
+
+		// Click edit pen
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+
+		// Now editable fields and save/cancel appear
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 
 		const nameInput = screen.getByLabelText("Название");
 		await user.clear(nameInput);
@@ -395,20 +427,41 @@ describe("ProcurementItemDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
+		// After save, returns to read-only view with updated value
 		await waitFor(() => {
-			expect(screen.getByLabelText("Название")).toHaveValue("Обновлённая позиция");
+			expect(screen.getByText("Обновлённая позиция")).toBeInTheDocument();
 		});
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("details tab shows read-only status, bestPrice, averagePrice", async () => {
+	test("details tab cancel editing reverts to read-only view", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
+
+		const panel = await waitFor(() => screen.getByTestId("tab-panel-details"));
+
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+		expect(screen.getByLabelText("Название")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// Back to read-only — input gone, value shown as text
+		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		expect(within(panel).getByText("Арматура А500С")).toBeInTheDocument();
+	});
+
+	test("details tab shows system data as read-only without edit button", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByLabelText("Статус")).toBeInTheDocument();
+			expect(screen.getByText("Системные данные")).toBeInTheDocument();
 		});
 
-		expect(screen.getByLabelText("Статус")).toHaveAttribute("readonly");
-		expect(screen.getByLabelText("Лучшая цена")).toHaveAttribute("readonly");
-		expect(screen.getByLabelText("Средняя цена")).toHaveAttribute("readonly");
+		// Status label appears in both header and details panel
+		const detailsPanel = screen.getByTestId("tab-panel-details");
+		expect(within(detailsPanel).getByText("Ищем поставщиков")).toBeInTheDocument();
+		// System section has no edit button — only info and conditions sections do
+		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
+		expect(editButtons).toHaveLength(2);
 	});
 });

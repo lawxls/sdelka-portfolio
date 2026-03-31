@@ -1,12 +1,17 @@
+import { Check, Clock, LoaderCircle, MessageCircle, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
+import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
-import { useDeleteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
+import type { ProcurementItem } from "@/data/types";
+import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 type ItemDrawerTab = "suppliers" | "analytics" | "details";
@@ -25,10 +30,10 @@ function parseItemDrawerTab(param: string | null): ItemDrawerTab {
 }
 
 interface ProcurementItemDrawerProps {
-	itemName?: string;
+	item?: ProcurementItem;
 }
 
-export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) {
+export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const isMobile = useIsMobile();
 
@@ -102,7 +107,7 @@ export function ProcurementItemDrawer({ itemName }: ProcurementItemDrawerProps) 
 						<ProcurementItemDrawerContent
 							key={itemId}
 							itemId={itemId}
-							itemName={itemName}
+							item={item}
 							activeTab={activeTab}
 							onTabChange={handleTabChange}
 							onSupplierClick={handleSupplierOpen}
@@ -130,9 +135,9 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 		}),
 		[search, activeStatuses, sort],
 	);
-	const { data, isLoading } = useSuppliers(itemId, filterParams);
+	const query = useInfiniteSuppliers(itemId, filterParams);
 	const deleteMutation = useDeleteSuppliers();
-	const suppliers = data?.suppliers ?? [];
+	const suppliers = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -173,7 +178,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 		<div data-testid="tab-panel-suppliers">
 			<SuppliersTable
 				suppliers={suppliers}
-				isLoading={isLoading}
+				isLoading={query.isLoading}
 				search={search}
 				onSearchChange={setSearch}
 				sort={sort}
@@ -182,9 +187,14 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				onStatusFilter={handleStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
+				onArchive={() => {}}
+				isArchiving={false}
 				onDelete={handleDelete}
 				isDeleting={deleteMutation.isPending}
 				onRowClick={onSupplierClick}
+				hasNextPage={query.hasNextPage}
+				loadMore={query.fetchNextPage}
+				isFetchingNextPage={query.isFetchingNextPage}
 			/>
 		</div>
 	);
@@ -192,21 +202,93 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 
 function ProcurementItemDrawerContent({
 	itemId,
-	itemName,
+	item,
 	activeTab,
 	onTabChange,
 	onSupplierClick,
 }: {
 	itemId: string;
-	itemName?: string;
+	item?: ProcurementItem;
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
 	onSupplierClick: (id: string) => void;
 }) {
+	// Idempotent — only seeds if item.id is missing from the mock store
+	if (item) seedItemDetail(item);
+
+	const itemName = item?.name;
+	const itemStatus = item?.status;
+	const { data: allSuppliersData } = useSuppliers(itemId);
+	const allSuppliers = allSuppliersData?.suppliers ?? [];
+
+	const totalCount = allSuppliers.length;
+	const negotiatingCount = allSuppliers.filter((s) => s.status === "переговоры").length;
+	const kpCount = allSuppliers.filter((s) => s.status === "получено_кп").length;
+
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
-				<SheetTitle>{itemName ?? "Позиция"}</SheetTitle>
+				<SheetTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
+					<span>{itemName ?? "Позиция"}</span>
+					{itemStatus && (
+						<>
+							<span className="text-muted-foreground/40" aria-hidden="true">
+								&bull;
+							</span>
+							<span
+								className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
+							>
+								{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
+								{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
+								{itemStatus === "negotiating" && (
+									<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+								)}
+								{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
+								{STATUS_CONFIG[itemStatus].label}
+							</span>
+						</>
+					)}
+					{totalCount > 0 && (
+						<>
+							<span className="text-muted-foreground/40" aria-hidden="true">
+								&bull;
+							</span>
+							<span className="inline-flex items-center gap-3 text-sm font-normal text-muted-foreground">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span className="inline-flex items-center gap-1">
+											<Users className="size-3.5" aria-hidden="true" />
+											{totalCount}
+										</span>
+									</TooltipTrigger>
+									<TooltipContent>Всего поставщиков</TooltipContent>
+								</Tooltip>
+								{negotiatingCount > 0 && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+												<MessageCircle className="size-3.5" aria-hidden="true" />
+												{negotiatingCount}
+											</span>
+										</TooltipTrigger>
+										<TooltipContent>Переговоры</TooltipContent>
+									</Tooltip>
+								)}
+								{kpCount > 0 && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="inline-flex items-center gap-1 text-[oklch(0.50_0.18_122)] dark:text-primary">
+												<Check className="size-3.5" aria-hidden="true" />
+												{kpCount}
+											</span>
+										</TooltipTrigger>
+										<TooltipContent>Получено КП</TooltipContent>
+									</Tooltip>
+								)}
+							</span>
+						</>
+					)}
+				</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
 			</SheetHeader>
 
@@ -229,7 +311,7 @@ function ProcurementItemDrawerContent({
 				))}
 			</div>
 
-			<div className="flex-1 overflow-y-auto p-4">
+			<div className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" ? "pt-3" : "p-4"}`}>
 				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
 				{activeTab === "analytics" && (
 					<div data-testid="tab-panel-analytics">
