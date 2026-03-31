@@ -2,6 +2,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { CompanySummary } from "@/data/types";
+import { makeCompany } from "@/test-utils";
 import { TaskToolbar } from "./task-toolbar";
 
 describe("TaskToolbar", () => {
@@ -9,9 +11,12 @@ describe("TaskToolbar", () => {
 		onSearchChange: vi.fn(),
 		onItemFilter: vi.fn(),
 		onSort: vi.fn(),
+		onCompanySelect: vi.fn(),
 		sort: null as { field: string; direction: "asc" | "desc" } | null,
 		activeItem: undefined as string | undefined,
+		activeCompany: undefined as string | undefined,
 		procurementItems: ["Арматура А500С", "Кабель ВВГнг 3×2.5", "Цемент М500"],
+		companies: [] as CompanySummary[],
 	};
 
 	beforeEach(() => {
@@ -104,5 +109,56 @@ describe("TaskToolbar", () => {
 		renderToolbar({ sort: { field: "deadline_at", direction: "asc" } });
 		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
 		expect(sortBtn.querySelector("[data-indicator]")).toBeInTheDocument();
+	});
+
+	describe("company filter", () => {
+		const companies = [makeCompany("c1", { name: "ООО Альфа" }), makeCompany("c2", { name: "ООО Бета" })];
+
+		it("does not render company button when single company", () => {
+			renderToolbar({ companies: [companies[0]] });
+			expect(screen.queryByRole("button", { name: "Компания" })).not.toBeInTheDocument();
+		});
+
+		it("renders company button when multiple companies", () => {
+			renderToolbar({ companies });
+			expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
+		});
+
+		it("shows companies in popover", async () => {
+			const user = userEvent.setup();
+			renderToolbar({ companies });
+
+			await user.click(screen.getByRole("button", { name: "Компания" }));
+
+			expect(screen.getByText("Все компании")).toBeInTheDocument();
+			expect(screen.getByText("ООО Альфа")).toBeInTheDocument();
+			expect(screen.getByText("ООО Бета")).toBeInTheDocument();
+		});
+
+		it("calls onCompanySelect with company id when clicked", async () => {
+			const user = userEvent.setup();
+			renderToolbar({ companies });
+
+			await user.click(screen.getByRole("button", { name: "Компания" }));
+			await user.click(screen.getByText("ООО Альфа"));
+
+			expect(defaultProps.onCompanySelect).toHaveBeenCalledWith("c1");
+		});
+
+		it("calls onCompanySelect with undefined when 'Все компании' clicked", async () => {
+			const user = userEvent.setup();
+			renderToolbar({ companies, activeCompany: "c1" });
+
+			await user.click(screen.getByRole("button", { name: "Компания" }));
+			await user.click(screen.getByText("Все компании"));
+
+			expect(defaultProps.onCompanySelect).toHaveBeenCalledWith(undefined);
+		});
+
+		it("shows active company indicator dot", () => {
+			renderToolbar({ companies, activeCompany: "c1" });
+			const companyBtn = screen.getByRole("button", { name: "Компания" });
+			expect(companyBtn.querySelector("[data-indicator]")).toBeInTheDocument();
+		});
 	});
 });

@@ -20,6 +20,7 @@ import { TaskToolbar } from "@/components/task-toolbar";
 import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
+import { useProcurementCompanies } from "@/data/use-companies";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
@@ -52,11 +53,15 @@ export function TasksPage() {
 	const view = (searchParams.get("view") ?? "board") as ViewMode;
 	const search = searchParams.get("q") ?? "";
 	const activeItem = searchParams.get("item") ?? undefined;
+	const company = searchParams.get("company") ?? undefined;
 	const sort = parseSort(searchParams);
+
+	const { data: companies = [] } = useProcurementCompanies();
 
 	const filterParams: TaskFilterParams = {
 		...(search && { q: search }),
 		...(activeItem && { item: activeItem }),
+		...(company && { company }),
 		...(sort && { sort: sort.field, dir: sort.direction }),
 	};
 
@@ -104,6 +109,10 @@ export function TasksPage() {
 
 	function handleItemFilter(item: string | undefined) {
 		updateParams((p) => (item ? p.set("item", item) : p.delete("item")));
+	}
+
+	function handleCompanySelect(companyId: string | undefined) {
+		updateParams((p) => (companyId ? p.set("company", companyId) : p.delete("company")));
 	}
 
 	function handleSort(field: TaskSortField) {
@@ -180,6 +189,9 @@ export function TasksPage() {
 						activeItem={activeItem}
 						onItemFilter={handleItemFilter}
 						procurementItems={[]}
+						companies={companies}
+						activeCompany={company}
+						onCompanySelect={handleCompanySelect}
 					/>
 					<div className="flex items-center gap-1">
 						<Button

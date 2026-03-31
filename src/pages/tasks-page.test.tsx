@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
-import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeCompany, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
@@ -296,6 +296,99 @@ describe("TasksPage", () => {
 
 		await waitFor(() => {
 			expect(toast.info).toHaveBeenCalledWith("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
+		});
+	});
+
+	describe("company filter", () => {
+		const companies = [makeCompany("c1", { name: "ООО Альфа" }), makeCompany("c2", { name: "ООО Бета" })];
+
+		beforeEach(() => {
+			server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+		});
+
+		it("shows company button when multi-company", async () => {
+			renderPage();
+			await waitFor(() => {
+				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
+			});
+		});
+
+		it("hides company button for single company", async () => {
+			server.use(
+				http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [companies[0]], nextCursor: null })),
+			);
+			renderPage();
+			await waitFor(() => {
+				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			});
+			expect(screen.queryByRole("button", { name: "Компания" })).not.toBeInTheDocument();
+		});
+
+		it("selecting company passes company param to board API", async () => {
+			let capturedCompany: string | null = null;
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedCompany = url.searchParams.get("company");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage();
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
+			});
+
+			await user.click(screen.getByRole("button", { name: "Компания" }));
+			await user.click(screen.getByText("ООО Альфа"));
+
+			await waitFor(() => {
+				expect(capturedCompany).toBe("c1");
+			});
+		});
+
+		it("clearing company selection removes company param", async () => {
+			let capturedCompany: string | null = "initial";
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedCompany = url.searchParams.get("company");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage(["/tasks?company=c1"]);
+			const user = userEvent.setup();
+
+			await waitFor(() => {
+				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
+			});
+
+			await user.click(screen.getByRole("button", { name: "Компания" }));
+			await user.click(screen.getByText("Все компании"));
+
+			await waitFor(() => {
+				expect(capturedCompany).toBeNull();
+			});
+		});
+
+		it("company param persists from URL on initial load", async () => {
+			let capturedCompany: string | null = null;
+			server.use(
+				http.get("/api/v1/tasks/board/", ({ request }) => {
+					const url = new URL(request.url);
+					capturedCompany = url.searchParams.get("company");
+					return HttpResponse.json(boardResponse());
+				}),
+			);
+
+			renderPage(["/tasks?company=c2"]);
+
+			await waitFor(() => {
+				expect(capturedCompany).toBe("c2");
+			});
 		});
 	});
 
