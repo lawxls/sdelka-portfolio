@@ -114,14 +114,15 @@ describe("User avatar dropdown", () => {
 		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
-	test("clicking avatar opens dropdown with 3 items", async () => {
+	test("clicking avatar opens dropdown with settings links", async () => {
 		renderSidebar();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Сотрудники" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 

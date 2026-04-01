@@ -31,7 +31,18 @@ function renderMenu(initialEntries = ["/"]) {
 							<>
 								<UserAvatarMenu />
 								<Routes>
-									<Route path="/profile" element={<div data-testid="profile-page">Profile</div>} />
+									<Route
+										path="/settings/profile"
+										element={<div data-testid="settings-profile-page">Settings Profile</div>}
+									/>
+									<Route
+										path="/settings/companies"
+										element={<div data-testid="settings-companies-page">Settings Companies</div>}
+									/>
+									<Route
+										path="/settings/employees"
+										element={<div data-testid="settings-employees-page">Settings Employees</div>}
+									/>
 								</Routes>
 							</>
 						}
@@ -62,7 +73,7 @@ describe("UserAvatarMenu", () => {
 		expect(screen.queryByText("ИП")).not.toBeInTheDocument();
 	});
 
-	test("Мой профиль navigates to /profile", async () => {
+	test("Мой профиль navigates to /settings/profile", async () => {
 		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
 
 		renderMenu();
@@ -77,11 +88,11 @@ describe("UserAvatarMenu", () => {
 		await user.click(screen.getByText("Мой профиль"));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("profile-page")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-profile-page")).toBeInTheDocument();
 		});
 	});
 
-	test("Настройки navigates to /profile?tab=settings", async () => {
+	test("Компании navigates to /settings/companies", async () => {
 		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
 
 		renderMenu();
@@ -90,13 +101,13 @@ describe("UserAvatarMenu", () => {
 		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Настройки")).toBeInTheDocument();
+			expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByText("Настройки"));
+		await user.click(screen.getByRole("menuitem", { name: "Компании" }));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("profile-page")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-companies-page")).toBeInTheDocument();
 		});
 	});
 });

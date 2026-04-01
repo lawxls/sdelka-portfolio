@@ -5,6 +5,7 @@ const BASE = "/api/v1/auth";
 export interface UserSettings {
 	first_name: string;
 	last_name: string;
+	patronymic?: string;
 	email: string;
 	phone: string;
 	avatar_icon: string;
@@ -12,7 +13,9 @@ export interface UserSettings {
 	mailing_allowed: boolean;
 }
 
-export type SettingsPatch = Partial<Pick<UserSettings, "first_name" | "last_name" | "phone" | "mailing_allowed">>;
+export type SettingsPatch = Partial<
+	Pick<UserSettings, "first_name" | "last_name" | "patronymic" | "phone" | "mailing_allowed">
+>;
 
 export async function fetchSettings(): Promise<UserSettings> {
 	return request("/settings", { base: BASE });

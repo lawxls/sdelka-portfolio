@@ -5,14 +5,17 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { AnalyticsPage } from "@/pages/analytics-page";
 import { CompaniesPage } from "@/pages/companies-page";
+import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
+import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
-import { ProfilePage } from "@/pages/profile-page";
+import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
+import { SettingsLayout } from "@/pages/settings-layout";
 import { TasksPage } from "@/pages/tasks-page";
 
 const PLACEHOLDER_ROUTES = NAV_ITEMS.filter(
@@ -45,7 +48,15 @@ function App() {
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					<Route path="/companies" element={<CompaniesPage />} />
-					<Route path="/profile" element={<ProfilePage />} />
+					{/* /profile redirects to /settings/profile */}
+					<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
+					{/* Settings section */}
+					<Route path="/settings" element={<SettingsLayout />}>
+						<Route index element={<Navigate to="profile" replace />} />
+						<Route path="profile" element={<ProfileSettingsPage />} />
+						<Route path="companies" element={<CompaniesSettingsPage />} />
+						<Route path="employees" element={<EmployeesSettingsPage />} />
+					</Route>
 					{PLACEHOLDER_ROUTES.map(({ path, label, icon }) => (
 						<Route
 							key={path}

@@ -178,6 +178,7 @@ function setupHandlers() {
 		),
 		http.get("/api/v1/company/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
 		http.get("/api/v1/company/tasks/:id/", () => HttpResponse.json({ detail: "Not found" }, { status: 404 })),
+		http.get("/api/v1/workspace/employees/", () => HttpResponse.json({ employees: [] })),
 	);
 }
 
@@ -263,7 +264,28 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/profile renders profile page with skeleton then content", async () => {
+	test("/profile redirects to /settings/profile and renders profile content", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () =>
+				HttpResponse.json({
+					first_name: "Иван",
+					last_name: "Иванов",
+					email: "ivan@example.com",
+					phone: "+79991234567",
+					avatar_icon: "blue",
+					date_joined: "2024-01-15T10:00:00Z",
+					mailing_allowed: true,
+				}),
+			),
+			http.get("/api/v1/workspace/employees/", () => HttpResponse.json({ employees: [] })),
+		);
+		renderApp(["/profile"]);
+		await waitFor(() => {
+			expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
+		});
+	});
+
+	test("/settings redirects to /settings/profile", async () => {
 		server.use(
 			http.get("/api/v1/auth/settings", () =>
 				HttpResponse.json({
@@ -277,9 +299,9 @@ describe("Routing", () => {
 				}),
 			),
 		);
-		renderApp(["/profile"]);
+		renderApp(["/settings"]);
 		await waitFor(() => {
-			expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-sidebar")).toBeInTheDocument();
 		});
 	});
 
@@ -314,14 +336,15 @@ describe("Routing", () => {
 		expect(within(header).getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
-	test("mobile header avatar opens dropdown with 3 items", async () => {
+	test("mobile header avatar opens dropdown with settings links", async () => {
 		renderApp();
 		const user = userEvent.setup();
 		const header = screen.getByTestId("mobile-header");
 		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Сотрудники" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 
