@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Outlet } from "react-router";
-import { DESKTOP_QUERY } from "@/components/folder-sidebar";
 import { SettingsSidebar } from "@/components/settings-sidebar";
 import { useMountEffect } from "@/hooks/use-mount-effect";
+import { DESKTOP_QUERY } from "@/lib/breakpoints";
 
 const LS_SETTINGS_SIDEBAR_KEY = "settings-sidebar-open";
 

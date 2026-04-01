@@ -38,10 +38,11 @@ import { nextUnusedColor } from "@/data/use-folders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { useMountEffect } from "@/hooks/use-mount-effect";
+import { DESKTOP_QUERY } from "@/lib/breakpoints";
 import { cn } from "@/lib/utils";
 
 export const LS_SIDEBAR_KEY = "sidebar-open";
-export const DESKTOP_QUERY = "(min-width: 1024px)";
+export { DESKTOP_QUERY };
 
 function navItemClassName(active: boolean, isOver = false, extra?: string) {
 	return cn(

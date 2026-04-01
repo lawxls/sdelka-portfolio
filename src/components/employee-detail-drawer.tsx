@@ -10,6 +10,8 @@ import type { EmployeePermissions, PermissionLevel } from "@/data/types";
 import { PRIVILEGED_ROLES, ROLE_LABELS } from "@/data/types";
 import { useUpdateWorkspaceEmployeePermissions } from "@/data/use-workspace";
 import type { WorkspaceEmployee } from "@/data/workspace-types";
+import { formatEmployeeFullName } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type EmployeeTab = "info" | "permissions";
 
@@ -41,12 +43,6 @@ const PERM_COLOR: Record<PermissionLevel, string> = {
 	none: "text-red-500/60 dark:text-red-400/60",
 };
 
-const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = {
-	none: "Нет доступа",
-	view: "Просмотр",
-	edit: "Редактирование",
-};
-
 function PermissionSegments({
 	value,
 	onChange,
@@ -63,9 +59,10 @@ function PermissionSegments({
 					key={lvl.value}
 					type="button"
 					aria-pressed={value === lvl.value}
-					className={`px-2 py-1 transition-colors first:rounded-l-md last:rounded-r-md border-r last:border-r-0 border-border ${
-						value === lvl.value ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-					}`}
+					className={cn(
+						"border-r border-border px-2 py-1 transition-colors first:rounded-l-md last:rounded-r-md last:border-r-0",
+						value === lvl.value ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+					)}
 					onClick={() => onChange(lvl.value)}
 					data-testid={`perm-${moduleKey}-${lvl.value}`}
 				>
@@ -119,7 +116,7 @@ function PermissionsMatrix({
 								</div>
 							</TooltipTrigger>
 							<TooltipContent side="bottom" className="text-xs">
-								{mod.label}: {PERMISSION_LEVEL_LABELS[level]}
+								{mod.label}: {PERMISSION_LEVELS.find((l) => l.value === level)?.label}
 							</TooltipContent>
 						</Tooltip>
 					);
@@ -167,10 +164,6 @@ function PermissionsMatrix({
 	);
 }
 
-function fullName(emp: WorkspaceEmployee): string {
-	return [emp.lastName, emp.firstName, emp.patronymic].filter(Boolean).join(" ");
-}
-
 interface EmployeeDetailDrawerProps {
 	employee: WorkspaceEmployee | null;
 	onClose: () => void;
@@ -193,7 +186,7 @@ export function EmployeeDetailDrawer({ employee, onClose }: EmployeeDetailDrawer
 				{employee && (
 					<>
 						<SheetHeader>
-							<SheetTitle>{fullName(employee)}</SheetTitle>
+							<SheetTitle>{formatEmployeeFullName(employee)}</SheetTitle>
 							<SheetDescription className="sr-only">Детали сотрудника</SheetDescription>
 						</SheetHeader>
 
@@ -204,11 +197,12 @@ export function EmployeeDetailDrawer({ employee, onClose }: EmployeeDetailDrawer
 									type="button"
 									role="tab"
 									aria-selected={activeTab === tab.key}
-									className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
+									className={cn(
+										"shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
 										activeTab === tab.key
 											? "border-b-2 border-primary text-foreground"
-											: "text-muted-foreground hover:text-foreground"
-									}`}
+											: "text-muted-foreground hover:text-foreground",
+									)}
 									onClick={() => setActiveTab(tab.key)}
 									data-testid={`emp-tab-${tab.key}`}
 								>

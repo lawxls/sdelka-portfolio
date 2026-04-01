@@ -95,6 +95,10 @@ export function formatAssigneeName(assignee: { firstName: string; lastName: stri
 	return `${assignee.lastName} ${assignee.firstName}`;
 }
 
+export function formatEmployeeFullName(emp: { firstName: string; lastName: string; patronymic?: string }): string {
+	return [emp.lastName, emp.firstName, emp.patronymic].filter(Boolean).join(" ");
+}
+
 export function pluralizeRu(count: number, one: string, few: string, many: string): string {
 	const mod100 = count % 100;
 	const mod10 = count % 10;

@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useWorkspaceEmployees } from "@/data/use-workspace";
 import type { WorkspaceEmployee } from "@/data/workspace-types";
+import { formatAssigneeName } from "@/lib/format";
 
 const SKELETON_KEYS = ["sk-name", "sk-position", "sk-email", "sk-companies", "sk-date"] as const;
 
@@ -20,10 +21,6 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
 function formatRegisteredAt(registeredAt: string | null): string {
 	if (registeredAt === null) return "Приглашение отправлено";
 	return dateFormatter.format(new Date(registeredAt));
-}
-
-function fullLastFirst(emp: WorkspaceEmployee): string {
-	return [emp.lastName, emp.firstName].filter(Boolean).join(" ");
 }
 
 export function EmployeesSettingsPage() {
@@ -96,7 +93,7 @@ export function EmployeesSettingsPage() {
 										className="cursor-pointer hover:bg-muted/50"
 										onClick={() => handleRowClick(emp)}
 									>
-										<TableCell className="font-medium">{fullLastFirst(emp)}</TableCell>
+										<TableCell className="font-medium">{formatAssigneeName(emp)}</TableCell>
 										<TableCell>{emp.position}</TableCell>
 										<TableCell>{emp.email}</TableCell>
 										<TableCell>{emp.companies.map((c) => c.name).join(", ") || "—"}</TableCell>
