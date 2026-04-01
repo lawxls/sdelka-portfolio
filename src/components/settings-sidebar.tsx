@@ -23,17 +23,15 @@ const WORKSPACE_ITEMS: NavItemDef[] = [
 	{ path: "/settings/employees", label: "Сотрудники", icon: <Users className="size-4" /> },
 ];
 
-function NavItem({ path, label, icon }: NavItemDef) {
-	const location = useLocation();
+function NavItem({ path, label, icon, isActive }: NavItemDef & { isActive: boolean }) {
 	const navigate = useNavigate();
-	const active = location.pathname === path;
 
 	return (
 		<button
 			type="button"
 			className={cn(
 				"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-				active
+				isActive
 					? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
 					: "text-sidebar-foreground hover:bg-sidebar-accent/50",
 			)}
@@ -48,6 +46,9 @@ function NavItem({ path, label, icon }: NavItemDef) {
 }
 
 export function SettingsSidebar({ open, onOpenChange }: SettingsSidebarProps) {
+	const location = useLocation();
+	const isDesktop = window.matchMedia(DESKTOP_QUERY).matches;
+
 	if (!open) {
 		return (
 			<div className="hidden shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar p-2 md:flex">
@@ -60,13 +61,11 @@ export function SettingsSidebar({ open, onOpenChange }: SettingsSidebarProps) {
 
 	function toggle() {
 		const next = !open;
-		if (window.matchMedia(DESKTOP_QUERY).matches) {
+		if (isDesktop) {
 			localStorage.setItem("settings-sidebar-open", String(next));
 		}
 		onOpenChange(next);
 	}
-
-	const isDesktop = window.matchMedia(DESKTOP_QUERY).matches;
 
 	const sidebarContent = (
 		<aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground" data-testid="settings-sidebar">
@@ -82,7 +81,7 @@ export function SettingsSidebar({ open, onOpenChange }: SettingsSidebarProps) {
 					<div className="px-2 pb-1 text-xs font-medium text-muted-foreground">Пользователь</div>
 					<div className="space-y-0.5">
 						{USER_ITEMS.map((item) => (
-							<NavItem key={item.path} {...item} />
+							<NavItem key={item.path} {...item} isActive={location.pathname === item.path} />
 						))}
 					</div>
 				</div>
@@ -91,7 +90,7 @@ export function SettingsSidebar({ open, onOpenChange }: SettingsSidebarProps) {
 					<div className="px-2 pb-1 text-xs font-medium text-muted-foreground">Рабочее пространство</div>
 					<div className="space-y-0.5">
 						{WORKSPACE_ITEMS.map((item) => (
-							<NavItem key={item.path} {...item} />
+							<NavItem key={item.path} {...item} isActive={location.pathname === item.path} />
 						))}
 					</div>
 				</div>

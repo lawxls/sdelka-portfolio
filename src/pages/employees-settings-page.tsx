@@ -15,7 +15,7 @@ function formatRegistrationDate(registeredAt: string | null | undefined): string
 }
 
 function formatFullName(employee: WorkspaceEmployee): string {
-	return `${employee.lastName} ${employee.firstName} ${employee.patronymic}`;
+	return [employee.lastName, employee.firstName, employee.patronymic].filter(Boolean).join(" ");
 }
 
 export function EmployeesSettingsPage() {

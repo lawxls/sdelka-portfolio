@@ -12,6 +12,10 @@ import { useUpdateWorkspaceEmployeePermissions, useWorkspaceEmployeeDetail } fro
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
 
+function formatEmployeeName(employee: { firstName: string; lastName: string; patronymic?: string | null }): string {
+	return [employee.lastName, employee.firstName, employee.patronymic].filter(Boolean).join(" ");
+}
+
 type DrawerTab = "info" | "permissions";
 
 const TABS: { key: DrawerTab; label: string }[] = [
@@ -36,11 +40,9 @@ const PERMISSION_LEVELS: { value: PermissionLevel; label: string }[] = [
 	{ value: "edit", label: "Редактирование" },
 ];
 
-const PERMISSION_LEVEL_LABELS: Record<PermissionLevel, string> = {
-	none: "Нет доступа",
-	view: "Просмотр",
-	edit: "Редактирование",
-};
+const PERMISSION_LEVEL_LABELS = Object.fromEntries(
+	PERMISSION_LEVELS.map(({ value, label }) => [value, label]),
+) as Record<PermissionLevel, string>;
 
 const PERM_COLOR: Record<PermissionLevel, string> = {
 	edit: "text-green-600 dark:text-green-400",
@@ -103,7 +105,7 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 		);
 	}
 
-	const fullName = [employee.lastName, employee.firstName, employee.patronymic].filter(Boolean).join(" ");
+	const fullName = formatEmployeeName(employee);
 
 	function handlePermissionChange(module: keyof UpdatePermissionsData, level: PermissionLevel) {
 		updatePermsMutation.mutate({ id: employeeId, data: { [module]: level } });
@@ -149,10 +151,7 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 function InfoTab({ employee }: { employee: WorkspaceEmployeeDetail }) {
 	return (
 		<div className="flex flex-col gap-4" data-testid="employee-info-tab">
-			<InfoRow
-				label="ФИО"
-				value={[employee.lastName, employee.firstName, employee.patronymic].filter(Boolean).join(" ")}
-			/>
+			<InfoRow label="ФИО" value={formatEmployeeName(employee)} />
 			<Separator />
 			<InfoRow label="Должность" value={employee.position} />
 			<Separator />
