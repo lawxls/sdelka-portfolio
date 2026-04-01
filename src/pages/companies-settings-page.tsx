@@ -17,7 +17,11 @@ export function CompaniesSettingsPage() {
 	const companyId = searchParams.get("company");
 	const activeTab = parseCompanyTab(searchParams.get("tab"));
 
-	const { companies } = useCompanies({ search: "", sort: null });
+	const { companies, hasNextPage, loadMore, isFetchingNextPage } = useCompanies({ search: "", sort: null });
+
+	if (hasNextPage && !isFetchingNextPage) {
+		loadMore();
+	}
 	const createCompanyMutation = useCreateCompany();
 
 	function handleRowClick(company: CompanySummary) {

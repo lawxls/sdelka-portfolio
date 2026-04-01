@@ -117,6 +117,26 @@ describe("CompaniesSettingsPage row click", () => {
 	});
 });
 
+describe("CompaniesSettingsPage pagination", () => {
+	test("auto-loads all pages when hasNextPage is true", async () => {
+		const page2Company = makeCompany("company-3", { name: "ТретьяКомпания" });
+		server.use(
+			http.get("/api/v1/companies/", ({ request }) => {
+				const cursor = new URL(request.url).searchParams.get("cursor");
+				if (!cursor) {
+					return HttpResponse.json({ companies: MOCK_COMPANIES, nextCursor: "cursor-page2" });
+				}
+				return HttpResponse.json({ companies: [page2Company], nextCursor: null });
+			}),
+		);
+
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByText("ТретьяКомпания")).toBeInTheDocument();
+		});
+	});
+});
+
 describe("CompaniesSettingsPage header", () => {
 	test("renders Добавить компанию button", () => {
 		renderPage();

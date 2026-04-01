@@ -146,7 +146,18 @@ function ProfileForm({ data }: { data: UserSettings }) {
 }
 
 export function ProfileSettingsPage() {
-	const { data } = useSettings();
+	const { data, isError, refetch } = useSettings();
+
+	if (isError) {
+		return (
+			<div className="p-6">
+				<p className="mb-3 text-sm text-muted-foreground">Не удалось загрузить профиль</p>
+				<Button variant="outline" onClick={() => refetch()}>
+					Повторить
+				</Button>
+			</div>
+		);
+	}
 
 	if (!data) {
 		return (

@@ -134,6 +134,15 @@ describe("ProfileSettingsPage", () => {
 		expect(toast.success).toHaveBeenCalledWith("Письмо отправлено");
 	});
 
+	test("shows error state with retry button when settings request fails", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.error()));
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
+		});
+		expect(screen.queryByTestId("profile-skeleton")).not.toBeInTheDocument();
+	});
+
 	test("submit button is disabled during in-flight request", async () => {
 		server.use(http.patch("/api/v1/auth/settings", () => new Promise<never>(() => {})));
 
