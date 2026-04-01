@@ -219,6 +219,7 @@ export interface Employee {
 	phone: string;
 	email: string;
 	isResponsible: boolean;
+	registeredAt?: string | null;
 }
 
 export interface Company {
