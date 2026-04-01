@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { NAV_ITEMS } from "@/lib/nav-items";
+import { AnalyticsPage } from "@/pages/analytics-page";
 import { CompaniesPage } from "@/pages/companies-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
@@ -15,7 +16,8 @@ import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { TasksPage } from "@/pages/tasks-page";
 
 const PLACEHOLDER_ROUTES = NAV_ITEMS.filter(
-	(item) => item.path !== "/procurement" && item.path !== "/tasks" && item.path !== "/companies",
+	(item) =>
+		item.path !== "/procurement" && item.path !== "/tasks" && item.path !== "/companies" && item.path !== "/analytics",
 );
 
 function RootRedirect() {
@@ -39,6 +41,7 @@ function App() {
 			<Route element={<ProtectedRoute />}>
 				<Route path="/" element={<RootRedirect />} />
 				<Route element={<AppLayout />}>
+					<Route path="/analytics" element={<AnalyticsPage />} />
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					<Route path="/companies" element={<CompaniesPage />} />

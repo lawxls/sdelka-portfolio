@@ -1,3 +1,4 @@
+import type { AnalyticsSummaryResponse } from "./analytics-types";
 import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
@@ -21,6 +22,7 @@ import type {
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
 const TASKS_BASE = "/api/v1/company/tasks";
+const ANALYTICS_BASE = "/api/v1/analytics";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -445,6 +447,14 @@ export async function updateEmployeePermissions(
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(data),
+	});
+}
+
+// --- Analytics ---
+
+export async function fetchAnalyticsSummary(params: { company?: string } = {}): Promise<AnalyticsSummaryResponse> {
+	return request(`/summary${buildQuery(params as Record<string, string | undefined>)}`, {
+		base: ANALYTICS_BASE,
 	});
 }
 

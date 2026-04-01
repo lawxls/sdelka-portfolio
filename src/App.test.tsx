@@ -146,6 +146,19 @@ function setupHandlers() {
 				nextCursor: null,
 			}),
 		),
+		http.get("/api/v1/analytics/summary", () =>
+			HttpResponse.json({
+				kpis: {
+					totalSpend: 0,
+					totalOverpayment: 0,
+					totalSavings: 0,
+					completedCount: 0,
+					totalCount: 0,
+					pendingAnalysisCount: 0,
+					openTasksCount: 0,
+				},
+			}),
+		),
 		http.get("/api/v1/company/tasks/board/", () =>
 			HttpResponse.json({
 				assigned: { results: [], next: null, count: 0 },
@@ -218,12 +231,10 @@ describe("Routing", () => {
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
-	test("/analytics renders placeholder page with icon", async () => {
+	test("/analytics renders analytics page", async () => {
 		renderApp(["/analytics"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
-			expect(screen.getByText("В разработке")).toBeInTheDocument();
-			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
 		});
 	});
 
