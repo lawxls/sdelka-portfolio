@@ -19,7 +19,7 @@ type ItemDrawerTab = "suppliers" | "analytics" | "details";
 const TABS: { key: ItemDrawerTab; label: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "analytics", label: "Аналитика" },
-	{ key: "details", label: "Детальная информация" },
+	{ key: "details", label: "Информация" },
 ];
 
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
@@ -296,14 +296,14 @@ function ProcurementItemDrawerContent({
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
 			</SheetHeader>
 
-			<div className="flex gap-0 border-b border-border px-4" role="tablist">
+			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
 				{TABS.map((tab) => (
 					<button
 						key={tab.key}
 						type="button"
 						role="tab"
 						aria-selected={activeTab === tab.key}
-						className={`px-3 py-2 text-sm font-medium transition-colors ${
+						className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
 							activeTab === tab.key
 								? "border-b-2 border-primary text-foreground"
 								: "text-muted-foreground hover:text-foreground"

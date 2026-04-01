@@ -48,7 +48,7 @@ export function TaskBoard({ columns, onTaskClick, activeTaskId, activeTaskStatus
 								aria-selected={activeTab === status}
 								onClick={() => setActiveTab(status)}
 								className={cn(
-									"flex-1 px-2 py-2.5 text-sm transition-colors inline-flex items-center justify-center gap-1.5",
+									"flex-1 px-2 py-2.5 text-xs transition-colors inline-flex items-center justify-center gap-1 whitespace-nowrap",
 									activeTab === status
 										? "border-b-2 border-primary font-medium text-foreground"
 										: "text-muted-foreground hover:text-foreground",

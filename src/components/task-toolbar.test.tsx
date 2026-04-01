@@ -13,11 +13,13 @@ describe("TaskToolbar", () => {
 		onItemSearch: vi.fn(),
 		onSort: vi.fn(),
 		onCompanySelect: vi.fn(),
+		onViewChange: vi.fn(),
 		sort: null as { field: string; direction: "asc" | "desc" } | null,
 		activeItem: undefined as string | undefined,
 		activeCompany: undefined as string | undefined,
 		itemSearchResults: [] as Array<{ id: string; name: string }>,
 		companies: [] as CompanySummary[],
+		view: "board" as "board" | "table",
 	};
 
 	beforeEach(() => {

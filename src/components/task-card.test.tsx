@@ -25,7 +25,7 @@ describe("TaskCard", () => {
 
 	it("renders assignee initials with accessible name", () => {
 		render(<TaskCard task={task} />, { wrapper: TooltipWrapper });
-		expect(screen.getByLabelText("Иванов Алексей")).toHaveTextContent("ИА");
+		expect(screen.getByLabelText("Иванов Алексей")).toHaveTextContent("АИ");
 	});
 
 	it("renders formatted dates with labels", () => {

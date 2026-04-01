@@ -91,7 +91,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(tabs).toHaveLength(3);
 		expect(tabs[0]).toHaveTextContent("Поставщики");
 		expect(tabs[1]).toHaveTextContent("Аналитика");
-		expect(tabs[2]).toHaveTextContent("Детальная информация");
+		expect(tabs[2]).toHaveTextContent("Информация");
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 
@@ -118,7 +118,7 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 
-		await user.click(screen.getByRole("tab", { name: "Детальная информация" }));
+		await user.click(screen.getByRole("tab", { name: "Информация" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=details");
 	});
 
@@ -142,7 +142,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getByRole("tab", { name: "Аналитика" }));
 		expect(screen.getByTestId("tab-panel-analytics")).toBeInTheDocument();
 
-		await user.click(screen.getByRole("tab", { name: "Детальная информация" }));
+		await user.click(screen.getByRole("tab", { name: "Информация" }));
 		expect(screen.getByTestId("tab-panel-details")).toBeInTheDocument();
 	});
 
@@ -376,7 +376,7 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 
-		await user.click(screen.getByRole("tab", { name: "Детальная информация" }));
+		await user.click(screen.getByRole("tab", { name: "Информация" }));
 
 		const panel = await waitFor(() => screen.getByTestId("tab-panel-details"));
 

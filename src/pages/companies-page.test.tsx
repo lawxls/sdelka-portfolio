@@ -616,26 +616,26 @@ describe("CompaniesPage drawer", () => {
 
 		await waitFor(() => {
 			expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка");
-			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+			expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
 		});
 	});
 
-	test("drawer renders 3 tabs with Общее active by default", async () => {
+	test("drawer renders 3 tabs with Сотрудники active by default", async () => {
 		renderPage(["/companies?company=company-1"]);
 
 		await waitFor(() => {
-			expect(screen.getByTestId("tab-general")).toBeInTheDocument();
+			expect(screen.getByTestId("tab-employees")).toBeInTheDocument();
 		});
 
 		expect(screen.getByTestId("tab-addresses")).toBeInTheDocument();
-		expect(screen.getByTestId("tab-employees")).toBeInTheDocument();
+		expect(screen.getByTestId("tab-general")).toBeInTheDocument();
 
-		expect(screen.getByTestId("tab-general")).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
+		expect(screen.getByTestId("tab-employees")).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByTestId("tab-content-employees")).toBeInTheDocument();
 	});
 
 	test("Общее tab displays company fields as text in view mode", async () => {
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
@@ -654,7 +654,7 @@ describe("CompaniesPage drawer", () => {
 	});
 
 	test("Общее tab shows both sections", async () => {
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-content-general")).toBeInTheDocument();
@@ -665,7 +665,7 @@ describe("CompaniesPage drawer", () => {
 	});
 
 	test("save button is disabled when no changes in edit mode", async () => {
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -686,7 +686,7 @@ describe("CompaniesPage drawer", () => {
 			}),
 		);
 
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -709,7 +709,7 @@ describe("CompaniesPage drawer", () => {
 	});
 
 	test("save button disabled when name is empty", async () => {
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -725,7 +725,7 @@ describe("CompaniesPage drawer", () => {
 	});
 
 	test("tab switching shows correct content", async () => {
-		renderPage(["/companies?company=company-1"]);
+		renderPage(["/companies?company=company-1&tab=general"]);
 		const user = userEvent.setup();
 
 		await waitFor(() => {

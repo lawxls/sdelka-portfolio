@@ -8,7 +8,6 @@ import {
 	useSensor,
 	useSensors,
 } from "@dnd-kit/core";
-import { Columns3, List } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -17,7 +16,6 @@ import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { TaskTable } from "@/components/task-table";
 import { TaskToolbar } from "@/components/task-toolbar";
-import { Button } from "@/components/ui/button";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useProcurementCompanies } from "@/data/use-companies";
@@ -195,25 +193,9 @@ export function TasksPage() {
 						companies={companies}
 						activeCompany={company}
 						onCompanySelect={handleCompanySelect}
+						view={view}
+						onViewChange={setView}
 					/>
-					<div className="flex items-center gap-1">
-						<Button
-							variant={view === "board" ? "secondary" : "ghost"}
-							size="icon-sm"
-							onClick={() => setView("board")}
-							aria-label="Kanban"
-						>
-							<Columns3 className="size-4" aria-hidden="true" />
-						</Button>
-						<Button
-							variant={view === "table" ? "secondary" : "ghost"}
-							size="icon-sm"
-							onClick={() => setView("table")}
-							aria-label="Таблица"
-						>
-							<List className="size-4" aria-hidden="true" />
-						</Button>
-					</div>
 				</header>
 				{view === "board" ? (
 					<TaskBoard

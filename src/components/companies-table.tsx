@@ -379,7 +379,7 @@ function CompanyCard({ company, onClick }: { company: CompanySummary; onClick?: 
 
 			{firstAddress && (
 				<div className="mt-2 flex items-center gap-2">
-					<span className="text-xs text-muted-foreground truncate">{firstAddress.name}</span>
+					<span className="text-xs text-muted-foreground truncate">{firstAddress.address}</span>
 					<AddressTypeBadge type={firstAddress.type} />
 					{extraAddresses.length > 0 && <ExtraAddressesPopover addresses={extraAddresses} />}
 				</div>
