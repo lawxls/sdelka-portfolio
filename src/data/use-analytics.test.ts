@@ -2,7 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test-msw";
-import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
+import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { AnalyticsKpis, FolderBreakdown, ProcurementStatus } from "./analytics-types";
 import type { SupplierStatus } from "./supplier-types";
 import { useAnalyticsSummary } from "./use-analytics";
@@ -31,6 +31,10 @@ beforeEach(() => {
 	localStorage.setItem("auth-refresh-token", "test-refresh");
 	// default pipeline handler so existing tests don't see an unhandled-request error
 	server.use(http.get("/api/v1/analytics/supplier-pipeline", () => HttpResponse.json(DEFAULT_PIPELINE)));
+	// default tasks handler so existing tests don't see an unhandled-request error
+	server.use(
+		http.get("/api/v1/company/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
+	);
 });
 
 afterEach(() => {
@@ -215,5 +219,44 @@ describe("useAnalyticsSummary", () => {
 			получено_кп: 0,
 			отказ: 0,
 		});
+	});
+
+	it("derives tasksSummary open and overdue counts from tasks endpoint", async () => {
+		const pastDate = "2026-01-01T00:00:00.000Z";
+		const futureDate = "2026-12-31T00:00:00.000Z";
+		const tasks = [
+			makeTask("t1", { status: "assigned", deadlineAt: pastDate }),
+			makeTask("t2", { status: "in_progress", deadlineAt: pastDate }),
+			makeTask("t3", { status: "assigned", deadlineAt: futureDate }),
+			makeTask("t4", { status: "completed", deadlineAt: pastDate }),
+			makeTask("t5", { status: "archived", deadlineAt: pastDate }),
+		];
+		server.use(
+			http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })),
+			http.get("/api/v1/company/tasks/", () =>
+				HttpResponse.json({ count: tasks.length, results: tasks, next: null, previous: null }),
+			),
+		);
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.tasksSummary.open).toBe(3);
+		expect(result.current.tasksSummary.overdue).toBe(2);
+	});
+
+	it("returns default tasksSummary (all zeros) when tasks endpoint returns empty", async () => {
+		server.use(http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })));
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.tasksSummary).toEqual({ open: 0, overdue: 0 });
 	});
 });

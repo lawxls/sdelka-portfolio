@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsKpis, FolderBreakdown, ProcurementStatus } from "./analytics-types";
-import { fetchAnalyticsPipeline, fetchAnalyticsSummary } from "./api-client";
+import { fetchAnalyticsPipeline, fetchAnalyticsSummary, fetchTasks } from "./api-client";
 import type { SupplierStatus } from "./supplier-types";
 import { SUPPLIER_STATUSES } from "./supplier-types";
 
@@ -27,12 +27,26 @@ export function useAnalyticsSummary({ company }: { company?: string } = {}) {
 		queryFn: () => fetchAnalyticsPipeline({ company }),
 	});
 
+	const tasksQuery = useQuery({
+		queryKey: ["analytics-tasks", { company }],
+		queryFn: () => fetchTasks({ company, page_size: 200 }),
+	});
+
+	const activeTasks = (tasksQuery.data?.results ?? []).filter(
+		(t) => t.status === "assigned" || t.status === "in_progress",
+	);
+	const tasksSummary = {
+		open: activeTasks.length,
+		overdue: activeTasks.filter((t) => t.deadlineAt < new Date().toISOString()).length,
+	};
+
 	return {
 		kpis: (query.data?.kpis ?? null) as AnalyticsKpis | null,
 		folderBreakdown: (query.data?.folderBreakdown ?? []) as FolderBreakdown[],
 		statusBreakdown: query.data?.statusBreakdown ?? DEFAULT_STATUS_BREAKDOWN,
 		supplierPipeline: pipelineQuery.data ?? DEFAULT_SUPPLIER_PIPELINE,
-		isLoading: query.isLoading || pipelineQuery.isLoading,
-		isError: query.isError || pipelineQuery.isError,
+		tasksSummary,
+		isLoading: query.isLoading || pipelineQuery.isLoading || tasksQuery.isLoading,
+		isError: query.isError || pipelineQuery.isError || tasksQuery.isError,
 	};
 }

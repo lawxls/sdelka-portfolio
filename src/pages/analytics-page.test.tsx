@@ -39,6 +39,7 @@ beforeEach(() => {
 				отказ: 0,
 			}),
 		),
+		http.get("/api/v1/company/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
 		http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [makeCompany("co-1")], nextCursor: null })),
 	);
 });
