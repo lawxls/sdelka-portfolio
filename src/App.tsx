@@ -1,4 +1,3 @@
-import { Building2 } from "lucide-react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
@@ -6,6 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { SettingsLayout } from "@/components/settings-layout";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { CompaniesPage } from "@/pages/companies-page";
+import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
 import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
@@ -57,10 +57,7 @@ function App() {
 					<Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
 					<Route element={<SettingsLayout />}>
 						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
-						<Route
-							path="/settings/companies"
-							element={<PlaceholderPage icon={Building2} title="Компании" subtitle="В разработке" />}
-						/>
+						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
 						<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
 					</Route>
 				</Route>
