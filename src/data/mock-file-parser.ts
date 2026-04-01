@@ -66,7 +66,7 @@ const MOCK_ITEMS: NewItemInput[] = [
 		annualQuantity: 200,
 		currentPrice: 320,
 		deliveryType: "warehouse",
-		deliveryAddress: "г. Москва, ул. Строителей, 15",
+		deliveryAddresses: ["г. Москва, ул. Строителей, 15"],
 	},
 	{
 		name: "Электрокабель ВВГнг 3×2.5",

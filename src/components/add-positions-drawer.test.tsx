@@ -66,6 +66,8 @@ const ALWAYS_INCLUDED_DEFAULTS = {
 	priceMonitoringPeriod: "quarter",
 };
 
+const BOTH_ADDRESSES = ["г. Москва, ул. Ленина, д. 15", "г. Москва, ул. Складская, д. 1"];
+
 describe("AddPositionsDrawer", () => {
 	test("renders header, footer, and position form when open", () => {
 		renderDrawer();
@@ -264,7 +266,7 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit).toHaveBeenCalledWith([
 			{
 				name: "Арматура А500С",
-				deliveryAddress: "г. Москва, ул. Ленина, д. 15",
+				deliveryAddresses: BOTH_ADDRESSES,
 				...ALWAYS_INCLUDED_DEFAULTS,
 			},
 		]);
@@ -295,7 +297,7 @@ describe("AddPositionsDrawer", () => {
 				unit: "т",
 				annualQuantity: 120,
 				currentPrice: 5500,
-				deliveryAddress: "г. Москва, ул. Ленина, д. 15",
+				deliveryAddresses: BOTH_ADDRESSES,
 				...ALWAYS_INCLUDED_DEFAULTS,
 			},
 		]);
@@ -659,6 +661,129 @@ describe("AddPositionsDrawer", () => {
 	test("company selector is visible", () => {
 		renderDrawer();
 		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
+	});
+
+	// --- Multi-address selection ---
+
+	test("selecting company pre-selects all its addresses", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await selectCompany(user);
+		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).toBeChecked();
+	});
+
+	test("can deselect individual address", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await selectCompany(user);
+		await user.click(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" }));
+		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).not.toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
+	});
+
+	test("Снять все deselects all addresses", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Снять все" }));
+		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).not.toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).not.toBeChecked();
+	});
+
+	test("Выбрать все after deselect re-selects all addresses", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Снять все" }));
+		await user.click(screen.getByRole("button", { name: "Выбрать все" }));
+		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).toBeChecked();
+	});
+
+	test("submit with no address selected shows validation error", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Снять все" }));
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+		expect(onSubmit).not.toHaveBeenCalled();
+		expect(screen.getByText("Выберите хотя бы один адрес")).toBeInTheDocument();
+	});
+
+	test("changing company resets addresses to all addresses of new company", async () => {
+		server.use(
+			http.get("/api/v1/companies/", () =>
+				HttpResponse.json({
+					companies: [
+						{
+							id: "company-1",
+							name: "Первая компания",
+							isMain: false,
+							responsibleEmployeeName: null,
+							addresses: [
+								{ id: "c1-addr-1", name: "Офис", type: "office", address: "г. Москва, ул. Первая, д. 1", isMain: true },
+							],
+							employeeCount: 1,
+							procurementItemCount: 0,
+						},
+						{
+							id: "company-2",
+							name: "Вторая компания",
+							isMain: false,
+							responsibleEmployeeName: null,
+							addresses: [
+								{
+									id: "c2-addr-1",
+									name: "Склад А",
+									type: "warehouse",
+									address: "г. СПб, ул. Вторая, д. 2",
+									isMain: false,
+								},
+								{
+									id: "c2-addr-2",
+									name: "Склад Б",
+									type: "warehouse",
+									address: "г. СПб, ул. Третья, д. 3",
+									isMain: false,
+								},
+							],
+							employeeCount: 1,
+							procurementItemCount: 0,
+						},
+					],
+					nextCursor: null,
+				}),
+			),
+		);
+
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const companyTrigger = await screen.findByLabelText("Компания");
+		await user.click(companyTrigger);
+		await user.click(await screen.findByRole("option", { name: "Первая компания" }));
+		expect(screen.getByRole("checkbox", { name: "Офис — г. Москва, ул. Первая, д. 1" })).toBeChecked();
+
+		await user.click(screen.getByLabelText("Компания"));
+		await user.click(await screen.findByRole("option", { name: "Вторая компания" }));
+		expect(screen.getByRole("checkbox", { name: "Склад А — г. СПб, ул. Вторая, д. 2" })).toBeChecked();
+		expect(screen.getByRole("checkbox", { name: "Склад Б — г. СПб, ул. Третья, д. 3" })).toBeChecked();
+	});
+
+	test("submit sends deliveryAddresses with selected address strings", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" }));
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({ deliveryAddresses: ["г. Москва, ул. Ленина, д. 15"] }),
+		]);
 	});
 
 	test("dirty detection: checking analogues triggers confirmation", async () => {

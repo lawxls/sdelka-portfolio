@@ -85,7 +85,7 @@ export interface ProcurementItem {
 	paymentDeferralDays?: number;
 	paymentMethod?: PaymentMethod;
 	deliveryType?: DeliveryType;
-	deliveryAddress?: string;
+	deliveryAddresses?: string[];
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
@@ -139,7 +139,7 @@ export interface NewItemInput {
 	paymentDeferralDays?: number;
 	paymentMethod?: PaymentMethod;
 	deliveryType?: DeliveryType;
-	deliveryAddress?: string;
+	deliveryAddresses?: string[];
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;

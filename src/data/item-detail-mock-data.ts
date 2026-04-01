@@ -20,7 +20,7 @@ const MOCK_ITEMS: Record<string, ProcurementItem> = {
 		paymentDeferralDays: 30,
 		paymentMethod: "bank_transfer",
 		deliveryType: "warehouse",
-		deliveryAddress: "г. Москва, ул. Складская, д. 15",
+		deliveryAddresses: ["г. Москва, ул. Складская, д. 15"],
 		unloading: "supplier",
 		analoguesAllowed: true,
 		additionalInfo: "Требуется сертификат соответствия ГОСТ",

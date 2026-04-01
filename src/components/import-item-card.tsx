@@ -84,8 +84,8 @@ export function ImportItemCard({ item, index }: ImportItemCardProps) {
 				{item.deliveryType != null && (
 					<Section title="Доставка">
 						<Field label="Тип доставки" value={DELIVERY_TYPE_LABELS[item.deliveryType]} />
-						{item.deliveryType === "warehouse" && item.deliveryAddress && (
-							<Field label="Адрес" value={item.deliveryAddress} />
+						{item.deliveryType === "warehouse" && item.deliveryAddresses && item.deliveryAddresses.length > 0 && (
+							<Field label="Адрес" value={item.deliveryAddresses.join(", ")} />
 						)}
 					</Section>
 				)}

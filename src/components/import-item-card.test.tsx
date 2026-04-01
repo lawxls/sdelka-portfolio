@@ -61,7 +61,7 @@ describe("ImportItemCard", () => {
 		renderCard({
 			name: "Труба",
 			deliveryType: "warehouse",
-			deliveryAddress: "г. Москва, ул. Строителей, 15",
+			deliveryAddresses: ["г. Москва, ул. Строителей, 15"],
 		});
 		expect(screen.getByText("Доставка")).toBeInTheDocument();
 		expect(screen.getByText("До склада")).toBeInTheDocument();

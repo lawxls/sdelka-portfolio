@@ -136,7 +136,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const [files, setFiles] = useState<File[]>([]);
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-	const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+	const [selectedAddressIds, setSelectedAddressIds] = useState<string[]>([]);
 	const [companyError, setCompanyError] = useState<string>("");
 	const pendingFocusKey = useRef<string | null>(null);
 	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
@@ -151,7 +151,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		frequencyPeriod !== "month" ||
 		hideCompanyInfo ||
 		selectedCompanyId !== "" ||
-		selectedAddressId !== "" ||
+		selectedAddressIds.length > 0 ||
 		delivery.paymentType !== "prepayment" ||
 		delivery.paymentDeferralDays !== "" ||
 		delivery.paymentMethod !== "bank_transfer" ||
@@ -168,7 +168,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		setFrequencyPeriod("month");
 		setHideCompanyInfo(false);
 		setSelectedCompanyId("");
-		setSelectedAddressId("");
+		setSelectedAddressIds([]);
 		setCompanyError("");
 		setDelivery(createDefaultDelivery());
 		setFiles([]);
@@ -198,10 +198,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		fields.paymentMethod = delivery.paymentMethod;
 
 		fields.deliveryType = delivery.deliveryType;
-		if (selectedAddressId && selectedCompany) {
-			const addr = selectedCompany.addresses.find((a) => a.id === selectedAddressId);
-			if (addr) {
-				fields.deliveryAddress = addr.address;
+		if (selectedAddressIds.length > 0 && selectedCompany) {
+			const addresses = selectedCompany.addresses
+				.filter((a) => selectedAddressIds.includes(a.id))
+				.map((a) => a.address);
+			if (addresses.length > 0) {
+				fields.deliveryAddresses = addresses;
 			}
 		}
 
@@ -247,8 +249,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			setCompanyError("Выберите компанию");
 			return;
 		}
-		if (!selectedAddressId) {
-			setCompanyError("Выберите адрес");
+		if (selectedAddressIds.length === 0) {
+			setCompanyError("Выберите хотя бы один адрес");
 			return;
 		}
 
@@ -481,8 +483,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 												setSelectedCompanyId(v);
 												setCompanyError("");
 												const company = companies.find((c) => c.id === v);
-												const mainAddr = company?.addresses.find((a) => a.isMain);
-												setSelectedAddressId(mainAddr?.id ?? "");
+												setSelectedAddressIds(company?.addresses.map((a) => a.id) ?? []);
 											}}
 										>
 											<SelectTrigger
@@ -502,31 +503,39 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 										</Select>
 									</div>
 									{selectedCompany && selectedCompany.addresses.length > 0 && (
-										<div>
-											<Select
-												value={selectedAddressId || undefined}
-												onValueChange={(v) => {
-													setSelectedAddressId(v);
-													setCompanyError("");
-												}}
-											>
-												<SelectTrigger
-													aria-label="Адрес компании"
-													aria-invalid={companyError && selectedCompanyId && !selectedAddressId ? true : undefined}
-													className={
-														companyError && selectedCompanyId && !selectedAddressId ? "border-destructive" : undefined
-													}
+										<div className="flex flex-col gap-1.5">
+											<div className="flex items-center justify-between">
+												<span className="text-sm text-muted-foreground">Адреса доставки</span>
+												<button
+													type="button"
+													className="text-xs text-primary hover:underline"
+													onClick={() => {
+														const allSelected = selectedAddressIds.length === selectedCompany.addresses.length;
+														setSelectedAddressIds(allSelected ? [] : selectedCompany.addresses.map((a) => a.id));
+														setCompanyError("");
+													}}
 												>
-													<SelectValue placeholder="Выберите адрес *" />
-												</SelectTrigger>
-												<SelectContent position="popper">
-													{selectedCompany.addresses.map((a) => (
-														<SelectItem key={a.id} value={a.id}>
-															{a.name} — {a.address}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
+													{selectedAddressIds.length === selectedCompany.addresses.length ? "Снять все" : "Выбрать все"}
+												</button>
+											</div>
+											{selectedCompany.addresses.map((a) => (
+												// biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally
+												<label key={a.id} className="flex cursor-pointer items-center gap-2">
+													<Checkbox
+														checked={selectedAddressIds.includes(a.id)}
+														onCheckedChange={(checked) => {
+															setSelectedAddressIds((prev) =>
+																checked ? [...prev, a.id] : prev.filter((id) => id !== a.id),
+															);
+															setCompanyError("");
+														}}
+														aria-label={`${a.name} — ${a.address}`}
+													/>
+													<span className="min-w-0 flex-1 text-sm">
+														{a.name} — {a.address}
+													</span>
+												</label>
+											))}
 										</div>
 									)}
 									{companyError && <p className="text-sm text-destructive">{companyError}</p>}
