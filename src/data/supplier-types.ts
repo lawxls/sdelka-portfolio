@@ -16,6 +16,14 @@ export const SUPPLIER_STATUS_LABELS: Record<SupplierStatus, string> = {
 	отказ: "Отказ",
 };
 
+export const SUPPLIER_STATUS_CHART_COLORS: Record<SupplierStatus, string> = {
+	письмо_не_отправлено: "oklch(0.70 0.10 250)",
+	ждем_ответа: "oklch(0.60 0.22 295)",
+	переговоры: "oklch(0.62 0.20 250)",
+	получено_кп: "oklch(0.60 0.20 145)",
+	отказ: "oklch(0.65 0.22 25)",
+};
+
 export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; className: string }> = {
 	письмо_не_отправлено: { label: SUPPLIER_STATUS_LABELS.письмо_не_отправлено, className: "text-muted-foreground" },
 	ждем_ответа: { label: SUPPLIER_STATUS_LABELS.ждем_ответа, className: "text-violet-600 dark:text-violet-400" },

@@ -2,6 +2,7 @@ import type { AnalyticsSummaryResponse } from "./analytics-types";
 import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
 import { refreshToken } from "./auth-api";
+import type { SupplierStatus } from "./supplier-types";
 import type { Attachment, Task, TaskStatus } from "./task-types";
 import { getTenant } from "./tenant";
 import type {
@@ -454,6 +455,14 @@ export async function updateEmployeePermissions(
 
 export async function fetchAnalyticsSummary(params: { company?: string } = {}): Promise<AnalyticsSummaryResponse> {
 	return request(`/summary${buildQuery(params as Record<string, string | undefined>)}`, {
+		base: ANALYTICS_BASE,
+	});
+}
+
+export async function fetchAnalyticsPipeline(
+	params: { company?: string } = {},
+): Promise<Record<SupplierStatus, number>> {
+	return request(`/supplier-pipeline${buildQuery(params as Record<string, string | undefined>)}`, {
 		base: ANALYTICS_BASE,
 	});
 }

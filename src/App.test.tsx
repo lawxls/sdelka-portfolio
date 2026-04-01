@@ -159,6 +159,15 @@ function setupHandlers() {
 				},
 			}),
 		),
+		http.get("/api/v1/analytics/supplier-pipeline", () =>
+			HttpResponse.json({
+				письмо_не_отправлено: 0,
+				ждем_ответа: 0,
+				переговоры: 0,
+				получено_кп: 0,
+				отказ: 0,
+			}),
+		),
 		http.get("/api/v1/company/tasks/board/", () =>
 			HttpResponse.json({
 				assigned: { results: [], next: null, count: 0 },

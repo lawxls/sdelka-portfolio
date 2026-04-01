@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
 import type { AnalyticsKpis, FolderBreakdown, ProcurementStatus } from "./analytics-types";
+import type { SupplierStatus } from "./supplier-types";
 import { useAnalyticsSummary } from "./use-analytics";
 
 const mockKpis: AnalyticsKpis = {
@@ -16,10 +17,20 @@ const mockKpis: AnalyticsKpis = {
 	openTasksCount: 3,
 };
 
+const DEFAULT_PIPELINE: Record<SupplierStatus, number> = {
+	письмо_не_отправлено: 0,
+	ждем_ответа: 0,
+	переговоры: 0,
+	получено_кп: 0,
+	отказ: 0,
+};
+
 beforeEach(() => {
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
+	// default pipeline handler so existing tests don't see an unhandled-request error
+	server.use(http.get("/api/v1/analytics/supplier-pipeline", () => HttpResponse.json(DEFAULT_PIPELINE)));
 });
 
 afterEach(() => {
@@ -161,5 +172,48 @@ describe("useAnalyticsSummary", () => {
 
 		await waitFor(() => expect(result.current.isLoading).toBe(false));
 		expect(capturedUrl).toContain("company=co-123");
+	});
+
+	it("exposes supplierPipeline from pipeline endpoint", async () => {
+		const pipeline: Record<SupplierStatus, number> = {
+			письмо_не_отправлено: 8,
+			ждем_ответа: 4,
+			переговоры: 2,
+			получено_кп: 6,
+			отказ: 1,
+		};
+		server.use(
+			http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })),
+			http.get("/api/v1/analytics/supplier-pipeline", () => HttpResponse.json(pipeline)),
+		);
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.supplierPipeline).toEqual(pipeline);
+	});
+
+	it("returns default supplierPipeline (all zeros) when pipeline endpoint returns empty", async () => {
+		server.use(
+			http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })),
+			http.get("/api/v1/analytics/supplier-pipeline", () => HttpResponse.json(DEFAULT_PIPELINE)),
+		);
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.supplierPipeline).toEqual({
+			письмо_не_отправлено: 0,
+			ждем_ответа: 0,
+			переговоры: 0,
+			получено_кп: 0,
+			отказ: 0,
+		});
 	});
 });

@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router";
 import { AnalyticsKpiStrip } from "@/components/analytics-kpi-strip";
 import { FolderOverpaymentChart } from "@/components/folder-overpayment-chart";
 import { ProcurementStatusDonut } from "@/components/procurement-status-donut";
+import { SupplierPipelineChart } from "@/components/supplier-pipeline-chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalyticsSummary } from "@/data/use-analytics";
@@ -12,7 +13,7 @@ export function AnalyticsPage() {
 	const company = searchParams.get("company") ?? undefined;
 
 	const { data: companies = [] } = useProcurementCompanies();
-	const { kpis, folderBreakdown, statusBreakdown, isLoading } = useAnalyticsSummary({ company });
+	const { kpis, folderBreakdown, statusBreakdown, supplierPipeline, isLoading } = useAnalyticsSummary({ company });
 
 	function handleCompanyChange(value: string) {
 		setSearchParams(
@@ -71,6 +72,12 @@ export function AnalyticsPage() {
 				<Skeleton className="h-64 rounded-xl" data-testid="status-donut-skeleton" />
 			) : (
 				<ProcurementStatusDonut statusBreakdown={statusBreakdown} />
+			)}
+
+			{isLoading ? (
+				<Skeleton className="h-64 rounded-xl" data-testid="supplier-pipeline-skeleton" />
+			) : (
+				<SupplierPipelineChart supplierPipeline={supplierPipeline} />
 			)}
 		</div>
 	);
