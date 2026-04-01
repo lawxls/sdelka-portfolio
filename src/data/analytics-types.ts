@@ -8,6 +8,14 @@ export interface AnalyticsKpis {
 	openTasksCount: number;
 }
 
+export interface FolderBreakdown {
+	folderId: string;
+	folderName: string;
+	overpayment: number;
+	deviationPct: number;
+}
+
 export interface AnalyticsSummaryResponse {
 	kpis: AnalyticsKpis;
+	folderBreakdown?: FolderBreakdown[];
 }

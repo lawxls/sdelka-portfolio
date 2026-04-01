@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import type { AnalyticsKpis } from "./analytics-types";
+import type { AnalyticsKpis, FolderBreakdown } from "./analytics-types";
 import { useAnalyticsSummary } from "./use-analytics";
 
 const mockKpis: AnalyticsKpis = {
@@ -80,6 +80,34 @@ describe("useAnalyticsSummary", () => {
 
 		await waitFor(() => expect(result.current.isLoading).toBe(false));
 		expect(result.current.kpis?.pendingAnalysisCount).toBe(5);
+	});
+
+	it("exposes folderBreakdown from response", async () => {
+		const folderBreakdown: FolderBreakdown[] = [
+			{ folderId: "f1", folderName: "Электроника", overpayment: 100_000, deviationPct: 15 },
+			{ folderId: "f2", folderName: "Мебель", overpayment: 50_000, deviationPct: 8 },
+		];
+		server.use(http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis, folderBreakdown })));
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.folderBreakdown).toEqual(folderBreakdown);
+	});
+
+	it("returns empty folderBreakdown when not present in response", async () => {
+		server.use(http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })));
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.folderBreakdown).toEqual([]);
 	});
 
 	it("passes company param to API request", async () => {
