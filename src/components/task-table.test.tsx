@@ -13,14 +13,26 @@ vi.mock("sonner", () => ({
 	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
 }));
 
-const tasks = [
-	makeTask("task-1", {
-		name: "Согласование цены на арматуру",
-		item: { id: "i-1", name: "Арматура А500С", companyId: "c-1" },
-		status: "assigned",
-	}),
-	makeTask("task-2", { name: "Запрос КП", status: "in_progress" }),
-];
+const task1 = makeTask("task-1", {
+	name: "Согласование цены на арматуру",
+	item: { id: "i-1", name: "Арматура А500С", companyId: "c-1" },
+	status: "assigned",
+});
+const task2 = makeTask("task-2", { name: "Запрос КП", status: "in_progress" });
+
+const boardResponse = {
+	assigned: { results: [task1], next: null, count: 1 },
+	in_progress: { results: [task2], next: null, count: 1 },
+	completed: { results: [], next: null, count: 0 },
+	archived: { results: [], next: null, count: 0 },
+};
+
+const flatResponse = {
+	count: 2,
+	results: [task1, task2],
+	next: null,
+	previous: null,
+};
 
 let queryClient: QueryClient;
 
@@ -31,14 +43,8 @@ beforeEach(() => {
 	localStorage.setItem("auth-refresh-token", "test-refresh");
 
 	server.use(
-		http.get("/api/v1/company/tasks/", () => {
-			return HttpResponse.json({
-				count: tasks.length,
-				results: tasks,
-				next: null,
-				previous: null,
-			});
-		}),
+		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(boardResponse)),
+		http.get("/api/v1/company/tasks/", () => HttpResponse.json(flatResponse)),
 	);
 });
 
@@ -56,64 +62,59 @@ function renderTable(onTaskClick = vi.fn(), isMobile = false) {
 	);
 }
 
-describe("TaskTable", () => {
-	it("renders table with 7 column headers", async () => {
+describe("TaskTable desktop", () => {
+	it("renders all four status group headers", async () => {
 		renderTable();
 		await waitFor(() => {
-			expect(screen.getByRole("table")).toBeInTheDocument();
+			expect(screen.getByText("Назначено")).toBeInTheDocument();
 		});
-
-		const headers = screen.getAllByRole("columnheader");
-		expect(headers).toHaveLength(7);
-		expect(headers[0]).toHaveTextContent("№");
-		expect(headers[1]).toHaveTextContent("НАЗВАНИЕ");
-		expect(headers[2]).toHaveTextContent("ПОЗИЦИЯ");
-		expect(headers[3]).toHaveTextContent("ИСПОЛНИТЕЛЬ");
-		expect(headers[4]).toHaveTextContent("ДЕДЛАЙН");
-		expect(headers[5]).toHaveTextContent("СОЗДАНО");
-		expect(headers[6]).toHaveTextContent("ВОПРОСЫ");
+		expect(screen.getByText("В работе")).toBeInTheDocument();
+		expect(screen.getByText("Завершено")).toBeInTheDocument();
+		expect(screen.getByText("Архив")).toBeInTheDocument();
 	});
 
-	it("renders task rows with correct data", async () => {
+	it("renders task name under its status group", async () => {
 		renderTable();
 		await waitFor(() => {
-			expect(screen.getAllByText("Согласование цены на арматуру").length).toBeGreaterThan(0);
+			expect(screen.getByText("Согласование цены на арматуру")).toBeInTheDocument();
 		});
-
-		expect(screen.getAllByText("Арматура А500С").length).toBeGreaterThan(0);
+		expect(screen.getByText("Запрос КП")).toBeInTheDocument();
 	});
 
-	it("shows status as badge", async () => {
-		renderTable();
-		await waitFor(() => {
-			expect(screen.getAllByText("Назначено").length).toBeGreaterThan(0);
-		});
-
-		const badges = screen.getAllByText("Назначено");
-		expect(badges[0].closest("[data-slot='badge']")).toBeInTheDocument();
-	});
-
-	it("calls onTaskClick when row is clicked", async () => {
+	it("calls onTaskClick when task row is clicked", async () => {
 		const onTaskClick = vi.fn();
 		renderTable(onTaskClick);
 		const user = userEvent.setup();
-
 		await waitFor(() => {
-			expect(screen.getAllByText("Согласование цены на арматуру").length).toBeGreaterThan(0);
+			expect(screen.getByText("Согласование цены на арматуру")).toBeInTheDocument();
 		});
-
-		// Click first data row
-		const rows = screen.getAllByRole("row");
-		await user.click(rows[1]);
-
+		await user.click(screen.getByText("Согласование цены на арматуру"));
 		expect(onTaskClick).toHaveBeenCalledWith("task-1");
 	});
 
-	it("shows loading skeletons initially", () => {
+	it("collapses a status group when its header is clicked", async () => {
+		renderTable();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByText("Согласование цены на арматуру")).toBeInTheDocument();
+		});
+		await user.click(screen.getByText("Назначено"));
+		expect(screen.queryByText("Согласование цены на арматуру")).not.toBeInTheDocument();
+	});
+
+	it("does not render a plain <table> element", async () => {
+		renderTable();
+		await waitFor(() => {
+			expect(screen.getByText("Назначено")).toBeInTheDocument();
+		});
+		expect(screen.queryByRole("table")).not.toBeInTheDocument();
+	});
+
+	it("shows loading skeletons before data arrives", () => {
 		server.use(
-			http.get("/api/v1/company/tasks/", async () => {
+			http.get("/api/v1/company/tasks/board/", async () => {
 				await new Promise((r) => setTimeout(r, 10000));
-				return HttpResponse.json({});
+				return HttpResponse.json(boardResponse);
 			}),
 		);
 		renderTable();
@@ -122,7 +123,7 @@ describe("TaskTable", () => {
 });
 
 describe("TaskTable mobile", () => {
-	it("renders cards instead of table on mobile", async () => {
+	it("renders cards instead of grouped view on mobile", async () => {
 		renderTable(vi.fn(), true);
 		await waitFor(() => {
 			expect(screen.getAllByTestId(/^task-table-card-/).length).toBeGreaterThan(0);
@@ -142,11 +143,9 @@ describe("TaskTable mobile", () => {
 		const onTaskClick = vi.fn();
 		renderTable(onTaskClick, true);
 		const user = userEvent.setup();
-
 		await waitFor(() => {
 			expect(screen.getByTestId("task-table-card-task-1")).toBeInTheDocument();
 		});
-
 		await user.click(screen.getByTestId("task-table-card-task-1"));
 		expect(onTaskClick).toHaveBeenCalledWith("task-1");
 	});

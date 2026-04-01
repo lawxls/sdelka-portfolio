@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_ICONS, STATUS_LABELS, type TaskStatus } from "@/data/task-types";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, pluralizeRu } from "@/lib/format";
 
 interface TaskDrawerProps {
 	taskId: string | null;
@@ -26,7 +26,7 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 				if (!open) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined}>
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined} showCloseButton={false}>
 				{taskId && (
 					<TaskDrawerContent
 						key={taskId}
@@ -114,16 +114,18 @@ function TaskDrawerContent({
 
 	return (
 		<>
-			<SheetHeader className="flex-row items-start justify-between gap-4 pr-12">
+			<SheetHeader className="flex-row items-start gap-2 px-4 pt-4">
 				<div className="min-w-0 flex-1">
 					<SheetTitle>{task.name}</SheetTitle>
 					<SheetDescription>{task.item.name}</SheetDescription>
 				</div>
 				{isAnswered ? (
-					<Badge variant="secondary">{STATUS_LABELS[task.status]}</Badge>
+					<Badge variant="secondary" className="shrink-0 self-start mt-0.5">
+						{STATUS_LABELS[task.status]}
+					</Badge>
 				) : (
 					<Select value={task.status} onValueChange={handleStatusChange}>
-						<SelectTrigger size="sm" aria-label="Статус задачи">
+						<SelectTrigger size="sm" aria-label="Статус задачи" className="shrink-0">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -139,12 +141,20 @@ function TaskDrawerContent({
 						</SelectContent>
 					</Select>
 				)}
+				<SheetClose asChild>
+					<Button variant="ghost" size="icon-sm" aria-label="Закрыть" className="shrink-0">
+						<X aria-hidden="true" />
+					</Button>
+				</SheetClose>
 			</SheetHeader>
 
 			<div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
 				<time className="block text-xs text-muted-foreground" dateTime={task.createdAt}>
 					{formatDateTime(task.createdAt)}
 				</time>
+				<p className="text-xs text-muted-foreground">
+					{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
+				</p>
 
 				<p className="text-sm">{task.description}</p>
 

@@ -1,13 +1,19 @@
-import { LoaderCircle } from "lucide-react";
-import { useRef } from "react";
+import { ChevronDown, ChevronRight, LoaderCircle } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Task, TaskFilterParams } from "@/data/task-types";
-import { STATUS_ICONS, STATUS_LABELS } from "@/data/task-types";
-import { useAllTasks } from "@/data/use-tasks";
+import {
+	STATUS_ICONS,
+	STATUS_LABELS,
+	TASK_STATUSES,
+	type Task,
+	type TaskFilterParams,
+	type TaskStatus,
+} from "@/data/task-types";
+import { useAllTasks, useTaskColumns } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
-import { formatAssigneeName, formatShortDate } from "@/lib/format";
+import { getAvatarColor } from "@/lib/avatar-colors";
+import { formatAssigneeName, formatDayMonth, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE_VARIANT = {
@@ -18,14 +24,15 @@ const STATUS_BADGE_VARIANT = {
 } as const;
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
-
-const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
+const SKELETON_ROW_KEYS = ["sk-r1", "sk-r2", "sk-r3"] as const;
 
 interface TaskTableProps {
 	onTaskClick?: (taskId: string) => void;
 	filterParams?: TaskFilterParams;
 	isMobile?: boolean;
 }
+
+// ── Mobile card ───────────────────────────────────────────────────────────────
 
 function TaskTableCard({
 	task,
@@ -76,7 +83,7 @@ function TaskTableCard({
 					<div className="text-xs text-muted-foreground">Дедлайн</div>
 					<div>
 						<time dateTime={task.deadlineAt} className={cn(isOverdue && "font-medium text-destructive")}>
-							{formatShortDate(task.deadlineAt)}
+							{formatDayMonth(task.deadlineAt)}
 						</time>
 					</div>
 				</div>
@@ -89,144 +96,177 @@ function TaskTableCard({
 	);
 }
 
-export function TaskTable({ onTaskClick, filterParams, isMobile }: TaskTableProps) {
-	const { tasks, isLoading, hasNextPage, loadMore, isFetchingNextPage } = useAllTasks(filterParams);
-	const scrollContainerRef = useRef<HTMLDivElement>(null);
+// ── Load-more sentinel (one per status group) ─────────────────────────────────
+
+function LoadMoreSentinel({ loadMore }: { loadMore: () => void }) {
+	const ref = useIntersectionObserver(loadMore);
+	return <div ref={ref} className="h-px" />;
+}
+
+// ── Desktop grouped row ───────────────────────────────────────────────────────
+
+function TaskRow({ task, onTaskClick }: { task: Task; onTaskClick?: (id: string) => void }) {
 	const now = new Date();
+	const isOverdue = new Date(task.deadlineAt) < now;
+	const StatusIcon = STATUS_ICONS[task.status];
 
-	const sentinelRef = useIntersectionObserver(
-		() => {
-			if (hasNextPage && !isFetchingNextPage) loadMore();
-		},
-		{ root: scrollContainerRef.current },
-	);
-
-	if (isMobile) {
-		return (
-			<div className="flex min-h-0 flex-1 flex-col">
-				<div
-					ref={scrollContainerRef}
-					className="flex-1 overflow-auto touch-manipulation"
-					data-testid="card-scroll-container"
+	return (
+		<button
+			type="button"
+			className={cn(
+				"flex w-full items-center gap-3 px-4 py-2 text-sm border-b border-border/50 last:border-0 text-left",
+				onTaskClick
+					? "cursor-pointer hover:bg-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					: "cursor-default",
+			)}
+			onClick={() => onTaskClick?.(task.id)}
+			data-testid={`task-row-${task.id}`}
+		>
+			<StatusIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+			<span className="flex-1 truncate">{task.name}</span>
+			{task.assignee ? (
+				<span
+					role="img"
+					className={cn(
+						"flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white",
+						getAvatarColor(task.assignee.avatarIcon),
+					)}
+					aria-label={formatAssigneeName(task.assignee)}
 				>
-					{isLoading && (
-						<div className="flex flex-col gap-3 p-4">
-							{SKELETON_KEYS.map((key) => (
-								<div key={key} data-testid="skeleton-card" className="rounded-lg border bg-background p-4">
-									<div className="flex items-start justify-between gap-2">
-										<div className="flex-1">
-											<Skeleton className="h-4 w-32" />
-											<Skeleton className="mt-1.5 h-4 w-16" />
-										</div>
-										<Skeleton className="h-4 w-6" />
-									</div>
-									<div className="mt-3 grid grid-cols-2 gap-2">
-										<Skeleton className="h-8 w-full" />
-										<Skeleton className="h-8 w-full" />
-										<Skeleton className="h-8 w-full" />
-										<Skeleton className="h-8 w-full" />
-									</div>
-								</div>
-							))}
-						</div>
-					)}
-					{!isLoading && tasks.length === 0 && (
-						<p className="py-8 text-center text-sm text-muted-foreground">Нет задач</p>
-					)}
-					{!isLoading && tasks.length > 0 && (
-						<div className="flex flex-col gap-3 p-4">
-							{tasks.map((task, index) => (
-								<TaskTableCard key={task.id} task={task} index={index} onTaskClick={onTaskClick} />
-							))}
-						</div>
-					)}
-					{hasNextPage && <div ref={sentinelRef} className="h-px" />}
-					{isFetchingNextPage && (
-						<div className="flex justify-center py-4" data-testid="loading-more-spinner">
-							<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
-						</div>
-					)}
-				</div>
-			</div>
-		);
+					{getInitials(task.assignee.firstName, task.assignee.lastName)}
+				</span>
+			) : (
+				<span
+					role="img"
+					className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] text-muted-foreground"
+					aria-label="Не назначен"
+				/>
+			)}
+			<time
+				dateTime={task.deadlineAt}
+				className={cn(
+					"tabular-nums text-xs text-muted-foreground w-10 text-right shrink-0",
+					isOverdue && "font-medium text-destructive",
+				)}
+			>
+				{formatDayMonth(task.deadlineAt)}
+			</time>
+		</button>
+	);
+}
+
+// ── Desktop grouped table ─────────────────────────────────────────────────────
+
+function TaskTableDesktop({ onTaskClick, filterParams }: Pick<TaskTableProps, "onTaskClick" | "filterParams">) {
+	const columns = useTaskColumns(filterParams);
+	const isLoading = columns.assigned.isLoading;
+
+	const [collapsed, setCollapsed] = useState<Record<TaskStatus, boolean>>({
+		assigned: false,
+		in_progress: false,
+		completed: false,
+		archived: false,
+	});
+
+	function toggle(status: TaskStatus) {
+		setCollapsed((prev) => ({ ...prev, [status]: !prev[status] }));
 	}
 
 	return (
+		<div className="flex min-h-0 flex-1 flex-col overflow-auto touch-manipulation">
+			{TASK_STATUSES.map((status) => {
+				const StatusIcon = STATUS_ICONS[status];
+				const col = columns[status];
+				const isCollapsed = collapsed[status];
+
+				return (
+					<div key={status} className="border-b border-border last:border-0">
+						{/* Group header */}
+						<button
+							type="button"
+							className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-medium hover:bg-accent/30 transition-colors"
+							onClick={() => toggle(status)}
+							aria-expanded={!isCollapsed}
+						>
+							{isCollapsed ? (
+								<ChevronRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+							) : (
+								<ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+							)}
+							<StatusIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+							<span>{STATUS_LABELS[status]}</span>
+							{!isLoading && <span className="text-xs font-normal text-muted-foreground">{col.tasks.length}</span>}
+						</button>
+
+						{/* Task rows */}
+						{!isCollapsed && (
+							<div>
+								{isLoading
+									? SKELETON_ROW_KEYS.map((key) => (
+											<div
+												key={key}
+												data-testid="skeleton-row"
+												className="flex items-center gap-3 px-4 py-2 border-b border-border/50 last:border-0"
+											>
+												<Skeleton className="size-3.5 rounded-full" />
+												<Skeleton className="h-4 flex-1" />
+												<Skeleton className="size-6 rounded-full" />
+												<Skeleton className="h-4 w-10" />
+											</div>
+										))
+									: col.tasks.map((task) => <TaskRow key={task.id} task={task} onTaskClick={onTaskClick} />)}
+								{!isLoading && col.hasNextPage && <LoadMoreSentinel loadMore={col.loadMore} />}
+							</div>
+						)}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+// ── Mobile list ───────────────────────────────────────────────────────────────
+
+function TaskTableMobile({ onTaskClick, filterParams }: Pick<TaskTableProps, "onTaskClick" | "filterParams">) {
+	const { tasks, isLoading, hasNextPage, loadMore, isFetchingNextPage } = useAllTasks(filterParams);
+	const sentinelRef = useIntersectionObserver(() => {
+		if (hasNextPage && !isFetchingNextPage) loadMore();
+	});
+
+	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<div ref={scrollContainerRef} className="flex flex-1 flex-col overflow-auto touch-manipulation">
-				<Table className="table-fixed">
-					<TableHeader>
-						<TableRow>
-							<TableHead className={`w-8 text-right ${stickyHead}`}>№</TableHead>
-							<TableHead className={`w-[30%] ${stickyHead}`}>НАЗВАНИЕ</TableHead>
-							<TableHead className={`w-[20%] ${stickyHead}`}>ПОЗИЦИЯ</TableHead>
-							<TableHead className={`w-[16%] ${stickyHead}`}>ИСПОЛНИТЕЛЬ</TableHead>
-							<TableHead className={`w-[12%] ${stickyHead}`}>ДЕДЛАЙН</TableHead>
-							<TableHead className={`w-[12%] ${stickyHead}`}>СОЗДАНО</TableHead>
-							<TableHead className={`w-[10%] text-right ${stickyHead}`}>ВОПРОСЫ</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{isLoading &&
-							SKELETON_KEYS.map((key, i) => (
-								<TableRow key={key} data-testid="skeleton-row">
-									<TableCell className="text-right tabular-nums text-muted-foreground">{i + 1}</TableCell>
-									<TableCell>
+			<div className="flex-1 overflow-auto touch-manipulation" data-testid="card-scroll-container">
+				{isLoading && (
+					<div className="flex flex-col gap-3 p-4">
+						{SKELETON_KEYS.map((key) => (
+							<div key={key} data-testid="skeleton-card" className="rounded-lg border bg-background p-4">
+								<div className="flex items-start justify-between gap-2">
+									<div className="flex-1">
 										<Skeleton className="h-4 w-32" />
 										<Skeleton className="mt-1.5 h-4 w-16" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-24" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-20" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-14" />
-									</TableCell>
-									<TableCell>
-										<Skeleton className="h-4 w-14" />
-									</TableCell>
-									<TableCell className="text-right">
-										<Skeleton className="ml-auto h-4 w-8" />
-									</TableCell>
-								</TableRow>
-							))}
-						{!isLoading &&
-							tasks.map((task, index) => {
-								const isOverdue = new Date(task.deadlineAt) < now;
-								const StatusIcon = STATUS_ICONS[task.status];
-								const assigneeName = formatAssigneeName(task.assignee);
-								return (
-									<TableRow
-										key={task.id}
-										className={onTaskClick ? "cursor-pointer" : undefined}
-										onClick={() => onTaskClick?.(task.id)}
-									>
-										<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
-										<TableCell>
-											<div className="font-medium">{task.name}</div>
-											<Badge variant={STATUS_BADGE_VARIANT[task.status]} className="mt-1">
-												<StatusIcon className="size-3" aria-hidden="true" />
-												{STATUS_LABELS[task.status]}
-											</Badge>
-										</TableCell>
-										<TableCell>{task.item.name}</TableCell>
-										<TableCell>{assigneeName}</TableCell>
-										<TableCell>
-											<time dateTime={task.deadlineAt} className={cn(isOverdue && "font-medium text-destructive")}>
-												{formatShortDate(task.deadlineAt)}
-											</time>
-										</TableCell>
-										<TableCell>
-											<time dateTime={task.createdAt}>{formatShortDate(task.createdAt)}</time>
-										</TableCell>
-										<TableCell className="text-right tabular-nums">{task.questionCount}</TableCell>
-									</TableRow>
-								);
-							})}
-					</TableBody>
-				</Table>
+									</div>
+									<Skeleton className="h-4 w-6" />
+								</div>
+								<div className="mt-3 grid grid-cols-2 gap-2">
+									<Skeleton className="h-8 w-full" />
+									<Skeleton className="h-8 w-full" />
+									<Skeleton className="h-8 w-full" />
+									<Skeleton className="h-8 w-full" />
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+				{!isLoading && tasks.length === 0 && (
+					<p className="py-8 text-center text-sm text-muted-foreground">Нет задач</p>
+				)}
+				{!isLoading && tasks.length > 0 && (
+					<div className="flex flex-col gap-3 p-4">
+						{tasks.map((task, index) => (
+							<TaskTableCard key={task.id} task={task} index={index} onTaskClick={onTaskClick} />
+						))}
+					</div>
+				)}
 				{hasNextPage && <div ref={sentinelRef} className="h-px" />}
 				{isFetchingNextPage && (
 					<div className="flex justify-center py-4" data-testid="loading-more-spinner">
@@ -236,4 +276,13 @@ export function TaskTable({ onTaskClick, filterParams, isMobile }: TaskTableProp
 			</div>
 		</div>
 	);
+}
+
+// ── Public component ──────────────────────────────────────────────────────────
+
+export function TaskTable({ onTaskClick, filterParams, isMobile }: TaskTableProps) {
+	if (isMobile) {
+		return <TaskTableMobile onTaskClick={onTaskClick} filterParams={filterParams} />;
+	}
+	return <TaskTableDesktop onTaskClick={onTaskClick} filterParams={filterParams} />;
 }

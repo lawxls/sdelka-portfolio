@@ -197,23 +197,24 @@ tbody > tr.dragging-row > [data-slot="table-cell"]:nth-child(2) {
 }
 
 .negotiating-stripe {
-	position: relative;
+	--stripe-row-bg: var(--background);
+	background-image:
+		linear-gradient(to right, var(--stripe-row-bg) 58%, transparent 68%),
+		repeating-linear-gradient(
+			-45deg,
+			transparent,
+			transparent 4px,
+			color-mix(in oklch, var(--status-highlight-text) 14%, transparent) 4px,
+			color-mix(in oklch, var(--status-highlight-text) 14%, transparent) 8px
+		);
 }
 
-.negotiating-stripe::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background-image: repeating-linear-gradient(
-		-45deg,
-		transparent,
-		transparent 4px,
-		color-mix(in oklch, var(--status-highlight-text) 14%, transparent) 4px,
-		color-mix(in oklch, var(--status-highlight-text) 14%, transparent) 8px
-	);
-	mask-image: linear-gradient(to left, black 20%, transparent 65%);
-	-webkit-mask-image: linear-gradient(to left, black 20%, transparent 65%);
+tbody tr:nth-child(even).negotiating-stripe {
+	--stripe-row-bg: color-mix(in oklch, var(--muted) 40%, var(--background));
+}
+
+tbody tr.negotiating-stripe:hover {
+	--stripe-row-bg: color-mix(in oklch, var(--muted) 60%, var(--background));
 }
 
 @utility scrollbar-thin {

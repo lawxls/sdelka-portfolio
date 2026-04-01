@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { makeTask, TooltipWrapper } from "@/test-utils";
 import { TaskCard } from "./task-card";
 
-const fmt = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" });
+const fmt = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" });
 
 describe("TaskCard", () => {
 	const task = makeTask("t1", {
@@ -38,20 +38,9 @@ describe("TaskCard", () => {
 		expect(screen.getByText(/Дедлайн/)).toBeInTheDocument();
 	});
 
-	it("renders question count with correct pluralization", () => {
-		const { rerender } = render(<TaskCard task={makeTask("t-plur", { questionCount: 1 })} />, {
-			wrapper: TooltipWrapper,
-		});
-		expect(screen.getByText(/1\s+вопрос$/)).toBeInTheDocument();
-
-		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 2 })} />);
-		expect(screen.getByText(/2\s+вопроса/)).toBeInTheDocument();
-
-		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 5 })} />);
-		expect(screen.getByText(/5\s+вопросов/)).toBeInTheDocument();
-
-		rerender(<TaskCard task={makeTask("t-plur", { questionCount: 11 })} />);
-		expect(screen.getByText(/11\s+вопросов/)).toBeInTheDocument();
+	it("does not render question count on card", () => {
+		render(<TaskCard task={makeTask("t-plur", { questionCount: 3 })} />, { wrapper: TooltipWrapper });
+		expect(screen.queryByText(/вопрос/)).not.toBeInTheDocument();
 	});
 
 	it("highlights overdue deadline in red", () => {

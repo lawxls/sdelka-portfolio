@@ -46,13 +46,13 @@ export function formatFileSize(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
-const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
-	day: "numeric",
-	month: "short",
+const dayMonthFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "2-digit",
+	month: "2-digit",
 });
 
-export function formatShortDate(iso: string): string {
-	return shortDateFormatter.format(new Date(iso));
+export function formatDayMonth(iso: string): string {
+	return dayMonthFormatter.format(new Date(iso));
 }
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
