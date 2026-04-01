@@ -1,5 +1,7 @@
 import { UserPlus } from "lucide-react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceEmployee } from "@/data/api-client";
 import { useWorkspaceEmployees } from "@/data/use-workspace-employees";
@@ -17,6 +19,7 @@ function formatFullName(employee: WorkspaceEmployee): string {
 
 export function EmployeesSettingsPage() {
 	const [, setSearchParams] = useSearchParams();
+	const [inviteOpen, setInviteOpen] = useState(false);
 	const { employees } = useWorkspaceEmployees();
 
 	function handleRowClick(employee: WorkspaceEmployee) {
@@ -34,7 +37,12 @@ export function EmployeesSettingsPage() {
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
 				<h1 className="text-lg tracking-tight whitespace-nowrap">Сотрудники</h1>
-				<Button type="button" size="sm" className="bg-status-highlight hover:bg-status-highlight/80">
+				<Button
+					type="button"
+					size="sm"
+					className="bg-status-highlight hover:bg-status-highlight/80"
+					onClick={() => setInviteOpen(true)}
+				>
 					<UserPlus data-icon="inline-start" aria-hidden="true" />
 					<span>Отправить приглашения</span>
 				</Button>
@@ -72,6 +80,8 @@ export function EmployeesSettingsPage() {
 					</tbody>
 				</table>
 			</main>
+
+			<InviteEmployeesDrawer open={inviteOpen} onOpenChange={setInviteOpen} />
 		</div>
 	);
 }
