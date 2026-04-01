@@ -1,6 +1,7 @@
 import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { EmployeeDetailDrawer } from "@/components/employee-detail-drawer";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { Button } from "@/components/ui/button";
 import type { WorkspaceEmployee } from "@/data/api-client";
@@ -82,6 +83,7 @@ export function EmployeesSettingsPage() {
 			</main>
 
 			<InviteEmployeesDrawer open={inviteOpen} onOpenChange={setInviteOpen} />
+			<EmployeeDetailDrawer />
 		</div>
 	);
 }

@@ -1,0 +1,186 @@
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
+import { MemoryRouter, Route, Routes } from "react-router";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { server } from "@/test-msw";
+import { createTestQueryClient, mockHostname } from "@/test-utils";
+import { EmployeeDetailDrawer } from "./employee-detail-drawer";
+
+const MOCK_EMPLOYEE = {
+	id: 1,
+	firstName: "Иван",
+	lastName: "Иванов",
+	patronymic: "Иванович",
+	position: "Директор",
+	role: "admin",
+	phone: "+71234567890",
+	email: "ivan@example.com",
+	isResponsible: true,
+	registeredAt: "2024-01-15T10:00:00Z",
+	companies: [
+		{
+			id: "c1",
+			name: "Компания А",
+			isMain: true,
+			responsibleEmployeeName: null,
+			addresses: [],
+			employeeCount: 3,
+			procurementItemCount: 5,
+		},
+	],
+	permissions: {
+		id: "perm-1",
+		employeeId: 1,
+		analytics: "edit",
+		procurement: "view",
+		companies: "none",
+		tasks: "edit",
+	},
+};
+
+const MOCK_EMPLOYEE_PENDING = {
+	id: 2,
+	firstName: "Мария",
+	lastName: "Петрова",
+	patronymic: "Сергеевна",
+	position: "Менеджер",
+	role: "user",
+	phone: "+79876543210",
+	email: "maria@example.com",
+	isResponsible: false,
+	registeredAt: null,
+	companies: [],
+	permissions: {
+		id: "perm-2",
+		employeeId: 2,
+		analytics: "none",
+		procurement: "none",
+		companies: "none",
+		tasks: "none",
+	},
+};
+
+let queryClient: QueryClient;
+
+function renderWithUrl(initialPath: string) {
+	return render(
+		<QueryClientProvider client={queryClient}>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={[initialPath]}>
+					<Routes>
+						<Route path="*" element={<EmployeeDetailDrawer />} />
+					</Routes>
+				</MemoryRouter>
+			</TooltipProvider>
+		</QueryClientProvider>,
+	);
+}
+
+beforeEach(() => {
+	queryClient = createTestQueryClient();
+	mockHostname("acme.localhost");
+	localStorage.setItem("auth-access-token", "test-token");
+	localStorage.setItem("auth-refresh-token", "test-refresh");
+	server.use(
+		http.get("/api/v1/workspace/employees/1/", () => HttpResponse.json(MOCK_EMPLOYEE)),
+		http.get("/api/v1/workspace/employees/2/", () => HttpResponse.json(MOCK_EMPLOYEE_PENDING)),
+	);
+});
+
+afterEach(() => {
+	localStorage.clear();
+});
+
+describe("EmployeeDetailDrawer — Информация tab", () => {
+	test("renders employee fields on Информация tab", async () => {
+		renderWithUrl("/?employee=1");
+
+		await waitFor(() => {
+			expect(screen.getByTestId("employee-drawer-title")).toHaveTextContent("Иванов Иван Иванович");
+		});
+
+		// Информация tab is active by default
+		expect(screen.getByTestId("employee-info-tab")).toBeInTheDocument();
+		expect(screen.getByText("Директор")).toBeInTheDocument();
+		expect(screen.getByText("ivan@example.com")).toBeInTheDocument();
+		expect(screen.getByText("Компания А")).toBeInTheDocument();
+		expect(screen.getByText("15.01.2024")).toBeInTheDocument();
+	});
+
+	test("shows Приглашение отправлено for pending employee", async () => {
+		renderWithUrl("/?employee=2");
+
+		await waitFor(() => {
+			expect(screen.getByTestId("employee-drawer-title")).toHaveTextContent("Петрова Мария Сергеевна");
+		});
+
+		expect(screen.getByText("Приглашение отправлено")).toBeInTheDocument();
+	});
+});
+
+describe("EmployeeDetailDrawer — Права доступа tab", () => {
+	test("renders permission matrix on Права доступа tab", async () => {
+		renderWithUrl("/?employee=1");
+
+		await waitFor(() => {
+			expect(screen.getByTestId("employee-tab-permissions")).toBeInTheDocument();
+		});
+
+		await userEvent.setup().click(screen.getByTestId("employee-tab-permissions"));
+
+		expect(screen.getByTestId("employee-permissions-tab")).toBeInTheDocument();
+		expect(screen.getByTestId("permissions-matrix")).toBeInTheDocument();
+		expect(screen.getByTestId("perm-row-analytics")).toBeInTheDocument();
+		expect(screen.getByTestId("perm-row-procurement")).toBeInTheDocument();
+		expect(screen.getByTestId("perm-row-companies")).toBeInTheDocument();
+		expect(screen.getByTestId("perm-row-tasks")).toBeInTheDocument();
+	});
+
+	test("permission change fires update mutation with correct payload", async () => {
+		let capturedBody: unknown = null;
+
+		server.use(
+			http.patch("/api/v1/workspace/employees/1/permissions/", async ({ request }) => {
+				capturedBody = await request.json();
+				return HttpResponse.json({ ...MOCK_EMPLOYEE.permissions, procurement: "edit" });
+			}),
+		);
+
+		renderWithUrl("/?employee=1");
+
+		await waitFor(() => {
+			expect(screen.getByTestId("employee-tab-permissions")).toBeInTheDocument();
+		});
+
+		const user = userEvent.setup();
+		await user.click(screen.getByTestId("employee-tab-permissions"));
+
+		// Open edit mode
+		await user.click(screen.getByRole("button", { name: "Редактировать права доступа" }));
+
+		// Click "Редактирование" for procurement
+		await user.click(screen.getByTestId("perm-procurement-edit"));
+
+		await waitFor(() => {
+			expect(capturedBody).toEqual({ procurement: "edit" });
+		});
+	});
+});
+
+describe("EmployeeDetailDrawer — URL-driven open/close", () => {
+	test("drawer is not visible without ?employee param", () => {
+		renderWithUrl("/");
+		expect(screen.queryByTestId("employee-drawer-title")).not.toBeInTheDocument();
+	});
+
+	test("deep-link with ?employee=1 opens correct employee", async () => {
+		renderWithUrl("/?employee=1");
+
+		await waitFor(() => {
+			expect(screen.getByTestId("employee-drawer-title")).toHaveTextContent("Иванов Иван Иванович");
+		});
+	});
+});
