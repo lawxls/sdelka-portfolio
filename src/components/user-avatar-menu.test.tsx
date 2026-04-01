@@ -31,7 +31,15 @@ function renderMenu(initialEntries = ["/"]) {
 							<>
 								<UserAvatarMenu />
 								<Routes>
-									<Route path="/profile" element={<div data-testid="profile-page">Profile</div>} />
+									<Route path="/settings/profile" element={<div data-testid="settings-profile-page">Profile</div>} />
+									<Route
+										path="/settings/companies"
+										element={<div data-testid="settings-companies-page">Companies</div>}
+									/>
+									<Route
+										path="/settings/employees"
+										element={<div data-testid="settings-employees-page">Employees</div>}
+									/>
 								</Routes>
 							</>
 						}
@@ -62,7 +70,7 @@ describe("UserAvatarMenu", () => {
 		expect(screen.queryByText("ИП")).not.toBeInTheDocument();
 	});
 
-	test("Мой профиль navigates to /profile", async () => {
+	test("Мой профиль navigates to /settings/profile", async () => {
 		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
 
 		renderMenu();
@@ -77,11 +85,11 @@ describe("UserAvatarMenu", () => {
 		await user.click(screen.getByText("Мой профиль"));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("profile-page")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-profile-page")).toBeInTheDocument();
 		});
 	});
 
-	test("Настройки navigates to /profile?tab=settings", async () => {
+	test("Компании navigates to /settings/companies", async () => {
 		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
 
 		renderMenu();
@@ -90,13 +98,58 @@ describe("UserAvatarMenu", () => {
 		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Настройки")).toBeInTheDocument();
+			expect(screen.getByText("Компании")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByText("Настройки"));
+		await user.click(screen.getByText("Компании"));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("profile-page")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-companies-page")).toBeInTheDocument();
+		});
+	});
+
+	test("Сотрудники navigates to /settings/employees", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderMenu();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Сотрудники")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByText("Сотрудники"));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("settings-employees-page")).toBeInTheDocument();
+		});
+	});
+
+	test("menu shows Сменить тему item", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderMenu();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		await waitFor(() => {
+			expect(screen.getAllByText("Сменить тему").length).toBeGreaterThan(0);
+		});
+	});
+
+	test("menu shows Выйти item", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderMenu();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Выйти")).toBeInTheDocument();
 		});
 	});
 });
