@@ -7,9 +7,18 @@ import { CompanyCreationSheet } from "@/components/company-creation-sheet";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
 import { Button } from "@/components/ui/button";
 import type { CreateCompanyPayload } from "@/data/api-client";
-import type { CompanySummary } from "@/data/types";
+import type { CompanySortField, CompanySortState, CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
 import { useCreateCompany } from "@/data/use-company-detail";
+
+const SORT_FIELDS = new Set<string>(["name", "employeeCount", "procurementItemCount"]);
+
+function parseSort(params: URLSearchParams): CompanySortState | null {
+	const field = params.get("sort");
+	const dir = params.get("dir");
+	if (!field || !SORT_FIELDS.has(field) || (dir !== "asc" && dir !== "desc")) return null;
+	return { field: field as CompanySortField, direction: dir };
+}
 
 export function CompaniesSettingsPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -17,8 +26,12 @@ export function CompaniesSettingsPage() {
 
 	const companyId = searchParams.get("company");
 	const activeTab = parseCompanyTab(searchParams.get("tab"));
+	const sort = parseSort(searchParams);
 
-	const { companies, isLoading, error, refetch } = useCompanies({ search: "", sort: null });
+	const { companies, hasNextPage, loadMore, isLoading, isFetchingNextPage, error, refetch } = useCompanies({
+		search: "",
+		sort,
+	});
 
 	const [creationOpen, setCreationOpen] = useState(false);
 	const createCompanyMutation = useCreateCompany();
@@ -70,6 +83,26 @@ export function CompaniesSettingsPage() {
 		});
 	}
 
+	function handleSort(field: CompanySortField) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			const currentField = next.get("sort");
+			const currentDir = next.get("dir");
+			if (currentField === field) {
+				if (currentDir === "asc") {
+					next.set("dir", "desc");
+				} else {
+					next.delete("sort");
+					next.delete("dir");
+				}
+			} else {
+				next.set("sort", field);
+				next.set("dir", "asc");
+			}
+			return next;
+		});
+	}
+
 	function handleViewProcurement(company: CompanySummary) {
 		navigate(`/procurement?company=${company.id}`);
 	}
@@ -88,11 +121,12 @@ export function CompaniesSettingsPage() {
 				<CompaniesTable
 					companies={companies}
 					isLoading={isLoading}
+					isFetchingNextPage={isFetchingNextPage}
 					error={error}
-					sort={null}
-					hasNextPage={false}
-					loadMore={() => {}}
-					onSort={() => {}}
+					sort={sort}
+					hasNextPage={hasNextPage}
+					loadMore={loadMore}
+					onSort={handleSort}
 					onRowClick={handleRowClick}
 					onViewProcurement={handleViewProcurement}
 					onRetry={refetch}

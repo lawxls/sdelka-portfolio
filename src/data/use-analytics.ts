@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { AnalyticsKpis, FolderBreakdown, ProcurementStatus } from "./analytics-types";
 import { fetchAnalyticsPipeline, fetchAnalyticsSummary, fetchTasks } from "./api-client";
 import type { SupplierStatus } from "./supplier-types";
@@ -27,17 +27,24 @@ export function useAnalyticsSummary({ company }: { company?: string } = {}) {
 		queryFn: () => fetchAnalyticsPipeline({ company }),
 	});
 
-	const tasksQuery = useQuery({
+	const tasksQuery = useInfiniteQuery({
 		queryKey: ["analytics-tasks", { company }],
-		queryFn: () => fetchTasks({ company, page_size: 200 }),
+		queryFn: ({ pageParam }) => fetchTasks({ company, page_size: 100, page: pageParam }),
+		initialPageParam: 1 as number,
+		getNextPageParam: (lastPage, _pages, lastPageParam) => (lastPage.next !== null ? lastPageParam + 1 : undefined),
 	});
 
-	const activeTasks = (tasksQuery.data?.results ?? []).filter(
-		(t) => t.status === "assigned" || t.status === "in_progress",
-	);
+	// Auto-fetch all pages to get complete task counts
+	if (tasksQuery.hasNextPage && !tasksQuery.isFetchingNextPage) {
+		tasksQuery.fetchNextPage();
+	}
+
+	const allTasks = tasksQuery.data?.pages.flatMap((p) => p.results) ?? [];
+	const activeTasks = allTasks.filter((t) => t.status === "assigned" || t.status === "in_progress");
+	const now = new Date();
 	const tasksSummary = {
 		open: activeTasks.length,
-		overdue: activeTasks.filter((t) => t.deadlineAt < new Date().toISOString()).length,
+		overdue: activeTasks.filter((t) => new Date(t.deadlineAt) < now).length,
 	};
 
 	return {
