@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import type { AnalyticsKpis, FolderBreakdown } from "./analytics-types";
+import type { AnalyticsKpis, FolderBreakdown, ProcurementStatus } from "./analytics-types";
 import { useAnalyticsSummary } from "./use-analytics";
 
 const mockKpis: AnalyticsKpis = {
@@ -108,6 +108,41 @@ describe("useAnalyticsSummary", () => {
 
 		await waitFor(() => expect(result.current.isLoading).toBe(false));
 		expect(result.current.folderBreakdown).toEqual([]);
+	});
+
+	it("exposes statusBreakdown from response", async () => {
+		const statusBreakdown: Record<ProcurementStatus, number> = {
+			awaiting_analytics: 3,
+			searching: 7,
+			negotiating: 2,
+			completed: 12,
+		};
+		server.use(http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis, statusBreakdown })));
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.statusBreakdown).toEqual(statusBreakdown);
+	});
+
+	it("returns default statusBreakdown (all zeros) when absent from response", async () => {
+		server.use(http.get("/api/v1/analytics/summary", () => HttpResponse.json({ kpis: mockKpis })));
+
+		const queryClient = createTestQueryClient();
+		const { result } = renderHook(() => useAnalyticsSummary(), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => expect(result.current.isLoading).toBe(false));
+		expect(result.current.statusBreakdown).toEqual({
+			awaiting_analytics: 0,
+			searching: 0,
+			negotiating: 0,
+			completed: 0,
+		});
 	});
 
 	it("passes company param to API request", async () => {

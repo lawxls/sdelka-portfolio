@@ -1,3 +1,7 @@
+import type { ProcurementStatus } from "./types";
+
+export type { ProcurementStatus };
+
 export interface AnalyticsKpis {
 	totalSpend: number;
 	totalOverpayment: number;
@@ -18,4 +22,5 @@ export interface FolderBreakdown {
 export interface AnalyticsSummaryResponse {
 	kpis: AnalyticsKpis;
 	folderBreakdown?: FolderBreakdown[];
+	statusBreakdown?: Record<ProcurementStatus, number>;
 }
