@@ -2,14 +2,17 @@ import { Navigate, Route, Routes, useLocation } from "react-router";
 import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
+import { SettingsLayout } from "@/components/settings-layout";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { CompaniesPage } from "@/pages/companies-page";
+import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
+import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { ProcurementPage } from "@/pages/procurement-page";
-import { ProfilePage } from "@/pages/profile-page";
+import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { TasksPage } from "@/pages/tasks-page";
@@ -38,11 +41,11 @@ function App() {
 			{/* App routes (protected) */}
 			<Route element={<ProtectedRoute />}>
 				<Route path="/" element={<RootRedirect />} />
+				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					<Route path="/companies" element={<CompaniesPage />} />
-					<Route path="/profile" element={<ProfilePage />} />
 					{PLACEHOLDER_ROUTES.map(({ path, label, icon }) => (
 						<Route
 							key={path}
@@ -50,6 +53,13 @@ function App() {
 							element={<PlaceholderPage icon={icon} title={label} subtitle="В разработке" />}
 						/>
 					))}
+					{/* Settings */}
+					<Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+					<Route element={<SettingsLayout />}>
+						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
+						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
+						<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
+					</Route>
 				</Route>
 			</Route>
 		</Routes>

@@ -121,7 +121,7 @@ describe("User avatar dropdown", () => {
 		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 

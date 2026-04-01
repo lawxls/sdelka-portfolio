@@ -21,6 +21,7 @@ import type {
 const BASE = "/api/v1/company";
 const COMPANIES_BASE = "/api/v1/companies";
 const TASKS_BASE = "/api/v1/company/tasks";
+const WORKSPACE_BASE = "/api/v1/workspace";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -113,7 +114,9 @@ export async function request<T>(
 
 	if (response.status === 204) return undefined as T;
 
-	const data = await response.json();
+	const text = await response.text();
+	if (!text) return undefined as T;
+	const data = JSON.parse(text);
 	return parseDecimals(data);
 }
 
@@ -442,6 +445,50 @@ export async function updateEmployeePermissions(
 ): Promise<EmployeePermissions> {
 	return request(`/${companyId}/employees/${employeeId}/permissions/`, {
 		base: COMPANIES_BASE,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(data),
+	});
+}
+
+// --- Workspace Employees ---
+
+export interface WorkspaceEmployee extends Employee {
+	companies: CompanySummary[];
+}
+
+export type WorkspaceEmployeeDetail = WorkspaceEmployee & { permissions: EmployeePermissions };
+
+export interface InviteEmployeeData {
+	email: string;
+	position: string;
+	role: EmployeeRole;
+	companies: string[];
+}
+
+export async function fetchWorkspaceEmployees(): Promise<WorkspaceEmployee[]> {
+	return request("/employees/", { base: WORKSPACE_BASE });
+}
+
+export async function fetchWorkspaceEmployee(id: number): Promise<WorkspaceEmployeeDetail> {
+	return request(`/employees/${id}/`, { base: WORKSPACE_BASE });
+}
+
+export async function inviteEmployees(invites: InviteEmployeeData[]): Promise<void> {
+	return request("/employees/invite/", {
+		base: WORKSPACE_BASE,
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ invites }),
+	});
+}
+
+export async function updateWorkspaceEmployeePermissions(
+	id: number,
+	data: UpdatePermissionsData,
+): Promise<EmployeePermissions> {
+	return request(`/employees/${id}/permissions/`, {
+		base: WORKSPACE_BASE,
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(data),

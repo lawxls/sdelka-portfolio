@@ -243,23 +243,10 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/profile renders profile page with skeleton then content", async () => {
-		server.use(
-			http.get("/api/v1/auth/settings", () =>
-				HttpResponse.json({
-					first_name: "Иван",
-					last_name: "Иванов",
-					email: "ivan@example.com",
-					phone: "+79991234567",
-					avatar_icon: "blue",
-					date_joined: "2024-01-15T10:00:00Z",
-					mailing_allowed: true,
-				}),
-			),
-		);
+	test("/profile redirects to /settings/profile", async () => {
 		renderApp(["/profile"]);
 		await waitFor(() => {
-			expect(screen.getByText("Иван Иванов")).toBeInTheDocument();
+			expect(screen.getByTestId("settings-layout")).toBeInTheDocument();
 		});
 	});
 
@@ -301,7 +288,7 @@ describe("Routing", () => {
 		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 
