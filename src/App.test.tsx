@@ -227,14 +227,6 @@ describe("Routing", () => {
 		});
 	});
 
-	test("/companies renders companies page", async () => {
-		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [], nextCursor: null })));
-		renderApp(["/companies"]);
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Компании" })).toBeInTheDocument();
-		});
-	});
-
 	test("/tasks renders tasks page with board", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {

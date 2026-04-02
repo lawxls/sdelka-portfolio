@@ -10,7 +10,6 @@ function renderNav(initialEntry = "/procurement") {
 			<Routes>
 				<Route path="/procurement" element={<div>procurement</div>} />
 				<Route path="/analytics" element={<div>analytics</div>} />
-				<Route path="/companies" element={<div>companies</div>} />
 				<Route path="/tasks" element={<div>tasks</div>} />
 			</Routes>
 			<MobileBottomNav />
@@ -19,11 +18,10 @@ function renderNav(initialEntry = "/procurement") {
 }
 
 describe("MobileBottomNav", () => {
-	test("renders 4 tab links", () => {
+	test("renders 3 tab links", () => {
 		renderNav();
 		expect(screen.getByRole("link", { name: "Аналитика" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Компании" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 	});
 
@@ -48,8 +46,8 @@ describe("MobileBottomNav", () => {
 	test("tapping tab navigates to route", async () => {
 		renderNav("/procurement");
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("link", { name: "Компании" }));
-		expect(screen.getByText("companies")).toBeInTheDocument();
+		await user.click(screen.getByRole("link", { name: "Задачи" }));
+		expect(screen.getByText("tasks")).toBeInTheDocument();
 	});
 
 	test("active state follows navigation", async () => {

@@ -33,7 +33,6 @@ function renderSidebar(initialEntry = "/procurement") {
 							<Routes>
 								<Route path="/procurement" element={<div>procurement-content</div>} />
 								<Route path="/analytics" element={<div>analytics-content</div>} />
-								<Route path="/companies" element={<div>companies-content</div>} />
 								<Route path="/tasks" element={<div>tasks-content</div>} />
 							</Routes>
 						</div>
@@ -45,11 +44,10 @@ function renderSidebar(initialEntry = "/procurement") {
 }
 
 describe("AppSidebar", () => {
-	test("renders 4 navigation links", () => {
+	test("renders 3 navigation links", () => {
 		renderSidebar();
 		expect(screen.getByRole("link", { name: "Аналитика" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Компании" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 	});
 
@@ -83,9 +81,6 @@ describe("AppSidebar", () => {
 	test("clicking nav icon navigates to correct route", async () => {
 		renderSidebar("/procurement");
 		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("link", { name: "Компании" }));
-		expect(screen.getByText("companies-content")).toBeInTheDocument();
 
 		await user.click(screen.getByRole("link", { name: "Задачи" }));
 		expect(screen.getByText("tasks-content")).toBeInTheDocument();
