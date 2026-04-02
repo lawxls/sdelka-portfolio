@@ -142,7 +142,7 @@ describe("TasksPage", () => {
 			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Close" }));
+		await user.click(screen.getByRole("button", { name: "Закрыть" }));
 
 		await waitFor(() => {
 			expect(screen.queryByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).not.toBeInTheDocument();
@@ -196,7 +196,7 @@ describe("TasksPage", () => {
 		await user.click(screen.getByRole("button", { name: "Таблица" }));
 
 		await waitFor(() => {
-			expect(screen.getByRole("table")).toBeInTheDocument();
+			expect(screen.getByTestId("task-table")).toBeInTheDocument();
 		});
 		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
 	});
@@ -204,7 +204,7 @@ describe("TasksPage", () => {
 	it("renders table view when ?view=table in URL", async () => {
 		renderPage(["/tasks?view=table"]);
 		await waitFor(() => {
-			expect(screen.getByRole("table")).toBeInTheDocument();
+			expect(screen.getByTestId("task-table")).toBeInTheDocument();
 		});
 		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
 	});
@@ -214,11 +214,10 @@ describe("TasksPage", () => {
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getAllByText("Назначено").length).toBeGreaterThan(0);
+			expect(screen.getAllByTestId(/^task-row-/).length).toBeGreaterThan(0);
 		});
 
-		const rows = screen.getAllByRole("row");
-		await user.click(rows[1]);
+		await user.click(screen.getAllByTestId(/^task-row-/)[0]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
@@ -277,8 +276,8 @@ describe("TasksPage", () => {
 		renderPage(["/tasks?view=table"]);
 
 		await waitFor(() => {
-			expect(screen.getByRole("table")).toBeInTheDocument();
-			expect(screen.getAllByRole("row").length).toBeGreaterThan(1);
+			expect(screen.getByTestId("task-table")).toBeInTheDocument();
+			expect(screen.getAllByTestId(/^task-row-/).length).toBeGreaterThan(1);
 		});
 	});
 

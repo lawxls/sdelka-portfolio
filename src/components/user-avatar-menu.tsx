@@ -54,6 +54,7 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					<User />
 					Мой профиль
 				</DropdownMenuItem>
+				<DropdownMenuSeparator />
 				<DropdownMenuItem onSelect={() => navigate("/settings/companies")}>
 					<Building2 />
 					Компании
