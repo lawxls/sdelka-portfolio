@@ -156,6 +156,24 @@ describe("ProcurementPage — multi-company, no selection", () => {
 		expect(within(nav).getByText("3")).toBeInTheDocument();
 	});
 
+	test("each company row has a settings link to /companies?company=<id>", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("company-navigator")).toBeInTheDocument();
+		});
+
+		const nav = screen.getByTestId("company-navigator");
+		const alfaLink = within(nav).getByRole("link", { name: "Настройки компании Альфа" });
+		const betaLink = within(nav).getByRole("link", { name: "Настройки компании Бета" });
+		const gammaLink = within(nav).getByRole("link", { name: "Настройки компании Гамма" });
+
+		expect(alfaLink).toHaveAttribute("href", "/settings/companies?company=c1");
+		expect(betaLink).toHaveAttribute("href", "/settings/companies?company=c2");
+		expect(gammaLink).toHaveAttribute("href", "/settings/companies?company=c3");
+	});
+
 	test("name column shows company badge instead of folder badge", async () => {
 		setupHandlers(MULTI_COMPANIES);
 		renderPage();

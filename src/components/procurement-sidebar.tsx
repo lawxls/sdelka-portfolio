@@ -1,4 +1,5 @@
-import { ArrowLeft, Building2, Layers, PanelLeft } from "lucide-react";
+import { ArrowLeft, Building2, Layers, PanelLeft, Settings } from "lucide-react";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CompanySummary } from "@/data/types";
@@ -61,16 +62,22 @@ function CompanyNavigator({
 			) : (
 				<div className="space-y-0.5">
 					{companies.map((company) => (
-						<button
-							key={company.id}
-							type="button"
-							className={navItemClassName(false)}
-							onClick={() => onSelectCompany(company.id)}
-						>
-							<Building2 className="size-4 shrink-0" aria-hidden="true" />
-							<span className="flex-1 truncate text-left">{company.name}</span>
-							<span className="tabular-nums text-xs text-muted-foreground">{company.procurementItemCount}</span>
-						</button>
+						<div key={company.id} className="group relative">
+							<button type="button" className={navItemClassName(false)} onClick={() => onSelectCompany(company.id)}>
+								<Building2 className="size-4 shrink-0" aria-hidden="true" />
+								<span className="flex-1 truncate text-left">{company.name}</span>
+								<span className="tabular-nums text-xs text-muted-foreground group-hover:invisible">
+									{company.procurementItemCount}
+								</span>
+							</button>
+							<Link
+								to={`/settings/companies?company=${company.id}`}
+								aria-label={`Настройки компании ${company.name}`}
+								className="absolute right-2 top-1/2 -translate-y-1/2 invisible flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:visible"
+							>
+								<Settings className="size-3.5" aria-hidden="true" />
+							</Link>
+						</div>
 					))}
 				</div>
 			)}
