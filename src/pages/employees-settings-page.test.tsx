@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { SettingsLayout } from "@/components/settings-layout";
 import { server } from "@/test-msw";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
@@ -54,7 +55,9 @@ function renderPage(initialPath = "/settings/employees") {
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter initialEntries={[initialPath]}>
 				<Routes>
-					<Route path="*" element={<EmployeesSettingsPage />} />
+					<Route element={<SettingsLayout />}>
+						<Route path="*" element={<EmployeesSettingsPage />} />
+					</Route>
 				</Routes>
 			</MemoryRouter>
 		</QueryClientProvider>,

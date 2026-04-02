@@ -94,19 +94,22 @@ export function SettingsSidebar({ open, onOpenChange }: SettingsSidebarProps) {
 						))}
 					</div>
 				</div>
-			</nav>
 
-			<div className="shrink-0 border-t border-sidebar-border p-2">
-				<button
-					type="button"
-					className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
-					onClick={clearTokens}
-					data-testid="settings-logout"
-				>
-					<LogOut className="size-4 shrink-0" aria-hidden="true" />
-					<span className="flex-1 text-left">Выход</span>
-				</button>
-			</div>
+				<div className="mb-3">
+					<div className="px-2 pb-1 text-xs font-medium text-muted-foreground">Аккаунт</div>
+					<div className="space-y-0.5">
+						<button
+							type="button"
+							className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
+							onClick={clearTokens}
+							data-testid="settings-logout"
+						>
+							<LogOut className="size-4 shrink-0" aria-hidden="true" />
+							<span className="flex-1 text-left">Выход</span>
+						</button>
+					</div>
+				</div>
+			</nav>
 		</aside>
 	);
 

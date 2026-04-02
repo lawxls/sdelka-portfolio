@@ -1,10 +1,8 @@
-import { Plus } from "lucide-react";
-import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CompanyCreationSheet } from "@/components/company-creation-sheet";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
-import { Button } from "@/components/ui/button";
+import { useSettingsOutletContext } from "@/components/settings-layout";
 import type { CreateCompanyPayload } from "@/data/api-client";
 import type { CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
@@ -12,7 +10,7 @@ import { useCreateCompany } from "@/data/use-company-detail";
 
 export function CompaniesSettingsPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const [creationOpen, setCreationOpen] = useState(false);
+	const { companiesCreateOpen: creationOpen, setCompaniesCreateOpen: setCreationOpen } = useSettingsOutletContext();
 
 	const companyId = searchParams.get("company");
 	const activeTab = parseCompanyTab(searchParams.get("tab"));
@@ -52,8 +50,7 @@ export function CompaniesSettingsPage() {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
-				if (tab === "general") next.delete("tab");
-				else next.set("tab", tab);
+				next.set("tab", tab);
 				return next;
 			},
 			{ replace: true },
@@ -68,20 +65,7 @@ export function CompaniesSettingsPage() {
 	}
 
 	return (
-		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
-				<h1 className="text-lg tracking-tight whitespace-nowrap">Компании</h1>
-				<Button
-					type="button"
-					size="sm"
-					className="bg-status-highlight hover:bg-status-highlight/80"
-					onClick={() => setCreationOpen(true)}
-				>
-					<Plus data-icon="inline-start" aria-hidden="true" />
-					<span>Добавить компанию</span>
-				</Button>
-			</header>
-
+		<>
 			<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50 overflow-auto">
 				<table className="w-full text-sm">
 					<thead className="sticky top-0 z-10 bg-background border-b border-border">
@@ -125,6 +109,6 @@ export function CompaniesSettingsPage() {
 				onSubmit={handleCreateCompany}
 				isPending={createCompanyMutation.isPending}
 			/>
-		</div>
+		</>
 	);
 }

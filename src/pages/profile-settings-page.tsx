@@ -93,7 +93,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 				</div>
 			</div>
 
-			<form onSubmit={handleSubmit} className="max-w-md space-y-4">
+			<form onSubmit={handleSubmit} className="w-full max-w-[28rem] space-y-4">
 				<FloatingInput
 					label="Имя"
 					name="first_name"
@@ -133,7 +133,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 				</Button>
 			</form>
 
-			<div className="mt-8 max-w-md">
+			<div className="mt-8 w-full max-w-[28rem]">
 				<h2 className="mb-1 text-base font-semibold">Изменить пароль</h2>
 				<p className="mb-3 text-sm text-muted-foreground">Получить письмо со ссылкой для обновления пароля</p>
 				<Button type="button" variant="outline" onClick={handleForgotPassword} disabled={forgotPending}>
@@ -165,24 +165,15 @@ export function ProfileSettingsPage() {
 				<div className="animate-pulse space-y-4">
 					<div className="size-14 rounded-full bg-muted" />
 					<div className="h-4 w-40 rounded bg-muted" />
-					<div className="h-10 w-full max-w-md rounded bg-muted" />
+					<div className="h-10 w-full max-w-[28rem] rounded bg-muted" />
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-			<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
-				<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-					<span>Пользователь</span>
-					<span aria-hidden="true">/</span>
-					<span className="text-foreground">Профиль</span>
-				</nav>
-			</header>
-			<main className="flex min-h-0 flex-1 flex-col overflow-auto px-lg py-md">
-				<ProfileForm key={data.email} data={data} />
-			</main>
-		</div>
+		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-lg py-md">
+			<ProfileForm key={data.email} data={data} />
+		</main>
 	);
 }

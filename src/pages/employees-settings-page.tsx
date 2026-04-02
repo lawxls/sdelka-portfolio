@@ -1,9 +1,7 @@
-import { UserPlus } from "lucide-react";
-import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { EmployeeDetailDrawer } from "@/components/employee-detail-drawer";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
-import { Button } from "@/components/ui/button";
+import { useSettingsOutletContext } from "@/components/settings-layout";
 import type { WorkspaceEmployee } from "@/data/api-client";
 import { useWorkspaceEmployees } from "@/data/use-workspace-employees";
 
@@ -20,7 +18,7 @@ function formatFullName(employee: WorkspaceEmployee): string {
 
 export function EmployeesSettingsPage() {
 	const [, setSearchParams] = useSearchParams();
-	const [inviteOpen, setInviteOpen] = useState(false);
+	const { employeesInviteOpen: inviteOpen, setEmployeesInviteOpen: setInviteOpen } = useSettingsOutletContext();
 	const { employees } = useWorkspaceEmployees();
 
 	function handleRowClick(employee: WorkspaceEmployee) {
@@ -35,20 +33,7 @@ export function EmployeesSettingsPage() {
 	}
 
 	return (
-		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
-				<h1 className="text-lg tracking-tight whitespace-nowrap">Сотрудники</h1>
-				<Button
-					type="button"
-					size="sm"
-					className="bg-status-highlight hover:bg-status-highlight/80"
-					onClick={() => setInviteOpen(true)}
-				>
-					<UserPlus data-icon="inline-start" aria-hidden="true" />
-					<span>Отправить приглашения</span>
-				</Button>
-			</header>
-
+		<>
 			<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50 overflow-auto">
 				<table className="w-full text-sm">
 					<thead className="sticky top-0 z-10 bg-background border-b border-border">
@@ -84,6 +69,6 @@ export function EmployeesSettingsPage() {
 
 			<InviteEmployeesDrawer open={inviteOpen} onOpenChange={setInviteOpen} />
 			<EmployeeDetailDrawer />
-		</div>
+		</>
 	);
 }

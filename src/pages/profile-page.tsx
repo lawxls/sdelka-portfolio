@@ -209,7 +209,7 @@ function ProfileSkeleton() {
 			<Skeleton className="size-20 rounded-full" />
 			<Skeleton className="h-6 w-40" />
 			<Skeleton className="h-4 w-32" />
-			<div className="mt-4 flex w-full max-w-lg gap-4">
+			<div className="mt-4 flex w-full max-w-[32rem] gap-4">
 				<Skeleton className="h-10 w-24" />
 				<Skeleton className="h-10 w-24" />
 			</div>
