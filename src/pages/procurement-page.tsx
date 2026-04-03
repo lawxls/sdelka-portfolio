@@ -14,6 +14,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
+import { CompanyDrawer, parseCompanyTab } from "@/components/company-drawer";
 import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementSidebar } from "@/components/procurement-sidebar";
@@ -252,6 +253,38 @@ export function ProcurementPage() {
 		});
 	}
 
+	const settingsCompanyId = searchParams.get("settings_company");
+	const settingsTab = parseCompanyTab(searchParams.get("settings_tab"));
+
+	function handleCompanySettings(companyId: string) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.set("settings_company", companyId);
+			next.delete("settings_tab");
+			return next;
+		});
+	}
+
+	function handleSettingsDrawerClose() {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.delete("settings_company");
+			next.delete("settings_tab");
+			return next;
+		});
+	}
+
+	function handleSettingsTabChange(tab: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("settings_tab", tab);
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
 	const selectedItemId = searchParams.get("item");
 	const selectedItem = selectedItemId ? items.find((i) => i.id === selectedItemId) : undefined;
 
@@ -324,6 +357,7 @@ export function ProcurementPage() {
 						selectedCompany={company}
 						isMultiCompany={isMultiCompany}
 						onCompanySelect={handleCompanySelect}
+						onCompanySettings={handleCompanySettings}
 					/>
 					<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
 						<ProcurementTable
@@ -366,6 +400,12 @@ export function ProcurementPage() {
 			/>
 			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
 			<ProcurementItemDrawer item={selectedItem} />
+			<CompanyDrawer
+				companyId={settingsCompanyId}
+				activeTab={settingsTab}
+				onClose={handleSettingsDrawerClose}
+				onTabChange={handleSettingsTabChange}
+			/>
 		</DndContext>
 	);
 }

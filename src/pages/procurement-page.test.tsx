@@ -8,7 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import type { CompanySummary, Folder, ProcurementItem } from "@/data/types";
 import { server } from "@/test-msw";
-import { makeCompany, makeItem } from "@/test-utils";
+import { makeCompany, makeCompanyDetail, makeItem } from "@/test-utils";
 
 const MOCK_FOLDERS: Folder[] = [
 	{ id: "f1", name: "Металлопрокат", color: "blue" },
@@ -156,8 +156,10 @@ describe("ProcurementPage — multi-company, no selection", () => {
 		expect(within(nav).getByText("3")).toBeInTheDocument();
 	});
 
-	test("each company row has a settings link to /companies?company=<id>", async () => {
+	test("clicking settings button on company row opens company drawer", async () => {
 		setupHandlers(MULTI_COMPANIES);
+		server.use(http.get("/api/v1/companies/c1/", () => HttpResponse.json(makeCompanyDetail("c1", { name: "Альфа" }))));
+		const user = userEvent.setup();
 		renderPage();
 
 		await waitFor(() => {
@@ -165,13 +167,12 @@ describe("ProcurementPage — multi-company, no selection", () => {
 		});
 
 		const nav = screen.getByTestId("company-navigator");
-		const alfaLink = within(nav).getByRole("link", { name: "Настройки компании Альфа" });
-		const betaLink = within(nav).getByRole("link", { name: "Настройки компании Бета" });
-		const gammaLink = within(nav).getByRole("link", { name: "Настройки компании Гамма" });
+		const alfaBtn = within(nav).getByRole("button", { name: "Настройки компании Альфа" });
+		await user.click(alfaBtn);
 
-		expect(alfaLink).toHaveAttribute("href", "/settings/companies?company=c1");
-		expect(betaLink).toHaveAttribute("href", "/settings/companies?company=c2");
-		expect(gammaLink).toHaveAttribute("href", "/settings/companies?company=c3");
+		await waitFor(() => {
+			expect(screen.getByRole("dialog")).toBeInTheDocument();
+		});
 	});
 
 	test("name column shows company badge instead of folder badge", async () => {

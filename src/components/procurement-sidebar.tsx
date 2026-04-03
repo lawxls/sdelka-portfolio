@@ -1,5 +1,4 @@
 import { ArrowLeft, Building2, Layers, PanelLeft, Settings } from "lucide-react";
-import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CompanySummary } from "@/data/types";
@@ -12,6 +11,7 @@ interface ProcurementSidebarProps extends FolderSidebarProps {
 	selectedCompany: string | undefined;
 	isMultiCompany: boolean;
 	onCompanySelect: (companyId: string | undefined) => void;
+	onCompanySettings: (companyId: string) => void;
 }
 
 function navItemClassName(active: boolean) {
@@ -29,12 +29,14 @@ function CompanyNavigator({
 	allActive,
 	onSelectAll,
 	onSelectCompany,
+	onCompanySettings,
 }: {
 	companies: CompanySummary[];
 	isLoading: boolean;
 	allActive: boolean;
 	onSelectAll: () => void;
 	onSelectCompany: (id: string) => void;
+	onCompanySettings: (id: string) => void;
 }) {
 	return (
 		<div data-testid="company-navigator">
@@ -70,13 +72,17 @@ function CompanyNavigator({
 									{company.procurementItemCount}
 								</span>
 							</button>
-							<Link
-								to={`/settings/companies?company=${company.id}`}
+							<button
+								type="button"
 								aria-label={`Настройки компании ${company.name}`}
 								className="absolute right-2 top-1/2 -translate-y-1/2 invisible flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:visible"
+								onClick={(e) => {
+									e.stopPropagation();
+									onCompanySettings(company.id);
+								}}
 							>
 								<Settings className="size-3.5" aria-hidden="true" />
-							</Link>
+							</button>
 						</div>
 					))}
 				</div>
@@ -91,6 +97,7 @@ export function ProcurementSidebar({
 	selectedCompany,
 	isMultiCompany,
 	onCompanySelect,
+	onCompanySettings,
 	...folderSidebarProps
 }: ProcurementSidebarProps) {
 	const { open, onOpenChange } = folderSidebarProps;
@@ -164,6 +171,7 @@ export function ProcurementSidebar({
 					allActive={!selectedCompany}
 					onSelectAll={() => onCompanySelect(undefined)}
 					onSelectCompany={onCompanySelect}
+					onCompanySettings={onCompanySettings}
 				/>
 			</nav>
 		</aside>
