@@ -3,11 +3,14 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	CircleCheck,
+	CreditCard,
 	Download,
 	ListFilter,
 	LoaderCircle,
 	Search,
 	Trash2,
+	Truck,
 } from "lucide-react";
 import { useRef } from "react";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
@@ -34,7 +37,7 @@ import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency, formatRating, stripProtocol } from "@/lib/format";
+import { formatCurrency, formatDeferral, formatDelivery, stripProtocol } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface SuppliersTableProps {
@@ -62,20 +65,44 @@ const SORTABLE_COLUMNS: { label: string; field: SupplierSortField }[] = [
 	{ label: "КОМПАНИЯ", field: "companyName" },
 	{ label: "ЦЕНА/ЕД.", field: "pricePerUnit" },
 	{ label: "TCO", field: "tco" },
-	{ label: "РЕЙТИНГ", field: "rating" },
 ];
+
+function DeliveryValue({ cost }: { cost: number | null }) {
+	const text = formatDelivery(cost);
+	if (cost == null) {
+		return (
+			<span className="inline-flex items-center gap-1">
+				<Truck className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{text}
+			</span>
+		);
+	}
+	if (cost === 0) {
+		return (
+			<span className="inline-flex items-center gap-1">
+				<CircleCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{text}
+			</span>
+		);
+	}
+	return <span className="tabular-nums">{text}</span>;
+}
+
+function DeferralValue({ days }: { days: number }) {
+	if (days === 0) {
+		return (
+			<span className="inline-flex items-center gap-1">
+				<CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{formatDeferral(days)}
+			</span>
+		);
+	}
+	return <span>{formatDeferral(days)}</span>;
+}
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
-
-function ratingColor(value: number): string {
-	if (value >= 80) return "text-[oklch(0.50_0.18_142)]";
-	if (value >= 60) return "text-[oklch(0.55_0.15_120)]";
-	if (value >= 40) return "text-[oklch(0.60_0.15_85)]";
-	if (value >= 20) return "text-[oklch(0.55_0.18_50)]";
-	return "text-[oklch(0.55_0.20_25)]";
-}
 
 function SortIcon({ sort, field }: { sort: SupplierSortState; field: SupplierSortField }) {
 	if (sort?.field !== field) return <ArrowUpDown className="ml-1 size-3.5" aria-hidden="true" />;
@@ -273,7 +300,7 @@ export function SuppliersTable({
 							>
 								<div className="mb-1 font-medium">{supplier.companyName}</div>
 								<SupplierStatusIndicator status={supplier.status} className="mb-3 text-xs" />
-								<div className="grid grid-cols-3 gap-x-4 text-sm">
+								<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 									<div>
 										<div className="text-muted-foreground">Цена/ед.</div>
 										<div className="tabular-nums">{formatCurrency(supplier.pricePerUnit)}</div>
@@ -283,10 +310,12 @@ export function SuppliersTable({
 										<div className="tabular-nums">{formatCurrency(supplier.tco)}</div>
 									</div>
 									<div>
-										<div className="text-muted-foreground">Рейтинг</div>
-										<div className={`tabular-nums ${supplier.rating != null ? ratingColor(supplier.rating) : ""}`}>
-											{formatRating(supplier.rating)}
-										</div>
+										<div className="text-muted-foreground">Доставка</div>
+										<DeliveryValue cost={supplier.deliveryCost} />
+									</div>
+									<div>
+										<div className="text-muted-foreground">Отсрочка</div>
+										<DeferralValue days={supplier.deferralDays} />
 									</div>
 								</div>
 							</button>
@@ -322,8 +351,9 @@ export function SuppliersTable({
 								<SortIcon sort={sort} field="companyName" />
 							</button>
 						</TableHead>
-						<TableHead>EMAIL</TableHead>
 						<TableHead>САЙТ</TableHead>
+						<TableHead>ДОСТАВКА</TableHead>
+						<TableHead>ОТСРОЧКА</TableHead>
 						{SORTABLE_COLUMNS.filter((col) => col.field !== "companyName").map((col) => (
 							<TableHead key={col.field} className="text-right">
 								<button
@@ -377,9 +407,6 @@ export function SuppliersTable({
 										<SupplierStatusIndicator status={supplier.status} className="text-xs" />
 									</div>
 								</TableCell>
-								<TableCell className="cursor-text select-text" onClick={(e) => e.stopPropagation()}>
-									{supplier.email}
-								</TableCell>
 								<TableCell onClick={(e) => e.stopPropagation()}>
 									<a
 										href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
@@ -390,13 +417,14 @@ export function SuppliersTable({
 										{stripProtocol(supplier.website)}
 									</a>
 								</TableCell>
+								<TableCell>
+									<DeliveryValue cost={supplier.deliveryCost} />
+								</TableCell>
+								<TableCell>
+									<DeferralValue days={supplier.deferralDays} />
+								</TableCell>
 								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
 								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
-								<TableCell
-									className={`text-right tabular-nums ${supplier.rating != null ? ratingColor(supplier.rating) : ""}`}
-								>
-									{formatRating(supplier.rating)}
-								</TableCell>
 							</TableRow>
 						))
 					)}

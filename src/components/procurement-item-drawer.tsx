@@ -1,25 +1,32 @@
-import { Check, Clock, LoaderCircle, MessageCircle, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, Clock, LoaderCircle, MessageCircle, Search, Users } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
+import { TaskCard } from "@/components/task-card";
+import { TaskDrawer } from "@/components/task-drawer";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
+import { STATUS_ICONS, STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
+import { useTaskColumns } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { cn } from "@/lib/utils";
 
-type ItemDrawerTab = "suppliers" | "analytics" | "details";
+type ItemDrawerTab = "suppliers" | "analytics" | "details" | "tasks";
 
 const TABS: { key: ItemDrawerTab; label: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "analytics", label: "Аналитика" },
 	{ key: "details", label: "Информация" },
+	{ key: "tasks", label: "Задачи" },
 ];
 
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
@@ -40,6 +47,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const itemId = searchParams.get("item");
 	const activeTab = parseItemDrawerTab(searchParams.get("tab"));
 	const supplierId = searchParams.get("supplier");
+	const taskId = searchParams.get("task");
 	const open = itemId != null;
 
 	const { data: supplier } = useSupplier(itemId ?? "", supplierId);
@@ -66,6 +74,8 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				next.delete("item");
 				next.delete("tab");
 				next.delete("supplier");
+				next.delete("status");
+				next.delete("task");
 				return next;
 			},
 			{ replace: false },
@@ -94,6 +104,28 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		);
 	}
 
+	function handleTaskOpen(id: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("task", id);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleTaskClose() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("task");
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
 	return (
 		<>
 			<Sheet
@@ -115,11 +147,13 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 							activeTab={activeTab}
 							onTabChange={handleTabChange}
 							onSupplierClick={handleSupplierOpen}
+							onTaskClick={handleTaskOpen}
 						/>
 					)}
 				</SheetContent>
 			</Sheet>
 			<SupplierDetailDrawer supplier={supplier ?? null} open={supplierId != null} onClose={handleSupplierClose} />
+			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 		</>
 	);
 }
@@ -204,18 +238,118 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	);
 }
 
+function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
+	const [searchParams, setSearchParams] = useSearchParams();
+	const [search, setSearch] = useState("");
+	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+	const statusParam = searchParams.get("status");
+	const activeStatus: TaskStatus = TASK_STATUSES.includes(statusParam as TaskStatus)
+		? (statusParam as TaskStatus)
+		: "assigned";
+
+	const columns = useTaskColumns({ item: itemId, q: search || undefined });
+
+	function handleStatusChange(status: TaskStatus) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				if (status === "assigned") {
+					next.delete("status");
+				} else {
+					next.set("status", status);
+				}
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
+		const value = e.target.value;
+		if (debounceRef.current) clearTimeout(debounceRef.current);
+		debounceRef.current = setTimeout(() => setSearch(value), 250);
+	}
+
+	const activeColumn = columns[activeStatus];
+
+	return (
+		<div data-testid="tab-panel-tasks">
+			<div className="mb-4 flex items-center gap-2">
+				<div className="relative max-w-56">
+					<Search
+						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+						aria-hidden="true"
+					/>
+					<Input
+						type="search"
+						placeholder="Поиск…"
+						onChange={handleSearchInput}
+						className="h-8 pl-8 text-sm"
+						spellCheck={false}
+						autoComplete="off"
+					/>
+				</div>
+				{TASK_STATUSES.map((status) => {
+					const Icon = STATUS_ICONS[status];
+					const isActive = activeStatus === status;
+					return (
+						<Tooltip key={status}>
+							<TooltipTrigger asChild>
+								<button
+									type="button"
+									aria-label={STATUS_LABELS[status]}
+									data-testid={`task-status-${status}`}
+									className={cn(
+										"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm tabular-nums transition-colors",
+										"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+										isActive ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
+									)}
+									onClick={() => handleStatusChange(status)}
+								>
+									<Icon className="size-4" aria-hidden="true" />
+									{columns[status].count}
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>{STATUS_LABELS[status]}</TooltipContent>
+						</Tooltip>
+					);
+				})}
+			</div>
+
+			{activeColumn.isLoading ? (
+				<div className="space-y-2 pr-[30%]">
+					<div className="h-16 animate-pulse rounded-lg bg-muted" />
+					<div className="h-16 animate-pulse rounded-lg bg-muted" />
+					<div className="h-16 animate-pulse rounded-lg bg-muted" />
+				</div>
+			) : activeColumn.tasks.length === 0 ? (
+				<p className="py-8 text-center text-sm text-muted-foreground">Нет задач</p>
+			) : (
+				<div className="space-y-2 pr-[30%]">
+					{activeColumn.tasks.map((task) => (
+						<TaskCard key={task.id} task={task} onClick={() => onTaskClick(task.id)} hideItemName showQuestionCount />
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
 function ProcurementItemDrawerContent({
 	itemId,
 	item,
 	activeTab,
 	onTabChange,
 	onSupplierClick,
+	onTaskClick,
 }: {
 	itemId: string;
 	item?: ProcurementItem;
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
 	onSupplierClick: (id: string) => void;
+	onTaskClick: (id: string) => void;
 }) {
 	// Idempotent — only seeds if item.id is missing from the mock store
 	if (item) seedItemDetail(item);
@@ -323,6 +457,7 @@ function ProcurementItemDrawerContent({
 					</div>
 				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
+				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}
 			</div>
 		</div>
 	);

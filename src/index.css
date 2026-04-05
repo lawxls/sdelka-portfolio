@@ -231,6 +231,21 @@ tbody tr.negotiating-stripe:hover {
 	}
 }
 
+/* Force light-mode tokens regardless of .dark ancestor */
+[data-theme="light"] {
+	color-scheme: light;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.145 0 0);
+	--muted: oklch(0.97 0 0);
+	--muted-foreground: oklch(0.556 0 0);
+	--primary: oklch(0.93 0.22 122);
+	--primary-foreground: oklch(0.15 0 0);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.922 0 0);
+	--input: oklch(0.922 0 0);
+	--ring: oklch(0.65 0.2 122);
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;

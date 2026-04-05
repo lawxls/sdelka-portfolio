@@ -2,6 +2,8 @@ import {
 	Archive,
 	Bot,
 	Calculator,
+	CircleCheck,
+	CreditCard,
 	Download,
 	File,
 	FileSpreadsheet,
@@ -9,6 +11,7 @@ import {
 	Mail,
 	Paperclip,
 	Sparkles,
+	Truck,
 	User,
 } from "lucide-react";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
@@ -18,7 +21,47 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierChatMessage, SupplierDocument } from "@/data/supplier-types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatCurrency, formatDateTime, formatFileSize, pluralizeRu, stripProtocol } from "@/lib/format";
+import {
+	formatCurrency,
+	formatDateTime,
+	formatDeferral,
+	formatDelivery,
+	formatFileSize,
+	stripProtocol,
+} from "@/lib/format";
+
+function DeliveryValue({ cost }: { cost: number | null }) {
+	const text = formatDelivery(cost);
+	if (cost == null) {
+		return (
+			<span className="inline-flex items-center gap-1 tabular-nums">
+				<Truck className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{text}
+			</span>
+		);
+	}
+	if (cost === 0) {
+		return (
+			<span className="inline-flex items-center gap-1 tabular-nums">
+				<CircleCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{text}
+			</span>
+		);
+	}
+	return <span className="tabular-nums">{text}</span>;
+}
+
+function DeferralValue({ days }: { days: number }) {
+	if (days === 0) {
+		return (
+			<span className="inline-flex items-center gap-1">
+				<CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
+				{formatDeferral(days)}
+			</span>
+		);
+	}
+	return <span>{formatDeferral(days)}</span>;
+}
 
 interface SupplierDetailDrawerProps {
 	supplier: Supplier | null;
@@ -52,11 +95,11 @@ function TcoSection({ supplier }: { supplier: Supplier }) {
 				</div>
 				<div className="flex justify-between">
 					<span className="text-muted-foreground">Доставка</span>
-					<span className="tabular-nums">{formatCurrency(supplier.deliveryCost)}</span>
+					<DeliveryValue cost={supplier.deliveryCost} />
 				</div>
 				<div className="flex justify-between">
 					<span className="text-muted-foreground">Отсрочка</span>
-					<span>{pluralizeRu(supplier.deferralDays, "день", "дня", "дней")}</span>
+					<DeferralValue days={supplier.deferralDays} />
 				</div>
 				<Separator />
 				<div className="flex justify-between font-medium">
@@ -176,6 +219,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 							</SheetTitle>
 							<SheetDescription>{supplier.address}</SheetDescription>
 							<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
+							<span className="text-sm text-muted-foreground">{supplier.email}</span>
 						</SheetHeader>
 
 						<div className="flex-1 space-y-6 overflow-y-auto p-4">

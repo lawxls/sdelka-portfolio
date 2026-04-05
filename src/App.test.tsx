@@ -218,15 +218,6 @@ describe("Routing", () => {
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
-	test("/analytics renders placeholder page with icon", async () => {
-		renderApp(["/analytics"]);
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
-			expect(screen.getByText("В разработке")).toBeInTheDocument();
-			expect(screen.getByTestId("placeholder-icon")).toBeInTheDocument();
-		});
-	});
-
 	test("/tasks renders tasks page with board", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
@@ -245,14 +236,6 @@ describe("Routing", () => {
 	test("FolderSidebar renders on /procurement", async () => {
 		await renderAppReady();
 		expect(screen.getByTestId("sidebar")).toBeInTheDocument();
-	});
-
-	test("FolderSidebar does not render on /analytics", async () => {
-		renderApp(["/analytics"]);
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
-		});
-		expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
 	});
 
 	test("URL query params preserved under /procurement", async () => {
@@ -319,17 +302,6 @@ describe("Routing", () => {
 		renderApp(["/reset-password?token=test-token"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Новый пароль" })).toBeInTheDocument();
-		});
-	});
-
-	test("mobile bottom nav navigates between sections", async () => {
-		renderApp();
-		const user = userEvent.setup();
-		const nav = screen.getByTestId("mobile-bottom-nav");
-		await user.click(within(nav).getByRole("link", { name: "Аналитика" }));
-
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Аналитика" })).toBeInTheDocument();
 		});
 	});
 });

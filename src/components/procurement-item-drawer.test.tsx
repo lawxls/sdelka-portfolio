@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,8 @@ import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-deta
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 
 import type { ProcurementItem } from "@/data/types";
+import { server } from "@/test-msw";
+import { makeTask, mockHostname } from "@/test-utils";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
@@ -56,17 +59,62 @@ function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 	);
 }
 
+const assignedTasks = [
+	makeTask("task-1", {
+		status: "assigned",
+		name: "Согласовать цену",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		questionCount: 2,
+	}),
+	makeTask("task-2", {
+		status: "assigned",
+		name: "Запросить образцы",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		questionCount: 1,
+	}),
+];
+const inProgressTasks = [
+	makeTask("task-3", {
+		status: "in_progress",
+		name: "Проверить качество",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		questionCount: 3,
+	}),
+];
+
+function taskBoardResponse() {
+	return {
+		assigned: { results: assignedTasks, next: null, count: assignedTasks.length },
+		in_progress: { results: inProgressTasks, next: null, count: inProgressTasks.length },
+		completed: { results: [], next: null, count: 0 },
+		archived: { results: [], next: null, count: 0 },
+	};
+}
+
 beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	mockHostname("acme.localhost");
+	localStorage.setItem("auth-access-token", "test-token");
+	localStorage.setItem("auth-refresh-token", "test-refresh");
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
 	_resetItemDetailStore();
 	_setItemDetailMockDelay(0, 0);
+
+	server.use(
+		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(taskBoardResponse())),
+		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
+			const all = [...assignedTasks, ...inProgressTasks];
+			const task = all.find((t) => t.id === params.id);
+			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
+		}),
+	);
 });
 
 afterEach(() => {
+	localStorage.clear();
 	_resetSupplierStore();
 	_resetItemDetailStore();
 });
@@ -83,15 +131,16 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 
-	test("renders three tabs with Поставщики as default", () => {
+	test("renders four tabs with Поставщики as default", () => {
 		renderDrawer();
 		const tablist = screen.getByRole("tablist");
 		const tabs = screen.getAllByRole("tab");
 		expect(tablist).toBeInTheDocument();
-		expect(tabs).toHaveLength(3);
+		expect(tabs).toHaveLength(4);
 		expect(tabs[0]).toHaveTextContent("Поставщики");
 		expect(tabs[1]).toHaveTextContent("Аналитика");
 		expect(tabs[2]).toHaveTextContent("Информация");
+		expect(tabs[3]).toHaveTextContent("Задачи");
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 
@@ -460,5 +509,115 @@ describe("ProcurementItemDrawer", () => {
 
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
 		expect(editButtons).toHaveLength(4);
+	});
+
+	test("tasks tab renders search, status filter buttons with counts, and task cards", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+
+		await user.click(screen.getByRole("tab", { name: "Задачи" }));
+
+		// Wait for data to load
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		// Search input present
+		const panel = screen.getByTestId("tab-panel-tasks");
+		expect(within(panel).getByPlaceholderText("Поиск…")).toBeInTheDocument();
+
+		// Status filter buttons visible inline with counts
+		const assignedBtn = within(panel).getByTestId("task-status-assigned");
+		const inProgressBtn = within(panel).getByTestId("task-status-in_progress");
+		expect(assignedBtn).toHaveTextContent("2");
+		expect(inProgressBtn).toHaveTextContent("1");
+
+		// Default status is "assigned" — cards displayed
+		expect(screen.getByText("Запросить образцы")).toBeInTheDocument();
+		// Item name hidden on cards within the tasks panel
+		expect(within(panel).queryByText("Арматура А500С")).not.toBeInTheDocument();
+	});
+
+	test("tasks tab deep link via ?tab=tasks loads tasks", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+	});
+
+	test("tasks tab shows question count on cards", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		expect(screen.getByText("2 вопроса")).toBeInTheDocument();
+		expect(screen.getByText("1 вопрос")).toBeInTheDocument();
+	});
+
+	test("tasks tab filter switches displayed tasks and updates URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		// Click "В работе" status button directly
+		await user.click(screen.getByTestId("task-status-in_progress"));
+
+		await waitFor(() => {
+			expect(screen.getByText("Проверить качество")).toBeInTheDocument();
+		});
+		// Assigned tasks no longer visible
+		expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
+		// URL updated
+		expect(screen.getByTestId("url-spy").textContent).toContain("status=in_progress");
+	});
+
+	test("tasks tab shows empty state for status with no tasks", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		// Click "Завершено" status button directly
+		await user.click(screen.getByTestId("task-status-completed"));
+
+		expect(screen.getByText("Нет задач")).toBeInTheDocument();
+	});
+
+	test("tasks tab clicking card opens task drawer with &task= in URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByTestId("task-card-task-1"));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("url-spy").textContent).toContain("task=task-1");
+		});
+	});
+
+	test("tasks tab status=assigned is default and omitted from URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks&status=in_progress"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Проверить качество")).toBeInTheDocument();
+		});
+
+		// Click "Назначено" status button directly
+		await user.click(screen.getByTestId("task-status-assigned"));
+
+		const url = screen.getByTestId("url-spy").textContent ?? "";
+		expect(url).not.toContain("status=");
 	});
 });

@@ -81,9 +81,15 @@ export function getInitials(firstName: string, lastName: string): string {
 	return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 }
 
-export function formatRating(value: number | null | undefined): string {
-	if (value == null) return "\u2014";
-	return `${value}%`;
+export function formatDelivery(cost: number | null): string {
+	if (cost == null) return "Самовывоз";
+	if (cost === 0) return "Включена";
+	return currencyFormatter.format(cost);
+}
+
+export function formatDeferral(days: number): string {
+	if (days === 0) return "Предоплата";
+	return pluralizeRu(days, "день", "дня", "дней");
 }
 
 export function stripProtocol(url: string): string {

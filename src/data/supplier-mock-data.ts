@@ -151,8 +151,9 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 		const status = STATUS_PATTERN[i % STATUS_PATTERN.length];
 		const isKp = status === "получено_кп";
 		const pricePerUnit = isKp ? 800 + ((idx * 137) % 1200) : null;
-		const deliveryCost = 1000 + ((idx * 53) % 3000);
-		const tco = isKp && pricePerUnit != null ? pricePerUnit + deliveryCost : null;
+		const deliveryVariant = i % 5;
+		const deliveryCost = deliveryVariant === 0 ? null : deliveryVariant === 1 ? 0 : 1000 + ((idx * 53) % 3000);
+		const tco = isKp && pricePerUnit != null ? pricePerUnit + (deliveryCost ?? 0) : null;
 		const rating = isKp ? 30 + ((idx * 17) % 71) : null;
 
 		return {
@@ -167,7 +168,7 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			tco,
 			rating,
 			deliveryCost,
-			deferralDays: 10 + ((idx * 7) % 50),
+			deferralDays: i % 4 === 0 ? 0 : 10 + ((idx * 7) % 50),
 			aiDescription: AI_DESCRIPTIONS[idx % AI_DESCRIPTIONS.length],
 			aiRecommendations: AI_RECOMMENDATIONS[idx % AI_RECOMMENDATIONS.length],
 			documents: makeDocuments(idx),

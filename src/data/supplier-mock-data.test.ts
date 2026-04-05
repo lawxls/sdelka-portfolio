@@ -73,7 +73,7 @@ describe("supplier mock store", () => {
 		const { suppliers } = await getSuppliers("item-1");
 		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
 		for (const s of kpSuppliers) {
-			expect(s.tco).toBe((s.pricePerUnit ?? 0) + s.deliveryCost);
+			expect(s.tco).toBe((s.pricePerUnit ?? 0) + (s.deliveryCost ?? 0));
 		}
 	});
 
@@ -151,14 +151,22 @@ describe("getSuppliers sort", () => {
 		}
 	});
 
-	it("sorts by rating descending (nulls last)", async () => {
-		const { suppliers } = await getSuppliers("item-1", { sort: "rating", dir: "desc" });
-		const withRating = suppliers.filter((s) => s.rating != null);
-		const withoutRating = suppliers.filter((s) => s.rating == null);
-		expect(suppliers.indexOf(withRating[0])).toBeLessThan(suppliers.indexOf(withoutRating[0]));
-		for (let i = 1; i < withRating.length; i++) {
-			expect(withRating[i].rating).toBeLessThanOrEqual(withRating[i - 1].rating as number);
-		}
+	it("generates varied deliveryCost values (null, 0, positive)", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const nullCost = suppliers.filter((s) => s.deliveryCost === null);
+		const zeroCost = suppliers.filter((s) => s.deliveryCost === 0);
+		const positiveCost = suppliers.filter((s) => s.deliveryCost != null && s.deliveryCost > 0);
+		expect(nullCost.length).toBeGreaterThan(0);
+		expect(zeroCost.length).toBeGreaterThan(0);
+		expect(positiveCost.length).toBeGreaterThan(0);
+	});
+
+	it("generates some suppliers with zero deferralDays (предоплата)", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const prepay = suppliers.filter((s) => s.deferralDays === 0);
+		const withDays = suppliers.filter((s) => s.deferralDays > 0);
+		expect(prepay.length).toBeGreaterThan(0);
+		expect(withDays.length).toBeGreaterThan(0);
 	});
 });
 

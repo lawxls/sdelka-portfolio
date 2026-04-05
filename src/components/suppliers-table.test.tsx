@@ -32,18 +32,24 @@ const defaultSuppliers = [
 		rating: 85,
 		email: "alfa@test.ru",
 		website: "https://alfa.ru",
+		deliveryCost: 1500,
+		deferralDays: 30,
 	}),
 	makeSupplier("s2", {
 		companyName: "ООО «Бета»",
 		status: "ждем_ответа",
 		email: "beta@test.ru",
 		website: "https://beta.ru",
+		deliveryCost: null,
+		deferralDays: 0,
 	}),
 	makeSupplier("s3", {
 		companyName: "ООО «Гамма»",
 		status: "переговоры",
 		email: "gamma@test.ru",
 		website: "https://gamma.ru",
+		deliveryCost: 0,
+		deferralDays: 14,
 	}),
 ];
 
@@ -79,11 +85,11 @@ describe("SuppliersTable", () => {
 		const headers = screen.getAllByRole("columnheader");
 		const headerTexts = headers.map((h) => h.textContent?.trim());
 		expect(headerTexts).toContain("КОМПАНИЯ");
-		expect(headerTexts).toContain("EMAIL");
 		expect(headerTexts).toContain("САЙТ");
+		expect(headerTexts).toContain("ДОСТАВКА");
+		expect(headerTexts).toContain("ОТСРОЧКА");
 		expect(headerTexts).toContain("ЦЕНА/ЕД.");
 		expect(headerTexts).toContain("TCO");
-		expect(headerTexts).toContain("РЕЙТИНГ");
 	});
 
 	test("renders supplier rows with company name and status badge", () => {
@@ -105,34 +111,41 @@ describe("SuppliersTable", () => {
 		const kpRow = rows[1];
 		const cells = within(kpRow).getAllByRole("cell");
 
-		// Price, TCO should contain ₽ (currency formatted), rating should show %
+		// Price, TCO should contain ₽ (currency formatted)
 		const priceCell = cells.find((c) => c.textContent?.includes("₽"));
 		expect(priceCell).toBeTruthy();
-		const ratingCell = cells.find((c) => c.textContent?.includes("85%"));
-		expect(ratingCell).toBeTruthy();
-		// None of the value cells should be em-dash
-		const emDashCount = cells.filter((c) => c.textContent === "\u2014").length;
-		expect(emDashCount).toBe(0);
+		// Delivery and deferral
+		const deliveryCell = cells.find((c) => c.textContent?.includes("₽") && c !== priceCell);
+		expect(deliveryCell).toBeTruthy();
+		const deferralCell = cells.find((c) => c.textContent?.match(/\d+\s*дн/));
+		expect(deferralCell).toBeTruthy();
 	});
 
-	test("shows em-dash for non-КП suppliers' price, tco, and rating", () => {
+	test("shows em-dash for non-КП suppliers' price and tco", () => {
 		renderTable();
 		const rows = screen.getAllByRole("row");
 		// rows[2] is s2 (ждем_ответа) — non-КП
 		const nonKpRow = rows[2];
 		const cells = within(nonKpRow).getAllByRole("cell");
 
-		// Price, TCO, Rating columns should contain em-dash
+		// Price, TCO columns should contain em-dash
 		const emDashCells = cells.filter((c) => c.textContent === "\u2014");
-		expect(emDashCells.length).toBe(3);
+		expect(emDashCells.length).toBe(2);
 	});
 
-	test("renders email and website for each supplier", () => {
+	test("renders website for each supplier", () => {
 		renderTable();
-		expect(screen.getByText("alfa@test.ru")).toBeInTheDocument();
-		expect(screen.getByText("beta@test.ru")).toBeInTheDocument();
 		expect(screen.getByText("alfa.ru")).toBeInTheDocument();
 		expect(screen.getByText("beta.ru")).toBeInTheDocument();
+	});
+
+	test("renders delivery and deferral values", () => {
+		renderTable();
+		// s2: deliveryCost=null → "Самовывоз", deferralDays=0 → "Предоплата"
+		expect(screen.getByText("Самовывоз")).toBeInTheDocument();
+		expect(screen.getByText("Предоплата")).toBeInTheDocument();
+		// s3: deliveryCost=0 → "Включена"
+		expect(screen.getByText("Включена")).toBeInTheDocument();
 	});
 
 	test("shows loading skeleton when isLoading is true", () => {
@@ -170,7 +183,6 @@ describe("SuppliersTable sort", () => {
 		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Цена\/ед/i })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /TCO/i })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Рейтинг/i })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with field name", async () => {
@@ -374,23 +386,25 @@ describe("SuppliersTable mobile cards", () => {
 		expect(within(cards[1]).getByText("Ждём ответа")).toBeInTheDocument();
 	});
 
-	test("card shows formatted price, tco, and rating for КП supplier", () => {
+	test("card shows formatted price, tco, delivery, and deferral for КП supplier", () => {
 		renderTable();
 		const cards = screen.getAllByTestId("supplier-card");
-		const kpCard = cards[0]; // s1 has pricePerUnit=1200, tco=2700, rating=85
+		const kpCard = cards[0]; // s1 has pricePerUnit=1200, tco=2700, deliveryCost=1500, deferralDays=30
 
 		const priceTexts = within(kpCard).getAllByText(/₽/);
 		expect(priceTexts.length).toBeGreaterThan(0);
-		expect(within(kpCard).getByText("85%")).toBeInTheDocument();
+		expect(within(kpCard).getByText(/30\s*дн/)).toBeInTheDocument();
 	});
 
-	test("card shows em-dash for missing price/tco/rating", () => {
+	test("card shows em-dash for missing price/tco and delivery/deferral labels", () => {
 		renderTable();
 		const cards = screen.getAllByTestId("supplier-card");
-		const nonKpCard = cards[1]; // s2 has null price/tco/rating
+		const nonKpCard = cards[1]; // s2 has null price/tco, deliveryCost=null, deferralDays=0
 
 		const dashes = within(nonKpCard).getAllByText("\u2014");
-		expect(dashes.length).toBe(3);
+		expect(dashes.length).toBe(2); // price and tco
+		expect(within(nonKpCard).getByText("Самовывоз")).toBeInTheDocument();
+		expect(within(nonKpCard).getByText("Предоплата")).toBeInTheDocument();
 	});
 
 	test("clicking a card calls onRowClick", async () => {

@@ -28,6 +28,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			companyName: "ООО «Альфа-Трейд»",
 			address: "г. Москва, ул. Промышленная, д. 15",
 			website: "https://alfa-trade.ru",
+			email: "info@alfa-trade.ru",
 			status: "получено_кп",
 			pricePerUnit: 1200,
 			deliveryCost: 1500,
@@ -80,10 +81,11 @@ describe("SupplierDetailDrawer", () => {
 		expect(screen.getByText("·")).toBeInTheDocument();
 	});
 
-	test("renders address and website", () => {
+	test("renders address, website, and email", () => {
 		renderDrawer();
 		expect(screen.getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
 		expect(screen.getByText("alfa-trade.ru")).toBeInTheDocument();
+		expect(screen.getByText("info@alfa-trade.ru")).toBeInTheDocument();
 	});
 
 	test("renders TCO section with correct labels", () => {

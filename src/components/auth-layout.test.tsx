@@ -27,8 +27,9 @@ describe("AuthLayout", () => {
 		expect(svg).toBeInTheDocument();
 	});
 
-	test("renders gradient panel on desktop", () => {
+	test("renders particle panel on desktop", () => {
 		renderWithRouter();
-		expect(screen.getByTestId("auth-gradient-panel")).toBeInTheDocument();
+		const canvas = document.querySelector("canvas");
+		expect(canvas).toBeInTheDocument();
 	});
 });

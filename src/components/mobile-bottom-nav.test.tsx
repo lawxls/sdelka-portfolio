@@ -9,7 +9,6 @@ function renderNav(initialEntry = "/procurement") {
 		<MemoryRouter initialEntries={[initialEntry]}>
 			<Routes>
 				<Route path="/procurement" element={<div>procurement</div>} />
-				<Route path="/analytics" element={<div>analytics</div>} />
 				<Route path="/tasks" element={<div>tasks</div>} />
 			</Routes>
 			<MobileBottomNav />
@@ -18,9 +17,8 @@ function renderNav(initialEntry = "/procurement") {
 }
 
 describe("MobileBottomNav", () => {
-	test("renders 3 tab links", () => {
+	test("renders 2 tab links", () => {
 		renderNav();
-		expect(screen.getByRole("link", { name: "Аналитика" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 	});
@@ -39,7 +37,7 @@ describe("MobileBottomNav", () => {
 
 	test("inactive tab has muted styling", () => {
 		renderNav("/procurement");
-		const link = screen.getByRole("link", { name: "Аналитика" });
+		const link = screen.getByRole("link", { name: "Задачи" });
 		expect(link.className).toContain("text-muted-foreground");
 	});
 

@@ -85,6 +85,7 @@ export function useTaskColumns(params?: TaskFilterParams) {
 		const column = boardQuery.data?.[status];
 		return {
 			tasks: column?.results ?? [],
+			count: column?.count ?? 0,
 			hasNextPage: column?.next != null,
 			loadMore: () => loadMore(status),
 			isLoading: boardQuery.isLoading,

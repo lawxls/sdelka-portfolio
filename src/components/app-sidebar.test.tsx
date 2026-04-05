@@ -32,7 +32,6 @@ function renderSidebar(initialEntry = "/procurement") {
 							<AppSidebar />
 							<Routes>
 								<Route path="/procurement" element={<div>procurement-content</div>} />
-								<Route path="/analytics" element={<div>analytics-content</div>} />
 								<Route path="/tasks" element={<div>tasks-content</div>} />
 							</Routes>
 						</div>
@@ -44,9 +43,8 @@ function renderSidebar(initialEntry = "/procurement") {
 }
 
 describe("AppSidebar", () => {
-	test("renders 3 navigation links", () => {
+	test("renders 2 navigation links", () => {
 		renderSidebar();
-		expect(screen.getByRole("link", { name: "Аналитика" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 	});
@@ -57,7 +55,7 @@ describe("AppSidebar", () => {
 	});
 
 	test("logo click navigates to /procurement", async () => {
-		renderSidebar("/analytics");
+		renderSidebar("/tasks");
 		const user = userEvent.setup();
 		await user.click(screen.getByTestId("app-sidebar-logo"));
 		expect(screen.getByText("procurement-content")).toBeInTheDocument();
@@ -68,14 +66,8 @@ describe("AppSidebar", () => {
 		const link = screen.getByRole("link", { name: "Закупки" });
 		expect(link).toHaveAttribute("data-active", "true");
 
-		const analyticsLink = screen.getByRole("link", { name: "Аналитика" });
-		expect(analyticsLink).not.toHaveAttribute("data-active", "true");
-	});
-
-	test("active state matches /analytics route", () => {
-		renderSidebar("/analytics");
-		const link = screen.getByRole("link", { name: "Аналитика" });
-		expect(link).toHaveAttribute("data-active", "true");
+		const tasksLink = screen.getByRole("link", { name: "Задачи" });
+		expect(tasksLink).not.toHaveAttribute("data-active", "true");
 	});
 
 	test("clicking nav icon navigates to correct route", async () => {
