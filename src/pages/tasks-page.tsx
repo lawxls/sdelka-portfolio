@@ -9,8 +9,10 @@ import {
 	useSensors,
 } from "@dnd-kit/core";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { useToolbarPortal } from "@/components/app-layout";
 import { isValidTransition, TaskBoard } from "@/components/task-board";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
@@ -171,6 +173,27 @@ export function TasksPage() {
 		setPendingDrag(null);
 	}
 
+	const toolbarPortal = useToolbarPortal();
+	const portalTarget = !isMobile && toolbarPortal ? toolbarPortal : null;
+
+	const taskToolbar = (
+		<TaskToolbar
+			defaultSearch={search}
+			onSearchChange={handleSearchChange}
+			sort={sort}
+			onSort={handleSort}
+			activeItem={activeItem}
+			onItemFilter={handleItemFilter}
+			onItemSearch={setItemSearchQuery}
+			itemSearchResults={itemSearch.data ?? []}
+			companies={companies}
+			activeCompany={company}
+			onCompanySelect={handleCompanySelect}
+			view={view}
+			onViewChange={setView}
+		/>
+	);
+
 	return (
 		<DndContext
 			sensors={sensors}
@@ -179,24 +202,13 @@ export function TasksPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				<header className="sticky top-0 z-30 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
-					<h1 className="text-lg tracking-tight">Задачи</h1>
-					<TaskToolbar
-						defaultSearch={search}
-						onSearchChange={handleSearchChange}
-						sort={sort}
-						onSort={handleSort}
-						activeItem={activeItem}
-						onItemFilter={handleItemFilter}
-						onItemSearch={setItemSearchQuery}
-						itemSearchResults={itemSearch.data ?? []}
-						companies={companies}
-						activeCompany={company}
-						onCompanySelect={handleCompanySelect}
-						view={view}
-						onViewChange={setView}
-					/>
-				</header>
+				{portalTarget ? (
+					createPortal(taskToolbar, portalTarget)
+				) : (
+					<header className="sticky top-0 z-20 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
+						{taskToolbar}
+					</header>
+				)}
 				{view === "board" ? (
 					<TaskBoard
 						columns={columns}

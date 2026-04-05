@@ -40,6 +40,7 @@ function renderMenu(initialEntries = ["/"]) {
 										path="/settings/employees"
 										element={<div data-testid="settings-employees-page">Employees</div>}
 									/>
+									<Route path="/tasks" element={<div data-testid="tasks-page">Tasks</div>} />
 								</Routes>
 							</>
 						}
@@ -125,6 +126,43 @@ describe("UserAvatarMenu", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("settings-employees-page")).toBeInTheDocument();
 		});
+	});
+
+	test("Задачи navigates to /tasks", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderMenu();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Задачи")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByText("Задачи"));
+
+		await waitFor(() => {
+			expect(screen.getByTestId("tasks-page")).toBeInTheDocument();
+		});
+	});
+
+	test("menu items are in correct order: settings → Задачи → theme → Выйти", async () => {
+		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+
+		renderMenu();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Задачи")).toBeInTheDocument();
+		});
+
+		const items = screen.getAllByRole("menuitem");
+		const labels = items.map((item) => item.textContent?.trim());
+
+		expect(labels).toEqual(["Мой профиль", "Компании", "Сотрудники", "Задачи", "Сменить темуСменить тему", "Выйти"]);
 	});
 
 	test("menu shows Сменить тему item", async () => {

@@ -83,9 +83,9 @@ function renderPage(initialEntries?: string[]) {
 }
 
 describe("TasksPage", () => {
-	it("renders page heading", () => {
+	it("does not render a page heading", () => {
 		renderPage();
-		expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.queryByRole("heading", { name: "Задачи" })).not.toBeInTheDocument();
 	});
 
 	it("renders 4 column labels after loading", async () => {

@@ -200,7 +200,7 @@ describe("Routing", () => {
 	test("/ redirects to /procurement", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		});
 	});
 
@@ -213,15 +213,14 @@ describe("Routing", () => {
 
 	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
-		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
-		expect(screen.getByRole("banner")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
 	test("/tasks renders tasks page with board", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 			expect(screen.getByTestId("task-board")).toBeInTheDocument();
 		});
 	});
@@ -245,21 +244,16 @@ describe("Routing", () => {
 		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("mobile bottom nav renders in layout", () => {
+	test("global header renders avatar button", () => {
 		renderApp();
-		expect(screen.getByTestId("mobile-bottom-nav")).toBeInTheDocument();
-	});
-
-	test("mobile header renders avatar button", () => {
-		renderApp();
-		const header = screen.getByTestId("mobile-header");
+		const header = screen.getByTestId("global-header");
 		expect(within(header).getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
-	test("mobile header avatar opens dropdown with 3 items", async () => {
+	test("global header avatar opens dropdown with 3 items", async () => {
 		renderApp();
 		const user = userEvent.setup();
-		const header = screen.getByTestId("mobile-header");
+		const header = screen.getByTestId("global-header");
 		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
@@ -311,8 +305,7 @@ describe("Routing", () => {
 describe("ProcurementPage", () => {
 	test("renders page layout with header and main", async () => {
 		await renderAppReady();
-		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
-		expect(screen.getByRole("banner")).toBeInTheDocument();
+		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
