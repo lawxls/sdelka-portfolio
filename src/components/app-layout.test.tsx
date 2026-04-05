@@ -58,6 +58,12 @@ describe("AppLayout — global header", () => {
 		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
+	test("renders toolbar slot in header for desktop", () => {
+		renderLayout();
+		const header = screen.getByTestId("global-header");
+		expect(header.querySelector('[data-testid="toolbar-slot"]')).toBeInTheDocument();
+	});
+
 	test("renders child route content", () => {
 		renderLayout();
 		expect(screen.getByText("procurement-content")).toBeInTheDocument();

@@ -10,10 +10,12 @@ import {
 } from "@dnd-kit/core";
 import { PanelLeft } from "lucide-react";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
+import { useToolbarPortal } from "@/components/app-layout";
 import { CompanyDrawer, parseCompanyTab } from "@/components/company-drawer";
 import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
@@ -308,6 +310,22 @@ export function ProcurementPage() {
 		});
 	}
 
+	const toolbarPortal = useToolbarPortal();
+	const portalTarget = !isMobile && toolbarPortal ? toolbarPortal : null;
+
+	const toolbar = (
+		<Toolbar
+			defaultSearch={search}
+			onSearchChange={handleSearchChange}
+			filters={filters}
+			onFiltersChange={handleFiltersChange}
+			sort={sort}
+			onSort={handleSort}
+			onAddPositions={() => setDialogOpen(true)}
+			onExport={handleExport}
+		/>
+	);
+
 	return (
 		<DndContext
 			sensors={sensors}
@@ -316,28 +334,24 @@ export function ProcurementPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						className="shrink-0 md:hidden"
-						onClick={() => setSidebarOpen(true)}
-						aria-label="Открыть боковую панель"
-					>
-						<PanelLeft className="size-4" />
-					</Button>
-					<h1 className="hidden text-lg tracking-tight whitespace-nowrap md:block">Ваши закупки</h1>
-					<Toolbar
-						defaultSearch={search}
-						onSearchChange={handleSearchChange}
-						filters={filters}
-						onFiltersChange={handleFiltersChange}
-						sort={sort}
-						onSort={handleSort}
-						onAddPositions={() => setDialogOpen(true)}
-						onExport={handleExport}
-					/>
-				</header>
+				{portalTarget ? (
+					createPortal(toolbar, portalTarget)
+				) : (
+					<header className="sticky top-0 z-20 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
+						{isMobile && (
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								className="shrink-0"
+								onClick={() => setSidebarOpen(true)}
+								aria-label="Открыть боковую панель"
+							>
+								<PanelLeft className="size-4" />
+							</Button>
+						)}
+						{toolbar}
+					</header>
+				)}
 
 				<div className="flex min-h-0 min-w-0 flex-1">
 					<ProcurementSidebar

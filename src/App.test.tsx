@@ -200,7 +200,7 @@ describe("Routing", () => {
 	test("/ redirects to /procurement", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		});
 	});
 
@@ -213,7 +213,7 @@ describe("Routing", () => {
 
 	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
-		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
@@ -221,7 +221,6 @@ describe("Routing", () => {
 	test("/tasks renders tasks page with board", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 			expect(screen.getByTestId("task-board")).toBeInTheDocument();
 		});
 	});
@@ -306,7 +305,6 @@ describe("Routing", () => {
 describe("ProcurementPage", () => {
 	test("renders page layout with header and main", async () => {
 		await renderAppReady();
-		expect(screen.getByText("Ваши закупки")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
