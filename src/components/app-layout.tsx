@@ -1,35 +1,28 @@
-import { Outlet } from "react-router";
-import { AppSidebar } from "@/components/app-sidebar";
+import { Link, Outlet } from "react-router";
 import { LogoWordmark } from "@/components/logo-wordmark";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
-
-const NOOP = () => {};
 
 export function AppLayout() {
 	return (
-		<SidebarProvider
-			open={false}
-			onOpenChange={NOOP}
-			style={{ "--sidebar-width-icon": "3.5rem" } as React.CSSProperties}
-		>
-			<div className="flex h-svh w-full" data-testid="app-layout">
-				<AppSidebar />
-				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-					<div
-						className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background px-3 py-0.5 md:hidden"
-						data-testid="mobile-header"
-					>
+		<div className="flex h-svh w-full flex-col" data-testid="app-layout">
+			<header
+				className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-border bg-background px-3 py-1.5"
+				data-testid="global-header"
+			>
+				<div className="flex items-center gap-2">
+					<Link to="/procurement" aria-label="На главную">
 						<LogoWordmark className="h-4 w-auto" />
-						<UserAvatarMenu />
-					</div>
-					<div className="flex min-h-0 flex-1 flex-col">
-						<Outlet />
-					</div>
-					<MobileBottomNav />
+					</Link>
+					<Badge variant="secondary" className="hidden text-[0.625rem] md:inline-flex">
+						Beta
+					</Badge>
 				</div>
+				<UserAvatarMenu />
+			</header>
+			<div className="flex min-h-0 flex-1 flex-col">
+				<Outlet />
 			</div>
-		</SidebarProvider>
+		</div>
 	);
 }
