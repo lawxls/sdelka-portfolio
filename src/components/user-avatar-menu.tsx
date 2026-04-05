@@ -1,4 +1,4 @@
-import { Building2, CircleUser, LogOut, Moon, Sun, User, Users } from "lucide-react";
+import { Building2, CircleUser, ListTodo, LogOut, Moon, Sun, User, Users } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
@@ -54,7 +54,6 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					<User />
 					Мой профиль
 				</DropdownMenuItem>
-				<DropdownMenuSeparator />
 				<DropdownMenuItem onSelect={() => navigate("/settings/companies")}>
 					<Building2 />
 					Компании
@@ -62,6 +61,11 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 				<DropdownMenuItem onSelect={() => navigate("/settings/employees")}>
 					<Users />
 					Сотрудники
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onSelect={() => navigate("/tasks")}>
+					<ListTodo />
+					Задачи
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem
