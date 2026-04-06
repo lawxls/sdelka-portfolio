@@ -6,6 +6,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
+const mockIsMobile = vi.hoisted(() => ({ value: false }));
+vi.mock("@/hooks/use-is-mobile", () => ({
+	useIsMobile: () => mockIsMobile.value,
+}));
+
 import { SupplierDetailDrawer } from "./supplier-detail-drawer";
 
 let queryClient: QueryClient;
@@ -226,6 +231,65 @@ describe("SupplierDetailDrawer", () => {
 		expect(header).toBeInTheDocument();
 		expect(grid).toBeInTheDocument();
 		expect(header?.compareDocumentPosition(grid as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	describe("mobile tabbed layout", () => {
+		beforeEach(() => {
+			mockIsMobile.value = true;
+		});
+
+		afterEach(() => {
+			mockIsMobile.value = false;
+		});
+
+		test("renders tabs instead of two-column grid on mobile", () => {
+			renderDrawer();
+			const tablist = screen.getByRole("tablist");
+			expect(tablist).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Информация" })).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Переписка" })).toBeInTheDocument();
+			expect(screen.queryByTestId("supplier-columns")).not.toBeInTheDocument();
+		});
+
+		test("shows info tab content by default", () => {
+			renderDrawer();
+			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+			expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
+			expect(screen.queryByText("История общения")).not.toBeInTheDocument();
+		});
+
+		test("switches to email tab on click", async () => {
+			const user = userEvent.setup();
+			renderDrawer();
+			await user.click(screen.getByRole("tab", { name: "Переписка" }));
+			expect(screen.getByText("История общения")).toBeInTheDocument();
+			expect(screen.queryByText("Расчёт TCO (Total Cost of Ownership)")).not.toBeInTheDocument();
+		});
+
+		test("shared header visible above tabs", () => {
+			renderDrawer();
+			expect(screen.getAllByText("ООО «Альфа-Трейд»").length).toBeGreaterThanOrEqual(1);
+			expect(screen.getByText("Получено КП")).toBeInTheDocument();
+			expect(screen.getByRole("tablist")).toBeInTheDocument();
+		});
+
+		test("composer visible on email tab for composable status", async () => {
+			const user = userEvent.setup();
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					status: "ждем_ответа",
+					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
+				}),
+			});
+			await user.click(screen.getByRole("tab", { name: "Переписка" }));
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("info tab is selected by default with aria-selected", () => {
+			renderDrawer();
+			expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByRole("tab", { name: "Переписка" })).toHaveAttribute("aria-selected", "false");
+		});
 	});
 
 	describe("ChatComposer visibility", () => {

@@ -14,7 +14,7 @@ import {
 	Truck,
 	User,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChatComposer } from "@/components/chat-composer";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { Button } from "@/components/ui/button";
@@ -199,8 +199,48 @@ function EmailThread({
 	);
 }
 
+type MobileTab = "info" | "email";
+
+function InfoContent({ supplier }: { supplier: Supplier }) {
+	return (
+		<div className="space-y-6 p-4">
+			<TcoSection supplier={supplier} />
+			<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
+			<DocumentsSection documents={supplier.documents} />
+		</div>
+	);
+}
+
+function EmailContent({
+	supplier,
+	showComposer,
+	scrollToLatest,
+	sendMutation,
+}: {
+	supplier: Supplier;
+	showComposer: boolean;
+	scrollToLatest: React.RefCallback<HTMLElement>;
+	sendMutation: ReturnType<typeof useSendSupplierMessage>;
+}) {
+	return (
+		<>
+			<div className="flex-1 overflow-y-auto p-4">
+				<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+			</div>
+			{showComposer && (
+				<ChatComposer
+					onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+					isPending={sendMutation.isPending}
+					error={sendMutation.error?.message ?? null}
+				/>
+			)}
+		</>
+	);
+}
+
 export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
 	const isMobile = useIsMobile();
+	const [mobileTab, setMobileTab] = useState<MobileTab>("info");
 	const sendMutation = useSendSupplierMessage(supplier?.itemId ?? "", supplier?.id ?? "");
 	const scrollToLatest = useCallback((el: HTMLElement | null) => {
 		el?.scrollIntoView({ block: "end" });
@@ -239,28 +279,69 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 							<span className="text-sm text-muted-foreground">{supplier.email}</span>
 						</SheetHeader>
 
-						<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
-							<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
-								<TcoSection supplier={supplier} />
-								<AgentCommentSection
-									description={supplier.aiDescription}
-									recommendations={supplier.aiRecommendations}
-								/>
-								<DocumentsSection documents={supplier.documents} />
-							</div>
-							<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
-								<div className="flex-1 overflow-y-auto">
-									<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+						{isMobile ? (
+							<>
+								<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
+									{(
+										[
+											{ key: "info", label: "Информация" },
+											{ key: "email", label: "Переписка" },
+										] as const
+									).map((tab) => (
+										<button
+											key={tab.key}
+											type="button"
+											role="tab"
+											aria-selected={mobileTab === tab.key}
+											className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
+												mobileTab === tab.key
+													? "border-b-2 border-primary text-foreground"
+													: "text-muted-foreground hover:text-foreground"
+											}`}
+											onClick={() => setMobileTab(tab.key)}
+										>
+											{tab.label}
+										</button>
+									))}
 								</div>
-								{showComposer && (
-									<ChatComposer
-										onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
-										isPending={sendMutation.isPending}
-										error={sendMutation.error?.message ?? null}
+								<div className="min-h-0 flex-1 overflow-y-auto">
+									{mobileTab === "info" && <InfoContent supplier={supplier} />}
+									{mobileTab === "email" && (
+										<div className="flex h-full flex-col overflow-hidden">
+											<EmailContent
+												supplier={supplier}
+												showComposer={showComposer}
+												scrollToLatest={scrollToLatest}
+												sendMutation={sendMutation}
+											/>
+										</div>
+									)}
+								</div>
+							</>
+						) : (
+							<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
+								<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
+									<TcoSection supplier={supplier} />
+									<AgentCommentSection
+										description={supplier.aiDescription}
+										recommendations={supplier.aiRecommendations}
 									/>
-								)}
+									<DocumentsSection documents={supplier.documents} />
+								</div>
+								<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
+									<div className="flex-1 overflow-y-auto">
+										<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+									</div>
+									{showComposer && (
+										<ChatComposer
+											onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+											isPending={sendMutation.isPending}
+											error={sendMutation.error?.message ?? null}
+										/>
+									)}
+								</div>
 							</div>
-						</div>
+						)}
 					</div>
 				)}
 			</SheetContent>
