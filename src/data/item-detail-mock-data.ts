@@ -44,6 +44,7 @@ const MOCK_ITEMS: Record<string, ProcurementItem> = {
 		deliveryType: "pickup",
 		analoguesAllowed: false,
 		priceMonitoringPeriod: "half_year",
+		taskCount: 3,
 	},
 };
 

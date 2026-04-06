@@ -49,6 +49,7 @@ const mockItems: ProcurementItem[] = [
 		averagePrice: null,
 		folderId: null,
 		companyId: "company-1",
+		taskCount: 5,
 	},
 	{
 		id: "4",

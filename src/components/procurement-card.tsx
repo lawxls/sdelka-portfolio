@@ -8,6 +8,7 @@ import {
 	FolderInput,
 	Inbox,
 	LoaderCircle,
+	MessageCircleQuestion,
 	Pencil,
 	Trash2,
 } from "lucide-react";
@@ -266,6 +267,15 @@ export function ProcurementCard({
 				)}
 				{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
 				{STATUS_CONFIG[item.status].label}
+				{item.status === "negotiating" && (item.taskCount ?? 0) > 0 && (
+					<>
+						<span className="opacity-40" aria-hidden="true">
+							&middot;
+						</span>
+						<MessageCircleQuestion className="size-3 text-red-500 dark:text-red-400" aria-hidden="true" />
+						<span className="tabular-nums text-red-500 dark:text-red-400">{item.taskCount}</span>
+					</>
+				)}
 			</span>
 			<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 				{FIELDS.map((f) => (

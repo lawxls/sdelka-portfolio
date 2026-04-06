@@ -76,6 +76,7 @@ export interface ProcurementItem {
 	averagePrice: number | null;
 	folderId: string | null;
 	companyId: string;
+	taskCount?: number;
 	description?: string;
 	unit?: Unit;
 	frequencyCount?: number;

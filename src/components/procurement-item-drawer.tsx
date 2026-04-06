@@ -368,24 +368,6 @@ function ProcurementItemDrawerContent({
 			<SheetHeader>
 				<SheetTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
 					<span>{itemName ?? "Позиция"}</span>
-					{itemStatus && (
-						<>
-							<span className="text-muted-foreground/40" aria-hidden="true">
-								&bull;
-							</span>
-							<span
-								className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
-							>
-								{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
-								{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
-								{itemStatus === "negotiating" && (
-									<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-								)}
-								{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
-								{STATUS_CONFIG[itemStatus].label}
-							</span>
-						</>
-					)}
 					{totalCount > 0 && (
 						<>
 							<span className="text-muted-foreground/40" aria-hidden="true">
@@ -427,6 +409,19 @@ function ProcurementItemDrawerContent({
 						</>
 					)}
 				</SheetTitle>
+				{itemStatus && (
+					<div className="flex items-center gap-1.5">
+						<span className={`inline-flex items-center gap-1.5 text-sm ${STATUS_CONFIG[itemStatus].className}`}>
+							{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
+							{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
+							{itemStatus === "negotiating" && (
+								<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+							)}
+							{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
+							{STATUS_CONFIG[itemStatus].label}
+						</span>
+					</div>
+				)}
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
 			</SheetHeader>
 
