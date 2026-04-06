@@ -92,7 +92,7 @@ export async function getItemDetail(id: string): Promise<ProcurementItem | null>
 /** Directly update item's currentSupplier in the mock store (no delay). */
 export function setItemCurrentSupplier(itemId: string, currentSupplier: CurrentSupplier): void {
 	const item = store.get(itemId);
-	if (!item) throw new Error(`Item ${itemId} not found`);
+	if (!item) return;
 	store.set(itemId, { ...item, currentSupplier });
 }
 
