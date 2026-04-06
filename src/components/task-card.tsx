@@ -3,7 +3,7 @@ import { MessageCircleQuestion } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Task } from "@/data/task-types";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatAssigneeName, formatDayMonth, getInitials, pluralizeRu } from "@/lib/format";
+import { formatAssigneeName, formatDayMonth, getInitials, isOverdue, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface TaskCardProps {
@@ -29,7 +29,7 @@ export function TaskCard({
 		id: task.id,
 		disabled: !draggable,
 	});
-	const isOverdue = new Date(task.deadlineAt) < new Date();
+	const overdue = isOverdue(task.deadlineAt);
 
 	const title = compact ? (
 		<p className="truncate text-sm font-medium">{task.name}</p>
@@ -77,7 +77,7 @@ export function TaskCard({
 					<span>
 						Создана <time dateTime={task.createdAt}>{formatDayMonth(task.createdAt)}</time>
 					</span>
-					<span className={cn(isOverdue && "font-medium text-destructive")}>
+					<span className={cn(overdue && "font-medium text-destructive")}>
 						Дедлайн{" "}
 						<time dateTime={task.deadlineAt} data-testid={`deadline-${task.id}`}>
 							{formatDayMonth(task.deadlineAt)}

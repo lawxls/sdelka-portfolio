@@ -8,7 +8,8 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTi
 import { Textarea } from "@/components/ui/textarea";
 import { STATUS_ICONS, STATUS_LABELS, type TaskStatus } from "@/data/task-types";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
-import { formatDateTime, pluralizeRu } from "@/lib/format";
+import { formatAssigneeName, formatDate, formatDateTime, isOverdue, pluralizeRu } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface TaskDrawerProps {
 	taskId: string | null;
@@ -149,12 +150,25 @@ function TaskDrawerContent({
 			</SheetHeader>
 
 			<div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-				<time className="block text-xs text-muted-foreground" dateTime={task.createdAt}>
-					{formatDateTime(task.createdAt)}
-				</time>
-				<p className="text-xs text-muted-foreground">
-					{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
-				</p>
+				<div className="space-y-1">
+					<time className="block text-xs text-muted-foreground" dateTime={task.createdAt}>
+						{formatDateTime(task.createdAt)}
+					</time>
+					<p className="text-xs text-muted-foreground">Исполнитель: {formatAssigneeName(task.assignee)}</p>
+					<p
+						className={cn(
+							"text-xs text-muted-foreground",
+							isOverdue(task.deadlineAt) && "font-medium text-destructive",
+						)}
+					>
+						Дедлайн: {formatDate(task.deadlineAt)}
+					</p>
+					{task.questionCount > 0 && (
+						<p className="text-xs text-muted-foreground">
+							{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
+						</p>
+					)}
+				</div>
 
 				<p className="text-sm">{task.description}</p>
 

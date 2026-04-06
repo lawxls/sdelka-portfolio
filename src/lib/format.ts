@@ -101,6 +101,10 @@ export function formatAssigneeName(assignee: { firstName: string; lastName: stri
 	return `${assignee.lastName} ${assignee.firstName}`;
 }
 
+export function isOverdue(iso: string): boolean {
+	return new Date(iso) < new Date();
+}
+
 export function pluralizeRu(count: number, one: string, few: string, many: string): string {
 	const mod100 = count % 100;
 	const mod10 = count % 10;

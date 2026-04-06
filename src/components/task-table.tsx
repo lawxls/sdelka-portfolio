@@ -13,7 +13,7 @@ import {
 import { useAllTasks, useTaskColumns } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatAssigneeName, formatDayMonth, getInitials, pluralizeRu } from "@/lib/format";
+import { formatAssigneeName, formatDayMonth, getInitials, isOverdue, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE_VARIANT = {
@@ -44,8 +44,7 @@ function TaskTableCard({
 	index: number;
 	onTaskClick?: (id: string) => void;
 }) {
-	const now = new Date();
-	const isOverdue = new Date(task.deadlineAt) < now;
+	const overdue = isOverdue(task.deadlineAt);
 	const StatusIcon = STATUS_ICONS[task.status];
 	const assigneeName = formatAssigneeName(task.assignee);
 
@@ -83,7 +82,7 @@ function TaskTableCard({
 				<div>
 					<div className="text-xs text-muted-foreground">Дедлайн</div>
 					<div>
-						<time dateTime={task.deadlineAt} className={cn(isOverdue && "font-medium text-destructive")}>
+						<time dateTime={task.deadlineAt} className={cn(overdue && "font-medium text-destructive")}>
 							{formatDayMonth(task.deadlineAt)}
 						</time>
 					</div>
@@ -110,13 +109,14 @@ export function TaskRow({
 	task,
 	onTaskClick,
 	showQuestionCount,
+	showCreatedDate,
 }: {
 	task: Task;
 	onTaskClick?: (id: string) => void;
 	showQuestionCount?: boolean;
+	showCreatedDate?: boolean;
 }) {
-	const now = new Date();
-	const isOverdue = new Date(task.deadlineAt) < now;
+	const overdue = isOverdue(task.deadlineAt);
 	const StatusIcon = STATUS_ICONS[task.status];
 
 	return (
@@ -139,7 +139,11 @@ export function TaskRow({
 					{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
 				</span>
 			)}
-			{task.assignee ? (
+			{showCreatedDate ? (
+				<time dateTime={task.createdAt} className="tabular-nums text-xs text-muted-foreground shrink-0">
+					{formatDayMonth(task.createdAt)}
+				</time>
+			) : task.assignee ? (
 				<span
 					role="img"
 					className={cn(
@@ -161,7 +165,7 @@ export function TaskRow({
 				dateTime={task.deadlineAt}
 				className={cn(
 					"tabular-nums text-xs text-muted-foreground w-10 text-right shrink-0",
-					isOverdue && "font-medium text-destructive",
+					overdue && "font-medium text-destructive",
 				)}
 			>
 				{formatDayMonth(task.deadlineAt)}
