@@ -66,6 +66,14 @@ export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 export const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
 
+export interface CurrentSupplier {
+	companyName: string;
+	deliveryCost: number | null;
+	deferralDays: number;
+	pricePerUnit: number | null;
+	tco: number | null;
+}
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -91,6 +99,7 @@ export interface ProcurementItem {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	priceMonitoringPeriod?: PriceMonitoringPeriod;
+	currentSupplier?: CurrentSupplier;
 }
 
 export interface Folder {
@@ -145,6 +154,7 @@ export interface NewItemInput {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	priceMonitoringPeriod?: PriceMonitoringPeriod;
+	currentSupplier?: CurrentSupplier;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

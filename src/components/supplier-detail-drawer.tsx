@@ -2,8 +2,6 @@ import {
 	Archive,
 	Bot,
 	Calculator,
-	CircleCheck,
-	CreditCard,
 	Download,
 	File,
 	FileSpreadsheet,
@@ -13,12 +11,13 @@ import {
 	MapPin,
 	Paperclip,
 	Sparkles,
-	Truck,
 	User,
+	UserCheck,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ChatComposer } from "@/components/chat-composer";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
+import { DeferralValue, DeliveryValue } from "@/components/supplier-value-displays";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -27,52 +26,13 @@ import type { Supplier, SupplierChatMessage, SupplierDocument } from "@/data/sup
 import { COMPOSABLE_STATUSES } from "@/data/supplier-types";
 import { useSendSupplierMessage } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import {
-	formatCurrency,
-	formatDateTime,
-	formatDeferral,
-	formatDelivery,
-	formatFileSize,
-	stripProtocol,
-} from "@/lib/format";
-
-function DeliveryValue({ cost }: { cost: number | null }) {
-	const text = formatDelivery(cost);
-	if (cost == null) {
-		return (
-			<span className="inline-flex items-center gap-1 tabular-nums">
-				<Truck className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{text}
-			</span>
-		);
-	}
-	if (cost === 0) {
-		return (
-			<span className="inline-flex items-center gap-1 tabular-nums">
-				<CircleCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{text}
-			</span>
-		);
-	}
-	return <span className="tabular-nums">{text}</span>;
-}
-
-function DeferralValue({ days }: { days: number }) {
-	if (days === 0) {
-		return (
-			<span className="inline-flex items-center gap-1">
-				<CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{formatDeferral(days)}
-			</span>
-		);
-	}
-	return <span>{formatDeferral(days)}</span>;
-}
+import { formatCurrency, formatDateTime, formatFileSize, stripProtocol } from "@/lib/format";
 
 interface SupplierDetailDrawerProps {
 	supplier: Supplier | null;
 	open: boolean;
 	onClose: () => void;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }
 
 function DocIcon({ type }: { type: string }) {
@@ -275,7 +235,15 @@ function EmailContent({
 	);
 }
 
-function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isMobile: boolean }) {
+function SupplierDrawerContent({
+	supplier,
+	isMobile,
+	onSelectSupplier,
+}: {
+	supplier: Supplier;
+	isMobile: boolean;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
+}) {
 	const [mobileTab, setMobileTab] = useState<MobileTab>("info");
 	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
 	const scrollToLatest = useCallback((el: HTMLElement | null) => {
@@ -286,6 +254,22 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
+			{supplier.status === "получено_кп" && onSelectSupplier && (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="absolute top-3 right-[5.25rem]"
+							aria-label="Выбрать поставщика"
+							onClick={() => onSelectSupplier?.(supplier.id, supplier.companyName)}
+						>
+							<UserCheck aria-hidden="true" />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Выбрать поставщика</TooltipContent>
+				</Tooltip>
+			)}
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
@@ -374,7 +358,7 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 	);
 }
 
-export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
+export function SupplierDetailDrawer({ supplier, open, onClose, onSelectSupplier }: SupplierDetailDrawerProps) {
 	const isMobile = useIsMobile();
 
 	return (
@@ -385,7 +369,14 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 			}}
 		>
 			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
-				{supplier && <SupplierDrawerContent key={supplier.id} supplier={supplier} isMobile={isMobile} />}
+				{supplier && (
+					<SupplierDrawerContent
+						key={supplier.id}
+						supplier={supplier}
+						isMobile={isMobile}
+						onSelectSupplier={onSelectSupplier}
+					/>
+				)}
 			</SheetContent>
 		</Sheet>
 	);

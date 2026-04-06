@@ -1,3 +1,4 @@
+import { setItemCurrentSupplier } from "./item-detail-mock-data";
 import type {
 	Supplier,
 	SupplierChatMessage,
@@ -166,6 +167,7 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			itemId,
 			companyName: COMPANY_NAMES[idx % COMPANY_NAMES.length],
 			status,
+			archived: false,
 			email: `info@${WEBSITES[idx % WEBSITES.length]}`,
 			website: `https://${WEBSITES[idx % WEBSITES.length]}`,
 			address: ADDRESSES[idx % ADDRESSES.length],
@@ -224,6 +226,10 @@ function simulateDelay(): Promise<void> {
 
 function applySupplierFilters(suppliers: Supplier[], params?: SupplierFilterParams): Supplier[] {
 	let result = suppliers;
+
+	if (!params?.showArchived) {
+		result = result.filter((s) => !s.archived);
+	}
 
 	if (params?.search) {
 		const q = params.search.toLowerCase();
@@ -301,6 +307,30 @@ export async function deleteSuppliers(itemId: string, supplierIds: string[]): Pr
 	const idsToDelete = new Set(supplierIds);
 	const remaining = suppliers.filter((s) => !idsToDelete.has(s.id));
 	store.set(itemId, remaining);
+}
+
+export async function archiveSuppliers(itemId: string, supplierIds: string[]): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const idsToArchive = new Set(supplierIds);
+	store.set(
+		itemId,
+		suppliers.map((s) => (idsToArchive.has(s.id) ? { ...s, archived: true } : s)),
+	);
+}
+
+export async function selectSupplier(itemId: string, supplierId: string): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const supplier = suppliers.find((s) => s.id === supplierId);
+	if (!supplier) throw new Error("Supplier not found");
+	setItemCurrentSupplier(itemId, {
+		companyName: supplier.companyName,
+		deliveryCost: supplier.deliveryCost,
+		deferralDays: supplier.deferralDays,
+		pricePerUnit: supplier.pricePerUnit,
+		tco: supplier.tco,
+	});
 }
 
 export async function sendSupplierMessage(

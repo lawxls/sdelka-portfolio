@@ -3,17 +3,16 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
-	CircleCheck,
-	CreditCard,
 	Download,
 	ListFilter,
 	LoaderCircle,
 	Search,
 	Trash2,
-	Truck,
+	UserCheck,
 } from "lucide-react";
 import { useRef } from "react";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
+import { DeferralValue, DeliveryValue } from "@/components/supplier-value-displays";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,7 +37,7 @@ import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency, formatDeferral, formatDelivery, stripProtocol } from "@/lib/format";
+import { formatCurrency, stripProtocol } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface SuppliersTableProps {
@@ -53,6 +53,10 @@ interface SuppliersTableProps {
 	onSelectionChange: (idOrAll: string) => void;
 	onArchive: () => void;
 	isArchiving: boolean;
+	onArchiveSupplier: (supplierId: string) => void;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
+	showArchived: boolean;
+	onToggleArchived: () => void;
 	onDelete: () => void;
 	isDeleting: boolean;
 	onRowClick?: (supplierId: string) => void;
@@ -66,39 +70,6 @@ const SORTABLE_COLUMNS: { label: string; field: SupplierSortField }[] = [
 	{ label: "ЦЕНА/ЕД.", field: "pricePerUnit" },
 	{ label: "TCO", field: "tco" },
 ];
-
-function DeliveryValue({ cost }: { cost: number | null }) {
-	const text = formatDelivery(cost);
-	if (cost == null) {
-		return (
-			<span className="inline-flex items-center gap-1">
-				<Truck className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{text}
-			</span>
-		);
-	}
-	if (cost === 0) {
-		return (
-			<span className="inline-flex items-center gap-1">
-				<CircleCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{text}
-			</span>
-		);
-	}
-	return <span className="tabular-nums">{text}</span>;
-}
-
-function DeferralValue({ days }: { days: number }) {
-	if (days === 0) {
-		return (
-			<span className="inline-flex items-center gap-1">
-				<CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
-				{formatDeferral(days)}
-			</span>
-		);
-	}
-	return <span>{formatDeferral(days)}</span>;
-}
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -123,6 +94,10 @@ export function SuppliersTable({
 	onSelectionChange,
 	onArchive,
 	isArchiving,
+	onArchiveSupplier,
+	onSelectSupplier,
+	showArchived,
+	onToggleArchived,
 	onDelete,
 	isDeleting,
 	onRowClick,
@@ -247,7 +222,15 @@ export function SuppliersTable({
 			</Tooltip>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<Button type="button" variant="ghost" size="icon-sm" aria-label="Архив">
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Архив"
+						aria-pressed={showArchived}
+						onClick={onToggleArchived}
+						className={showArchived ? "bg-muted" : ""}
+					>
 						<Archive aria-hidden="true" />
 					</Button>
 				</TooltipTrigger>
@@ -389,43 +372,58 @@ export function SuppliersTable({
 						</TableRow>
 					) : (
 						suppliers.map((supplier) => (
-							<TableRow
-								key={supplier.id}
-								className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
-								onClick={() => onRowClick?.(supplier.id)}
-							>
-								<TableCell onClick={(e) => e.stopPropagation()}>
-									<Checkbox
-										checked={selectedIds.has(supplier.id)}
-										onCheckedChange={() => onSelectionChange(supplier.id)}
-										aria-label={`Выбрать ${supplier.companyName}`}
-									/>
-								</TableCell>
-								<TableCell>
-									<div className="flex flex-col gap-1">
-										<span className="font-medium">{supplier.companyName}</span>
-										<SupplierStatusIndicator status={supplier.status} className="text-xs" />
-									</div>
-								</TableCell>
-								<TableCell onClick={(e) => e.stopPropagation()}>
-									<a
-										href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+							<ContextMenu key={supplier.id}>
+								<ContextMenuTrigger asChild>
+									<TableRow
+										className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+										onClick={() => onRowClick?.(supplier.id)}
 									>
-										{stripProtocol(supplier.website)}
-									</a>
-								</TableCell>
-								<TableCell>
-									<DeliveryValue cost={supplier.deliveryCost} />
-								</TableCell>
-								<TableCell>
-									<DeferralValue days={supplier.deferralDays} />
-								</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
-							</TableRow>
+										<TableCell onClick={(e) => e.stopPropagation()}>
+											<Checkbox
+												checked={selectedIds.has(supplier.id)}
+												onCheckedChange={() => onSelectionChange(supplier.id)}
+												aria-label={`Выбрать ${supplier.companyName}`}
+											/>
+										</TableCell>
+										<TableCell>
+											<div className="flex flex-col gap-1">
+												<span className="font-medium">{supplier.companyName}</span>
+												<SupplierStatusIndicator status={supplier.status} className="text-xs" />
+											</div>
+										</TableCell>
+										<TableCell onClick={(e) => e.stopPropagation()}>
+											<a
+												href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+											>
+												{stripProtocol(supplier.website)}
+											</a>
+										</TableCell>
+										<TableCell>
+											<DeliveryValue cost={supplier.deliveryCost} />
+										</TableCell>
+										<TableCell>
+											<DeferralValue days={supplier.deferralDays} />
+										</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
+									</TableRow>
+								</ContextMenuTrigger>
+								<ContextMenuContent>
+									{supplier.status === "получено_кп" && onSelectSupplier && (
+										<ContextMenuItem onSelect={() => onSelectSupplier(supplier.id, supplier.companyName)}>
+											<UserCheck className="size-3.5" />
+											Выбрать поставщика
+										</ContextMenuItem>
+									)}
+									<ContextMenuItem onSelect={() => onArchiveSupplier(supplier.id)}>
+										<Archive className="size-3.5" />
+										Архивировать
+									</ContextMenuItem>
+								</ContextMenuContent>
+							</ContextMenu>
 						))
 					)}
 				</TableBody>

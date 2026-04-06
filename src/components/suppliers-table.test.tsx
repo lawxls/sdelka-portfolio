@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -67,6 +67,9 @@ function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>>
 		onSelectionChange: vi.fn(),
 		onArchive: vi.fn(),
 		isArchiving: false,
+		onArchiveSupplier: vi.fn(),
+		showArchived: false,
+		onToggleArchived: vi.fn(),
 		onDelete: vi.fn(),
 		isDeleting: false,
 	};
@@ -431,5 +434,75 @@ describe("SuppliersTable mobile cards", () => {
 	test("renders search input on mobile", () => {
 		renderTable();
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+	});
+});
+
+describe("SuppliersTable context menu", () => {
+	test("right-clicking a row opens context menu with Архивировать", () => {
+		renderTable();
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		expect(screen.getByText("Архивировать")).toBeInTheDocument();
+	});
+
+	test("clicking Архивировать calls onArchiveSupplier with supplier id", () => {
+		const onArchiveSupplier = vi.fn();
+		renderTable({ onArchiveSupplier });
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		fireEvent.click(screen.getByText("Архивировать"));
+		expect(onArchiveSupplier).toHaveBeenCalledWith("s1");
+	});
+
+	test("context menu shows Выбрать поставщика for получено_кп supplier", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		// s1 is получено_кп
+		fireEvent.contextMenu(rows[1]);
+		expect(screen.getByText("Выбрать поставщика")).toBeInTheDocument();
+	});
+
+	test("context menu hides Выбрать поставщика for non-получено_кп supplier", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		// s2 is ждем_ответа
+		fireEvent.contextMenu(rows[2]);
+		expect(screen.queryByText("Выбрать поставщика")).not.toBeInTheDocument();
+	});
+
+	test("clicking Выбрать поставщика calls onSelectSupplier with id and company name", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		fireEvent.click(screen.getByText("Выбрать поставщика"));
+		expect(onSelectSupplier).toHaveBeenCalledWith("s1", "ООО «Альфа»");
+	});
+});
+
+describe("SuppliersTable archive filter toggle", () => {
+	test("archive toggle button is present in toolbar", () => {
+		renderTable();
+		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
+	});
+
+	test("archive toggle shows pressed state when showArchived is true", () => {
+		renderTable({ showArchived: true });
+		expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "true");
+	});
+
+	test("archive toggle shows unpressed state when showArchived is false", () => {
+		renderTable({ showArchived: false });
+		expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("clicking archive toggle calls onToggleArchived", async () => {
+		const user = userEvent.setup();
+		const onToggleArchived = vi.fn();
+		renderTable({ onToggleArchived });
+		await user.click(screen.getByRole("button", { name: "Архив" }));
+		expect(onToggleArchived).toHaveBeenCalled();
 	});
 });
