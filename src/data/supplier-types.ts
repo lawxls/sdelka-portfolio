@@ -27,10 +27,23 @@ export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; cla
 	отказ: { label: SUPPLIER_STATUS_LABELS.отказ, className: "text-destructive" },
 };
 
+/** Statuses that allow sending messages to the supplier */
+export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set(["ждем_ответа", "переговоры", "получено_кп"]);
+
 export interface SupplierDocument {
 	name: string;
 	type: string;
 	size: number;
+}
+
+export interface MessageAttachment {
+	name: string;
+	type: string;
+	size: number;
+}
+
+export function filesToAttachments(files: File[]): MessageAttachment[] {
+	return files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }));
 }
 
 export interface SupplierChatMessage {
@@ -38,6 +51,7 @@ export interface SupplierChatMessage {
 	timestamp: string;
 	body: string;
 	isOurs: boolean;
+	attachments?: MessageAttachment[];
 }
 
 export interface SupplierPositionOffer {

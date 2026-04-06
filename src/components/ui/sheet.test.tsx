@@ -38,4 +38,30 @@ describe("Sheet", () => {
 		const content = document.querySelector('[data-slot="sheet-content"]');
 		expect(content?.getAttribute("data-side")).toBe("right");
 	});
+
+	test("applies xl size data attribute", () => {
+		render(
+			<Sheet open>
+				<SheetContent size="xl">
+					<SheetTitle>XL Sheet</SheetTitle>
+					<SheetDescription>Wide drawer</SheetDescription>
+				</SheetContent>
+			</Sheet>,
+		);
+		const content = document.querySelector('[data-slot="sheet-content"]');
+		expect(content?.getAttribute("data-size")).toBe("xl");
+	});
+
+	test("xl size applies wide max-width class", () => {
+		render(
+			<Sheet open>
+				<SheetContent size="xl">
+					<SheetTitle>XL Sheet</SheetTitle>
+					<SheetDescription>Wide drawer</SheetDescription>
+				</SheetContent>
+			</Sheet>,
+		);
+		const content = document.querySelector('[data-slot="sheet-content"]');
+		expect(content?.className).toMatch(/max-w-\[70vw\]/);
+	});
 });

@@ -7,6 +7,7 @@ import type {
 	SupplierSortField,
 	SupplierStatus,
 } from "./supplier-types";
+import { filesToAttachments } from "./supplier-types";
 
 const COMPANY_NAMES = [
 	"ООО «СтройТорг»",
@@ -119,6 +120,10 @@ function makeChatHistory(seed: number): SupplierChatMessage[] {
 			timestamp: new Date(base.getTime() + (seed + 2) * 86_400_000).toISOString(),
 			body: "Здравствуйте! КП направлено во вложении. Готовы обсудить условия.",
 			isOurs: false,
+			attachments: [
+				{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },
+				{ name: "Прайс-лист 2026.xlsx", type: "xlsx", size: 89_000 },
+			],
 		},
 	];
 }
@@ -181,6 +186,7 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 // --- Mutable store (lazily populated per item) ---
 
 let store: Map<string, Supplier[]> = new Map();
+let sendShouldFail = false;
 
 function getSuppliersForItem(itemId: string): Supplier[] {
 	let suppliers = store.get(itemId);
@@ -193,6 +199,11 @@ function getSuppliersForItem(itemId: string): Supplier[] {
 
 export function _resetSupplierStore() {
 	store = new Map();
+	sendShouldFail = false;
+}
+
+export function _setSendShouldFail(fail: boolean) {
+	sendShouldFail = fail;
 }
 
 // --- Configurable delay for tests ---
@@ -290,4 +301,29 @@ export async function deleteSuppliers(itemId: string, supplierIds: string[]): Pr
 	const idsToDelete = new Set(supplierIds);
 	const remaining = suppliers.filter((s) => !idsToDelete.has(s.id));
 	store.set(itemId, remaining);
+}
+
+export async function sendSupplierMessage(
+	itemId: string,
+	supplierId: string,
+	body: string,
+	files?: File[],
+): Promise<SupplierChatMessage> {
+	await simulateDelay();
+	if (sendShouldFail) throw new Error("Не удалось отправить сообщение");
+	const suppliers = getSuppliersForItem(itemId);
+	const supplier = suppliers.find((s) => s.id === supplierId);
+	if (!supplier) throw new Error("Supplier not found");
+
+	const attachments = files && files.length > 0 ? filesToAttachments(files) : undefined;
+
+	const message: SupplierChatMessage = {
+		sender: "Агент",
+		timestamp: new Date().toISOString(),
+		body,
+		isOurs: true,
+		attachments,
+	};
+	supplier.chatHistory.push(message);
+	return message;
 }

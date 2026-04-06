@@ -138,9 +138,9 @@ describe("ProcurementItemDrawer", () => {
 		expect(tablist).toBeInTheDocument();
 		expect(tabs).toHaveLength(4);
 		expect(tabs[0]).toHaveTextContent("Поставщики");
-		expect(tabs[1]).toHaveTextContent("Аналитика");
-		expect(tabs[2]).toHaveTextContent("Информация");
-		expect(tabs[3]).toHaveTextContent("Задачи");
+		expect(tabs[1]).toHaveTextContent("Задачи");
+		expect(tabs[2]).toHaveTextContent("Аналитика");
+		expect(tabs[3]).toHaveTextContent("Информация");
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 

@@ -6,6 +6,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
+const mockIsMobile = vi.hoisted(() => ({ value: false }));
+vi.mock("@/hooks/use-is-mobile", () => ({
+	useIsMobile: () => mockIsMobile.value,
+}));
+
 import { SupplierDetailDrawer } from "./supplier-detail-drawer";
 
 let queryClient: QueryClient;
@@ -178,5 +183,204 @@ describe("SupplierDetailDrawer", () => {
 			}),
 		});
 		expect(screen.queryByText("История общения")).not.toBeInTheDocument();
+	});
+
+	test("uses xl size on desktop", () => {
+		renderDrawer();
+		const content = document.querySelector('[data-slot="sheet-content"]');
+		expect(content?.getAttribute("data-size")).toBe("xl");
+	});
+
+	test("renders two-column grid layout on desktop", () => {
+		renderDrawer();
+		const grid = document.querySelector("[data-testid='supplier-columns']");
+		expect(grid).toBeInTheDocument();
+		expect(grid?.className).toMatch(/grid/);
+		expect(grid?.className).toMatch(/grid-cols-2/);
+	});
+
+	test("left column contains info sections", () => {
+		renderDrawer();
+		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
+		expect(leftCol).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Комментарии агента")).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Документы из диалога")).toBeInTheDocument();
+	});
+
+	test("right column contains email thread", () => {
+		renderDrawer();
+		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
+		expect(rightCol).toBeInTheDocument();
+		expect(within(rightCol as HTMLElement).getByText("История общения")).toBeInTheDocument();
+	});
+
+	test("both columns scroll independently", () => {
+		renderDrawer();
+		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
+		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
+		expect(leftCol?.className).toMatch(/overflow-y-auto/);
+		expect(rightCol?.className).toMatch(/overflow/);
+	});
+
+	test("shared header spans full width above columns", () => {
+		renderDrawer();
+		const header = document.querySelector('[data-slot="sheet-header"]');
+		const grid = document.querySelector("[data-testid='supplier-columns']");
+		// Header is a sibling before the grid, not inside a column
+		expect(header).toBeInTheDocument();
+		expect(grid).toBeInTheDocument();
+		expect(header?.compareDocumentPosition(grid as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	describe("mobile tabbed layout", () => {
+		beforeEach(() => {
+			mockIsMobile.value = true;
+		});
+
+		afterEach(() => {
+			mockIsMobile.value = false;
+		});
+
+		test("renders tabs instead of two-column grid on mobile", () => {
+			renderDrawer();
+			const tablist = screen.getByRole("tablist");
+			expect(tablist).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Информация" })).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Переписка" })).toBeInTheDocument();
+			expect(screen.queryByTestId("supplier-columns")).not.toBeInTheDocument();
+		});
+
+		test("shows info tab content by default", () => {
+			renderDrawer();
+			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+			expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
+			expect(screen.queryByText("История общения")).not.toBeInTheDocument();
+		});
+
+		test("switches to email tab on click", async () => {
+			const user = userEvent.setup();
+			renderDrawer();
+			await user.click(screen.getByRole("tab", { name: "Переписка" }));
+			expect(screen.getByText("История общения")).toBeInTheDocument();
+			expect(screen.queryByText("Расчёт TCO (Total Cost of Ownership)")).not.toBeInTheDocument();
+		});
+
+		test("shared header visible above tabs", () => {
+			renderDrawer();
+			expect(screen.getAllByText("ООО «Альфа-Трейд»").length).toBeGreaterThanOrEqual(1);
+			expect(screen.getByText("Получено КП")).toBeInTheDocument();
+			expect(screen.getByRole("tablist")).toBeInTheDocument();
+		});
+
+		test("composer visible on email tab for composable status", async () => {
+			const user = userEvent.setup();
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					status: "ждем_ответа",
+					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
+				}),
+			});
+			await user.click(screen.getByRole("tab", { name: "Переписка" }));
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("info tab is selected by default with aria-selected", () => {
+			renderDrawer();
+			expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByRole("tab", { name: "Переписка" })).toHaveAttribute("aria-selected", "false");
+		});
+	});
+
+	describe("inline attachments on thread messages", () => {
+		test("renders attachment chips with name and size when message has attachments", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Альфа-Трейд»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "КП во вложении.",
+							isOurs: false,
+							attachments: [
+								{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },
+								{ name: "Прайс-лист.xlsx", type: "xlsx", size: 89_000 },
+							],
+						},
+					],
+				}),
+			});
+			expect(screen.getByText("Коммерческое предложение.pdf")).toBeInTheDocument();
+			expect(screen.getByText("239 КБ")).toBeInTheDocument();
+			expect(screen.getByText("Прайс-лист.xlsx")).toBeInTheDocument();
+			expect(screen.getByText("87 КБ")).toBeInTheDocument();
+		});
+
+		test("does not render attachment section when message has no attachments", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "Агент",
+							timestamp: "2026-02-20T10:00:00.000Z",
+							body: "Добрый день!",
+							isOurs: true,
+						},
+					],
+				}),
+			});
+			const article = screen.getByText("Добрый день!").closest("article") as HTMLElement;
+			expect(article.querySelectorAll("[data-testid='msg-attachment']")).toHaveLength(0);
+		});
+
+		test("renders type-appropriate icon for each attachment", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Тест»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "Документы.",
+							isOurs: false,
+							attachments: [
+								{ name: "offer.pdf", type: "pdf", size: 100_000 },
+								{ name: "prices.xlsx", type: "xlsx", size: 50_000 },
+								{ name: "spec.docx", type: "docx", size: 30_000 },
+							],
+						},
+					],
+				}),
+			});
+			const chips = screen.getAllByTestId("msg-attachment");
+			expect(chips).toHaveLength(3);
+		});
+	});
+
+	describe("ChatComposer visibility", () => {
+		test("shows composer for ждем_ответа status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
+		});
+
+		test("shows composer for переговоры status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "переговоры" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("shows composer for получено_кп status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "получено_кп" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("hides composer for письмо_не_отправлено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_не_отправлено" }) });
+			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+		});
+
+		test("hides composer for отказ status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "отказ" }) });
+			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+		});
 	});
 });

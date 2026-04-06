@@ -14,12 +14,16 @@ import {
 	Truck,
 	User,
 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { ChatComposer } from "@/components/chat-composer";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierChatMessage, SupplierDocument } from "@/data/supplier-types";
+import { COMPOSABLE_STATUSES } from "@/data/supplier-types";
+import { useSendSupplierMessage } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	formatCurrency,
@@ -154,7 +158,13 @@ function DocumentsSection({ documents }: { documents: SupplierDocument[] }) {
 	);
 }
 
-function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
+function EmailThread({
+	messages,
+	lastMessageRef,
+}: {
+	messages: SupplierChatMessage[];
+	lastMessageRef?: React.RefCallback<HTMLElement>;
+}) {
 	if (messages.length === 0) return null;
 	return (
 		<section className="rounded-lg border bg-muted/30 p-4">
@@ -163,9 +173,10 @@ function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
 				История общения
 			</h3>
 			<div className="flex flex-col gap-3">
-				{messages.map((msg) => (
+				{messages.map((msg, i) => (
 					<article
 						key={`${msg.timestamp}-${msg.sender}`}
+						ref={i === messages.length - 1 ? lastMessageRef : undefined}
 						data-email-msg={msg.isOurs ? "ours" : "theirs"}
 						className="rounded-md border bg-background text-sm"
 					>
@@ -181,10 +192,158 @@ function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
 							<span>{formatDateTime(msg.timestamp)}</span>
 						</div>
 						<div className="px-3 py-2.5">{msg.body}</div>
+						{msg.attachments && msg.attachments.length > 0 && (
+							<div className="flex flex-wrap gap-1.5 border-t px-3 py-2">
+								{msg.attachments.map((att) => (
+									<div
+										key={att.name}
+										data-testid="msg-attachment"
+										className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
+									>
+										<DocIcon type={att.type} />
+										<span className="max-w-32 truncate">{att.name}</span>
+										<span className="text-muted-foreground">{formatFileSize(att.size)}</span>
+									</div>
+								))}
+							</div>
+						)}
 					</article>
 				))}
 			</div>
 		</section>
+	);
+}
+
+type MobileTab = "info" | "email";
+
+function InfoContent({ supplier }: { supplier: Supplier }) {
+	return (
+		<div className="space-y-6 p-4">
+			<TcoSection supplier={supplier} />
+			<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
+			<DocumentsSection documents={supplier.documents} />
+		</div>
+	);
+}
+
+function EmailContent({
+	supplier,
+	showComposer,
+	scrollToLatest,
+	sendMutation,
+}: {
+	supplier: Supplier;
+	showComposer: boolean;
+	scrollToLatest: React.RefCallback<HTMLElement>;
+	sendMutation: ReturnType<typeof useSendSupplierMessage>;
+}) {
+	return (
+		<div className="flex h-full flex-col overflow-hidden">
+			<div className="flex-1 overflow-y-auto p-4">
+				<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+			</div>
+			{showComposer && (
+				<ChatComposer
+					onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+					isPending={sendMutation.isPending}
+					error={sendMutation.error?.message ?? null}
+				/>
+			)}
+		</div>
+	);
+}
+
+function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isMobile: boolean }) {
+	const [mobileTab, setMobileTab] = useState<MobileTab>("info");
+	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
+	const scrollToLatest = useCallback((el: HTMLElement | null) => {
+		el?.scrollIntoView({ block: "end" });
+	}, []);
+
+	const showComposer = COMPOSABLE_STATUSES.has(supplier.status);
+
+	return (
+		<div className="flex h-full flex-col overflow-hidden">
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
+						<Archive aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Архивировать</TooltipContent>
+			</Tooltip>
+			<SheetHeader className="border-b pb-4">
+				<SheetTitle className="flex items-center gap-2">
+					{supplier.companyName}
+					<span className="text-muted-foreground" aria-hidden="true">
+						·
+					</span>
+					<SupplierStatusIndicator status={supplier.status} className="text-xs" />
+				</SheetTitle>
+				<SheetDescription>{supplier.address}</SheetDescription>
+				<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
+				<span className="text-sm text-muted-foreground">{supplier.email}</span>
+			</SheetHeader>
+
+			{isMobile ? (
+				<>
+					<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
+						{(
+							[
+								{ key: "info", label: "Информация" },
+								{ key: "email", label: "Переписка" },
+							] as const
+						).map((tab) => (
+							<button
+								key={tab.key}
+								type="button"
+								role="tab"
+								aria-selected={mobileTab === tab.key}
+								className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
+									mobileTab === tab.key
+										? "border-b-2 border-primary text-foreground"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+								onClick={() => setMobileTab(tab.key)}
+							>
+								{tab.label}
+							</button>
+						))}
+					</div>
+					<div className="min-h-0 flex-1 overflow-y-auto">
+						{mobileTab === "info" && <InfoContent supplier={supplier} />}
+						{mobileTab === "email" && (
+							<EmailContent
+								supplier={supplier}
+								showComposer={showComposer}
+								scrollToLatest={scrollToLatest}
+								sendMutation={sendMutation}
+							/>
+						)}
+					</div>
+				</>
+			) : (
+				<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
+					<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
+						<TcoSection supplier={supplier} />
+						<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
+						<DocumentsSection documents={supplier.documents} />
+					</div>
+					<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
+						<div className="flex-1 overflow-y-auto">
+							<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+						</div>
+						{showComposer && (
+							<ChatComposer
+								onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+								isPending={sendMutation.isPending}
+								error={sendMutation.error?.message ?? null}
+							/>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
 	);
 }
 
@@ -198,38 +357,8 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 				if (!nextOpen) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined}>
-				{supplier && (
-					<div className="flex h-full flex-col overflow-hidden">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
-									<Archive aria-hidden="true" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>Архивировать</TooltipContent>
-						</Tooltip>
-						<SheetHeader className="border-b pb-4">
-							<SheetTitle className="flex items-center gap-2">
-								{supplier.companyName}
-								<span className="text-muted-foreground" aria-hidden="true">
-									·
-								</span>
-								<SupplierStatusIndicator status={supplier.status} className="text-xs" />
-							</SheetTitle>
-							<SheetDescription>{supplier.address}</SheetDescription>
-							<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
-							<span className="text-sm text-muted-foreground">{supplier.email}</span>
-						</SheetHeader>
-
-						<div className="flex-1 space-y-6 overflow-y-auto p-4">
-							<TcoSection supplier={supplier} />
-							<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
-							<DocumentsSection documents={supplier.documents} />
-							<EmailThread messages={supplier.chatHistory} />
-						</div>
-					</div>
-				)}
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
+				{supplier && <SupplierDrawerContent key={supplier.id} supplier={supplier} isMobile={isMobile} />}
 			</SheetContent>
 		</Sheet>
 	);

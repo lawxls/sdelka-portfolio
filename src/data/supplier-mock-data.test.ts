@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	_resetSupplierStore,
+	_setSendShouldFail,
 	_setSupplierMockDelay,
 	deleteSuppliers,
 	getSupplier,
 	getSuppliers,
+	sendSupplierMessage,
 } from "./supplier-mock-data";
 import { SUPPLIER_STATUSES } from "./supplier-types";
 
@@ -242,5 +244,81 @@ describe("getSuppliers combined search + sort + filter", () => {
 			expect(s.status).toBe("получено_кп");
 			expect(s.companyName.toLowerCase()).toContain(searchTerm.toLowerCase());
 		}
+	});
+});
+
+describe("mock data attachments on existing messages", () => {
+	it("supplier reply messages include attachments", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const withAttachments = suppliers.filter((s) =>
+			s.chatHistory.some((m) => m.attachments && m.attachments.length > 0),
+		);
+		expect(withAttachments.length).toBeGreaterThan(0);
+	});
+
+	it("first message (agent) has no attachments", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		for (const s of suppliers) {
+			expect(s.chatHistory[0].attachments).toBeUndefined();
+		}
+	});
+
+	it("reply attachments have name, type, and size", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const reply = suppliers[0].chatHistory[1];
+		const attachments = reply.attachments ?? [];
+		expect(attachments.length).toBeGreaterThan(0);
+		for (const att of attachments) {
+			expect(att.name).toBeTruthy();
+			expect(att.type).toBeTruthy();
+			expect(att.size).toBeGreaterThan(0);
+		}
+	});
+});
+
+describe("sendSupplierMessage", () => {
+	it("appends a message to the supplier's chatHistory", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const target = suppliers[0];
+		const before = target.chatHistory.length;
+
+		const msg = await sendSupplierMessage("item-1", target.id, "Тестовое сообщение");
+
+		expect(msg.body).toBe("Тестовое сообщение");
+		expect(msg.sender).toBe("Агент");
+		expect(msg.isOurs).toBe(true);
+		expect(msg.timestamp).toBeTruthy();
+
+		const updated = await getSupplier("item-1", target.id);
+		expect(updated?.chatHistory).toHaveLength(before + 1);
+		expect(updated?.chatHistory[updated.chatHistory.length - 1].body).toBe("Тестовое сообщение");
+	});
+
+	it("throws for non-existent supplier", async () => {
+		await expect(sendSupplierMessage("item-1", "nonexistent", "msg")).rejects.toThrow("Supplier not found");
+	});
+
+	it("throws when _setSendShouldFail is set", async () => {
+		_setSendShouldFail(true);
+		const { suppliers } = await getSuppliers("item-1");
+		await expect(sendSupplierMessage("item-1", suppliers[0].id, "msg")).rejects.toThrow(
+			"Не удалось отправить сообщение",
+		);
+	});
+
+	it("includes attachments when files are provided", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const file = new File([new Uint8Array(5000)], "offer.pdf", { type: "application/pdf" });
+		const msg = await sendSupplierMessage("item-1", suppliers[0].id, "Вот КП", [file]);
+
+		expect(msg.attachments).toHaveLength(1);
+		expect(msg.attachments?.[0]).toEqual({ name: "offer.pdf", type: "pdf", size: 5000 });
+	});
+
+	it("omits attachments when no files provided", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const msg = await sendSupplierMessage("item-1", suppliers[0].id, "Без файлов");
+
+		expect(msg.attachments).toBeUndefined();
 	});
 });
