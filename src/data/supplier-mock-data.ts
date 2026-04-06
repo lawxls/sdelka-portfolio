@@ -241,11 +241,33 @@ function applySupplierFilters(suppliers: Supplier[], params?: SupplierFilterPara
 		result = result.filter((s) => set.has(s.status));
 	}
 
-	if (params?.sort) {
-		result = sortSuppliers(result, params.sort, params.dir ?? "asc");
-	}
+	result = params?.sort ? sortSuppliers(result, params.sort, params.dir ?? "asc") : defaultSortSuppliers(result);
 
 	return result;
+}
+
+/** Default sort: "получено_кп" first, then TCO asc, then price/unit asc */
+function defaultSortSuppliers(suppliers: Supplier[]): Supplier[] {
+	const sorted = [...suppliers];
+	sorted.sort((a, b) => {
+		const aKP = a.status === "получено_кп" ? 0 : 1;
+		const bKP = b.status === "получено_кп" ? 0 : 1;
+		if (aKP !== bKP) return aKP - bKP;
+
+		// nulls last
+		if (a.tco != null && b.tco != null) {
+			if (a.tco !== b.tco) return a.tco - b.tco;
+		} else if (a.tco != null) return -1;
+		else if (b.tco != null) return 1;
+
+		if (a.pricePerUnit != null && b.pricePerUnit != null) {
+			return a.pricePerUnit - b.pricePerUnit;
+		}
+		if (a.pricePerUnit != null) return -1;
+		if (b.pricePerUnit != null) return 1;
+		return 0;
+	});
+	return sorted;
 }
 
 function sortSuppliers(suppliers: Supplier[], field: SupplierSortField, dir: "asc" | "desc"): Supplier[] {

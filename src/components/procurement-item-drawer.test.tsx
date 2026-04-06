@@ -394,7 +394,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("selecting suppliers shows selection toolbar with delete", async () => {
+	test("selecting suppliers shows selection toolbar with archive", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
@@ -406,7 +406,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(checkboxes[1]);
 
 		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /архивировать/i })).toBeInTheDocument();
 	});
 
 	test("details tab shows read-only view with sections and edit buttons", async () => {
@@ -677,22 +677,17 @@ describe("ProcurementItemDrawer", () => {
 
 		// item-1 mock has currentSupplier with companyName "МеталлТрейд"
 		await waitFor(() => {
-			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+			expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		});
 		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
 	});
 
 	test("suppliers tab hides current supplier card when item has no currentSupplier", async () => {
-		const itemNoSupplier: ProcurementItem = {
-			...TEST_ITEM,
-			id: "item-2",
-			name: "Труба профильная",
-		};
 		render(
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
-					<MemoryRouter initialEntries={["/procurement?item=item-2"]}>
-						<ProcurementItemDrawer item={itemNoSupplier} />
+					<MemoryRouter initialEntries={["/procurement?item=item-no-supplier"]}>
+						<ProcurementItemDrawer />
 						<UrlSpy />
 					</MemoryRouter>
 				</TooltipProvider>
@@ -704,7 +699,7 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
 		});
 
-		expect(screen.queryByText("Текущий поставщик")).not.toBeInTheDocument();
+		expect(screen.queryByText(/Текущий поставщик/)).not.toBeInTheDocument();
 	});
 
 	test("context menu shows Выбрать поставщика for получено_кп supplier", async () => {
@@ -725,9 +720,9 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(11);
 		});
 
-		// Second data row is письмо_не_отправлено (STATUS_PATTERN[1])
+		// Default sort puts получено_кП first (3 rows), so row 4 is non-получено_кп
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[2]);
+		fireEvent.contextMenu(rows[4]);
 		expect(screen.queryByText("Выбрать поставщика")).not.toBeInTheDocument();
 	});
 

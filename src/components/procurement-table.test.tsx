@@ -1,10 +1,16 @@
 import { DndContext } from "@dnd-kit/core";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, type RenderOptions, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Folder, ProcurementItem } from "@/data/types";
 import { installMockIntersectionObserver, type ObserverRecord } from "@/test-intersection-observer";
+import { TooltipWrapper } from "@/test-utils";
 import { ProcurementTable } from "./procurement-table";
+
+function renderWithTooltip(ui: ReactNode, options?: Omit<RenderOptions, "wrapper">) {
+	return render(ui, { wrapper: TooltipWrapper, ...options });
+}
 
 let observers: ObserverRecord[];
 
@@ -74,53 +80,53 @@ const defaultProps = {
 
 describe("ProcurementTable", () => {
 	test("renders 8 column headers", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByRole("columnheader")).toHaveLength(8);
 	});
 
 	test("renders correct number of data rows", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		// 1 header row + 4 data rows
 		expect(screen.getAllByRole("row")).toHaveLength(5);
 	});
 
 	test("renders sequential row numbers starting from 1", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByText("1")).toBeInTheDocument();
 		expect(screen.getByText("2")).toBeInTheDocument();
 		expect(screen.getByText("3")).toBeInTheDocument();
 	});
 
 	test("renders item names", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
 		expect(screen.getByText("Труба стальная")).toBeInTheDocument();
 		expect(screen.getByText("Цемент М500")).toBeInTheDocument();
 	});
 
 	test("renders status badges with correct labels", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
 		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
 		expect(screen.getByText("Ожидание аналитики").className).toContain("text-violet-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
-		render(<ProcurementTable {...defaultProps} items={[mockItems[2]]} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[mockItems[2]]} />);
 		// Цемент М500 has null bestPrice, averagePrice, deviation, overpayment → 4 dashes
 		const dashes = screen.getAllByText("—");
 		expect(dashes).toHaveLength(4);
 	});
 
 	test("applies red color class for positive deviation (overpaying)", () => {
-		render(<ProcurementTable {...defaultProps} items={[mockItems[0]]} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[mockItems[0]]} />);
 		// Арматура: deviation = (55000-50000)/50000*100 = +10%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const redCells = [...cells].filter((cell) => cell.className.includes("text-red-600"));
@@ -129,7 +135,7 @@ describe("ProcurementTable", () => {
 	});
 
 	test("applies green color class for negative deviation (savings)", () => {
-		render(<ProcurementTable {...defaultProps} items={[mockItems[1]]} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[mockItems[1]]} />);
 		// Труба: deviation = (30000-35000)/35000*100 = -14.3%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const primaryCells = [...cells].filter((cell) => cell.className.includes("text-primary"));
@@ -138,7 +144,7 @@ describe("ProcurementTable", () => {
 	});
 
 	test("rows have cursor-pointer class when onRowClick provided", () => {
-		render(<ProcurementTable {...defaultProps} onRowClick={() => {}} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} onRowClick={() => {}} />);
 		const dataRows = screen.getAllByRole("row").slice(1);
 		for (const row of dataRows) {
 			expect(row.className).toContain("cursor-pointer");
@@ -146,7 +152,7 @@ describe("ProcurementTable", () => {
 	});
 
 	test("rows do not have cursor-pointer class when onRowClick omitted", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		const dataRows = screen.getAllByRole("row").slice(1);
 		for (const row of dataRows) {
 			expect(row.className).not.toContain("cursor-pointer");
@@ -156,14 +162,14 @@ describe("ProcurementTable", () => {
 	test("calls onRowClick with correct item when row is clicked", async () => {
 		const user = userEvent.setup();
 		const handleRowClick = vi.fn();
-		render(<ProcurementTable {...defaultProps} onRowClick={handleRowClick} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} onRowClick={handleRowClick} />);
 
 		await user.click(screen.getByText("Арматура А500"));
 		expect(handleRowClick).toHaveBeenCalledWith(mockItems[0]);
 	});
 
 	test("sortable column headers have sort buttons", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШАЯ ЦЕНА/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ/ })).toBeInTheDocument();
@@ -172,14 +178,14 @@ describe("ProcurementTable", () => {
 	test("clicking sort button calls onSort with correct field", async () => {
 		const user = userEvent.setup();
 		const onSort = vi.fn();
-		render(<ProcurementTable {...defaultProps} onSort={onSort} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} onSort={onSort} />);
 
 		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
 	test("shows sort direction indicator on active column", () => {
-		render(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
 		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
 		// Instead it should have ArrowUp (asc)
 		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ });
@@ -190,21 +196,21 @@ describe("ProcurementTable", () => {
 	});
 
 	test("does not render pagination buttons", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.queryByText(/Страница/)).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Предыдущая страница" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Следующая страница" })).not.toBeInTheDocument();
 	});
 
 	test("renders sentinel element after table body", () => {
-		render(<ProcurementTable {...defaultProps} hasNextPage />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} hasNextPage />);
 		const sentinel = screen.getByTestId("scroll-sentinel");
 		expect(sentinel).toBeInTheDocument();
 	});
 
 	test("calls loadMore when sentinel is observed and hasNextPage is true", () => {
 		const loadMore = vi.fn();
-		render(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
 
 		// Trigger intersection on the observer created by useIntersectionObserver
 		expect(observers).toHaveLength(1);
@@ -215,7 +221,7 @@ describe("ProcurementTable", () => {
 
 	test("does not call loadMore when hasNextPage is false", () => {
 		const loadMore = vi.fn();
-		render(<ProcurementTable {...defaultProps} hasNextPage={false} loadMore={loadMore} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} hasNextPage={false} loadMore={loadMore} />);
 
 		// Even if sentinel intersects, loadMore should not fire
 		if (observers.length > 0) {
@@ -227,7 +233,7 @@ describe("ProcurementTable", () => {
 
 	test("re-observes sentinel when hasNextPage toggles false → true", () => {
 		const loadMore = vi.fn();
-		const { rerender } = render(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
+		const { rerender } = renderWithTooltip(<ProcurementTable {...defaultProps} hasNextPage loadMore={loadMore} />);
 
 		expect(observers).toHaveLength(1);
 
@@ -244,14 +250,14 @@ describe("ProcurementTable", () => {
 	});
 
 	test("renders scroll container with overflow-auto for horizontal and vertical scrolling", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		const scrollContainer = screen.getByTestId("table-scroll-container");
 		expect(scrollContainer.className).toContain("overflow-auto");
 		expect(scrollContainer.className).toContain("touch-manipulation");
 	});
 
 	test("header cells have sticky top-0 classes with opaque background", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		const headers = screen.getAllByRole("columnheader");
 		for (const header of headers) {
 			expect(header.className).toContain("sticky");
@@ -261,13 +267,13 @@ describe("ProcurementTable", () => {
 	});
 
 	test("name column header is not horizontally pinned", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		const nameHeader = screen.getByText("НАИМЕНОВАНИЕ").closest("[data-slot='table-head']");
 		expect(nameHeader?.className).not.toContain("left-0");
 	});
 
 	test("name column body cells are not horizontally pinned", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		const nameCell = screen.getByText("Арматура А500").closest("[data-slot='table-cell']");
 		expect(nameCell?.className).not.toContain("left-0");
 	});
@@ -275,31 +281,33 @@ describe("ProcurementTable", () => {
 
 describe("ProcurementTable loading states", () => {
 	test("renders skeleton rows when isLoading is true", () => {
-		render(<ProcurementTable {...defaultProps} items={[]} isLoading />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[]} isLoading />);
 		const skeletonRows = screen.getAllByTestId("skeleton-row");
 		expect(skeletonRows).toHaveLength(6);
 	});
 
 	test("does not render data rows when isLoading is true", () => {
-		render(<ProcurementTable {...defaultProps} isLoading />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isLoading />);
 		// Only header row + 6 skeleton rows
 		expect(screen.queryByText("Арматура А500")).not.toBeInTheDocument();
 	});
 
 	test("renders spinner when isFetchingNextPage is true", () => {
-		render(<ProcurementTable {...defaultProps} isFetchingNextPage />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isFetchingNextPage />);
 		expect(screen.getByTestId("loading-more-spinner")).toBeInTheDocument();
 	});
 
 	test("does not render spinner when isFetchingNextPage is false", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.queryByTestId("loading-more-spinner")).not.toBeInTheDocument();
 	});
 });
 
 describe("ProcurementTable error state", () => {
 	test("renders error state with retry button on query failure", () => {
-		render(<ProcurementTable {...defaultProps} items={[]} error={new Error("Network error")} onRetry={() => {}} />);
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={[]} error={new Error("Network error")} onRetry={() => {}} />,
+		);
 		expect(screen.getByTestId("items-error")).toBeInTheDocument();
 		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
 		expect(screen.getByText("Повторить")).toBeInTheDocument();
@@ -308,14 +316,14 @@ describe("ProcurementTable error state", () => {
 	test("clicking retry button calls onRetry", async () => {
 		const user = userEvent.setup();
 		const onRetry = vi.fn();
-		render(<ProcurementTable {...defaultProps} items={[]} error={new Error("fail")} onRetry={onRetry} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[]} error={new Error("fail")} onRetry={onRetry} />);
 
 		await user.click(screen.getByText("Повторить"));
 		expect(onRetry).toHaveBeenCalledOnce();
 	});
 
 	test("does not render error state when no error", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.queryByTestId("items-error")).not.toBeInTheDocument();
 	});
 });
@@ -333,26 +341,26 @@ const itemsWithFolders: ProcurementItem[] = [
 
 describe("ProcurementTable folder badges", () => {
 	test("renders folder badge for items with folderId", () => {
-		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
 		const badge = screen.getByTestId("folder-badge-1");
 		expect(badge).toBeInTheDocument();
 		expect(badge.textContent).toContain("Металлопрокат");
 	});
 
 	test("does not render badge for items without folderId", () => {
-		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
 		expect(screen.queryByTestId("folder-badge-2")).not.toBeInTheDocument();
 	});
 
 	test("badge shows correct folder color", () => {
-		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
 		const badge = screen.getByTestId("folder-badge-1");
 		const dot = badge.querySelector("span[aria-hidden]") as HTMLElement;
 		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
 	});
 
 	test("does not render badges when folders prop is omitted", () => {
-		render(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
 		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
 	});
 });
@@ -368,18 +376,18 @@ const contextMenuProps = {
 
 describe("ProcurementTable context menu", () => {
 	test("rows have data-testid when context menu props are provided", () => {
-		render(<ProcurementTable {...contextMenuProps} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
 		expect(screen.getByTestId("row-1")).toBeInTheDocument();
 		expect(screen.getByTestId("row-2")).toBeInTheDocument();
 	});
 
 	test("rows do not have data-testid when no context menu props", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.queryByTestId("row-1")).not.toBeInTheDocument();
 	});
 
 	test("context menu opens on right-click with correct items", () => {
-		render(<ProcurementTable {...contextMenuProps} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
 		const row = screen.getByTestId("row-1");
 		fireEvent.contextMenu(row);
 		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
@@ -388,7 +396,7 @@ describe("ProcurementTable context menu", () => {
 	});
 
 	test("folder assignment submenu shows folders", () => {
-		render(<ProcurementTable {...contextMenuProps} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 
 		// Hover over submenu trigger to open it
@@ -398,7 +406,7 @@ describe("ProcurementTable context menu", () => {
 	});
 
 	test("clicking delete opens AlertDialog", () => {
-		render(<ProcurementTable {...contextMenuProps} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		fireEvent.click(screen.getByText("Удалить"));
 
@@ -410,7 +418,7 @@ describe("ProcurementTable context menu", () => {
 
 	test("confirming delete calls onDeleteItem", () => {
 		const onDeleteItem = vi.fn();
-		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
 
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		fireEvent.click(screen.getByText("Удалить"));
@@ -421,7 +429,7 @@ describe("ProcurementTable context menu", () => {
 
 	test("cancelling delete does not call onDeleteItem", () => {
 		const onDeleteItem = vi.fn();
-		render(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} onDeleteItem={onDeleteItem} />);
 
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		fireEvent.click(screen.getByText("Удалить"));
@@ -432,7 +440,7 @@ describe("ProcurementTable context menu", () => {
 
 	test("clicking Переименовать shows inline input", async () => {
 		// Render without onAssignFolder to isolate rename from submenu
-		render(
+		renderWithTooltip(
 			<ProcurementTable
 				{...defaultProps}
 				items={itemsWithFolders}
@@ -453,7 +461,7 @@ describe("ProcurementTable context menu", () => {
 	test("inline rename Enter saves and calls onRenameItem", async () => {
 		const user = userEvent.setup();
 		const onRenameItem = vi.fn();
-		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
 
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		await user.click(screen.getByText("Переименовать"));
@@ -468,7 +476,7 @@ describe("ProcurementTable context menu", () => {
 	test("inline rename Esc cancels without calling onRenameItem", async () => {
 		const user = userEvent.setup();
 		const onRenameItem = vi.fn();
-		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
 
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		await user.click(screen.getByText("Переименовать"));
@@ -483,7 +491,7 @@ describe("ProcurementTable context menu", () => {
 	test("inline rename rejects empty name on blur", async () => {
 		const user = userEvent.setup();
 		const onRenameItem = vi.fn();
-		render(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
+		renderWithTooltip(<ProcurementTable {...contextMenuProps} onRenameItem={onRenameItem} />);
 
 		fireEvent.contextMenu(screen.getByTestId("row-1"));
 		await user.click(screen.getByText("Переименовать"));
@@ -498,7 +506,7 @@ describe("ProcurementTable context menu", () => {
 
 describe("ProcurementTable responsive card/table switch", () => {
 	test("renders cards instead of table when isMobile is true", () => {
-		render(
+		renderWithTooltip(
 			<ProcurementTable
 				{...defaultProps}
 				isMobile
@@ -517,17 +525,17 @@ describe("ProcurementTable responsive card/table switch", () => {
 	});
 
 	test("renders table when isMobile is false", () => {
-		render(<ProcurementTable {...defaultProps} isMobile={false} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isMobile={false} />);
 		expect(screen.getByRole("table")).toBeInTheDocument();
 	});
 
 	test("renders table when isMobile is omitted (default)", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByRole("table")).toBeInTheDocument();
 	});
 
 	test("card mode shows card-shaped skeletons when isLoading", () => {
-		render(<ProcurementTable {...defaultProps} items={[]} isMobile isLoading />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[]} isMobile isLoading />);
 		const skeletons = screen.getAllByTestId("skeleton-card");
 		expect(skeletons.length).toBeGreaterThanOrEqual(4);
 		// No table skeleton rows
@@ -537,7 +545,9 @@ describe("ProcurementTable responsive card/table switch", () => {
 	test("card mode shows error state with retry", async () => {
 		const user = userEvent.setup();
 		const onRetry = vi.fn();
-		render(<ProcurementTable {...defaultProps} items={[]} isMobile error={new Error("fail")} onRetry={onRetry} />);
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={[]} isMobile error={new Error("fail")} onRetry={onRetry} />,
+		);
 
 		expect(screen.getByTestId("items-error")).toBeInTheDocument();
 		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
@@ -546,19 +556,19 @@ describe("ProcurementTable responsive card/table switch", () => {
 	});
 
 	test("card mode shows empty state", () => {
-		render(<ProcurementTable {...defaultProps} items={[]} isMobile />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={[]} isMobile />);
 		expect(screen.getByTestId("items-empty")).toBeInTheDocument();
 		expect(screen.getByText("Позиции не найдены")).toBeInTheDocument();
 	});
 
 	test("card mode renders infinite scroll sentinel when hasNextPage", () => {
-		render(<ProcurementTable {...defaultProps} isMobile hasNextPage />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isMobile hasNextPage />);
 		expect(screen.getByTestId("scroll-sentinel")).toBeInTheDocument();
 	});
 
 	test("card mode calls loadMore when sentinel intersects", () => {
 		const loadMore = vi.fn();
-		render(<ProcurementTable {...defaultProps} isMobile hasNextPage loadMore={loadMore} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isMobile hasNextPage loadMore={loadMore} />);
 
 		expect(observers).toHaveLength(1);
 		observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -566,12 +576,12 @@ describe("ProcurementTable responsive card/table switch", () => {
 	});
 
 	test("card mode shows spinner when isFetchingNextPage", () => {
-		render(<ProcurementTable {...defaultProps} isMobile isFetchingNextPage />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} isMobile isFetchingNextPage />);
 		expect(screen.getByTestId("loading-more-spinner")).toBeInTheDocument();
 	});
 
 	test("card mode does not have draggable attributes", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable
 					{...defaultProps}
@@ -597,7 +607,7 @@ describe("ProcurementTable name truncation", () => {
 
 	test("truncates names longer than 32 characters with ellipsis", () => {
 		const items = [{ ...mockItems[0], name: longName }];
-		render(<ProcurementTable {...defaultProps} items={items} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={items} />);
 
 		expect(screen.getByText(`${longName.slice(0, 40)}…`)).toBeInTheDocument();
 		expect(screen.queryByText(longName)).not.toBeInTheDocument();
@@ -606,7 +616,7 @@ describe("ProcurementTable name truncation", () => {
 	test("shows full name in tooltip for truncated names", async () => {
 		const user = userEvent.setup();
 		const items = [{ ...mockItems[0], name: longName }];
-		render(<ProcurementTable {...defaultProps} items={items} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={items} />);
 
 		const truncated = screen.getByText(`${longName.slice(0, 40)}…`);
 		await user.hover(truncated);
@@ -615,7 +625,7 @@ describe("ProcurementTable name truncation", () => {
 	});
 
 	test("does not truncate names within 32 characters", () => {
-		render(<ProcurementTable {...defaultProps} />);
+		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 
 		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
 		// No tooltip trigger wrapper needed
@@ -625,7 +635,7 @@ describe("ProcurementTable name truncation", () => {
 
 describe("ProcurementTable drag-and-drop", () => {
 	test("rows have draggable aria-roledescription when draggable", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable {...contextMenuProps} draggable />
 			</DndContext>,
@@ -635,7 +645,7 @@ describe("ProcurementTable drag-and-drop", () => {
 	});
 
 	test("rows do not have draggable attributes when draggable prop is omitted", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable {...contextMenuProps} />
 			</DndContext>,
@@ -645,7 +655,7 @@ describe("ProcurementTable drag-and-drop", () => {
 	});
 
 	test("rows have tabIndex for keyboard dragging when draggable", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable {...contextMenuProps} draggable />
 			</DndContext>,
@@ -655,7 +665,7 @@ describe("ProcurementTable drag-and-drop", () => {
 	});
 
 	test("dragging row reduces opacity", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable {...contextMenuProps} draggable />
 			</DndContext>,
@@ -666,7 +676,7 @@ describe("ProcurementTable drag-and-drop", () => {
 	});
 
 	test("active dragged row gets drag-state class", () => {
-		render(
+		renderWithTooltip(
 			<DndContext>
 				<ProcurementTable {...contextMenuProps} draggable activeItemId="1" />
 			</DndContext>,

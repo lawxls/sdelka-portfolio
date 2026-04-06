@@ -13,10 +13,10 @@ const FULL_SUPPLIER: CurrentSupplier = {
 };
 
 describe("CurrentSupplierCard", () => {
-	test("renders all 5 fields with correct formatting", () => {
+	test("renders header with company name and all detail fields", () => {
 		render(<CurrentSupplierCard currentSupplier={FULL_SUPPLIER} />);
 
-		expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+		expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
 		// deliveryCost 15000 → "15 000 ₽" (Intl.NumberFormat ru-RU)
 		expect(screen.getByText(/15\s?000\s?₽/)).toBeInTheDocument();

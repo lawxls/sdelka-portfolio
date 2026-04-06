@@ -12,11 +12,11 @@ import {
 	FolderInput,
 	Inbox,
 	LoaderCircle,
-	MessageCircleQuestion,
 	Pencil,
 	Trash2,
 } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { TaskCountBadge } from "@/components/task-count-badge";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -382,17 +382,8 @@ export function ProcurementTable({
 													)}
 													{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
 													{status.label}
-													{item.status === "negotiating" && (item.taskCount ?? 0) > 0 && (
-														<>
-															<span className="opacity-40" aria-hidden="true">
-																&middot;
-															</span>
-															<MessageCircleQuestion
-																className="size-3 text-red-500 dark:text-red-400"
-																aria-hidden="true"
-															/>
-															<span className="tabular-nums text-red-500 dark:text-red-400">{item.taskCount}</span>
-														</>
+													{item.status === "negotiating" && item.taskCount && item.taskCount > 0 && (
+														<TaskCountBadge count={item.taskCount} />
 													)}
 												</span>
 											</div>

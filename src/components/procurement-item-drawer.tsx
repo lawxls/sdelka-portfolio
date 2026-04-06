@@ -1,10 +1,11 @@
-import { Check, Clock, LoaderCircle, MessageCircle, Search, Users } from "lucide-react";
+import { Check, Clock, LoaderCircle, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { CurrentSupplierCard } from "@/components/current-supplier-card";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
+import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
 import { LoadMoreSentinel, TaskRow } from "@/components/task-table";
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS } from "@/data/task-types";
@@ -28,7 +28,6 @@ import type { ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSuppliers,
-	useDeleteSuppliers,
 	useInfiniteSuppliers,
 	useSelectSupplier,
 	useSupplier,
@@ -240,7 +239,6 @@ function SuppliersTabPanel({
 		[search, activeStatuses, showArchived, sort],
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
-	const deleteMutation = useDeleteSuppliers();
 	const archiveMutation = useArchiveSuppliers();
 	const suppliers = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
 
@@ -274,22 +272,18 @@ function SuppliersTabPanel({
 		archiveMutation.mutate({ itemId, supplierIds: ids }, { onSuccess: () => setSelectedIds(new Set()) });
 	}
 
-	function handleDelete() {
-		const ids = [...selectedIds];
-		deleteMutation.mutate(
-			{ itemId, supplierIds: ids },
-			{
-				onSuccess: () => setSelectedIds(new Set()),
-			},
-		);
-	}
-
 	const { data: itemDetail } = useItemDetail(itemId);
 	const currentSupplier = itemDetail?.currentSupplier;
 
+	const { data: allSuppliersData } = useSuppliers(itemId);
+	const allSuppliers = allSuppliersData?.suppliers ?? [];
+
 	return (
 		<div data-testid="tab-panel-suppliers">
-			{currentSupplier && <CurrentSupplierCard currentSupplier={currentSupplier} />}
+			<div className="mb-3 grid grid-cols-1 gap-3 px-4 xl:grid-cols-2">
+				{currentSupplier && <CurrentSupplierCard currentSupplier={currentSupplier} />}
+				<SupplierResponseStatusCard suppliers={allSuppliers} />
+			</div>
 			<SuppliersTable
 				suppliers={suppliers}
 				isLoading={query.isLoading}
@@ -307,8 +301,6 @@ function SuppliersTabPanel({
 				onSelectSupplier={onSelectSupplier}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}
-				onDelete={handleDelete}
-				isDeleting={deleteMutation.isPending}
 				onRowClick={onSupplierClick}
 				hasNextPage={query.hasNextPage}
 				loadMore={query.fetchNextPage}
@@ -370,7 +362,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 
 	return (
 		<div data-testid="tab-panel-tasks">
-			<div className="mb-4 flex items-center gap-2">
+			<div className="mb-4 flex flex-wrap items-center gap-2">
 				<div className="relative flex-1 max-w-56">
 					<Search
 						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -455,13 +447,6 @@ function ProcurementItemDrawerContent({
 
 	const itemName = item?.name;
 	const itemStatus = item?.status;
-	const { data: allSuppliersData } = useSuppliers(itemId);
-	const allSuppliers = allSuppliersData?.suppliers ?? [];
-
-	const totalCount = allSuppliers.length;
-	const negotiatingCount = allSuppliers.filter((s) => s.status === "переговоры").length;
-	const kpCount = allSuppliers.filter((s) => s.status === "получено_кп").length;
-
 	const taskColumns = useTaskColumns({ item: itemId });
 	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
 
@@ -470,50 +455,10 @@ function ProcurementItemDrawerContent({
 			<SheetHeader>
 				<SheetTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
 					<span>{itemName ?? "Позиция"}</span>
-					{totalCount > 0 && (
-						<>
-							<span className="text-muted-foreground/40" aria-hidden="true">
-								&bull;
-							</span>
-							<span className="inline-flex items-center gap-3 text-sm font-normal text-muted-foreground">
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<span className="inline-flex items-center gap-1">
-											<Users className="size-3.5" aria-hidden="true" />
-											{totalCount}
-										</span>
-									</TooltipTrigger>
-									<TooltipContent>Всего поставщиков</TooltipContent>
-								</Tooltip>
-								{negotiatingCount > 0 && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
-												<MessageCircle className="size-3.5" aria-hidden="true" />
-												{negotiatingCount}
-											</span>
-										</TooltipTrigger>
-										<TooltipContent>Переговоры</TooltipContent>
-									</Tooltip>
-								)}
-								{kpCount > 0 && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="inline-flex items-center gap-1 text-highlight-foreground">
-												<Check className="size-3.5" aria-hidden="true" />
-												{kpCount}
-											</span>
-										</TooltipTrigger>
-										<TooltipContent>Получено КП</TooltipContent>
-									</Tooltip>
-								)}
-							</span>
-						</>
-					)}
-				</SheetTitle>
-				{itemStatus && (
-					<div className="flex items-center gap-1.5">
-						<span className={`inline-flex items-center gap-1.5 text-sm ${STATUS_CONFIG[itemStatus].className}`}>
+					{itemStatus && (
+						<span
+							className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
+						>
 							{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
 							{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
 							{itemStatus === "negotiating" && (
@@ -522,8 +467,8 @@ function ProcurementItemDrawerContent({
 							{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
 							{STATUS_CONFIG[itemStatus].label}
 						</span>
-					</div>
-				)}
+					)}
+				</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
 			</SheetHeader>
 

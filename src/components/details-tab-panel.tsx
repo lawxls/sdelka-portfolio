@@ -434,7 +434,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<div className="relative rounded-lg border border-border p-4">
 					<EditButton onClick={handleEditInfo} label="Редактировать основную информацию" />
 					<SectionHeader title="Основная информация" />
-					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
+					<div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
 						<ViewField label="Название" value={item.name} />
 						<ViewField label="Описание" value={item.description ?? ""} />
 						<ViewField label="Количество" value={String(item.annualQuantity)} />
@@ -520,7 +520,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<div className="relative rounded-lg border border-border p-4">
 					<EditButton onClick={handleEditConditions} label="Редактировать условия" />
 					<SectionHeader title="Условия" />
-					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
+					<div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
 						<ViewField label="Условия оплаты" value={PAYMENT_TYPE_LABELS[item.paymentType ?? "prepayment"]} />
 						<ViewField label="Доставка" value={DELIVERY_TYPE_LABELS[item.deliveryType ?? "warehouse"]} />
 						<ViewField label="Разгрузка" value={item.unloading ? UNLOADING_LABELS[item.unloading] : ""} />
@@ -577,7 +577,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<div className="relative rounded-lg border border-border p-4">
 					<EditButton onClick={handleEditRequestParams} label="Редактировать параметры запроса" />
 					<SectionHeader title="Параметры запроса" />
-					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
+					<div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
 						<ViewField
 							label="Периодичность мониторинга цен"
 							value={PRICE_MONITORING_PERIOD_LABELS[item.priceMonitoringPeriod ?? "quarter"]}

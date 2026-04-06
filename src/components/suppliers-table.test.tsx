@@ -70,8 +70,6 @@ function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>>
 		onArchiveSupplier: vi.fn(),
 		showArchived: false,
 		onToggleArchived: vi.fn(),
-		onDelete: vi.fn(),
-		isDeleting: false,
 	};
 	return render(
 		<QueryClientProvider client={queryClient}>
@@ -316,40 +314,12 @@ describe("SuppliersTable toolbar", () => {
 	test("shows selection toolbar when items selected", () => {
 		renderTable({ selectedIds: new Set(["s1"]) });
 		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /удалить/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /архивировать/i })).toBeInTheDocument();
 	});
 
 	test("hides search/filter when selection toolbar is shown", () => {
 		renderTable({ selectedIds: new Set(["s1"]) });
 		expect(screen.queryByPlaceholderText("Поиск…")).not.toBeInTheDocument();
-	});
-
-	test("delete button shows confirmation dialog before deleting", async () => {
-		const user = userEvent.setup();
-		const onDelete = vi.fn();
-		renderTable({ selectedIds: new Set(["s1", "s2"]), onDelete });
-
-		// Click delete — should open confirmation, not call onDelete yet
-		await user.click(screen.getByRole("button", { name: /удалить/i }));
-		expect(onDelete).not.toHaveBeenCalled();
-		expect(screen.getByText("Удалить поставщиков?")).toBeInTheDocument();
-		expect(screen.getByText(/будут удалены/)).toBeInTheDocument();
-
-		// Confirm deletion
-		await user.click(screen.getByRole("button", { name: "Удалить" }));
-		expect(onDelete).toHaveBeenCalled();
-	});
-
-	test("delete confirmation can be cancelled", async () => {
-		const user = userEvent.setup();
-		const onDelete = vi.fn();
-		renderTable({ selectedIds: new Set(["s1"]), onDelete });
-
-		await user.click(screen.getByRole("button", { name: /удалить/i }));
-		expect(screen.getByText("Удалить поставщиков?")).toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-		expect(onDelete).not.toHaveBeenCalled();
 	});
 
 	test("shows correct selected count", () => {

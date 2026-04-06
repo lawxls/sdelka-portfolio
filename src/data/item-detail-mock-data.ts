@@ -52,7 +52,22 @@ const MOCK_ITEMS: Record<string, ProcurementItem> = {
 		analoguesAllowed: false,
 		priceMonitoringPeriod: "half_year",
 		taskCount: 3,
+		currentSupplier: {
+			companyName: "ТрубоСталь",
+			deliveryCost: 1500,
+			deferralDays: 14,
+			pricePerUnit: 8200,
+			tco: 4100000,
+		},
 	},
+};
+
+const DEFAULT_CURRENT_SUPPLIER: CurrentSupplier = {
+	companyName: "МеталлТрейд",
+	deliveryCost: 0,
+	deferralDays: 30,
+	pricePerUnit: 4500,
+	tco: 5400000,
 };
 
 // --- Mutable store (lazily populated per item) ---
@@ -61,7 +76,11 @@ let store: Map<string, ProcurementItem> = new Map(Object.entries(MOCK_ITEMS));
 
 /** Seed the store with an item fetched from the API so detail/edit works. */
 export function seedItemDetail(item: ProcurementItem) {
-	if (!store.has(item.id)) store.set(item.id, item);
+	if (!store.has(item.id))
+		store.set(item.id, {
+			...item,
+			currentSupplier: item.currentSupplier ?? DEFAULT_CURRENT_SUPPLIER,
+		});
 }
 
 export function _resetItemDetailStore() {

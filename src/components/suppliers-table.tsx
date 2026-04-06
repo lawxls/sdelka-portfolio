@@ -7,23 +7,11 @@ import {
 	ListFilter,
 	LoaderCircle,
 	Search,
-	Trash2,
 	UserCheck,
 } from "lucide-react";
 import { useRef } from "react";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { DeferralValue, DeliveryValue } from "@/components/supplier-value-displays";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -57,8 +45,6 @@ interface SuppliersTableProps {
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 	showArchived: boolean;
 	onToggleArchived: () => void;
-	onDelete: () => void;
-	isDeleting: boolean;
 	onRowClick?: (supplierId: string) => void;
 	hasNextPage?: boolean;
 	loadMore?: () => void;
@@ -98,8 +84,6 @@ export function SuppliersTable({
 	onSelectSupplier,
 	showArchived,
 	onToggleArchived,
-	onDelete,
-	isDeleting,
 	onRowClick,
 	hasNextPage,
 	loadMore,
@@ -137,30 +121,6 @@ export function SuppliersTable({
 				<Archive className="mr-1 size-4" aria-hidden="true" />
 				Архивировать
 			</Button>
-			<AlertDialog>
-				<AlertDialogTrigger asChild>
-					<Button type="button" variant="destructive" size="sm" disabled={isDeleting} aria-label="Удалить">
-						<Trash2 className="mr-1 size-4" aria-hidden="true" />
-						Удалить
-					</Button>
-				</AlertDialogTrigger>
-				<AlertDialogContent size="sm">
-					<AlertDialogHeader>
-						<AlertDialogTitle>Удалить поставщиков?</AlertDialogTitle>
-						<AlertDialogDescription>
-							{selectedIds.size === 1
-								? "Выбранный поставщик будет удалён. Это действие нельзя отменить."
-								: `Выбранные поставщики (${selectedIds.size}) будут удалены. Это действие нельзя отменить.`}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Отмена</AlertDialogCancel>
-						<AlertDialogAction variant="destructive" onClick={onDelete}>
-							Удалить
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
