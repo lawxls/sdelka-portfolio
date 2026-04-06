@@ -86,11 +86,12 @@ describe("SupplierDetailDrawer", () => {
 		expect(screen.getByText("·")).toBeInTheDocument();
 	});
 
-	test("renders address, website, and email", () => {
+	test("renders address, website, and email in info column", () => {
 		renderDrawer();
-		expect(screen.getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
-		expect(screen.getByText("alfa-trade.ru")).toBeInTheDocument();
-		expect(screen.getByText("info@alfa-trade.ru")).toBeInTheDocument();
+		const infoCol = document.querySelector("[data-testid='supplier-info-column']") as HTMLElement;
+		expect(within(infoCol).getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
+		expect(within(infoCol).getByText("alfa-trade.ru")).toBeInTheDocument();
+		expect(within(infoCol).getByText("info@alfa-trade.ru")).toBeInTheDocument();
 	});
 
 	test("renders TCO section with correct labels", () => {
@@ -182,7 +183,9 @@ describe("SupplierDetailDrawer", () => {
 				chatHistory: [],
 			}),
 		});
-		expect(screen.queryByText("История общения")).not.toBeInTheDocument();
+		// Column title still visible, but no message articles rendered
+		expect(screen.getByText("История общения")).toBeInTheDocument();
+		expect(document.querySelectorAll("[data-email-msg]")).toHaveLength(0);
 	});
 
 	test("uses xl size on desktop", () => {
@@ -203,6 +206,8 @@ describe("SupplierDetailDrawer", () => {
 		renderDrawer();
 		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
 		expect(leftCol).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Информация о поставщике")).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Контактная информация")).toBeInTheDocument();
 		expect(within(leftCol as HTMLElement).getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
 		expect(within(leftCol as HTMLElement).getByText("Комментарии агента")).toBeInTheDocument();
 		expect(within(leftCol as HTMLElement).getByText("Документы из диалога")).toBeInTheDocument();
@@ -219,7 +224,8 @@ describe("SupplierDetailDrawer", () => {
 		renderDrawer();
 		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
 		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
-		expect(leftCol?.className).toMatch(/overflow-y-auto/);
+		// Columns use overflow-hidden; inner content areas scroll
+		expect(leftCol?.className).toMatch(/overflow/);
 		expect(rightCol?.className).toMatch(/overflow/);
 	});
 

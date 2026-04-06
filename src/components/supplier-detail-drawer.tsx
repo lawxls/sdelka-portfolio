@@ -8,7 +8,9 @@ import {
 	File,
 	FileSpreadsheet,
 	FileText,
+	Globe,
 	Mail,
+	MapPin,
 	Paperclip,
 	Sparkles,
 	Truck,
@@ -158,6 +160,28 @@ function DocumentsSection({ documents }: { documents: SupplierDocument[] }) {
 	);
 }
 
+function ContactInfoSection({ supplier }: { supplier: Supplier }) {
+	return (
+		<section>
+			<h3 className="mb-2 text-sm font-medium">Контактная информация</h3>
+			<div className="flex flex-col gap-1.5 text-sm">
+				<div className="flex items-start gap-2">
+					<MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+					<span>{supplier.address}</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+					<span>{stripProtocol(supplier.website)}</span>
+				</div>
+				<div className="flex items-center gap-2">
+					<Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+					<span>{supplier.email}</span>
+				</div>
+			</div>
+		</section>
+	);
+}
+
 function EmailThread({
 	messages,
 	lastMessageRef,
@@ -167,50 +191,44 @@ function EmailThread({
 }) {
 	if (messages.length === 0) return null;
 	return (
-		<section className="rounded-lg border bg-muted/30 p-4">
-			<h3 className="mb-3 flex items-center gap-1.5 text-sm font-medium">
-				<Mail className="size-4 text-muted-foreground" aria-hidden="true" />
-				История общения
-			</h3>
-			<div className="flex flex-col gap-3">
-				{messages.map((msg, i) => (
-					<article
-						key={`${msg.timestamp}-${msg.sender}`}
-						ref={i === messages.length - 1 ? lastMessageRef : undefined}
-						data-email-msg={msg.isOurs ? "ours" : "theirs"}
-						className="rounded-md border bg-background text-sm"
-					>
-						<div className="flex flex-col gap-1 border-b px-3 py-2 text-xs text-muted-foreground">
-							<div className="flex items-center gap-1.5">
-								{msg.isOurs ? (
-									<Bot className="size-3 shrink-0" aria-hidden="true" />
-								) : (
-									<User className="size-3 shrink-0" aria-hidden="true" />
-								)}
-								<span className="font-medium text-foreground">{msg.sender}</span>
-							</div>
-							<span>{formatDateTime(msg.timestamp)}</span>
+		<div className="flex flex-col gap-3">
+			{messages.map((msg, i) => (
+				<article
+					key={`${msg.timestamp}-${msg.sender}`}
+					ref={i === messages.length - 1 ? lastMessageRef : undefined}
+					data-email-msg={msg.isOurs ? "ours" : "theirs"}
+					className="rounded-md border bg-background text-sm"
+				>
+					<div className="flex flex-col gap-1 border-b px-3 py-2 text-xs text-muted-foreground">
+						<div className="flex items-center gap-1.5">
+							{msg.isOurs ? (
+								<Bot className="size-3 shrink-0" aria-hidden="true" />
+							) : (
+								<User className="size-3 shrink-0" aria-hidden="true" />
+							)}
+							<span className="font-medium text-foreground">{msg.sender}</span>
 						</div>
-						<div className="px-3 py-2.5">{msg.body}</div>
-						{msg.attachments && msg.attachments.length > 0 && (
-							<div className="flex flex-wrap gap-1.5 border-t px-3 py-2">
-								{msg.attachments.map((att) => (
-									<div
-										key={att.name}
-										data-testid="msg-attachment"
-										className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
-									>
-										<DocIcon type={att.type} />
-										<span className="max-w-32 truncate">{att.name}</span>
-										<span className="text-muted-foreground">{formatFileSize(att.size)}</span>
-									</div>
-								))}
-							</div>
-						)}
-					</article>
-				))}
-			</div>
-		</section>
+						<span>{formatDateTime(msg.timestamp)}</span>
+					</div>
+					<div className="px-3 py-2.5">{msg.body}</div>
+					{msg.attachments && msg.attachments.length > 0 && (
+						<div className="flex flex-wrap gap-1.5 border-t px-3 py-2">
+							{msg.attachments.map((att) => (
+								<div
+									key={att.name}
+									data-testid="msg-attachment"
+									className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
+								>
+									<DocIcon type={att.type} />
+									<span className="max-w-32 truncate">{att.name}</span>
+									<span className="text-muted-foreground">{formatFileSize(att.size)}</span>
+								</div>
+							))}
+						</div>
+					)}
+				</article>
+			))}
+		</div>
 	);
 }
 
@@ -219,6 +237,7 @@ type MobileTab = "info" | "email";
 function InfoContent({ supplier }: { supplier: Supplier }) {
 	return (
 		<div className="space-y-6 p-4">
+			<ContactInfoSection supplier={supplier} />
 			<TcoSection supplier={supplier} />
 			<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
 			<DocumentsSection documents={supplier.documents} />
@@ -240,14 +259,17 @@ function EmailContent({
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<div className="flex-1 overflow-y-auto p-4">
+				<h2 className="mb-3 text-sm font-semibold">История общения</h2>
 				<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
 			</div>
 			{showComposer && (
-				<ChatComposer
-					onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
-					isPending={sendMutation.isPending}
-					error={sendMutation.error?.message ?? null}
-				/>
+				<div className="px-4 pb-4">
+					<ChatComposer
+						onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+						isPending={sendMutation.isPending}
+						error={sendMutation.error?.message ?? null}
+					/>
+				</div>
 			)}
 		</div>
 	);
@@ -280,9 +302,7 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 					</span>
 					<SupplierStatusIndicator status={supplier.status} className="text-xs" />
 				</SheetTitle>
-				<SheetDescription>{supplier.address}</SheetDescription>
-				<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
-				<span className="text-sm text-muted-foreground">{supplier.email}</span>
+				<SheetDescription className="sr-only">Детали поставщика</SheetDescription>
 			</SheetHeader>
 
 			{isMobile ? (
@@ -324,21 +344,28 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 				</>
 			) : (
 				<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
-					<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
-						<TcoSection supplier={supplier} />
-						<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
-						<DocumentsSection documents={supplier.documents} />
+					<div data-testid="supplier-info-column" className="flex flex-col overflow-hidden border-r">
+						<h2 className="shrink-0 border-b px-4 py-3 text-sm font-semibold">Информация о поставщике</h2>
+						<div className="space-y-6 overflow-y-auto p-4">
+							<ContactInfoSection supplier={supplier} />
+							<TcoSection supplier={supplier} />
+							<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
+							<DocumentsSection documents={supplier.documents} />
+						</div>
 					</div>
-					<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
-						<div className="flex-1 overflow-y-auto">
+					<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden">
+						<h2 className="shrink-0 border-b px-4 py-3 text-sm font-semibold">История общения</h2>
+						<div className="flex-1 overflow-y-auto p-4">
 							<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
 						</div>
 						{showComposer && (
-							<ChatComposer
-								onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
-								isPending={sendMutation.isPending}
-								error={sendMutation.error?.message ?? null}
-							/>
+							<div className="px-4 pb-4">
+								<ChatComposer
+									onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+									isPending={sendMutation.isPending}
+									error={sendMutation.error?.message ?? null}
+								/>
+							</div>
 						)}
 					</div>
 				</div>
