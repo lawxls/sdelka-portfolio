@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { InviteEmployeeData } from "@/data/api-client";
 import type { CompanySummary, EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useInviteEmployees } from "@/data/use-workspace-employees";
+import { cn } from "@/lib/utils";
 
 interface InviteCard {
 	key: string;
@@ -37,18 +38,29 @@ interface InviteEmployeesDrawerProps {
 
 export function InviteEmployeesDrawer({ open, onOpenChange }: InviteEmployeesDrawerProps) {
 	const [cards, setCards] = useState<InviteCard[]>(() => [createEmptyCard()]);
+	const [validatedKeys, setValidatedKeys] = useState<Set<string>>(() => new Set());
 	const { data: allCompanies } = useProcurementCompanies();
 	const inviteMutation = useInviteEmployees();
 
 	function handleOpenChange(next: boolean) {
 		if (!next) {
 			setCards([createEmptyCard()]);
+			setValidatedKeys(new Set());
 			inviteMutation.reset();
 		}
 		onOpenChange(next);
 	}
 
 	function addCard() {
+		const invalid = cards.filter((c) => c.email.trim() === "");
+		if (invalid.length > 0) {
+			setValidatedKeys((prev) => {
+				const next = new Set(prev);
+				for (const c of invalid) next.add(c.key);
+				return next;
+			});
+			return;
+		}
 		setCards((prev) => [...prev, createEmptyCard()]);
 	}
 
@@ -83,35 +95,39 @@ export function InviteEmployeesDrawer({ open, onOpenChange }: InviteEmployeesDra
 
 	return (
 		<Sheet open={open} onOpenChange={handleOpenChange}>
-			<SheetContent className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none">
-				<SheetHeader>
+			<SheetContent
+				showCloseButton={false}
+				className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
+			>
+				<SheetHeader className="border-b pb-4">
 					<SheetTitle>Отправить приглашения</SheetTitle>
+					<SheetDescription className="sr-only">Приглашение сотрудников</SheetDescription>
 				</SheetHeader>
 
-				<div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-2">
+				<div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
 					{cards.map((card, idx) => (
 						<InviteCardRow
 							key={card.key}
 							card={card}
 							cardNumber={idx + 1}
 							canRemove={cards.length > 1}
+							emailError={validatedKeys.has(card.key) && card.email.trim() === ""}
 							allCompanies={allCompanies}
 							onUpdate={(patch) => updateCard(card.key, patch)}
 							onRemove={() => removeCard(card.key)}
 						/>
 					))}
 
-					<button
-						type="button"
-						onClick={addCard}
-						className="flex items-center gap-1.5 rounded text-sm text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					>
-						<Plus className="size-4" aria-hidden="true" />
-						<span>Добавить</span>
-					</button>
+					<Button type="button" variant="outline" size="sm" className="self-start" onClick={addCard}>
+						<Plus aria-hidden="true" />
+						Добавить
+					</Button>
 				</div>
 
-				<SheetFooter>
+				<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
+					<Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+						Отмена
+					</Button>
 					<Button type="button" disabled={!canSubmit} onClick={handleSubmit}>
 						{inviteMutation.isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
 						Отправить
@@ -126,6 +142,7 @@ function InviteCardRow({
 	card,
 	cardNumber,
 	canRemove,
+	emailError,
 	allCompanies,
 	onUpdate,
 	onRemove,
@@ -133,6 +150,7 @@ function InviteCardRow({
 	card: InviteCard;
 	cardNumber: number;
 	canRemove: boolean;
+	emailError: boolean;
 	allCompanies: CompanySummary[];
 	onUpdate: (patch: Partial<Omit<InviteCard, "key">>) => void;
 	onRemove: () => void;
@@ -166,10 +184,12 @@ function InviteCardRow({
 					</label>
 					<Input
 						id={`email-${card.key}`}
+						className={cn(emailError && "border-destructive")}
 						type="email"
 						value={card.email}
 						onChange={(e) => onUpdate({ email: e.target.value })}
 						placeholder="email@example.com"
+						aria-invalid={emailError || undefined}
 						spellCheck={false}
 						autoComplete="off"
 					/>

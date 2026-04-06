@@ -54,13 +54,26 @@ describe("InviteEmployeesDrawer default state", () => {
 });
 
 describe("InviteEmployeesDrawer add card", () => {
-	test("+ Добавить appends a new invite card", async () => {
+	test("+ Добавить appends a new invite card when email is filled", async () => {
 		renderDrawer();
 		await waitFor(() => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
-		await userEvent.setup().click(screen.getByRole("button", { name: /Добавить/i }));
+		const user = userEvent.setup();
+		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "a@b.com");
+		await user.click(screen.getByRole("button", { name: /Добавить/i }));
 		expect(screen.getByText("Сотрудник 2")).toBeInTheDocument();
+	});
+
+	test("+ Добавить highlights email when empty", async () => {
+		renderDrawer();
+		await waitFor(() => {
+			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
+		});
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить/i }));
+		expect(screen.queryByText("Сотрудник 2")).not.toBeInTheDocument();
+		expect(screen.getByRole("textbox", { name: /Электронная почта/i })).toHaveAttribute("aria-invalid", "true");
 	});
 });
 
@@ -71,7 +84,8 @@ describe("InviteEmployeesDrawer remove card", () => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
 		const user = userEvent.setup();
-		// Add second card
+		// Fill email then add second card
+		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "a@b.com");
 		await user.click(screen.getByRole("button", { name: /Добавить/i }));
 		expect(screen.getByText("Сотрудник 2")).toBeInTheDocument();
 		// Remove first card
