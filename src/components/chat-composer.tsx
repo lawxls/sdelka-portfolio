@@ -1,4 +1,4 @@
-import { Loader2, Paperclip, Send, X } from "lucide-react";
+import { ArrowUp, Loader2, Paperclip, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,62 +88,76 @@ export function ChatComposer({ onSend, isPending, error }: ChatComposerProps) {
 	const displayError = error || fileError;
 
 	return (
-		<form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t pt-3">
-			<Textarea
-				value={body}
-				onChange={(e) => setBody(e.target.value)}
-				placeholder="Написать сообщение…"
-				rows={3}
-				disabled={isPending}
-			/>
-			{entries.length > 0 && (
-				<div className="flex flex-wrap gap-1.5">
-					{entries.map(({ id, file }) => (
-						<div key={id} className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs">
-							<span className="max-w-32 truncate">{file.name}</span>
-							<span className="text-muted-foreground">{formatFileSize(file.size)}</span>
-							<button
-								type="button"
-								onClick={() => removeFile(id)}
-								className="rounded-sm hover:bg-muted"
-								aria-label={`Удалить ${file.name}`}
+		<form onSubmit={handleSubmit} className="flex flex-col gap-2">
+			<div className="relative rounded-2xl border border-input bg-muted/30 transition-colors focus-within:border-ring">
+				<Textarea
+					value={body}
+					onChange={(e) => setBody(e.target.value)}
+					placeholder="Написать сообщение…"
+					rows={3}
+					disabled={isPending}
+					className="resize-none border-0 bg-transparent px-5 pt-4 pr-14 shadow-none focus-visible:ring-0 dark:bg-transparent"
+				/>
+				{entries.length > 0 && (
+					<div className="flex flex-wrap gap-1.5 px-3 pb-2">
+						{entries.map(({ id, file }) => (
+							<div
+								key={id}
+								className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs"
 							>
-								<X className="size-3" aria-hidden="true" />
-							</button>
-						</div>
-					))}
+								<span className="max-w-32 truncate">{file.name}</span>
+								<span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+								<button
+									type="button"
+									onClick={() => removeFile(id)}
+									className="rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+									aria-label={`Удалить ${file.name}`}
+								>
+									<X className="size-3" aria-hidden="true" />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+				<div className="flex items-center justify-between px-3 pb-2.5">
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept={ACCEPT}
+						multiple
+						className="hidden"
+						onChange={handleFileChange}
+						tabIndex={-1}
+					/>
+					<button
+						type="button"
+						disabled={isPending}
+						aria-label="Прикрепить файл"
+						onClick={() => fileInputRef.current?.click()}
+						className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+					>
+						<Paperclip className="size-5" aria-hidden="true" />
+					</button>
+					<Button
+						type="submit"
+						size="icon-sm"
+						disabled={!canSend}
+						aria-label="Отправить"
+						className="size-8 rounded-full"
+					>
+						{isPending ? (
+							<Loader2 className="size-4 animate-spin" aria-hidden="true" />
+						) : (
+							<ArrowUp className="size-4" aria-hidden="true" />
+						)}
+					</Button>
 				</div>
-			)}
+			</div>
 			{displayError && (
 				<p className="text-sm text-destructive" role="alert">
 					{displayError}
 				</p>
 			)}
-			<div className="flex justify-end gap-1">
-				<input
-					ref={fileInputRef}
-					type="file"
-					accept={ACCEPT}
-					multiple
-					className="hidden"
-					onChange={handleFileChange}
-					tabIndex={-1}
-				/>
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon-sm"
-					disabled={isPending}
-					aria-label="Прикрепить файл"
-					onClick={() => fileInputRef.current?.click()}
-				>
-					<Paperclip aria-hidden="true" />
-				</Button>
-				<Button type="submit" size="sm" disabled={!canSend}>
-					{isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
-					Отправить
-				</Button>
-			</div>
 		</form>
 	);
 }
