@@ -36,33 +36,23 @@ export function SettingsLayout() {
 		setEmployeesInviteOpen,
 	};
 
+	const BREADCRUMBS: Record<string, [parent: string, current: string]> = {
+		"/settings/profile": ["Пользователь", "Профиль"],
+		"/settings/workspace": ["Рабочее пространство", "Общие настройки"],
+		"/settings/companies": ["Рабочее пространство", "Компании"],
+		"/settings/employees": ["Рабочее пространство", "Сотрудники"],
+	};
+
 	function renderBreadcrumb() {
-		switch (location.pathname) {
-			case "/settings/profile":
-				return (
-					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-						<span>Пользователь</span>
-						<span aria-hidden="true">/</span>
-						<span className="text-foreground">Профиль</span>
-					</nav>
-				);
-			case "/settings/companies":
-				return (
-					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-						<span>Рабочее пространство</span>
-						<span aria-hidden="true">/</span>
-						<span className="text-foreground">Компании</span>
-					</nav>
-				);
-			case "/settings/employees":
-				return (
-					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-						<span>Рабочее пространство</span>
-						<span aria-hidden="true">/</span>
-						<span className="text-foreground">Сотрудники</span>
-					</nav>
-				);
-		}
+		const crumb = BREADCRUMBS[location.pathname];
+		if (!crumb) return null;
+		return (
+			<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
+				<span>{crumb[0]}</span>
+				<span aria-hidden="true">/</span>
+				<span className="text-foreground">{crumb[1]}</span>
+			</nav>
+		);
 	}
 
 	function renderHeaderAction() {

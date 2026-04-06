@@ -161,4 +161,55 @@ describe("ProfileSettingsPage", () => {
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
 		});
 	});
+
+	test("email notifications checkbox reflects mailing_allowed from API", async () => {
+		server.use(
+			http.get("/api/v1/auth/settings", () =>
+				HttpResponse.json(makeSettings({ patronymic: "Иванович", mailing_allowed: false })),
+			),
+		);
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByRole("checkbox", { name: /уведомления/i })).toBeInTheDocument();
+		});
+		expect(screen.getByRole("checkbox", { name: /уведомления/i })).not.toBeChecked();
+	});
+
+	test("toggling email notifications checkbox enables Save", async () => {
+		renderPage();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("checkbox", { name: /уведомления/i })).toBeInTheDocument();
+		});
+
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+		await user.click(screen.getByRole("checkbox", { name: /уведомления/i }));
+		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+	});
+
+	test("save includes mailing_allowed in PATCH payload", async () => {
+		let patchBody: Record<string, unknown> | null = null;
+		server.use(
+			http.patch("/api/v1/auth/settings", async ({ request }) => {
+				patchBody = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({ ...MOCK_SETTINGS, ...patchBody });
+			}),
+		);
+
+		renderPage();
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("checkbox", { name: /уведомления/i })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("checkbox", { name: /уведомления/i }));
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(patchBody).toEqual({ mailing_allowed: false });
+		});
+		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
+	});
 });

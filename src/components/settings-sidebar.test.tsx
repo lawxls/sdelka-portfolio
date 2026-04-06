@@ -46,11 +46,22 @@ describe("SettingsSidebar sections", () => {
 		expect(screen.getByText("Профиль")).toBeInTheDocument();
 	});
 
-	test("renders Рабочее пространство section with Компании and Сотрудники", () => {
+	test("renders Рабочее пространство section with Общие настройки, Компании, and Сотрудники", () => {
 		renderSidebar();
 		expect(screen.getByText("Рабочее пространство")).toBeInTheDocument();
+		expect(screen.getByText("Общие настройки")).toBeInTheDocument();
 		expect(screen.getByText("Компании")).toBeInTheDocument();
 		expect(screen.getByText("Сотрудники")).toBeInTheDocument();
+	});
+
+	test("Общие настройки appears first in Рабочее пространство section", () => {
+		renderSidebar();
+		const sectionLabel = screen.getByText("Рабочее пространство");
+		const section = sectionLabel.closest("div")?.parentElement as HTMLElement;
+		const buttons = section.querySelectorAll("button");
+		expect(buttons[0]).toHaveTextContent("Общие настройки");
+		expect(buttons[1]).toHaveTextContent("Компании");
+		expect(buttons[2]).toHaveTextContent("Сотрудники");
 	});
 
 	test("renders Выход item at the bottom", () => {
@@ -63,6 +74,12 @@ describe("SettingsSidebar active item", () => {
 	test("highlights Профиль when at /settings/profile", () => {
 		renderSidebar({}, "/settings/profile");
 		const btn = screen.getByText("Профиль").closest("button") as HTMLElement;
+		expect(btn.className).toContain("bg-sidebar-accent");
+	});
+
+	test("highlights Общие настройки when at /settings/workspace", () => {
+		renderSidebar({}, "/settings/workspace");
+		const btn = screen.getByText("Общие настройки").closest("button") as HTMLElement;
 		expect(btn.className).toContain("bg-sidebar-accent");
 	});
 
