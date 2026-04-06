@@ -1,7 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import { Link, Outlet } from "react-router";
 import { LogoWordmark } from "@/components/logo-wordmark";
-import { Badge } from "@/components/ui/badge";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
 
 const ToolbarPortalContext = createContext<HTMLDivElement | null>(null);
@@ -24,9 +23,9 @@ export function AppLayout() {
 						<Link to="/procurement" aria-label="На главную">
 							<LogoWordmark className="h-4 w-auto" />
 						</Link>
-						<Badge variant="secondary" className="hidden text-[0.625rem] md:inline-flex">
+						<span className="hidden -translate-y-px select-none items-center rounded-full px-1.5 py-0.5 text-[0.5625rem] font-medium tracking-wide text-muted-foreground/70 ring-1 ring-border md:inline-flex">
 							Beta
-						</Badge>
+						</span>
 					</div>
 					<div ref={setToolbarEl} className="hidden min-w-0 flex-1 items-center md:flex" data-testid="toolbar-slot" />
 					<UserAvatarMenu />

@@ -310,7 +310,7 @@ function CreationForm({
 							</div>
 						))}
 
-						<Button type="button" variant="outline" size="sm" onClick={addAddress}>
+						<Button type="button" variant="outline" size="sm" className="self-start" onClick={addAddress}>
 							<Plus aria-hidden="true" />
 							Добавить адрес
 						</Button>
