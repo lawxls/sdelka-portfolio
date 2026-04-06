@@ -19,8 +19,6 @@ interface FileEntry {
 	file: File;
 }
 
-let nextFileId = 0;
-
 interface ChatComposerProps {
 	onSend: (body: string, files: File[]) => Promise<unknown>;
 	isPending?: boolean;
@@ -32,6 +30,7 @@ export function ChatComposer({ onSend, isPending, error }: ChatComposerProps) {
 	const [entries, setEntries] = useState<FileEntry[]>([]);
 	const [fileError, setFileError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const nextFileId = useRef(0);
 
 	const trimmed = body.trim();
 	const canSend = (trimmed.length > 0 || entries.length > 0) && !isPending;
@@ -63,7 +62,7 @@ export function ChatComposer({ onSend, isPending, error }: ChatComposerProps) {
 		}
 
 		setFileError(null);
-		setEntries((prev) => [...prev, ...selected.map((file) => ({ id: nextFileId++, file }))]);
+		setEntries((prev) => [...prev, ...selected.map((file) => ({ id: nextFileId.current++, file }))]);
 	}
 
 	function removeFile(id: number) {

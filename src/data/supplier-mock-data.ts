@@ -7,6 +7,7 @@ import type {
 	SupplierSortField,
 	SupplierStatus,
 } from "./supplier-types";
+import { filesToAttachments } from "./supplier-types";
 
 const COMPANY_NAMES = [
 	"ООО «СтройТорг»",
@@ -314,14 +315,7 @@ export async function sendSupplierMessage(
 	const supplier = suppliers.find((s) => s.id === supplierId);
 	if (!supplier) throw new Error("Supplier not found");
 
-	const attachments =
-		files && files.length > 0
-			? files.map((f) => ({
-					name: f.name,
-					type: f.name.split(".").pop() ?? "",
-					size: f.size,
-				}))
-			: undefined;
+	const attachments = files && files.length > 0 ? filesToAttachments(files) : undefined;
 
 	const message: SupplierChatMessage = {
 		sender: "Агент",

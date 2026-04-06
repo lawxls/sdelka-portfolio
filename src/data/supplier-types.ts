@@ -42,6 +42,10 @@ export interface MessageAttachment {
 	size: number;
 }
 
+export function filesToAttachments(files: File[]): MessageAttachment[] {
+	return files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }));
+}
+
 export interface SupplierChatMessage {
 	sender: string;
 	timestamp: string;

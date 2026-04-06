@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteSuppliers, getAllSuppliers, getSupplier, getSuppliers, sendSupplierMessage } from "./supplier-mock-data";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
+import { filesToAttachments } from "./supplier-types";
 
 export function useSuppliers(itemId: string | null) {
 	return useQuery({
@@ -57,10 +58,7 @@ export function useSendSupplierMessage(itemId: string, supplierId: string) {
 
 			const snapshot = queryClient.getQueryData<Supplier | null>(queryKey);
 
-			const attachments =
-				files.length > 0
-					? files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }))
-					: undefined;
+			const attachments = files.length > 0 ? filesToAttachments(files) : undefined;
 
 			const optimisticMessage: SupplierChatMessage = {
 				sender: "Агент",

@@ -238,7 +238,7 @@ function EmailContent({
 	sendMutation: ReturnType<typeof useSendSupplierMessage>;
 }) {
 	return (
-		<>
+		<div className="flex h-full flex-col overflow-hidden">
 			<div className="flex-1 overflow-y-auto p-4">
 				<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
 			</div>
@@ -249,7 +249,7 @@ function EmailContent({
 					error={sendMutation.error?.message ?? null}
 				/>
 			)}
-		</>
+		</div>
 	);
 }
 
@@ -272,7 +272,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 		>
 			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
 				{supplier && (
-					<div className="flex h-full flex-col overflow-hidden">
+					<div key={supplier.id} className="flex h-full flex-col overflow-hidden">
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
@@ -322,14 +322,12 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 								<div className="min-h-0 flex-1 overflow-y-auto">
 									{mobileTab === "info" && <InfoContent supplier={supplier} />}
 									{mobileTab === "email" && (
-										<div className="flex h-full flex-col overflow-hidden">
-											<EmailContent
-												supplier={supplier}
-												showComposer={showComposer}
-												scrollToLatest={scrollToLatest}
-												sendMutation={sendMutation}
-											/>
-										</div>
+										<EmailContent
+											supplier={supplier}
+											showComposer={showComposer}
+											scrollToLatest={scrollToLatest}
+											sendMutation={sendMutation}
+										/>
 									)}
 								</div>
 							</>
