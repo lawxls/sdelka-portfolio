@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { extractFormErrors, forgotPassword } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
 import { useSettings, useUpdateSettings } from "@/data/use-settings";
@@ -19,6 +20,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 	const [lastName, setLastName] = useState(data.last_name);
 	const [patronymic, setPatronymic] = useState(data.patronymic ?? "");
 	const [phone, setPhone] = useState(data.phone);
+	const [mailingAllowed, setMailingAllowed] = useState(data.mailing_allowed);
 	const [phoneError, setPhoneError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 	const [forgotPending, setForgotPending] = useState(false);
@@ -27,7 +29,8 @@ function ProfileForm({ data }: { data: UserSettings }) {
 		firstName !== data.first_name ||
 		lastName !== data.last_name ||
 		patronymic !== (data.patronymic ?? "") ||
-		phone !== data.phone;
+		phone !== data.phone ||
+		mailingAllowed !== data.mailing_allowed;
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -44,6 +47,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 		if (lastName !== data.last_name) patch.last_name = lastName;
 		if (patronymic !== (data.patronymic ?? "")) patch.patronymic = patronymic;
 		if (phone !== data.phone) patch.phone = phone;
+		if (mailingAllowed !== data.mailing_allowed) patch.mailing_allowed = mailingAllowed;
 
 		updateSettings.mutate(patch, {
 			onSuccess: () => toast.success("Изменения сохранены"),
@@ -126,6 +130,15 @@ function ProfileForm({ data }: { data: UserSettings }) {
 					inputMode="tel"
 					autoComplete="tel"
 				/>
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders input internally */}
+				<label className="flex items-center gap-2">
+					<Checkbox
+						checked={mailingAllowed}
+						onCheckedChange={(checked) => setMailingAllowed(checked === true)}
+						aria-label="Получать сервисные уведомления на почту"
+					/>
+					<span className="text-sm">Получать сервисные уведомления на почту</span>
+				</label>
 				<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
 				<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
 					{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
