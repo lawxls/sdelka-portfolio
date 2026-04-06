@@ -1,6 +1,6 @@
-import { Menu, Plus, UserPlus } from "lucide-react";
+import { Menu, MoveLeft, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { Outlet, useLocation, useOutletContext } from "react-router";
+import { Link, Outlet, useLocation, useOutletContext } from "react-router";
 import { Button } from "@/components/ui/button";
 import { DESKTOP_QUERY } from "./folder-sidebar";
 import { SettingsSidebar } from "./settings-sidebar";
@@ -36,7 +36,7 @@ export function SettingsLayout() {
 		setEmployeesInviteOpen,
 	};
 
-	function renderHeaderContent() {
+	function renderBreadcrumb() {
 		switch (location.pathname) {
 			case "/settings/profile":
 				return (
@@ -48,41 +48,48 @@ export function SettingsLayout() {
 				);
 			case "/settings/companies":
 				return (
-					<>
-						<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-							<span>Рабочее пространство</span>
-							<span aria-hidden="true">/</span>
-							<span className="text-foreground">Компании</span>
-						</nav>
-						<Button
-							type="button"
-							size="sm"
-							className="bg-status-highlight hover:bg-status-highlight/80"
-							onClick={() => setCompaniesCreateOpen(true)}
-						>
-							<Plus data-icon="inline-start" aria-hidden="true" />
-							<span>Добавить компанию</span>
-						</Button>
-					</>
+					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
+						<span>Рабочее пространство</span>
+						<span aria-hidden="true">/</span>
+						<span className="text-foreground">Компании</span>
+					</nav>
 				);
 			case "/settings/employees":
 				return (
-					<>
-						<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-							<span>Рабочее пространство</span>
-							<span aria-hidden="true">/</span>
-							<span className="text-foreground">Сотрудники</span>
-						</nav>
-						<Button
-							type="button"
-							size="sm"
-							className="bg-status-highlight hover:bg-status-highlight/80"
-							onClick={() => setEmployeesInviteOpen(true)}
-						>
-							<UserPlus data-icon="inline-start" aria-hidden="true" />
-							<span>Отправить приглашения</span>
-						</Button>
-					</>
+					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
+						<span>Рабочее пространство</span>
+						<span aria-hidden="true">/</span>
+						<span className="text-foreground">Сотрудники</span>
+					</nav>
+				);
+		}
+	}
+
+	function renderHeaderAction() {
+		switch (location.pathname) {
+			case "/settings/companies":
+				return (
+					<Button
+						type="button"
+						size="sm"
+						className="bg-status-highlight hover:bg-status-highlight/80"
+						onClick={() => setCompaniesCreateOpen(true)}
+					>
+						<Plus data-icon="inline-start" aria-hidden="true" />
+						<span>Добавить компанию</span>
+					</Button>
+				);
+			case "/settings/employees":
+				return (
+					<Button
+						type="button"
+						size="sm"
+						className="bg-status-highlight hover:bg-status-highlight/80"
+						onClick={() => setEmployeesInviteOpen(true)}
+					>
+						<UserPlus data-icon="inline-start" aria-hidden="true" />
+						<span>Отправить приглашения</span>
+					</Button>
 				);
 		}
 	}
@@ -93,16 +100,24 @@ export function SettingsLayout() {
 			data-testid="settings-layout"
 		>
 			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					aria-label="Открыть меню настроек"
-					onClick={() => setOpen(true)}
-					className="shrink-0 md:hidden"
-				>
-					<Menu className="size-4" />
-				</Button>
-				{renderHeaderContent()}
+				<div className="flex items-center gap-sm">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Открыть меню настроек"
+						onClick={() => setOpen(true)}
+						className="shrink-0 md:hidden"
+					>
+						<Menu className="size-4" />
+					</Button>
+					<Button variant="ghost" size="icon-sm" aria-label="Назад" asChild>
+						<Link to="/procurement">
+							<MoveLeft className="size-4" />
+						</Link>
+					</Button>
+					{renderBreadcrumb()}
+				</div>
+				{renderHeaderAction()}
 			</header>
 			<div className="flex min-h-0 flex-1">
 				<SettingsSidebar open={open} onOpenChange={setOpen} />
