@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter, useSearchParams } from "react-router";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
@@ -13,19 +13,6 @@ import { server } from "@/test-msw";
 import { makeTask, mockHostname } from "@/test-utils";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
-
-// Mock recharts ResponsiveContainer for jsdom
-vi.mock("recharts", async () => {
-	const actual = await vi.importActual<typeof import("recharts")>("recharts");
-	return {
-		...actual,
-		ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
-			<div data-testid="responsive-container" style={{ width: 320, height: 200 }}>
-				{children}
-			</div>
-		),
-	};
-});
 
 const TEST_ITEM: ProcurementItem = {
 	id: "item-1",
@@ -150,32 +137,39 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 
-	test("renders four tabs with Поставщики as default", () => {
+	test("renders three tabs with Поставщики as default", () => {
 		renderDrawer();
 		const tablist = screen.getByRole("tablist");
 		const tabs = screen.getAllByRole("tab");
 		expect(tablist).toBeInTheDocument();
-		expect(tabs).toHaveLength(4);
+		expect(tabs).toHaveLength(3);
 		expect(tabs[0]).toHaveTextContent("Поставщики");
 		expect(tabs[1]).toHaveTextContent("Задачи");
-		expect(tabs[2]).toHaveTextContent("Аналитика");
-		expect(tabs[3]).toHaveTextContent("Информация");
+		expect(tabs[2]).toHaveTextContent("Информация");
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+	});
+
+	test("tasks tab shows active task count badge", async () => {
+		renderDrawer();
+		const tasksTab = screen.getByRole("tab", { name: /Задачи/ });
+		await waitFor(() => {
+			expect(tasksTab).toHaveTextContent(/Задачи\s*\(3\)/);
+		});
 	});
 
 	test("tab click updates URL &tab= param", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 
-		await user.click(screen.getByRole("tab", { name: "Аналитика" }));
-		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=analytics");
-		expect(screen.getByRole("tab", { name: "Аналитика" })).toHaveAttribute("aria-selected", "true");
+		await user.click(screen.getByRole("tab", { name: "Информация" }));
+		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=details");
+		expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "true");
 		expect(screen.getByRole("tab", { name: "Поставщики" })).toHaveAttribute("aria-selected", "false");
 	});
 
 	test("suppliers tab omits &tab= from URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=analytics"]);
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1");
@@ -192,7 +186,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("close button removes ?item= from URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=analytics"]);
+		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await user.click(screen.getByRole("button", { name: "Close" }));
 		const urlText = screen.getByTestId("url-spy").textContent ?? "";
@@ -207,9 +201,6 @@ describe("ProcurementItemDrawer", () => {
 		// Default tab — suppliers placeholder
 		expect(screen.getByTestId("tab-panel-suppliers")).toBeInTheDocument();
 
-		await user.click(screen.getByRole("tab", { name: "Аналитика" }));
-		expect(screen.getByTestId("tab-panel-analytics")).toBeInTheDocument();
-
 		await user.click(screen.getByRole("tab", { name: "Информация" }));
 		expect(screen.getByTestId("tab-panel-details")).toBeInTheDocument();
 	});
@@ -220,12 +211,6 @@ describe("ProcurementItemDrawer", () => {
 		// We just verify the drawer opens — responsive class testing
 		// is better done via the page-level integration test
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
-	});
-
-	test("URL with ?tab=analytics opens on analytics tab", () => {
-		renderDrawer(["/procurement?item=item-1&tab=analytics"]);
-		expect(screen.getByRole("tab", { name: "Аналитика" })).toHaveAttribute("aria-selected", "true");
-		expect(screen.getByTestId("tab-panel-analytics")).toBeInTheDocument();
 	});
 
 	test("invalid tab param defaults to suppliers", () => {
@@ -400,31 +385,6 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("analytics tab renders donut chart with supplier status distribution", async () => {
-		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
-		await user.click(screen.getByRole("tab", { name: "Аналитика" }));
-
-		await waitFor(() => {
-			expect(screen.getByTestId("analytics-chart")).toBeInTheDocument();
-		});
-		// Legend labels should be present
-		expect(screen.getByText("Отправлено RFQ")).toBeInTheDocument();
-		expect(screen.getByText("Прислали КП")).toBeInTheDocument();
-		// Total count should be displayed in the chart center
-		const chart = screen.getByTestId("analytics-chart");
-		expect(within(chart).getByText("10")).toBeInTheDocument();
-		expect(within(chart).getByText("Поставщиков")).toBeInTheDocument();
-	});
-
-	test("analytics tab deep link via ?tab=analytics loads chart", async () => {
-		renderDrawer(["/procurement?item=item-1&tab=analytics"]);
-		await waitFor(() => {
-			expect(screen.getByTestId("analytics-chart")).toBeInTheDocument();
-		});
-		expect(screen.getByText("Не ответили")).toBeInTheDocument();
-	});
-
 	test("selecting suppliers shows selection toolbar with delete", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
@@ -582,8 +542,8 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(panel).getByPlaceholderText("Поиск…")).toBeInTheDocument();
 
 		// Only two filter buttons
-		expect(within(panel).getByRole("button", { name: "Завершённые" })).toBeInTheDocument();
-		expect(within(panel).getByRole("button", { name: "Архив" })).toBeInTheDocument();
+		expect(within(panel).getByRole("button", { name: /Завершённые/ })).toBeInTheDocument();
+		expect(within(panel).getByRole("button", { name: /Архив/ })).toBeInTheDocument();
 
 		// No assigned/in_progress filter buttons
 		expect(within(panel).queryByTestId("task-status-assigned")).not.toBeInTheDocument();
@@ -609,7 +569,7 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+		await user.click(screen.getByRole("button", { name: /Завершённые/ }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
@@ -617,7 +577,7 @@ describe("ProcurementItemDrawer", () => {
 		// Active tasks no longer visible
 		expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
 		// URL updated
-		expect(screen.getByTestId("url-spy").textContent).toContain("status=completed");
+		expect(screen.getByTestId("url-spy").textContent).toContain("task_status=completed");
 	});
 
 	test("tasks tab clicking Архив replaces list with archived tasks", async () => {
@@ -628,25 +588,25 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Архив" }));
+		await user.click(screen.getByRole("button", { name: /Архив/ }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Старый запрос")).toBeInTheDocument();
 		});
 		expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
-		expect(screen.getByTestId("url-spy").textContent).toContain("status=archived");
+		expect(screen.getByTestId("url-spy").textContent).toContain("task_status=archived");
 	});
 
 	test("tasks tab clicking active filter toggles back to default view", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=tasks&status=completed"]);
+		renderDrawer(["/procurement?item=item-1&tab=tasks&task_status=completed"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
 		});
 
 		// Click active Завершённые button again
-		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+		await user.click(screen.getByRole("button", { name: /Завершённые/ }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
@@ -654,7 +614,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.queryByText("Подписать договор")).not.toBeInTheDocument();
 
 		const url = screen.getByTestId("url-spy").textContent ?? "";
-		expect(url).not.toContain("status=");
+		expect(url).not.toContain("task_status=");
 	});
 
 	test("tasks tab only one filter active at a time", async () => {
@@ -666,18 +626,18 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		// Activate Завершённые
-		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+		await user.click(screen.getByRole("button", { name: /Завершённые/ }));
 		await waitFor(() => {
 			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
 		});
 
 		// Switch to Архив — replaces completed with archived
-		await user.click(screen.getByRole("button", { name: "Архив" }));
+		await user.click(screen.getByRole("button", { name: /Архив/ }));
 		await waitFor(() => {
 			expect(screen.getByText("Старый запрос")).toBeInTheDocument();
 		});
 		expect(screen.queryByText("Подписать договор")).not.toBeInTheDocument();
-		expect(screen.getByTestId("url-spy").textContent).toContain("status=archived");
+		expect(screen.getByTestId("url-spy").textContent).toContain("task_status=archived");
 	});
 
 	test("tasks tab clicking row opens task drawer with &task= in URL", async () => {

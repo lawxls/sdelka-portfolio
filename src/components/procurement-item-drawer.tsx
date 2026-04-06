@@ -1,7 +1,6 @@
 import { Check, Clock, LoaderCircle, MessageCircle, Search, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { AnalyticsTabPanel } from "@/components/analytics-tab-panel";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
@@ -13,18 +12,18 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
+import { STATUS_ICONS } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
 import { useTaskColumns } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 
-type ItemDrawerTab = "suppliers" | "analytics" | "details" | "tasks";
+type ItemDrawerTab = "suppliers" | "details" | "tasks";
 
 const TABS: { key: ItemDrawerTab; label: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "tasks", label: "Задачи" },
-	{ key: "analytics", label: "Аналитика" },
 	{ key: "details", label: "Информация" },
 ];
 
@@ -73,7 +72,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				next.delete("item");
 				next.delete("tab");
 				next.delete("supplier");
-				next.delete("status");
+				next.delete("task_status");
 				next.delete("task");
 				return next;
 			},
@@ -249,7 +248,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 	const [search, setSearch] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-	const statusParam = searchParams.get("status") as TasksFilter | null;
+	const statusParam = searchParams.get("task_status") as TasksFilter | null;
 	const activeFilter: TasksFilter | null =
 		statusParam === "completed" || statusParam === "archived" ? statusParam : null;
 
@@ -260,9 +259,9 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			(prev) => {
 				const next = new URLSearchParams(prev);
 				if (activeFilter === filter) {
-					next.delete("status");
+					next.delete("task_status");
 				} else {
-					next.set("status", filter);
+					next.set("task_status", filter);
 				}
 				return next;
 			},
@@ -304,20 +303,26 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 						autoComplete="off"
 					/>
 				</div>
-				{FILTER_BUTTONS.map(({ key, label }) => (
-					<button
-						key={key}
-						type="button"
-						className={cn(
-							"rounded-md px-2.5 py-1.5 text-sm transition-colors",
-							"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-							activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
-						)}
-						onClick={() => handleFilterToggle(key)}
-					>
-						{label}
-					</button>
-				))}
+				{FILTER_BUTTONS.map(({ key, label }) => {
+					const Icon = STATUS_ICONS[key];
+					const count = columns[key].count;
+					return (
+						<button
+							key={key}
+							type="button"
+							className={cn(
+								"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+								"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+								activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
+							)}
+							onClick={() => handleFilterToggle(key)}
+						>
+							<Icon className="size-3.5" aria-hidden="true" />
+							{label}
+							{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
+						</button>
+					);
+				})}
 			</div>
 
 			{isLoading ? (
@@ -331,7 +336,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			) : (
 				<div>
 					{tasks.map((task) => (
-						<TaskRow key={task.id} task={task} onTaskClick={onTaskClick} showQuestionCount />
+						<TaskRow key={task.id} task={task} onTaskClick={onTaskClick} showQuestionCount showCreatedDate />
 					))}
 					{!activeFilter && columns.assigned.hasNextPage && <LoadMoreSentinel loadMore={columns.assigned.loadMore} />}
 					{!activeFilter && columns.in_progress.hasNextPage && (
@@ -372,6 +377,9 @@ function ProcurementItemDrawerContent({
 	const totalCount = allSuppliers.length;
 	const negotiatingCount = allSuppliers.filter((s) => s.status === "переговоры").length;
 	const kpCount = allSuppliers.filter((s) => s.status === "получено_кп").length;
+
+	const taskColumns = useTaskColumns({ item: itemId });
+	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
@@ -450,17 +458,15 @@ function ProcurementItemDrawerContent({
 						onClick={() => onTabChange(tab.key)}
 					>
 						{tab.label}
+						{tab.key === "tasks" && activeTaskCount > 0 && (
+							<span className="ml-1.5 tabular-nums text-xs text-muted-foreground">({activeTaskCount})</span>
+						)}
 					</button>
 				))}
 			</div>
 
 			<div className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" ? "pt-3" : "p-4"}`}>
 				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
-				{activeTab === "analytics" && (
-					<div data-testid="tab-panel-analytics">
-						<AnalyticsTabPanel itemId={itemId} />
-					</div>
-				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
 				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}
 			</div>
