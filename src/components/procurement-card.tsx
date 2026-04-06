@@ -54,7 +54,7 @@ export const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className
 	awaiting_analytics: { label: STATUS_LABELS.awaiting_analytics, className: "text-violet-600 dark:text-violet-400" },
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
-	completed: { label: STATUS_LABELS.completed, className: "text-[oklch(0.50_0.18_122)] dark:text-primary" },
+	completed: { label: STATUS_LABELS.completed, className: "text-green-600 dark:text-green-400" },
 };
 
 interface ProcurementCardProps {

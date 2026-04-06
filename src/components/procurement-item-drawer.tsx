@@ -24,9 +24,9 @@ type ItemDrawerTab = "suppliers" | "analytics" | "details" | "tasks";
 
 const TABS: { key: ItemDrawerTab; label: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
+	{ key: "tasks", label: "Задачи" },
 	{ key: "analytics", label: "Аналитика" },
 	{ key: "details", label: "Информация" },
-	{ key: "tasks", label: "Задачи" },
 ];
 
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
@@ -415,7 +415,7 @@ function ProcurementItemDrawerContent({
 								{kpCount > 0 && (
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<span className="inline-flex items-center gap-1 text-[oklch(0.50_0.18_122)] dark:text-primary">
+											<span className="inline-flex items-center gap-1 text-highlight-foreground">
 												<Check className="size-3.5" aria-hidden="true" />
 												{kpCount}
 											</span>

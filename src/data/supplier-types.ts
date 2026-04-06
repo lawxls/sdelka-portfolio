@@ -22,7 +22,7 @@ export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; cla
 	переговоры: { label: SUPPLIER_STATUS_LABELS.переговоры, className: "text-blue-600 dark:text-blue-400" },
 	получено_кп: {
 		label: SUPPLIER_STATUS_LABELS.получено_кп,
-		className: "text-[oklch(0.50_0.18_122)] dark:text-primary",
+		className: "text-green-600 dark:text-green-400",
 	},
 	отказ: { label: SUPPLIER_STATUS_LABELS.отказ, className: "text-destructive" },
 };

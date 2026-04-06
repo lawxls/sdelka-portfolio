@@ -9,10 +9,10 @@ const FRICTION = 0.88;
 const FONT_WEIGHT = "900";
 const TEXT_FILL_RATIO = 0.8;
 
-// Bright lime RGB — high base alpha so it reads as lime on black, not dark green
-const BASE_R = 209;
-const BASE_G = 254;
-const BASE_B = 22;
+// Orange RGB (#fc6a39)
+const BASE_R = 252;
+const BASE_G = 106;
+const BASE_B = 57;
 const BASE_ALPHA = 0.88;
 
 // Entrance animation

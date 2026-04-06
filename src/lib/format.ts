@@ -22,7 +22,7 @@ export function formatPercent(value: number | null | undefined): string {
 
 export function signClassName(value: number | null | undefined): string {
 	if (value == null || value === 0) return "";
-	return value > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400";
+	return value > 0 ? "text-red-600 dark:text-red-400" : "text-primary";
 }
 
 export function formatDeviation(value: number | null | undefined): { text: string; className: string } {

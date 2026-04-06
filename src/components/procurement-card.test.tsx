@@ -48,8 +48,8 @@ describe("ProcurementCard", () => {
 
 		const deviationEl = container.querySelector("[data-field='deviation']");
 		const overpaymentEl = container.querySelector("[data-field='overpayment']");
-		expect(deviationEl?.className).toContain("text-green-600");
-		expect(overpaymentEl?.className).toContain("text-green-600");
+		expect(deviationEl?.className).toContain("text-primary");
+		expect(overpaymentEl?.className).toContain("text-primary");
 	});
 
 	it("does not render average price", () => {
@@ -86,7 +86,7 @@ describe("ProcurementCard", () => {
 
 		render(<ProcurementCard item={completed} index={0} />);
 		const compStatus = screen.getByText("Переговоры завершены");
-		expect(compStatus.className).toContain("text-[oklch(0.50_0.18_122)]");
+		expect(compStatus.className).toContain("text-green-600");
 		expect(compStatus.querySelector("svg")).toBeTruthy();
 	});
 

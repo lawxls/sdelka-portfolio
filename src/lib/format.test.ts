@@ -67,8 +67,8 @@ describe("signClassName", () => {
 		expect(signClassName(100)).toContain("text-red");
 	});
 
-	it("returns green class for negative values", () => {
-		expect(signClassName(-50)).toContain("text-green");
+	it("returns primary class for negative values", () => {
+		expect(signClassName(-50)).toContain("text-primary");
 	});
 
 	it("returns empty string for zero", () => {
@@ -91,9 +91,9 @@ describe("formatDeviation", () => {
 		expect(result.text).toContain("%");
 	});
 
-	it("returns green class for negative deviation (savings)", () => {
+	it("returns primary class for negative deviation (savings)", () => {
 		const result = formatDeviation(-3.1);
-		expect(result.className).toContain("text-green");
+		expect(result.className).toContain("text-primary");
 		expect(result.text).toContain("%");
 	});
 
