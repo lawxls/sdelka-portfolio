@@ -99,14 +99,14 @@ function TaskTableCard({
 
 // ── Load-more sentinel (one per status group) ─────────────────────────────────
 
-function LoadMoreSentinel({ loadMore }: { loadMore: () => void }) {
+export function LoadMoreSentinel({ loadMore }: { loadMore: () => void }) {
 	const ref = useIntersectionObserver(loadMore);
 	return <div ref={ref} className="h-px" />;
 }
 
 // ── Desktop grouped row ───────────────────────────────────────────────────────
 
-function TaskRow({
+export function TaskRow({
 	task,
 	onTaskClick,
 	showQuestionCount,
