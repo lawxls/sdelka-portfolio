@@ -14,7 +14,13 @@ import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
-import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
+import {
+	useArchiveSupplier,
+	useDeleteSuppliers,
+	useInfiniteSuppliers,
+	useSupplier,
+	useSuppliers,
+} from "@/data/use-suppliers";
 import { useTaskColumns } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
@@ -161,18 +167,21 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	const [sort, setSort] = useState<SupplierSortState>(null);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+	const [showArchived, setShowArchived] = useState(false);
 
 	const filterParams = useMemo(
 		() => ({
 			search: search || undefined,
 			statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
+			showArchived,
 			sort: sort?.field,
 			dir: sort?.direction,
 		}),
-		[search, activeStatuses, sort],
+		[search, activeStatuses, showArchived, sort],
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const deleteMutation = useDeleteSuppliers();
+	const archiveMutation = useArchiveSupplier();
 	const suppliers = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
 
 	function handleSort(field: SupplierSortField) {
@@ -200,6 +209,17 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 		}
 	}
 
+	function handleArchiveBulk() {
+		for (const id of selectedIds) {
+			archiveMutation.mutate({ itemId, supplierId: id });
+		}
+		setSelectedIds(new Set());
+	}
+
+	function handleArchiveSupplier(supplierId: string) {
+		archiveMutation.mutate({ itemId, supplierId });
+	}
+
 	function handleDelete() {
 		const ids = [...selectedIds];
 		deleteMutation.mutate(
@@ -223,8 +243,11 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				onStatusFilter={handleStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={() => {}}
-				isArchiving={false}
+				onArchive={handleArchiveBulk}
+				isArchiving={archiveMutation.isPending}
+				onArchiveSupplier={handleArchiveSupplier}
+				showArchived={showArchived}
+				onToggleArchived={() => setShowArchived((v) => !v)}
 				onDelete={handleDelete}
 				isDeleting={deleteMutation.isPending}
 				onRowClick={onSupplierClick}

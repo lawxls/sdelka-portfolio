@@ -166,6 +166,7 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			itemId,
 			companyName: COMPANY_NAMES[idx % COMPANY_NAMES.length],
 			status,
+			archived: false,
 			email: `info@${WEBSITES[idx % WEBSITES.length]}`,
 			website: `https://${WEBSITES[idx % WEBSITES.length]}`,
 			address: ADDRESSES[idx % ADDRESSES.length],
@@ -224,6 +225,10 @@ function simulateDelay(): Promise<void> {
 
 function applySupplierFilters(suppliers: Supplier[], params?: SupplierFilterParams): Supplier[] {
 	let result = suppliers;
+
+	if (!params?.showArchived) {
+		result = result.filter((s) => !s.archived);
+	}
 
 	if (params?.search) {
 		const q = params.search.toLowerCase();
@@ -301,6 +306,14 @@ export async function deleteSuppliers(itemId: string, supplierIds: string[]): Pr
 	const idsToDelete = new Set(supplierIds);
 	const remaining = suppliers.filter((s) => !idsToDelete.has(s.id));
 	store.set(itemId, remaining);
+}
+
+export async function archiveSupplier(itemId: string, supplierId: string): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const supplier = suppliers.find((s) => s.id === supplierId);
+	if (!supplier) throw new Error("Supplier not found");
+	supplier.archived = true;
 }
 
 export async function sendSupplierMessage(

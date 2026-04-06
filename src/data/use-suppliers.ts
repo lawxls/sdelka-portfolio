@@ -1,5 +1,12 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteSuppliers, getAllSuppliers, getSupplier, getSuppliers, sendSupplierMessage } from "./supplier-mock-data";
+import {
+	archiveSupplier,
+	deleteSuppliers,
+	getAllSuppliers,
+	getSupplier,
+	getSuppliers,
+	sendSupplierMessage,
+} from "./supplier-mock-data";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
 
@@ -26,6 +33,17 @@ export function useSupplier(itemId: string, supplierId: string | null) {
 		queryKey: ["supplier", itemId, supplierId],
 		queryFn: () => getSupplier(itemId, supplierId as string),
 		enabled: supplierId !== null,
+	});
+}
+
+export function useArchiveSupplier() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => archiveSupplier(itemId, supplierId),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+		},
 	});
 }
 

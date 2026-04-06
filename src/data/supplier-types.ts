@@ -67,6 +67,7 @@ export type SupplierSortState = { field: SupplierSortField; direction: "asc" | "
 export interface SupplierFilterParams {
 	search?: string;
 	statuses?: SupplierStatus[];
+	showArchived?: boolean;
 	sort?: SupplierSortField;
 	dir?: "asc" | "desc";
 	cursor?: string;
@@ -78,6 +79,7 @@ export interface Supplier {
 	itemId: string;
 	companyName: string;
 	status: SupplierStatus;
+	archived: boolean;
 	email: string;
 	website: string;
 	address: string;

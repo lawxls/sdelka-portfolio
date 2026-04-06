@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,6 +54,9 @@ interface SuppliersTableProps {
 	onSelectionChange: (idOrAll: string) => void;
 	onArchive: () => void;
 	isArchiving: boolean;
+	onArchiveSupplier: (supplierId: string) => void;
+	showArchived: boolean;
+	onToggleArchived: () => void;
 	onDelete: () => void;
 	isDeleting: boolean;
 	onRowClick?: (supplierId: string) => void;
@@ -123,6 +127,9 @@ export function SuppliersTable({
 	onSelectionChange,
 	onArchive,
 	isArchiving,
+	onArchiveSupplier,
+	showArchived,
+	onToggleArchived,
 	onDelete,
 	isDeleting,
 	onRowClick,
@@ -247,7 +254,15 @@ export function SuppliersTable({
 			</Tooltip>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<Button type="button" variant="ghost" size="icon-sm" aria-label="Архив">
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Архив"
+						aria-pressed={showArchived}
+						onClick={onToggleArchived}
+						className={showArchived ? "bg-muted" : ""}
+					>
 						<Archive aria-hidden="true" />
 					</Button>
 				</TooltipTrigger>
@@ -389,43 +404,52 @@ export function SuppliersTable({
 						</TableRow>
 					) : (
 						suppliers.map((supplier) => (
-							<TableRow
-								key={supplier.id}
-								className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
-								onClick={() => onRowClick?.(supplier.id)}
-							>
-								<TableCell onClick={(e) => e.stopPropagation()}>
-									<Checkbox
-										checked={selectedIds.has(supplier.id)}
-										onCheckedChange={() => onSelectionChange(supplier.id)}
-										aria-label={`Выбрать ${supplier.companyName}`}
-									/>
-								</TableCell>
-								<TableCell>
-									<div className="flex flex-col gap-1">
-										<span className="font-medium">{supplier.companyName}</span>
-										<SupplierStatusIndicator status={supplier.status} className="text-xs" />
-									</div>
-								</TableCell>
-								<TableCell onClick={(e) => e.stopPropagation()}>
-									<a
-										href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+							<ContextMenu key={supplier.id}>
+								<ContextMenuTrigger asChild>
+									<TableRow
+										className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
+										onClick={() => onRowClick?.(supplier.id)}
 									>
-										{stripProtocol(supplier.website)}
-									</a>
-								</TableCell>
-								<TableCell>
-									<DeliveryValue cost={supplier.deliveryCost} />
-								</TableCell>
-								<TableCell>
-									<DeferralValue days={supplier.deferralDays} />
-								</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
-								<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
-							</TableRow>
+										<TableCell onClick={(e) => e.stopPropagation()}>
+											<Checkbox
+												checked={selectedIds.has(supplier.id)}
+												onCheckedChange={() => onSelectionChange(supplier.id)}
+												aria-label={`Выбрать ${supplier.companyName}`}
+											/>
+										</TableCell>
+										<TableCell>
+											<div className="flex flex-col gap-1">
+												<span className="font-medium">{supplier.companyName}</span>
+												<SupplierStatusIndicator status={supplier.status} className="text-xs" />
+											</div>
+										</TableCell>
+										<TableCell onClick={(e) => e.stopPropagation()}>
+											<a
+												href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
+											>
+												{stripProtocol(supplier.website)}
+											</a>
+										</TableCell>
+										<TableCell>
+											<DeliveryValue cost={supplier.deliveryCost} />
+										</TableCell>
+										<TableCell>
+											<DeferralValue days={supplier.deferralDays} />
+										</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
+										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
+									</TableRow>
+								</ContextMenuTrigger>
+								<ContextMenuContent>
+									<ContextMenuItem onSelect={() => onArchiveSupplier(supplier.id)}>
+										<Archive className="size-3.5" />
+										Архивировать
+									</ContextMenuItem>
+								</ContextMenuContent>
+							</ContextMenu>
 						))
 					)}
 				</TableBody>

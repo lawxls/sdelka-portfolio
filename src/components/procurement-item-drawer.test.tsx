@@ -302,6 +302,15 @@ describe("ProcurementItemDrawer", () => {
 		expect(checkboxes).toHaveLength(11);
 	});
 
+	test("suppliers tab has archive filter toggle", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+		const btn = screen.getByRole("button", { name: "Архив" });
+		expect(btn).toHaveAttribute("aria-pressed", "false");
+	});
+
 	test("clicking supplier row opens supplier detail drawer with &supplier= in URL", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
