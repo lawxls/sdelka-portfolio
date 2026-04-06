@@ -65,12 +65,14 @@ const assignedTasks = [
 		name: "Согласовать цену",
 		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
 		questionCount: 2,
+		createdAt: "2026-03-20T10:00:00.000Z",
 	}),
 	makeTask("task-2", {
 		status: "assigned",
 		name: "Запросить образцы",
 		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
 		questionCount: 1,
+		createdAt: "2026-03-18T10:00:00.000Z",
 	}),
 ];
 const inProgressTasks = [
@@ -79,6 +81,23 @@ const inProgressTasks = [
 		name: "Проверить качество",
 		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
 		questionCount: 3,
+		createdAt: "2026-03-19T10:00:00.000Z",
+	}),
+];
+const completedTasks = [
+	makeTask("task-4", {
+		status: "completed",
+		name: "Подписать договор",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		questionCount: 0,
+	}),
+];
+const archivedTasks = [
+	makeTask("task-5", {
+		status: "archived",
+		name: "Старый запрос",
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		questionCount: 0,
 	}),
 ];
 
@@ -86,8 +105,8 @@ function taskBoardResponse() {
 	return {
 		assigned: { results: assignedTasks, next: null, count: assignedTasks.length },
 		in_progress: { results: inProgressTasks, next: null, count: inProgressTasks.length },
-		completed: { results: [], next: null, count: 0 },
-		archived: { results: [], next: null, count: 0 },
+		completed: { results: completedTasks, next: null, count: completedTasks.length },
+		archived: { results: archivedTasks, next: null, count: archivedTasks.length },
 	};
 }
 
@@ -106,7 +125,7 @@ beforeEach(() => {
 	server.use(
 		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(taskBoardResponse())),
 		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
-			const all = [...assignedTasks, ...inProgressTasks];
+			const all = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
 			const task = all.find((t) => t.id === params.id);
 			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
 		}),
@@ -511,42 +530,67 @@ describe("ProcurementItemDrawer", () => {
 		expect(editButtons).toHaveLength(4);
 	});
 
-	test("tasks tab renders search, status filter buttons with counts, and task cards", async () => {
+	test("tasks tab default view shows assigned + in_progress tasks as rows", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 
 		await user.click(screen.getByRole("tab", { name: "Задачи" }));
 
-		// Wait for data to load
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		// Search input present
 		const panel = screen.getByTestId("tab-panel-tasks");
-		expect(within(panel).getByPlaceholderText("Поиск…")).toBeInTheDocument();
 
-		// Status filter buttons visible inline with counts
-		const assignedBtn = within(panel).getByTestId("task-status-assigned");
-		const inProgressBtn = within(panel).getByTestId("task-status-in_progress");
-		expect(assignedBtn).toHaveTextContent("2");
-		expect(inProgressBtn).toHaveTextContent("1");
+		// All three active tasks visible (assigned + in_progress merged)
+		expect(within(panel).getByText("Согласовать цену")).toBeInTheDocument();
+		expect(within(panel).getByText("Запросить образцы")).toBeInTheDocument();
+		expect(within(panel).getByText("Проверить качество")).toBeInTheDocument();
 
-		// Default status is "assigned" — cards displayed
-		expect(screen.getByText("Запросить образцы")).toBeInTheDocument();
-		// Item name hidden on cards within the tasks panel
-		expect(within(panel).queryByText("Арматура А500С")).not.toBeInTheDocument();
+		// Rendered as rows, not cards
+		expect(within(panel).getByTestId("task-row-task-1")).toBeInTheDocument();
+		expect(within(panel).queryByTestId("task-card-task-1")).not.toBeInTheDocument();
+
+		// Completed/archived not shown in default view
+		expect(within(panel).queryByText("Подписать договор")).not.toBeInTheDocument();
+		expect(within(panel).queryByText("Старый запрос")).not.toBeInTheDocument();
 	});
 
-	test("tasks tab deep link via ?tab=tasks loads tasks", async () => {
+	test("tasks tab default view sorted by createdAt descending", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const rows = within(panel).getAllByTestId(/^task-row-/);
+		// task-1 (Mar 20) > task-3 (Mar 19) > task-2 (Mar 18)
+		expect(rows[0]).toHaveAttribute("data-testid", "task-row-task-1");
+		expect(rows[1]).toHaveAttribute("data-testid", "task-row-task-3");
+		expect(rows[2]).toHaveAttribute("data-testid", "task-row-task-2");
 	});
 
-	test("tasks tab shows question count on cards", async () => {
+	test("tasks tab has search input and only Завершённые/Архив filter buttons", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		expect(within(panel).getByPlaceholderText("Поиск…")).toBeInTheDocument();
+
+		// Only two filter buttons
+		expect(within(panel).getByRole("button", { name: "Завершённые" })).toBeInTheDocument();
+		expect(within(panel).getByRole("button", { name: "Архив" })).toBeInTheDocument();
+
+		// No assigned/in_progress filter buttons
+		expect(within(panel).queryByTestId("task-status-assigned")).not.toBeInTheDocument();
+		expect(within(panel).queryByTestId("task-status-in_progress")).not.toBeInTheDocument();
+	});
+
+	test("tasks tab shows question count on rows", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
@@ -557,7 +601,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByText("1 вопрос")).toBeInTheDocument();
 	});
 
-	test("tasks tab filter switches displayed tasks and updates URL", async () => {
+	test("tasks tab clicking Завершённые replaces list with completed tasks", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
@@ -565,19 +609,18 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		// Click "В работе" status button directly
-		await user.click(screen.getByTestId("task-status-in_progress"));
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Проверить качество")).toBeInTheDocument();
+			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
 		});
-		// Assigned tasks no longer visible
+		// Active tasks no longer visible
 		expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
 		// URL updated
-		expect(screen.getByTestId("url-spy").textContent).toContain("status=in_progress");
+		expect(screen.getByTestId("url-spy").textContent).toContain("status=completed");
 	});
 
-	test("tasks tab shows empty state for status with no tasks", async () => {
+	test("tasks tab clicking Архив replaces list with archived tasks", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
@@ -585,13 +628,36 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		// Click "Завершено" status button directly
-		await user.click(screen.getByTestId("task-status-completed"));
+		await user.click(screen.getByRole("button", { name: "Архив" }));
 
-		expect(screen.getByText("Нет задач")).toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByText("Старый запрос")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
+		expect(screen.getByTestId("url-spy").textContent).toContain("status=archived");
 	});
 
-	test("tasks tab clicking card opens task drawer with &task= in URL", async () => {
+	test("tasks tab clicking active filter toggles back to default view", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks&status=completed"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
+		});
+
+		// Click active Завершённые button again
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("Подписать договор")).not.toBeInTheDocument();
+
+		const url = screen.getByTestId("url-spy").textContent ?? "";
+		expect(url).not.toContain("status=");
+	});
+
+	test("tasks tab only one filter active at a time", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
@@ -599,25 +665,41 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByTestId("task-card-task-1"));
+		// Activate Завершённые
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+		await waitFor(() => {
+			expect(screen.getByText("Подписать договор")).toBeInTheDocument();
+		});
+
+		// Switch to Архив — replaces completed with archived
+		await user.click(screen.getByRole("button", { name: "Архив" }));
+		await waitFor(() => {
+			expect(screen.getByText("Старый запрос")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("Подписать договор")).not.toBeInTheDocument();
+		expect(screen.getByTestId("url-spy").textContent).toContain("status=archived");
+	});
+
+	test("tasks tab clicking row opens task drawer with &task= in URL", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByTestId("task-row-task-1"));
 
 		await waitFor(() => {
 			expect(screen.getByTestId("url-spy").textContent).toContain("task=task-1");
 		});
 	});
 
-	test("tasks tab status=assigned is default and omitted from URL", async () => {
-		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=tasks&status=in_progress"]);
+	test("tasks tab deep link via ?tab=tasks loads tasks", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Проверить качество")).toBeInTheDocument();
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
-
-		// Click "Назначено" status button directly
-		await user.click(screen.getByTestId("task-status-assigned"));
-
-		const url = screen.getByTestId("url-spy").textContent ?? "";
-		expect(url).not.toContain("status=");
 	});
 });

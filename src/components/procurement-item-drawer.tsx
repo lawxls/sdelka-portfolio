@@ -6,14 +6,13 @@ import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
-import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
+import { LoadMoreSentinel, TaskRow } from "@/components/task-table";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
-import { STATUS_ICONS, STATUS_LABELS, TASK_STATUSES, type TaskStatus } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "@/data/use-suppliers";
 import { useTaskColumns } from "@/data/use-tasks";
@@ -238,26 +237,32 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	);
 }
 
+type TasksFilter = "completed" | "archived";
+
+const FILTER_BUTTONS: { key: TasksFilter; label: string }[] = [
+	{ key: "completed", label: "Завершённые" },
+	{ key: "archived", label: "Архив" },
+];
+
 function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [search, setSearch] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-	const statusParam = searchParams.get("status");
-	const activeStatus: TaskStatus = TASK_STATUSES.includes(statusParam as TaskStatus)
-		? (statusParam as TaskStatus)
-		: "assigned";
+	const statusParam = searchParams.get("status") as TasksFilter | null;
+	const activeFilter: TasksFilter | null =
+		statusParam === "completed" || statusParam === "archived" ? statusParam : null;
 
 	const columns = useTaskColumns({ item: itemId, q: search || undefined });
 
-	function handleStatusChange(status: TaskStatus) {
+	function handleFilterToggle(filter: TasksFilter) {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
-				if (status === "assigned") {
+				if (activeFilter === filter) {
 					next.delete("status");
 				} else {
-					next.set("status", status);
+					next.set("status", filter);
 				}
 				return next;
 			},
@@ -271,12 +276,21 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 		debounceRef.current = setTimeout(() => setSearch(value), 250);
 	}
 
-	const activeColumn = columns[activeStatus];
+	const activeFilterTasks = activeFilter ? columns[activeFilter].tasks : null;
+
+	const tasks = useMemo(() => {
+		if (activeFilterTasks) return activeFilterTasks;
+		return [...columns.assigned.tasks, ...columns.in_progress.tasks].sort(
+			(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+		);
+	}, [activeFilterTasks, columns.assigned.tasks, columns.in_progress.tasks]);
+
+	const isLoading = columns.assigned.isLoading;
 
 	return (
 		<div data-testid="tab-panel-tasks">
 			<div className="mb-4 flex items-center gap-2">
-				<div className="relative max-w-56">
+				<div className="relative flex-1 max-w-56">
 					<Search
 						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
 						aria-hidden="true"
@@ -290,46 +304,42 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 						autoComplete="off"
 					/>
 				</div>
-				{TASK_STATUSES.map((status) => {
-					const Icon = STATUS_ICONS[status];
-					const isActive = activeStatus === status;
-					return (
-						<Tooltip key={status}>
-							<TooltipTrigger asChild>
-								<button
-									type="button"
-									aria-label={STATUS_LABELS[status]}
-									data-testid={`task-status-${status}`}
-									className={cn(
-										"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm tabular-nums transition-colors",
-										"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-										isActive ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
-									)}
-									onClick={() => handleStatusChange(status)}
-								>
-									<Icon className="size-4" aria-hidden="true" />
-									{columns[status].count}
-								</button>
-							</TooltipTrigger>
-							<TooltipContent>{STATUS_LABELS[status]}</TooltipContent>
-						</Tooltip>
-					);
-				})}
+				{FILTER_BUTTONS.map(({ key, label }) => (
+					<button
+						key={key}
+						type="button"
+						className={cn(
+							"rounded-md px-2.5 py-1.5 text-sm transition-colors",
+							"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+							activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
+						)}
+						onClick={() => handleFilterToggle(key)}
+					>
+						{label}
+					</button>
+				))}
 			</div>
 
-			{activeColumn.isLoading ? (
-				<div className="space-y-2 pr-[30%]">
-					<div className="h-16 animate-pulse rounded-lg bg-muted" />
-					<div className="h-16 animate-pulse rounded-lg bg-muted" />
-					<div className="h-16 animate-pulse rounded-lg bg-muted" />
+			{isLoading ? (
+				<div className="space-y-px">
+					<div className="h-10 animate-pulse bg-muted" />
+					<div className="h-10 animate-pulse bg-muted" />
+					<div className="h-10 animate-pulse bg-muted" />
 				</div>
-			) : activeColumn.tasks.length === 0 ? (
+			) : tasks.length === 0 ? (
 				<p className="py-8 text-center text-sm text-muted-foreground">Нет задач</p>
 			) : (
-				<div className="space-y-2 pr-[30%]">
-					{activeColumn.tasks.map((task) => (
-						<TaskCard key={task.id} task={task} onClick={() => onTaskClick(task.id)} hideItemName showQuestionCount />
+				<div>
+					{tasks.map((task) => (
+						<TaskRow key={task.id} task={task} onTaskClick={onTaskClick} showQuestionCount />
 					))}
+					{!activeFilter && columns.assigned.hasNextPage && <LoadMoreSentinel loadMore={columns.assigned.loadMore} />}
+					{!activeFilter && columns.in_progress.hasNextPage && (
+						<LoadMoreSentinel loadMore={columns.in_progress.loadMore} />
+					)}
+					{activeFilter && columns[activeFilter].hasNextPage && (
+						<LoadMoreSentinel loadMore={columns[activeFilter].loadMore} />
+					)}
 				</div>
 			)}
 		</div>
