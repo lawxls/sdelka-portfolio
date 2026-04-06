@@ -154,6 +154,7 @@ export interface NewItemInput {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	priceMonitoringPeriod?: PriceMonitoringPeriod;
+	currentSupplier?: CurrentSupplier;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

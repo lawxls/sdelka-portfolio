@@ -1,4 +1,4 @@
-import { CircleHelp, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleHelp, Plus, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
+	CurrentSupplier,
 	DeliveryType,
 	FrequencyPeriod,
 	NewItemInput,
@@ -138,6 +139,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
 	const [selectedAddressIds, setSelectedAddressIds] = useState<string[]>([]);
 	const [companyError, setCompanyError] = useState<string>("");
+	const [csExpanded, setCsExpanded] = useState(false);
+	const [csCompanyName, setCsCompanyName] = useState("");
+	const [csDeliveryCost, setCsDeliveryCost] = useState("");
+	const [csDeferralDays, setCsDeferralDays] = useState("");
+	const [csPricePerUnit, setCsPricePerUnit] = useState("");
+	const [csTco, setCsTco] = useState("");
 	const pendingFocusKey = useRef<string | null>(null);
 	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -160,7 +167,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		delivery.analoguesAllowed !== null ||
 		delivery.additionalInfo !== "" ||
 		delivery.monitoringPeriod !== "quarter" ||
-		files.length > 0;
+		files.length > 0 ||
+		csCompanyName !== "" ||
+		csDeliveryCost !== "" ||
+		csDeferralDays !== "" ||
+		csPricePerUnit !== "" ||
+		csTco !== "";
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
@@ -172,10 +184,28 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		setCompanyError("");
 		setDelivery(createDefaultDelivery());
 		setFiles([]);
+		setCsExpanded(false);
+		setCsCompanyName("");
+		setCsDeliveryCost("");
+		setCsDeferralDays("");
+		setCsPricePerUnit("");
+		setCsTco("");
 	}
 
 	function updateDelivery<K extends keyof DeliveryState>(field: K, value: DeliveryState[K]) {
 		setDelivery((prev) => ({ ...prev, [field]: value }));
+	}
+
+	function buildCurrentSupplier(): CurrentSupplier | undefined {
+		const hasAnyValue = csCompanyName || csDeliveryCost || csDeferralDays || csPricePerUnit || csTco;
+		if (!hasAnyValue) return undefined;
+		return {
+			companyName: csCompanyName,
+			deliveryCost: csDeliveryCost ? Number(csDeliveryCost) : null,
+			deferralDays: csDeferralDays ? Number(csDeferralDays) : 0,
+			pricePerUnit: csPricePerUnit ? Number(csPricePerUnit) : null,
+			tco: csTco ? Number(csTco) : null,
+		};
 	}
 
 	function buildSharedFields(): Partial<NewItemInput> {
@@ -255,6 +285,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		}
 
 		const deliveryFields = buildSharedFields();
+		const currentSupplier = buildCurrentSupplier();
 
 		const items: NewItemInput[] = positions.map((p) => ({
 			name: p.name.trim(),
@@ -263,6 +294,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			annualQuantity: p.quantity ? Number(p.quantity) : undefined,
 			currentPrice: p.price ? Number(p.price) : undefined,
 			...deliveryFields,
+			...(currentSupplier ? { currentSupplier } : {}),
 		}));
 
 		onSubmit(items);
@@ -464,6 +496,84 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 								<Plus aria-hidden="true" />
 								Добавить позицию
 							</Button>
+						</div>
+
+						{/* ── Текущий поставщик (collapsible) ── */}
+						<div className="mt-4 rounded-lg border border-border">
+							<button
+								type="button"
+								className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-medium hover:bg-muted/50"
+								aria-expanded={csExpanded}
+								onClick={() => setCsExpanded((prev) => !prev)}
+							>
+								{csExpanded ? (
+									<ChevronDown className="size-4" aria-hidden="true" />
+								) : (
+									<ChevronRight className="size-4" aria-hidden="true" />
+								)}
+								Текущий поставщик
+							</button>
+							{csExpanded && (
+								<div className="flex flex-col gap-3 border-t border-border px-3 pb-3 pt-2">
+									<Input
+										placeholder="Название компании"
+										value={csCompanyName}
+										onChange={(e) => setCsCompanyName(e.target.value)}
+										spellCheck={false}
+										autoComplete="off"
+									/>
+									<div className="grid grid-cols-2 gap-3">
+										<div>
+											<Input
+												type="number"
+												inputMode="numeric"
+												min={0}
+												value={csDeliveryCost}
+												onChange={(e) => setCsDeliveryCost(e.target.value)}
+												aria-label="Доставка, ₽"
+												placeholder="Доставка"
+												autoComplete="off"
+											/>
+										</div>
+										<div>
+											<Input
+												type="number"
+												inputMode="numeric"
+												min={0}
+												value={csDeferralDays}
+												onChange={(e) => setCsDeferralDays(e.target.value)}
+												aria-label="Отсрочка, дн."
+												placeholder="Отсрочка"
+												autoComplete="off"
+											/>
+										</div>
+										<div>
+											<Input
+												type="number"
+												inputMode="numeric"
+												min={0}
+												value={csPricePerUnit}
+												onChange={(e) => setCsPricePerUnit(e.target.value)}
+												aria-label="Цена/ед., ₽"
+												placeholder="Цена/ед."
+												autoComplete="off"
+											/>
+										</div>
+										<div>
+											<Input
+												type="number"
+												inputMode="numeric"
+												min={0}
+												value={csTco}
+												onChange={(e) => setCsTco(e.target.value)}
+												aria-label="ТСО, ₽"
+												placeholder="ТСО"
+												autoComplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							)}
 						</div>
 
 						<p className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs max-md:text-[0.65rem] text-muted-foreground">

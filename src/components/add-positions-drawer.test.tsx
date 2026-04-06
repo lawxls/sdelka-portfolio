@@ -819,4 +819,143 @@ describe("AddPositionsDrawer", () => {
 
 		expect(screen.getByPlaceholderText("Название позиции *")).toHaveValue("");
 	});
+
+	// --- Current supplier form section ---
+
+	test("current supplier section is collapsed by default", () => {
+		renderDrawer();
+		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toHaveAttribute("aria-expanded", "false");
+		expect(screen.queryByPlaceholderText("Название компании")).not.toBeInTheDocument();
+	});
+
+	test("current supplier section expands on click", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+
+		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toHaveAttribute("aria-expanded", "true");
+		expect(screen.getByPlaceholderText("Название компании")).toBeInTheDocument();
+		expect(screen.getByLabelText("Доставка, ₽")).toBeInTheDocument();
+		expect(screen.getByLabelText("Отсрочка, дн.")).toBeInTheDocument();
+		expect(screen.getByLabelText("Цена/ед., ₽")).toBeInTheDocument();
+		expect(screen.getByLabelText("ТСО, ₽")).toBeInTheDocument();
+	});
+
+	test("current supplier section collapses on second click", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+
+		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toHaveAttribute("aria-expanded", "false");
+		expect(screen.queryByPlaceholderText("Название компании")).not.toBeInTheDocument();
+	});
+
+	test("submit with all current supplier fields empty sends no currentSupplier", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		// Expand section but leave all fields empty
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit.mock.calls[0][0][0].currentSupplier).toBeUndefined();
+	});
+
+	test("submit with current supplier fields populated includes currentSupplier", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.type(screen.getByPlaceholderText("Название компании"), "МеталлТрейд");
+		await user.type(screen.getByLabelText("Доставка, ₽"), "5000");
+		await user.type(screen.getByLabelText("Отсрочка, дн."), "30");
+		await user.type(screen.getByLabelText("Цена/ед., ₽"), "1200");
+		await user.type(screen.getByLabelText("ТСО, ₽"), "15000");
+
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({
+				currentSupplier: {
+					companyName: "МеталлТрейд",
+					deliveryCost: 5000,
+					deferralDays: 30,
+					pricePerUnit: 1200,
+					tco: 15000,
+				},
+			}),
+		]);
+	});
+
+	test("submit with only company name sends currentSupplier with null numerics", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.type(screen.getByPlaceholderText("Название компании"), "СтройМаркет");
+
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		expect(onSubmit).toHaveBeenCalledWith([
+			expect.objectContaining({
+				currentSupplier: {
+					companyName: "СтройМаркет",
+					deliveryCost: null,
+					deferralDays: 0,
+					pricePerUnit: null,
+					tco: null,
+				},
+			}),
+		]);
+	});
+
+	test("current supplier section resets after submit", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.type(screen.getByPlaceholderText("Название компании"), "Test");
+
+		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
+		await selectCompany(user);
+		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+
+		// Section collapses and fields reset
+		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toHaveAttribute("aria-expanded", "false");
+		expect(screen.queryByPlaceholderText("Название компании")).not.toBeInTheDocument();
+	});
+
+	test("dirty detection: filling current supplier field triggers confirmation", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
+		await user.type(screen.getByPlaceholderText("Название компании"), "Test");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+
+	test("current supplier section positioned after positions, before company", () => {
+		renderDrawer();
+		const toggle = screen.getByRole("button", { name: "Текущий поставщик" });
+		const companyHeader = screen.getByText("Компания");
+		// Toggle should appear before the company section in DOM
+		expect(toggle.compareDocumentPosition(companyHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
 });
