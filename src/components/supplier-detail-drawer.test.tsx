@@ -362,6 +362,31 @@ describe("SupplierDetailDrawer", () => {
 		});
 	});
 
+	describe("select supplier icon", () => {
+		test("shows select supplier icon for получено_кп status", () => {
+			renderDrawer({ onSelectSupplier: vi.fn() });
+			expect(screen.getByRole("button", { name: "Выбрать поставщика" })).toBeInTheDocument();
+		});
+
+		test("hides select supplier icon for ждем_ответа status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }), onSelectSupplier: vi.fn() });
+			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
+		});
+
+		test("hides select supplier icon for переговоры status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "переговоры" }), onSelectSupplier: vi.fn() });
+			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
+		});
+
+		test("clicking select supplier icon calls onSelectSupplier", async () => {
+			const user = userEvent.setup();
+			const onSelectSupplier = vi.fn();
+			renderDrawer({ onSelectSupplier });
+			await user.click(screen.getByRole("button", { name: "Выбрать поставщика" }));
+			expect(onSelectSupplier).toHaveBeenCalled();
+		});
+	});
+
 	describe("ChatComposer visibility", () => {
 		test("shows composer for ждем_ответа status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }) });

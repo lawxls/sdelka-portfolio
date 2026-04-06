@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter, useSearchParams } from "react-router";
@@ -705,5 +705,88 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		expect(screen.queryByText("Текущий поставщик")).not.toBeInTheDocument();
+	});
+
+	test("context menu shows Выбрать поставщика for получено_кп supplier", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// First data row is получено_кп (STATUS_PATTERN[0])
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		expect(screen.getByText("Выбрать поставщика")).toBeInTheDocument();
+	});
+
+	test("context menu hides Выбрать поставщика for non-получено_кп supplier", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Second data row is письмо_не_отправлено (STATUS_PATTERN[1])
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[2]);
+		expect(screen.queryByText("Выбрать поставщика")).not.toBeInTheDocument();
+	});
+
+	test("clicking Выбрать поставщика opens confirmation dialog", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		await user.click(screen.getByText("Выбрать поставщика"));
+
+		expect(screen.getByText(/текущим поставщиком/)).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Подтвердить" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+	});
+
+	test("cancelling select supplier dialog does not change current supplier", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		await user.click(screen.getByText("Выбрать поставщика"));
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		// Dialog should be gone
+		expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
+		// Original current supplier still shown
+		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+	});
+
+	test("confirming select supplier dialog fires mutation and closes dialog", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(11);
+		});
+
+		// Verify current supplier before selection
+		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		await user.click(screen.getByText("Выбрать поставщика"));
+
+		// Confirmation dialog is open
+		expect(screen.getByText(/текущим поставщиком/)).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+		// Dialog should close
+		await waitFor(() => {
+			expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
+		});
 	});
 });

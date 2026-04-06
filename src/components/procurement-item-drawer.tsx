@@ -8,6 +8,16 @@ import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
 import { LoadMoreSentinel, TaskRow } from "@/components/task-table";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +30,7 @@ import {
 	useArchiveSupplier,
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
+	useSelectSupplier,
 	useSupplier,
 	useSuppliers,
 } from "@/data/use-suppliers";
@@ -57,6 +68,8 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const open = itemId != null;
 
 	const { data: supplier } = useSupplier(itemId ?? "", supplierId);
+	const [selectingSupplier, setSelectingSupplier] = useState<{ id: string; companyName: string } | null>(null);
+	const selectMutation = useSelectSupplier();
 
 	function handleTabChange(tab: ItemDrawerTab) {
 		setSearchParams(
@@ -132,6 +145,24 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		);
 	}
 
+	function handleSelectSupplierFromTable(supplierId: string, companyName: string) {
+		setSelectingSupplier({ id: supplierId, companyName });
+	}
+
+	function handleSelectSupplierFromDrawer() {
+		if (supplier) {
+			setSelectingSupplier({ id: supplier.id, companyName: supplier.companyName });
+		}
+	}
+
+	function handleConfirmSelect() {
+		if (!selectingSupplier || !itemId) return;
+		selectMutation.mutate(
+			{ itemId, supplierId: selectingSupplier.id },
+			{ onSuccess: () => setSelectingSupplier(null) },
+		);
+	}
+
 	return (
 		<>
 			<Sheet
@@ -154,17 +185,50 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 							onTabChange={handleTabChange}
 							onSupplierClick={handleSupplierOpen}
 							onTaskClick={handleTaskOpen}
+							onSelectSupplier={handleSelectSupplierFromTable}
 						/>
 					)}
 				</SheetContent>
 			</Sheet>
-			<SupplierDetailDrawer supplier={supplier ?? null} open={supplierId != null} onClose={handleSupplierClose} />
+			<SupplierDetailDrawer
+				supplier={supplier ?? null}
+				open={supplierId != null}
+				onClose={handleSupplierClose}
+				onSelectSupplier={handleSelectSupplierFromDrawer}
+			/>
 			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
+			<AlertDialog
+				open={selectingSupplier != null}
+				onOpenChange={(open) => {
+					if (!open) setSelectingSupplier(null);
+				}}
+			>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Выбрать поставщика</AlertDialogTitle>
+						<AlertDialogDescription>
+							Выбрать {selectingSupplier?.companyName} текущим поставщиком?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction onClick={handleConfirmSelect}>Подтвердить</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</>
 	);
 }
 
-function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
+function SuppliersTabPanel({
+	itemId,
+	onSupplierClick,
+	onSelectSupplier,
+}: {
+	itemId: string;
+	onSupplierClick: (id: string) => void;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
+}) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>(null);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
@@ -252,6 +316,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				onArchive={handleArchiveBulk}
 				isArchiving={archiveMutation.isPending}
 				onArchiveSupplier={handleArchiveSupplier}
+				onSelectSupplier={onSelectSupplier}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}
 				onDelete={handleDelete}
@@ -387,6 +452,7 @@ function ProcurementItemDrawerContent({
 	onTabChange,
 	onSupplierClick,
 	onTaskClick,
+	onSelectSupplier,
 }: {
 	itemId: string;
 	item?: ProcurementItem;
@@ -394,6 +460,7 @@ function ProcurementItemDrawerContent({
 	onTabChange: (tab: ItemDrawerTab) => void;
 	onSupplierClick: (id: string) => void;
 	onTaskClick: (id: string) => void;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
 	// Idempotent — only seeds if item.id is missing from the mock store
 	if (item) seedItemDetail(item);
@@ -495,7 +562,9 @@ function ProcurementItemDrawerContent({
 			</div>
 
 			<div className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" ? "pt-3" : "p-4"}`}>
-				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
+				{activeTab === "suppliers" && (
+					<SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
+				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
 				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}
 			</div>

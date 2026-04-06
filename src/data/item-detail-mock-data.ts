@@ -1,4 +1,4 @@
-import type { ProcurementItem } from "./types";
+import type { CurrentSupplier, ProcurementItem } from "./types";
 
 // --- Default mock item data ---
 
@@ -87,6 +87,13 @@ function simulateDelay(): Promise<void> {
 export async function getItemDetail(id: string): Promise<ProcurementItem | null> {
 	await simulateDelay();
 	return store.get(id) ?? null;
+}
+
+/** Directly update item's currentSupplier in the mock store (no delay). */
+export function setItemCurrentSupplier(itemId: string, currentSupplier: CurrentSupplier): void {
+	const item = store.get(itemId);
+	if (!item) throw new Error(`Item ${itemId} not found`);
+	store.set(itemId, { ...item, currentSupplier });
 }
 
 export async function updateItemDetail(

@@ -15,6 +15,7 @@ import {
 	Sparkles,
 	Truck,
 	User,
+	UserCheck,
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { ChatComposer } from "@/components/chat-composer";
@@ -73,6 +74,7 @@ interface SupplierDetailDrawerProps {
 	supplier: Supplier | null;
 	open: boolean;
 	onClose: () => void;
+	onSelectSupplier?: () => void;
 }
 
 function DocIcon({ type }: { type: string }) {
@@ -275,7 +277,15 @@ function EmailContent({
 	);
 }
 
-function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isMobile: boolean }) {
+function SupplierDrawerContent({
+	supplier,
+	isMobile,
+	onSelectSupplier,
+}: {
+	supplier: Supplier;
+	isMobile: boolean;
+	onSelectSupplier?: () => void;
+}) {
 	const [mobileTab, setMobileTab] = useState<MobileTab>("info");
 	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
 	const scrollToLatest = useCallback((el: HTMLElement | null) => {
@@ -286,6 +296,22 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
+			{supplier.status === "получено_кп" && onSelectSupplier && (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							className="absolute top-3 right-[5.25rem]"
+							aria-label="Выбрать поставщика"
+							onClick={onSelectSupplier}
+						>
+							<UserCheck aria-hidden="true" />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Выбрать поставщика</TooltipContent>
+				</Tooltip>
+			)}
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
@@ -374,7 +400,7 @@ function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isM
 	);
 }
 
-export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
+export function SupplierDetailDrawer({ supplier, open, onClose, onSelectSupplier }: SupplierDetailDrawerProps) {
 	const isMobile = useIsMobile();
 
 	return (
@@ -385,7 +411,14 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 			}}
 		>
 			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
-				{supplier && <SupplierDrawerContent key={supplier.id} supplier={supplier} isMobile={isMobile} />}
+				{supplier && (
+					<SupplierDrawerContent
+						key={supplier.id}
+						supplier={supplier}
+						isMobile={isMobile}
+						onSelectSupplier={onSelectSupplier}
+					/>
+				)}
 			</SheetContent>
 		</Sheet>
 	);

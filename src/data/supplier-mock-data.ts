@@ -1,3 +1,4 @@
+import { setItemCurrentSupplier } from "./item-detail-mock-data";
 import type {
 	Supplier,
 	SupplierChatMessage,
@@ -314,6 +315,20 @@ export async function archiveSupplier(itemId: string, supplierId: string): Promi
 	const supplier = suppliers.find((s) => s.id === supplierId);
 	if (!supplier) throw new Error("Supplier not found");
 	supplier.archived = true;
+}
+
+export async function selectSupplier(itemId: string, supplierId: string): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const supplier = suppliers.find((s) => s.id === supplierId);
+	if (!supplier) throw new Error("Supplier not found");
+	setItemCurrentSupplier(itemId, {
+		companyName: supplier.companyName,
+		deliveryCost: supplier.deliveryCost,
+		deferralDays: supplier.deferralDays,
+		pricePerUnit: supplier.pricePerUnit,
+		tco: supplier.tco,
+	});
 }
 
 export async function sendSupplierMessage(

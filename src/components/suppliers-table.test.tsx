@@ -453,6 +453,33 @@ describe("SuppliersTable context menu", () => {
 		fireEvent.click(screen.getByText("Архивировать"));
 		expect(onArchiveSupplier).toHaveBeenCalledWith("s1");
 	});
+
+	test("context menu shows Выбрать поставщика for получено_кп supplier", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		// s1 is получено_кп
+		fireEvent.contextMenu(rows[1]);
+		expect(screen.getByText("Выбрать поставщика")).toBeInTheDocument();
+	});
+
+	test("context menu hides Выбрать поставщика for non-получено_кп supplier", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		// s2 is ждем_ответа
+		fireEvent.contextMenu(rows[2]);
+		expect(screen.queryByText("Выбрать поставщика")).not.toBeInTheDocument();
+	});
+
+	test("clicking Выбрать поставщика calls onSelectSupplier with id and company name", () => {
+		const onSelectSupplier = vi.fn();
+		renderTable({ onSelectSupplier });
+		const rows = screen.getAllByRole("row");
+		fireEvent.contextMenu(rows[1]);
+		fireEvent.click(screen.getByText("Выбрать поставщика"));
+		expect(onSelectSupplier).toHaveBeenCalledWith("s1", "ООО «Альфа»");
+	});
 });
 
 describe("SuppliersTable archive filter toggle", () => {

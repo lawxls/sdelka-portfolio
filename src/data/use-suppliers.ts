@@ -5,6 +5,7 @@ import {
 	getAllSuppliers,
 	getSupplier,
 	getSuppliers,
+	selectSupplier,
 	sendSupplierMessage,
 } from "./supplier-mock-data";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
@@ -41,6 +42,18 @@ export function useArchiveSupplier() {
 	return useMutation({
 		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => archiveSupplier(itemId, supplierId),
 		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+		},
+	});
+}
+
+export function useSelectSupplier() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => selectSupplier(itemId, supplierId),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["itemDetail"] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
 		},

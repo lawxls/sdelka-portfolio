@@ -11,6 +11,7 @@ import {
 	Search,
 	Trash2,
 	Truck,
+	UserCheck,
 } from "lucide-react";
 import { useRef } from "react";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
@@ -55,6 +56,7 @@ interface SuppliersTableProps {
 	onArchive: () => void;
 	isArchiving: boolean;
 	onArchiveSupplier: (supplierId: string) => void;
+	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 	showArchived: boolean;
 	onToggleArchived: () => void;
 	onDelete: () => void;
@@ -128,6 +130,7 @@ export function SuppliersTable({
 	onArchive,
 	isArchiving,
 	onArchiveSupplier,
+	onSelectSupplier,
 	showArchived,
 	onToggleArchived,
 	onDelete,
@@ -444,6 +447,12 @@ export function SuppliersTable({
 									</TableRow>
 								</ContextMenuTrigger>
 								<ContextMenuContent>
+									{supplier.status === "получено_кп" && onSelectSupplier && (
+										<ContextMenuItem onSelect={() => onSelectSupplier(supplier.id, supplier.companyName)}>
+											<UserCheck className="size-3.5" />
+											Выбрать поставщика
+										</ContextMenuItem>
+									)}
 									<ContextMenuItem onSelect={() => onArchiveSupplier(supplier.id)}>
 										<Archive className="size-3.5" />
 										Архивировать
