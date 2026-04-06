@@ -198,7 +198,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 				if (!nextOpen) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined}>
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
 				{supplier && (
 					<div className="flex h-full flex-col overflow-hidden">
 						<Tooltip>
@@ -222,11 +222,18 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 							<span className="text-sm text-muted-foreground">{supplier.email}</span>
 						</SheetHeader>
 
-						<div className="flex-1 space-y-6 overflow-y-auto p-4">
-							<TcoSection supplier={supplier} />
-							<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
-							<DocumentsSection documents={supplier.documents} />
-							<EmailThread messages={supplier.chatHistory} />
+						<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
+							<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
+								<TcoSection supplier={supplier} />
+								<AgentCommentSection
+									description={supplier.aiDescription}
+									recommendations={supplier.aiRecommendations}
+								/>
+								<DocumentsSection documents={supplier.documents} />
+							</div>
+							<div data-testid="supplier-email-column" className="overflow-y-auto p-4">
+								<EmailThread messages={supplier.chatHistory} />
+							</div>
 						</div>
 					</div>
 				)}

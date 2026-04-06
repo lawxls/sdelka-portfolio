@@ -179,4 +179,52 @@ describe("SupplierDetailDrawer", () => {
 		});
 		expect(screen.queryByText("История общения")).not.toBeInTheDocument();
 	});
+
+	test("uses xl size on desktop", () => {
+		renderDrawer();
+		const content = document.querySelector('[data-slot="sheet-content"]');
+		expect(content?.getAttribute("data-size")).toBe("xl");
+	});
+
+	test("renders two-column grid layout on desktop", () => {
+		renderDrawer();
+		const grid = document.querySelector("[data-testid='supplier-columns']");
+		expect(grid).toBeInTheDocument();
+		expect(grid?.className).toMatch(/grid/);
+		expect(grid?.className).toMatch(/grid-cols-2/);
+	});
+
+	test("left column contains info sections", () => {
+		renderDrawer();
+		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
+		expect(leftCol).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Комментарии агента")).toBeInTheDocument();
+		expect(within(leftCol as HTMLElement).getByText("Документы из диалога")).toBeInTheDocument();
+	});
+
+	test("right column contains email thread", () => {
+		renderDrawer();
+		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
+		expect(rightCol).toBeInTheDocument();
+		expect(within(rightCol as HTMLElement).getByText("История общения")).toBeInTheDocument();
+	});
+
+	test("both columns scroll independently", () => {
+		renderDrawer();
+		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
+		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
+		expect(leftCol?.className).toMatch(/overflow-y-auto/);
+		expect(rightCol?.className).toMatch(/overflow-y-auto/);
+	});
+
+	test("shared header spans full width above columns", () => {
+		renderDrawer();
+		const header = document.querySelector('[data-slot="sheet-header"]');
+		const grid = document.querySelector("[data-testid='supplier-columns']");
+		// Header is a sibling before the grid, not inside a column
+		expect(header).toBeInTheDocument();
+		expect(grid).toBeInTheDocument();
+		expect(header?.compareDocumentPosition(grid as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
 });
