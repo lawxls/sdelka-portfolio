@@ -26,7 +26,7 @@ export function WorkspaceSettingsPage() {
 		setDeadlineText(raw);
 		if (raw === "") return;
 		const num = Number.parseInt(raw, 10);
-		setDeadline(Math.min(num, MAX_DEADLINE));
+		setDeadline(Math.max(MIN_DEADLINE, Math.min(num, MAX_DEADLINE)));
 	}
 
 	function handleDeadlineBlur() {
@@ -37,7 +37,10 @@ export function WorkspaceSettingsPage() {
 
 	function handleSave(e: React.FormEvent) {
 		e.preventDefault();
-		setSavedDeadline(deadline);
+		const clamped = Math.max(MIN_DEADLINE, Math.min(MAX_DEADLINE, deadline));
+		setDeadline(clamped);
+		setDeadlineText(String(clamped));
+		setSavedDeadline(clamped);
 		setSavedInstructions(instructions);
 		toast.success("Изменения сохранены");
 	}
