@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	archiveSupplier,
+	archiveSuppliers,
 	deleteSuppliers,
 	getAllSuppliers,
 	getSupplier,
@@ -37,13 +37,14 @@ export function useSupplier(itemId: string, supplierId: string | null) {
 	});
 }
 
-export function useArchiveSupplier() {
+export function useArchiveSuppliers() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => archiveSupplier(itemId, supplierId),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
+			archiveSuppliers(itemId, supplierIds),
+		onSuccess: (_data, { itemId }) => {
+			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
 		},
 	});
 }
@@ -52,10 +53,10 @@ export function useSelectSupplier() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => selectSupplier(itemId, supplierId),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["itemDetail"] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+		onSuccess: (_data, { itemId }) => {
+			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
 		},
 	});
 }
@@ -65,9 +66,9 @@ export function useDeleteSuppliers() {
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
 			deleteSuppliers(itemId, supplierIds),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+		onSuccess: (_data, { itemId }) => {
+			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
 		},
 	});
 }

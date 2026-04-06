@@ -309,12 +309,14 @@ export async function deleteSuppliers(itemId: string, supplierIds: string[]): Pr
 	store.set(itemId, remaining);
 }
 
-export async function archiveSupplier(itemId: string, supplierId: string): Promise<void> {
+export async function archiveSuppliers(itemId: string, supplierIds: string[]): Promise<void> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
-	const supplier = suppliers.find((s) => s.id === supplierId);
-	if (!supplier) throw new Error("Supplier not found");
-	supplier.archived = true;
+	const idsToArchive = new Set(supplierIds);
+	store.set(
+		itemId,
+		suppliers.map((s) => (idsToArchive.has(s.id) ? { ...s, archived: true } : s)),
+	);
 }
 
 export async function selectSupplier(itemId: string, supplierId: string): Promise<void> {

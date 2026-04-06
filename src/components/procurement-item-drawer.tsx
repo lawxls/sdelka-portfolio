@@ -27,7 +27,7 @@ import { STATUS_ICONS } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
-	useArchiveSupplier,
+	useArchiveSuppliers,
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
 	useSelectSupplier,
@@ -145,14 +145,8 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		);
 	}
 
-	function handleSelectSupplierFromTable(supplierId: string, companyName: string) {
+	function handleSelectSupplier(supplierId: string, companyName: string) {
 		setSelectingSupplier({ id: supplierId, companyName });
-	}
-
-	function handleSelectSupplierFromDrawer() {
-		if (supplier) {
-			setSelectingSupplier({ id: supplier.id, companyName: supplier.companyName });
-		}
 	}
 
 	function handleConfirmSelect() {
@@ -185,7 +179,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 							onTabChange={handleTabChange}
 							onSupplierClick={handleSupplierOpen}
 							onTaskClick={handleTaskOpen}
-							onSelectSupplier={handleSelectSupplierFromTable}
+							onSelectSupplier={handleSelectSupplier}
 						/>
 					)}
 				</SheetContent>
@@ -194,7 +188,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				supplier={supplier ?? null}
 				open={supplierId != null}
 				onClose={handleSupplierClose}
-				onSelectSupplier={handleSelectSupplierFromDrawer}
+				onSelectSupplier={handleSelectSupplier}
 			/>
 			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 			<AlertDialog
@@ -247,7 +241,7 @@ function SuppliersTabPanel({
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const deleteMutation = useDeleteSuppliers();
-	const archiveMutation = useArchiveSupplier();
+	const archiveMutation = useArchiveSuppliers();
 	const suppliers = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
 
 	function handleSort(field: SupplierSortField) {
@@ -275,15 +269,9 @@ function SuppliersTabPanel({
 		}
 	}
 
-	function handleArchiveBulk() {
-		for (const id of selectedIds) {
-			archiveMutation.mutate({ itemId, supplierId: id });
-		}
-		setSelectedIds(new Set());
-	}
-
-	function handleArchiveSupplier(supplierId: string) {
-		archiveMutation.mutate({ itemId, supplierId });
+	function handleArchive(supplierIds?: string[]) {
+		const ids = supplierIds ?? [...selectedIds];
+		archiveMutation.mutate({ itemId, supplierIds: ids }, { onSuccess: () => setSelectedIds(new Set()) });
 	}
 
 	function handleDelete() {
@@ -313,9 +301,9 @@ function SuppliersTabPanel({
 				onStatusFilter={handleStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={handleArchiveBulk}
+				onArchive={() => handleArchive()}
 				isArchiving={archiveMutation.isPending}
-				onArchiveSupplier={handleArchiveSupplier}
+				onArchiveSupplier={(id) => handleArchive([id])}
 				onSelectSupplier={onSelectSupplier}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}
