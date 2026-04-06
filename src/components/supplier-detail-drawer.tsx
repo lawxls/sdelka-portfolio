@@ -253,15 +253,102 @@ function EmailContent({
 	);
 }
 
-export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
-	const isMobile = useIsMobile();
+function SupplierDrawerContent({ supplier, isMobile }: { supplier: Supplier; isMobile: boolean }) {
 	const [mobileTab, setMobileTab] = useState<MobileTab>("info");
-	const sendMutation = useSendSupplierMessage(supplier?.itemId ?? "", supplier?.id ?? "");
+	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
 	const scrollToLatest = useCallback((el: HTMLElement | null) => {
 		el?.scrollIntoView({ block: "end" });
 	}, []);
 
-	const showComposer = supplier != null && COMPOSABLE_STATUSES.has(supplier.status);
+	const showComposer = COMPOSABLE_STATUSES.has(supplier.status);
+
+	return (
+		<div className="flex h-full flex-col overflow-hidden">
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
+						<Archive aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Архивировать</TooltipContent>
+			</Tooltip>
+			<SheetHeader className="border-b pb-4">
+				<SheetTitle className="flex items-center gap-2">
+					{supplier.companyName}
+					<span className="text-muted-foreground" aria-hidden="true">
+						·
+					</span>
+					<SupplierStatusIndicator status={supplier.status} className="text-xs" />
+				</SheetTitle>
+				<SheetDescription>{supplier.address}</SheetDescription>
+				<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
+				<span className="text-sm text-muted-foreground">{supplier.email}</span>
+			</SheetHeader>
+
+			{isMobile ? (
+				<>
+					<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
+						{(
+							[
+								{ key: "info", label: "Информация" },
+								{ key: "email", label: "Переписка" },
+							] as const
+						).map((tab) => (
+							<button
+								key={tab.key}
+								type="button"
+								role="tab"
+								aria-selected={mobileTab === tab.key}
+								className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
+									mobileTab === tab.key
+										? "border-b-2 border-primary text-foreground"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+								onClick={() => setMobileTab(tab.key)}
+							>
+								{tab.label}
+							</button>
+						))}
+					</div>
+					<div className="min-h-0 flex-1 overflow-y-auto">
+						{mobileTab === "info" && <InfoContent supplier={supplier} />}
+						{mobileTab === "email" && (
+							<EmailContent
+								supplier={supplier}
+								showComposer={showComposer}
+								scrollToLatest={scrollToLatest}
+								sendMutation={sendMutation}
+							/>
+						)}
+					</div>
+				</>
+			) : (
+				<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
+					<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
+						<TcoSection supplier={supplier} />
+						<AgentCommentSection description={supplier.aiDescription} recommendations={supplier.aiRecommendations} />
+						<DocumentsSection documents={supplier.documents} />
+					</div>
+					<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
+						<div className="flex-1 overflow-y-auto">
+							<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+						</div>
+						{showComposer && (
+							<ChatComposer
+								onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
+								isPending={sendMutation.isPending}
+								error={sendMutation.error?.message ?? null}
+							/>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
+	const isMobile = useIsMobile();
 
 	return (
 		<Sheet
@@ -271,92 +358,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 			}}
 		>
 			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
-				{supplier && (
-					<div key={supplier.id} className="flex h-full flex-col overflow-hidden">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button variant="ghost" size="icon-sm" className="absolute top-3 right-12" aria-label="Архивировать">
-									<Archive aria-hidden="true" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>Архивировать</TooltipContent>
-						</Tooltip>
-						<SheetHeader className="border-b pb-4">
-							<SheetTitle className="flex items-center gap-2">
-								{supplier.companyName}
-								<span className="text-muted-foreground" aria-hidden="true">
-									·
-								</span>
-								<SupplierStatusIndicator status={supplier.status} className="text-xs" />
-							</SheetTitle>
-							<SheetDescription>{supplier.address}</SheetDescription>
-							<span className="text-sm text-muted-foreground">{stripProtocol(supplier.website)}</span>
-							<span className="text-sm text-muted-foreground">{supplier.email}</span>
-						</SheetHeader>
-
-						{isMobile ? (
-							<>
-								<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
-									{(
-										[
-											{ key: "info", label: "Информация" },
-											{ key: "email", label: "Переписка" },
-										] as const
-									).map((tab) => (
-										<button
-											key={tab.key}
-											type="button"
-											role="tab"
-											aria-selected={mobileTab === tab.key}
-											className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
-												mobileTab === tab.key
-													? "border-b-2 border-primary text-foreground"
-													: "text-muted-foreground hover:text-foreground"
-											}`}
-											onClick={() => setMobileTab(tab.key)}
-										>
-											{tab.label}
-										</button>
-									))}
-								</div>
-								<div className="min-h-0 flex-1 overflow-y-auto">
-									{mobileTab === "info" && <InfoContent supplier={supplier} />}
-									{mobileTab === "email" && (
-										<EmailContent
-											supplier={supplier}
-											showComposer={showComposer}
-											scrollToLatest={scrollToLatest}
-											sendMutation={sendMutation}
-										/>
-									)}
-								</div>
-							</>
-						) : (
-							<div data-testid="supplier-columns" className="grid min-h-0 flex-1 grid-cols-2">
-								<div data-testid="supplier-info-column" className="space-y-6 overflow-y-auto border-r p-4">
-									<TcoSection supplier={supplier} />
-									<AgentCommentSection
-										description={supplier.aiDescription}
-										recommendations={supplier.aiRecommendations}
-									/>
-									<DocumentsSection documents={supplier.documents} />
-								</div>
-								<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
-									<div className="flex-1 overflow-y-auto">
-										<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
-									</div>
-									{showComposer && (
-										<ChatComposer
-											onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
-											isPending={sendMutation.isPending}
-											error={sendMutation.error?.message ?? null}
-										/>
-									)}
-								</div>
-							</div>
-						)}
-					</div>
-				)}
+				{supplier && <SupplierDrawerContent key={supplier.id} supplier={supplier} isMobile={isMobile} />}
 			</SheetContent>
 		</Sheet>
 	);
