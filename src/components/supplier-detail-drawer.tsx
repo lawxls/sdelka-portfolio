@@ -254,7 +254,7 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 								</div>
 								{showComposer && (
 									<ChatComposer
-										onSend={(body) => sendMutation.mutateAsync(body)}
+										onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
 										isPending={sendMutation.isPending}
 										error={sendMutation.error?.message ?? null}
 									/>

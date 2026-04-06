@@ -302,6 +302,7 @@ export async function sendSupplierMessage(
 	itemId: string,
 	supplierId: string,
 	body: string,
+	files?: File[],
 ): Promise<SupplierChatMessage> {
 	await simulateDelay();
 	if (sendShouldFail) throw new Error("Не удалось отправить сообщение");
@@ -309,11 +310,21 @@ export async function sendSupplierMessage(
 	const supplier = suppliers.find((s) => s.id === supplierId);
 	if (!supplier) throw new Error("Supplier not found");
 
+	const attachments =
+		files && files.length > 0
+			? files.map((f) => ({
+					name: f.name,
+					type: f.name.split(".").pop() ?? "",
+					size: f.size,
+				}))
+			: undefined;
+
 	const message: SupplierChatMessage = {
 		sender: "Агент",
 		timestamp: new Date().toISOString(),
 		body,
 		isOurs: true,
+		attachments,
 	};
 	supplier.chatHistory.push(message);
 	return message;

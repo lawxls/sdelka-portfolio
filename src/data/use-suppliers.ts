@@ -40,22 +40,34 @@ export function useDeleteSuppliers() {
 	});
 }
 
+interface SendMessagePayload {
+	body: string;
+	files: File[];
+}
+
 export function useSendSupplierMessage(itemId: string, supplierId: string) {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (body: string) => sendSupplierMessage(itemId, supplierId, body),
-		onMutate: async (body) => {
+		mutationFn: ({ body, files }: SendMessagePayload) =>
+			sendSupplierMessage(itemId, supplierId, body, files.length > 0 ? files : undefined),
+		onMutate: async ({ body, files }) => {
 			const queryKey = ["supplier", itemId, supplierId];
 			await queryClient.cancelQueries({ queryKey });
 
 			const snapshot = queryClient.getQueryData<Supplier | null>(queryKey);
+
+			const attachments =
+				files.length > 0
+					? files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }))
+					: undefined;
 
 			const optimisticMessage: SupplierChatMessage = {
 				sender: "Агент",
 				timestamp: new Date().toISOString(),
 				body,
 				isOurs: true,
+				attachments,
 			};
 
 			queryClient.setQueryData<Supplier | null>(queryKey, (old) => {
@@ -65,7 +77,7 @@ export function useSendSupplierMessage(itemId: string, supplierId: string) {
 
 			return { snapshot };
 		},
-		onError: (_err, _body, context) => {
+		onError: (_err, _payload, context) => {
 			if (context?.snapshot !== undefined) {
 				queryClient.setQueryData(["supplier", itemId, supplierId], context.snapshot);
 			}

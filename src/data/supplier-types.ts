@@ -36,11 +36,18 @@ export interface SupplierDocument {
 	size: number;
 }
 
+export interface MessageAttachment {
+	name: string;
+	type: string;
+	size: number;
+}
+
 export interface SupplierChatMessage {
 	sender: string;
 	timestamp: string;
 	body: string;
 	isOurs: boolean;
+	attachments?: MessageAttachment[];
 }
 
 export interface SupplierPositionOffer {

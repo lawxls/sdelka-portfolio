@@ -276,4 +276,20 @@ describe("sendSupplierMessage", () => {
 			"Не удалось отправить сообщение",
 		);
 	});
+
+	it("includes attachments when files are provided", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const file = new File([new Uint8Array(5000)], "offer.pdf", { type: "application/pdf" });
+		const msg = await sendSupplierMessage("item-1", suppliers[0].id, "Вот КП", [file]);
+
+		expect(msg.attachments).toHaveLength(1);
+		expect(msg.attachments?.[0]).toEqual({ name: "offer.pdf", type: "pdf", size: 5000 });
+	});
+
+	it("omits attachments when no files provided", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const msg = await sendSupplierMessage("item-1", suppliers[0].id, "Без файлов");
+
+		expect(msg.attachments).toBeUndefined();
+	});
 });

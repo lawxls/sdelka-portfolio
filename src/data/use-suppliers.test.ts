@@ -144,7 +144,7 @@ describe("useSendSupplierMessage", () => {
 			wrapper,
 		});
 
-		mutationResult.current.mutate("Тестовое сообщение");
+		mutationResult.current.mutate({ body: "Тестовое сообщение", files: [] });
 
 		// Optimistic update should appear immediately (before API resolves)
 		await waitFor(() => {
@@ -168,7 +168,7 @@ describe("useSendSupplierMessage", () => {
 			wrapper,
 		});
 
-		mutationResult.current.mutate("Сообщение, которое не дойдёт");
+		mutationResult.current.mutate({ body: "Сообщение, которое не дойдёт", files: [] });
 
 		// After error, cache should roll back to original
 		await waitFor(() => {
@@ -177,5 +177,26 @@ describe("useSendSupplierMessage", () => {
 
 		const cached = queryClient.getQueryData<Supplier | null>(["supplier", "item-1", "supplier-item-1-1"]);
 		expect(cached?.chatHistory).toHaveLength(initialCount);
+	});
+
+	it("optimistic update includes attachments when files provided", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+
+		const { result: supplierResult } = renderHook(() => useSupplier("item-1", "supplier-item-1-1"), { wrapper });
+		await waitFor(() => expect(supplierResult.current.data).toBeTruthy());
+
+		const { result: mutationResult } = renderHook(() => useSendSupplierMessage("item-1", "supplier-item-1-1"), {
+			wrapper,
+		});
+
+		const file = new File([new Uint8Array(5000)], "offer.pdf", { type: "application/pdf" });
+		mutationResult.current.mutate({ body: "С файлом", files: [file] });
+
+		await waitFor(() => {
+			const cached = queryClient.getQueryData<Supplier | null>(["supplier", "item-1", "supplier-item-1-1"]);
+			const lastMsg = cached?.chatHistory[cached.chatHistory.length - 1];
+			expect(lastMsg?.attachments).toHaveLength(1);
+			expect(lastMsg?.attachments?.[0].name).toBe("offer.pdf");
+		});
 	});
 });
