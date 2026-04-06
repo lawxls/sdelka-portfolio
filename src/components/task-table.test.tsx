@@ -52,11 +52,11 @@ afterEach(() => {
 	localStorage.clear();
 });
 
-function renderTable(onTaskClick = vi.fn(), isMobile = false) {
+function renderTable(onTaskClick = vi.fn(), isMobile = false, showQuestionCount = false) {
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<MemoryRouter>
-				<TaskTable onTaskClick={onTaskClick} isMobile={isMobile} />
+				<TaskTable onTaskClick={onTaskClick} isMobile={isMobile} showQuestionCount={showQuestionCount} />
 			</MemoryRouter>
 		</QueryClientProvider>,
 	);
@@ -119,6 +119,77 @@ describe("TaskTable desktop", () => {
 		);
 		renderTable();
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
+	});
+});
+
+describe("TaskRow question count", () => {
+	it("renders question count with icon when showQuestionCount is true and questionCount > 0", async () => {
+		const taskWithQuestions = makeTask("task-q", {
+			name: "Задача с вопросами",
+			status: "assigned",
+			questionCount: 3,
+		});
+		server.use(
+			http.get("/api/v1/company/tasks/board/", () =>
+				HttpResponse.json({
+					assigned: { results: [taskWithQuestions], next: null, count: 1 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				}),
+			),
+		);
+		renderTable(vi.fn(), false, true);
+		await waitFor(() => {
+			expect(screen.getByTestId("task-row-task-q")).toBeInTheDocument();
+		});
+		expect(screen.getByText("3 вопроса")).toBeInTheDocument();
+	});
+
+	it("does not render question count when showQuestionCount is false", async () => {
+		const taskWithQuestions = makeTask("task-q2", {
+			name: "Задача без счётчика",
+			status: "assigned",
+			questionCount: 3,
+		});
+		server.use(
+			http.get("/api/v1/company/tasks/board/", () =>
+				HttpResponse.json({
+					assigned: { results: [taskWithQuestions], next: null, count: 1 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				}),
+			),
+		);
+		renderTable();
+		await waitFor(() => {
+			expect(screen.getByTestId("task-row-task-q2")).toBeInTheDocument();
+		});
+		expect(screen.queryByText("3 вопроса")).not.toBeInTheDocument();
+	});
+
+	it("does not render question count when questionCount is 0", async () => {
+		const taskNoQuestions = makeTask("task-q3", {
+			name: "Задача без счётчика 2",
+			status: "assigned",
+			questionCount: 0,
+		});
+		server.use(
+			http.get("/api/v1/company/tasks/board/", () =>
+				HttpResponse.json({
+					assigned: { results: [taskNoQuestions], next: null, count: 1 },
+					in_progress: { results: [], next: null, count: 0 },
+					completed: { results: [], next: null, count: 0 },
+					archived: { results: [], next: null, count: 0 },
+				}),
+			),
+		);
+		renderTable(vi.fn(), false, true);
+		await waitFor(() => {
+			expect(screen.getByTestId("task-row-task-q3")).toBeInTheDocument();
+		});
+		expect(screen.queryByText(/^\d+\s+вопрос/)).not.toBeInTheDocument();
 	});
 });
 

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, LoaderCircle } from "lucide-react";
+import { ChevronDown, ChevronRight, LoaderCircle, MessageCircleQuestion } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ import {
 import { useAllTasks, useTaskColumns } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatAssigneeName, formatDayMonth, getInitials } from "@/lib/format";
+import { formatAssigneeName, formatDayMonth, getInitials, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGE_VARIANT = {
@@ -30,6 +30,7 @@ interface TaskTableProps {
 	onTaskClick?: (taskId: string) => void;
 	filterParams?: TaskFilterParams;
 	isMobile?: boolean;
+	showQuestionCount?: boolean;
 }
 
 // ── Mobile card ───────────────────────────────────────────────────────────────
@@ -105,7 +106,15 @@ function LoadMoreSentinel({ loadMore }: { loadMore: () => void }) {
 
 // ── Desktop grouped row ───────────────────────────────────────────────────────
 
-function TaskRow({ task, onTaskClick }: { task: Task; onTaskClick?: (id: string) => void }) {
+function TaskRow({
+	task,
+	onTaskClick,
+	showQuestionCount,
+}: {
+	task: Task;
+	onTaskClick?: (id: string) => void;
+	showQuestionCount?: boolean;
+}) {
 	const now = new Date();
 	const isOverdue = new Date(task.deadlineAt) < now;
 	const StatusIcon = STATUS_ICONS[task.status];
@@ -124,6 +133,12 @@ function TaskRow({ task, onTaskClick }: { task: Task; onTaskClick?: (id: string)
 		>
 			<StatusIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
 			<span className="flex-1 truncate">{task.name}</span>
+			{showQuestionCount && task.questionCount > 0 && (
+				<span className="inline-flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
+					<MessageCircleQuestion className="size-3.5" aria-hidden="true" />
+					{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
+				</span>
+			)}
 			{task.assignee ? (
 				<span
 					role="img"
@@ -157,7 +172,11 @@ function TaskRow({ task, onTaskClick }: { task: Task; onTaskClick?: (id: string)
 
 // ── Desktop grouped table ─────────────────────────────────────────────────────
 
-function TaskTableDesktop({ onTaskClick, filterParams }: Pick<TaskTableProps, "onTaskClick" | "filterParams">) {
+function TaskTableDesktop({
+	onTaskClick,
+	filterParams,
+	showQuestionCount,
+}: Pick<TaskTableProps, "onTaskClick" | "filterParams" | "showQuestionCount">) {
 	const columns = useTaskColumns(filterParams);
 	const isLoading = columns.assigned.isLoading;
 
@@ -214,7 +233,14 @@ function TaskTableDesktop({ onTaskClick, filterParams }: Pick<TaskTableProps, "o
 												<Skeleton className="h-4 w-10" />
 											</div>
 										))
-									: col.tasks.map((task) => <TaskRow key={task.id} task={task} onTaskClick={onTaskClick} />)}
+									: col.tasks.map((task) => (
+											<TaskRow
+												key={task.id}
+												task={task}
+												onTaskClick={onTaskClick}
+												showQuestionCount={showQuestionCount}
+											/>
+										))}
 								{!isLoading && col.hasNextPage && <LoadMoreSentinel loadMore={col.loadMore} />}
 							</div>
 						)}
@@ -280,9 +306,11 @@ function TaskTableMobile({ onTaskClick, filterParams }: Pick<TaskTableProps, "on
 
 // ── Public component ──────────────────────────────────────────────────────────
 
-export function TaskTable({ onTaskClick, filterParams, isMobile }: TaskTableProps) {
+export function TaskTable({ onTaskClick, filterParams, isMobile, showQuestionCount }: TaskTableProps) {
 	if (isMobile) {
 		return <TaskTableMobile onTaskClick={onTaskClick} filterParams={filterParams} />;
 	}
-	return <TaskTableDesktop onTaskClick={onTaskClick} filterParams={filterParams} />;
+	return (
+		<TaskTableDesktop onTaskClick={onTaskClick} filterParams={filterParams} showQuestionCount={showQuestionCount} />
+	);
 }
