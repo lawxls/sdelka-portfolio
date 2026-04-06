@@ -276,12 +276,14 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 		debounceRef.current = setTimeout(() => setSearch(value), 250);
 	}
 
+	const activeFilterTasks = activeFilter ? columns[activeFilter].tasks : null;
+
 	const tasks = useMemo(() => {
-		if (activeFilter) return columns[activeFilter].tasks;
+		if (activeFilterTasks) return activeFilterTasks;
 		return [...columns.assigned.tasks, ...columns.in_progress.tasks].sort(
 			(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
 		);
-	}, [activeFilter, columns]);
+	}, [activeFilterTasks, columns.assigned.tasks, columns.in_progress.tasks]);
 
 	const isLoading = columns.assigned.isLoading;
 
