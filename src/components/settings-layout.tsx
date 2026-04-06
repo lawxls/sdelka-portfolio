@@ -46,6 +46,14 @@ export function SettingsLayout() {
 						<span className="text-foreground">Профиль</span>
 					</nav>
 				);
+			case "/settings/workspace":
+				return (
+					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
+						<span>Рабочее пространство</span>
+						<span aria-hidden="true">/</span>
+						<span className="text-foreground">Общие настройки</span>
+					</nav>
+				);
 			case "/settings/companies":
 				return (
 					<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">

@@ -13,6 +13,7 @@ import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { TasksPage } from "@/pages/tasks-page";
+import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
 function RootRedirect() {
 	const { search } = useLocation();
@@ -42,6 +43,7 @@ function App() {
 					<Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
 					<Route element={<SettingsLayout />}>
 						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
+						<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
 						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
 						<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
 					</Route>

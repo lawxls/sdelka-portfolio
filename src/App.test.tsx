@@ -232,6 +232,26 @@ describe("Routing", () => {
 		});
 	});
 
+	test("/settings/workspace renders inside settings layout with correct breadcrumb", async () => {
+		renderApp(["/settings/workspace"]);
+		await waitFor(() => {
+			expect(screen.getByTestId("settings-layout")).toBeInTheDocument();
+		});
+		const breadcrumb = screen.getByRole("navigation", { name: "breadcrumb" });
+		expect(within(breadcrumb).getByText("Рабочее пространство")).toBeInTheDocument();
+		expect(within(breadcrumb).getByText("Общие настройки")).toBeInTheDocument();
+	});
+
+	test("/settings/workspace has no header action button", async () => {
+		renderApp(["/settings/workspace"]);
+		await waitFor(() => {
+			expect(screen.getByTestId("settings-layout")).toBeInTheDocument();
+		});
+		// No action buttons like "Добавить компанию" or "Отправить приглашения"
+		expect(screen.queryByRole("button", { name: /Добавить компанию/ })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /Отправить приглашения/ })).not.toBeInTheDocument();
+	});
+
 	test("FolderSidebar renders on /procurement", async () => {
 		await renderAppReady();
 		expect(screen.getByTestId("sidebar")).toBeInTheDocument();

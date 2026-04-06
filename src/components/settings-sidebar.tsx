@@ -1,4 +1,4 @@
-import { Building2, ChevronLeft, LogOut, PanelLeft, User, Users } from "lucide-react";
+import { Building2, ChevronLeft, LogOut, PanelLeft, Settings, User, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { clearTokens } from "@/data/auth";
@@ -19,6 +19,7 @@ interface NavItemDef {
 const USER_ITEMS: NavItemDef[] = [{ path: "/settings/profile", label: "Профиль", icon: <User className="size-4" /> }];
 
 const WORKSPACE_ITEMS: NavItemDef[] = [
+	{ path: "/settings/workspace", label: "Общие настройки", icon: <Settings className="size-4" /> },
 	{ path: "/settings/companies", label: "Компании", icon: <Building2 className="size-4" /> },
 	{ path: "/settings/employees", label: "Сотрудники", icon: <Users className="size-4" /> },
 ];
