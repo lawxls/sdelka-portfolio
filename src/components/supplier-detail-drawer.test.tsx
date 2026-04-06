@@ -292,6 +292,70 @@ describe("SupplierDetailDrawer", () => {
 		});
 	});
 
+	describe("inline attachments on thread messages", () => {
+		test("renders attachment chips with name and size when message has attachments", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Альфа-Трейд»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "КП во вложении.",
+							isOurs: false,
+							attachments: [
+								{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },
+								{ name: "Прайс-лист.xlsx", type: "xlsx", size: 89_000 },
+							],
+						},
+					],
+				}),
+			});
+			expect(screen.getByText("Коммерческое предложение.pdf")).toBeInTheDocument();
+			expect(screen.getByText("239 КБ")).toBeInTheDocument();
+			expect(screen.getByText("Прайс-лист.xlsx")).toBeInTheDocument();
+			expect(screen.getByText("87 КБ")).toBeInTheDocument();
+		});
+
+		test("does not render attachment section when message has no attachments", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "Агент",
+							timestamp: "2026-02-20T10:00:00.000Z",
+							body: "Добрый день!",
+							isOurs: true,
+						},
+					],
+				}),
+			});
+			const article = screen.getByText("Добрый день!").closest("article") as HTMLElement;
+			expect(article.querySelectorAll("[data-testid='msg-attachment']")).toHaveLength(0);
+		});
+
+		test("renders type-appropriate icon for each attachment", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Тест»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "Документы.",
+							isOurs: false,
+							attachments: [
+								{ name: "offer.pdf", type: "pdf", size: 100_000 },
+								{ name: "prices.xlsx", type: "xlsx", size: 50_000 },
+								{ name: "spec.docx", type: "docx", size: 30_000 },
+							],
+						},
+					],
+				}),
+			});
+			const chips = screen.getAllByTestId("msg-attachment");
+			expect(chips).toHaveLength(3);
+		});
+	});
+
 	describe("ChatComposer visibility", () => {
 		test("shows composer for ждем_ответа status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }) });

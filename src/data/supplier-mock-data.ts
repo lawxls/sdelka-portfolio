@@ -119,6 +119,10 @@ function makeChatHistory(seed: number): SupplierChatMessage[] {
 			timestamp: new Date(base.getTime() + (seed + 2) * 86_400_000).toISOString(),
 			body: "Здравствуйте! КП направлено во вложении. Готовы обсудить условия.",
 			isOurs: false,
+			attachments: [
+				{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },
+				{ name: "Прайс-лист 2026.xlsx", type: "xlsx", size: 89_000 },
+			],
 		},
 	];
 }

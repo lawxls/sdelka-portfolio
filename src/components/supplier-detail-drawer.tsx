@@ -192,6 +192,21 @@ function EmailThread({
 							<span>{formatDateTime(msg.timestamp)}</span>
 						</div>
 						<div className="px-3 py-2.5">{msg.body}</div>
+						{msg.attachments && msg.attachments.length > 0 && (
+							<div className="flex flex-wrap gap-1.5 border-t px-3 py-2">
+								{msg.attachments.map((att) => (
+									<div
+										key={att.name}
+										data-testid="msg-attachment"
+										className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1 text-xs"
+									>
+										<DocIcon type={att.type} />
+										<span className="max-w-32 truncate">{att.name}</span>
+										<span className="text-muted-foreground">{formatFileSize(att.size)}</span>
+									</div>
+								))}
+							</div>
+						)}
 					</article>
 				))}
 			</div>

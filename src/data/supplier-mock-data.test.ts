@@ -247,6 +247,35 @@ describe("getSuppliers combined search + sort + filter", () => {
 	});
 });
 
+describe("mock data attachments on existing messages", () => {
+	it("supplier reply messages include attachments", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const withAttachments = suppliers.filter((s) =>
+			s.chatHistory.some((m) => m.attachments && m.attachments.length > 0),
+		);
+		expect(withAttachments.length).toBeGreaterThan(0);
+	});
+
+	it("first message (agent) has no attachments", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		for (const s of suppliers) {
+			expect(s.chatHistory[0].attachments).toBeUndefined();
+		}
+	});
+
+	it("reply attachments have name, type, and size", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const reply = suppliers[0].chatHistory[1];
+		const attachments = reply.attachments ?? [];
+		expect(attachments.length).toBeGreaterThan(0);
+		for (const att of attachments) {
+			expect(att.name).toBeTruthy();
+			expect(att.type).toBeTruthy();
+			expect(att.size).toBeGreaterThan(0);
+		}
+	});
+});
+
 describe("sendSupplierMessage", () => {
 	it("appends a message to the supplier's chatHistory", async () => {
 		const { suppliers } = await getSuppliers("item-1");
