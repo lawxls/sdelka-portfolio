@@ -25,6 +25,13 @@ const MOCK_ITEMS: Record<string, ProcurementItem> = {
 		analoguesAllowed: true,
 		additionalInfo: "Требуется сертификат соответствия ГОСТ",
 		priceMonitoringPeriod: "quarter",
+		currentSupplier: {
+			companyName: "МеталлТрейд",
+			deliveryCost: 0,
+			deferralDays: 30,
+			pricePerUnit: 4500,
+			tco: 5400000,
+		},
 	},
 	"item-2": {
 		id: "item-2",

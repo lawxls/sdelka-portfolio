@@ -1,6 +1,7 @@
 import { Check, Clock, LoaderCircle, MessageCircle, Search, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { CurrentSupplierCard } from "@/components/current-supplier-card";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
@@ -14,6 +15,7 @@ import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
+import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSupplier,
 	useDeleteSuppliers,
@@ -230,8 +232,12 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 		);
 	}
 
+	const { data: itemDetail } = useItemDetail(itemId);
+	const currentSupplier = itemDetail?.currentSupplier;
+
 	return (
 		<div data-testid="tab-panel-suppliers">
+			{currentSupplier && <CurrentSupplierCard currentSupplier={currentSupplier} />}
 			<SuppliersTable
 				suppliers={suppliers}
 				isLoading={query.isLoading}

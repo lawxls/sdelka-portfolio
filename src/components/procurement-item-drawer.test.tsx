@@ -671,4 +671,39 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 	});
+
+	test("suppliers tab shows current supplier card when item has currentSupplier", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+
+		// item-1 mock has currentSupplier with companyName "МеталлТрейд"
+		await waitFor(() => {
+			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+		});
+		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+	});
+
+	test("suppliers tab hides current supplier card when item has no currentSupplier", async () => {
+		const itemNoSupplier: ProcurementItem = {
+			...TEST_ITEM,
+			id: "item-2",
+			name: "Труба профильная",
+		};
+		render(
+			<QueryClientProvider client={queryClient}>
+				<TooltipProvider>
+					<MemoryRouter initialEntries={["/procurement?item=item-2"]}>
+						<ProcurementItemDrawer item={itemNoSupplier} />
+						<UrlSpy />
+					</MemoryRouter>
+				</TooltipProvider>
+			</QueryClientProvider>,
+		);
+
+		// Wait for suppliers table to load
+		await waitFor(() => {
+			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
+		});
+
+		expect(screen.queryByText("Текущий поставщик")).not.toBeInTheDocument();
+	});
 });
