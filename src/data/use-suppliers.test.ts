@@ -2,8 +2,15 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
-import { _resetSupplierStore, _setSupplierMockDelay } from "./supplier-mock-data";
-import { useDeleteSuppliers, useInfiniteSuppliers, useSupplier, useSuppliers } from "./use-suppliers";
+import { _resetSupplierStore, _setSendShouldFail, _setSupplierMockDelay } from "./supplier-mock-data";
+import type { Supplier } from "./supplier-types";
+import {
+	useDeleteSuppliers,
+	useInfiniteSuppliers,
+	useSendSupplierMessage,
+	useSupplier,
+	useSuppliers,
+} from "./use-suppliers";
 
 let queryClient: QueryClient;
 
@@ -121,5 +128,54 @@ describe("useDeleteSuppliers", () => {
 		await waitFor(() => {
 			expect(suppliersResult.current.data?.suppliers).toHaveLength(9);
 		});
+	});
+});
+
+describe("useSendSupplierMessage", () => {
+	it("optimistically adds message to supplier cache", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+
+		// Populate the single-supplier cache
+		const { result: supplierResult } = renderHook(() => useSupplier("item-1", "supplier-item-1-1"), { wrapper });
+		await waitFor(() => expect(supplierResult.current.data).toBeTruthy());
+		const initialCount = supplierResult.current.data?.chatHistory.length ?? 0;
+
+		const { result: mutationResult } = renderHook(() => useSendSupplierMessage("item-1", "supplier-item-1-1"), {
+			wrapper,
+		});
+
+		mutationResult.current.mutate("Тестовое сообщение");
+
+		// Optimistic update should appear immediately (before API resolves)
+		await waitFor(() => {
+			const cached = queryClient.getQueryData<Supplier | null>(["supplier", "item-1", "supplier-item-1-1"]);
+			expect(cached?.chatHistory).toHaveLength(initialCount + 1);
+			expect(cached?.chatHistory[cached.chatHistory.length - 1].body).toBe("Тестовое сообщение");
+			expect(cached?.chatHistory[cached.chatHistory.length - 1].isOurs).toBe(true);
+		});
+	});
+
+	it("rolls back on error", async () => {
+		const wrapper = createQueryWrapper(queryClient);
+
+		const { result: supplierResult } = renderHook(() => useSupplier("item-1", "supplier-item-1-1"), { wrapper });
+		await waitFor(() => expect(supplierResult.current.data).toBeTruthy());
+		const initialCount = supplierResult.current.data?.chatHistory.length ?? 0;
+
+		_setSendShouldFail(true);
+
+		const { result: mutationResult } = renderHook(() => useSendSupplierMessage("item-1", "supplier-item-1-1"), {
+			wrapper,
+		});
+
+		mutationResult.current.mutate("Сообщение, которое не дойдёт");
+
+		// After error, cache should roll back to original
+		await waitFor(() => {
+			expect(mutationResult.current.isError).toBe(true);
+		});
+
+		const cached = queryClient.getQueryData<Supplier | null>(["supplier", "item-1", "supplier-item-1-1"]);
+		expect(cached?.chatHistory).toHaveLength(initialCount);
 	});
 });

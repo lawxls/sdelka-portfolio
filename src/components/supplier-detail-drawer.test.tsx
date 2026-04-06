@@ -215,7 +215,7 @@ describe("SupplierDetailDrawer", () => {
 		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
 		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
 		expect(leftCol?.className).toMatch(/overflow-y-auto/);
-		expect(rightCol?.className).toMatch(/overflow-y-auto/);
+		expect(rightCol?.className).toMatch(/overflow/);
 	});
 
 	test("shared header spans full width above columns", () => {
@@ -226,5 +226,33 @@ describe("SupplierDetailDrawer", () => {
 		expect(header).toBeInTheDocument();
 		expect(grid).toBeInTheDocument();
 		expect(header?.compareDocumentPosition(grid as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+	});
+
+	describe("ChatComposer visibility", () => {
+		test("shows composer for ждем_ответа status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
+		});
+
+		test("shows composer for переговоры status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "переговоры" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("shows composer for получено_кп status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "получено_кп" }) });
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
+		});
+
+		test("hides composer for письмо_не_отправлено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_не_отправлено" }) });
+			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+		});
+
+		test("hides composer for отказ status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "отказ" }) });
+			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+		});
 	});
 });

@@ -14,12 +14,16 @@ import {
 	Truck,
 	User,
 } from "lucide-react";
+import { useCallback } from "react";
+import { ChatComposer } from "@/components/chat-composer";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierChatMessage, SupplierDocument } from "@/data/supplier-types";
+import { COMPOSABLE_STATUSES } from "@/data/supplier-types";
+import { useSendSupplierMessage } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	formatCurrency,
@@ -154,7 +158,13 @@ function DocumentsSection({ documents }: { documents: SupplierDocument[] }) {
 	);
 }
 
-function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
+function EmailThread({
+	messages,
+	lastMessageRef,
+}: {
+	messages: SupplierChatMessage[];
+	lastMessageRef?: React.RefCallback<HTMLElement>;
+}) {
 	if (messages.length === 0) return null;
 	return (
 		<section className="rounded-lg border bg-muted/30 p-4">
@@ -163,9 +173,10 @@ function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
 				История общения
 			</h3>
 			<div className="flex flex-col gap-3">
-				{messages.map((msg) => (
+				{messages.map((msg, i) => (
 					<article
 						key={`${msg.timestamp}-${msg.sender}`}
+						ref={i === messages.length - 1 ? lastMessageRef : undefined}
 						data-email-msg={msg.isOurs ? "ours" : "theirs"}
 						className="rounded-md border bg-background text-sm"
 					>
@@ -190,6 +201,12 @@ function EmailThread({ messages }: { messages: SupplierChatMessage[] }) {
 
 export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetailDrawerProps) {
 	const isMobile = useIsMobile();
+	const sendMutation = useSendSupplierMessage(supplier?.itemId ?? "", supplier?.id ?? "");
+	const scrollToLatest = useCallback((el: HTMLElement | null) => {
+		el?.scrollIntoView({ block: "end" });
+	}, []);
+
+	const showComposer = supplier != null && COMPOSABLE_STATUSES.has(supplier.status);
 
 	return (
 		<Sheet
@@ -231,8 +248,17 @@ export function SupplierDetailDrawer({ supplier, open, onClose }: SupplierDetail
 								/>
 								<DocumentsSection documents={supplier.documents} />
 							</div>
-							<div data-testid="supplier-email-column" className="overflow-y-auto p-4">
-								<EmailThread messages={supplier.chatHistory} />
+							<div data-testid="supplier-email-column" className="flex flex-col overflow-hidden p-4">
+								<div className="flex-1 overflow-y-auto">
+									<EmailThread messages={supplier.chatHistory} lastMessageRef={scrollToLatest} />
+								</div>
+								{showComposer && (
+									<ChatComposer
+										onSend={(body) => sendMutation.mutateAsync(body)}
+										isPending={sendMutation.isPending}
+										error={sendMutation.error?.message ?? null}
+									/>
+								)}
 							</div>
 						</div>
 					</div>

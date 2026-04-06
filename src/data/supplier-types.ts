@@ -27,6 +27,9 @@ export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; cla
 	отказ: { label: SUPPLIER_STATUS_LABELS.отказ, className: "text-destructive" },
 };
 
+/** Statuses that allow sending messages to the supplier */
+export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set(["ждем_ответа", "переговоры", "получено_кп"]);
+
 export interface SupplierDocument {
 	name: string;
 	type: string;

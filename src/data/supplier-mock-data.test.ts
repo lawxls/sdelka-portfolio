@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	_resetSupplierStore,
+	_setSendShouldFail,
 	_setSupplierMockDelay,
 	deleteSuppliers,
 	getSupplier,
 	getSuppliers,
+	sendSupplierMessage,
 } from "./supplier-mock-data";
 import { SUPPLIER_STATUSES } from "./supplier-types";
 
@@ -242,5 +244,36 @@ describe("getSuppliers combined search + sort + filter", () => {
 			expect(s.status).toBe("получено_кп");
 			expect(s.companyName.toLowerCase()).toContain(searchTerm.toLowerCase());
 		}
+	});
+});
+
+describe("sendSupplierMessage", () => {
+	it("appends a message to the supplier's chatHistory", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		const target = suppliers[0];
+		const before = target.chatHistory.length;
+
+		const msg = await sendSupplierMessage("item-1", target.id, "Тестовое сообщение");
+
+		expect(msg.body).toBe("Тестовое сообщение");
+		expect(msg.sender).toBe("Агент");
+		expect(msg.isOurs).toBe(true);
+		expect(msg.timestamp).toBeTruthy();
+
+		const updated = await getSupplier("item-1", target.id);
+		expect(updated?.chatHistory).toHaveLength(before + 1);
+		expect(updated?.chatHistory[updated.chatHistory.length - 1].body).toBe("Тестовое сообщение");
+	});
+
+	it("throws for non-existent supplier", async () => {
+		await expect(sendSupplierMessage("item-1", "nonexistent", "msg")).rejects.toThrow("Supplier not found");
+	});
+
+	it("throws when _setSendShouldFail is set", async () => {
+		_setSendShouldFail(true);
+		const { suppliers } = await getSuppliers("item-1");
+		await expect(sendSupplierMessage("item-1", suppliers[0].id, "msg")).rejects.toThrow(
+			"Не удалось отправить сообщение",
+		);
 	});
 });
