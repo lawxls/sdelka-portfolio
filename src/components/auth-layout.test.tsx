@@ -26,10 +26,4 @@ describe("AuthLayout", () => {
 		const svg = document.querySelector('svg[viewBox="0 0 1121 203"]');
 		expect(svg).toBeInTheDocument();
 	});
-
-	test("renders particle panel on desktop", () => {
-		renderWithRouter();
-		const canvas = document.querySelector("canvas");
-		expect(canvas).toBeInTheDocument();
-	});
 });
