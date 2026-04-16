@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import type { NewItemInput } from "@/data/types";
 import {
 	DELIVERY_COST_TYPE_LABELS,
@@ -34,6 +35,7 @@ import {
 import { useProcurementCompanies } from "@/data/use-companies";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { formatFileSize, formatGroupedInteger } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { useAddPositionForm } from "./use-add-position-form";
 
 interface AddPositionsDrawerProps {
@@ -239,7 +241,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 								/>
 							)}
 							{step === 2 && <Step2Body form={form} />}
-							{step === 3 && <StepPlaceholder title="Дополнительные вопросы — скоро" />}
+							{step === 3 && <Step3Body form={form} />}
 						</TooltipProvider>
 					</div>
 
@@ -357,10 +359,51 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 	);
 }
 
-function StepPlaceholder({ title }: { title: string }) {
+function Step3Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
+	const { step3, update3 } = form;
+
 	return (
-		<div className="flex h-full items-center justify-center py-8">
-			<p className="text-sm text-muted-foreground">{title}</p>
+		<div className="flex flex-col gap-5 pt-4 pb-2">
+			{CREATION_QUESTIONS.map((question) => {
+				const answer = step3.answers[question.id] ?? {};
+				return (
+					<fieldset key={question.id} className="flex flex-col gap-2">
+						<legend className="text-sm font-medium">{question.label}</legend>
+						<div className="flex flex-wrap gap-1.5">
+							{question.options.map((option) => {
+								const selected = answer.selectedOption === option;
+								return (
+									<button
+										key={option}
+										type="button"
+										aria-pressed={selected}
+										onClick={() =>
+											update3(question.id, {
+												selectedOption: selected ? undefined : option,
+											})
+										}
+										className={cn(
+											"rounded-full border px-3 py-1 text-xs transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+											selected
+												? "border-primary bg-primary text-primary-foreground"
+												: "border-border bg-background text-foreground hover:bg-muted",
+										)}
+									>
+										{option}
+									</button>
+								);
+							})}
+						</div>
+						<Textarea
+							placeholder="Свой вариант"
+							value={answer.freeText ?? ""}
+							onChange={(e) => update3(question.id, { freeText: e.target.value })}
+							rows={2}
+							aria-label={`Свой вариант: ${question.label}`}
+						/>
+					</fieldset>
+				);
+			})}
 		</div>
 	);
 }

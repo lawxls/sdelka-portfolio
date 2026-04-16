@@ -491,6 +491,125 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 	});
 });
 
+describe("AddPositionsDrawer — Step 3 generated questions", () => {
+	async function reachStep3(user: ReturnType<typeof userEvent.setup>) {
+		await fillStep1Minimum(user);
+		await advance(user);
+		await advance(user);
+	}
+
+	test("renders all 5 questions with label + option chips + free-text", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		expect(screen.getByText("Уточните марку / сорт материала")).toBeInTheDocument();
+		expect(screen.getByText("Требования к упаковке")).toBeInTheDocument();
+		expect(screen.getByText("Нужны ли сертификаты и паспорта качества")).toBeInTheDocument();
+		expect(screen.getByText("Насколько срочна поставка")).toBeInTheDocument();
+		expect(screen.getByText("Особые требования к поставщику")).toBeInTheDocument();
+
+		// 5 "Свой вариант" textareas, one per question
+		expect(screen.getAllByPlaceholderText("Свой вариант")).toHaveLength(5);
+	});
+
+	test("clicking an option chip selects it (aria-pressed=true)", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const chip = screen.getByRole("button", { name: "Стандарт" });
+		expect(chip).toHaveAttribute("aria-pressed", "false");
+		await user.click(chip);
+		expect(chip).toHaveAttribute("aria-pressed", "true");
+	});
+
+	test("selecting another option replaces the selection (single-select)", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const first = screen.getByRole("button", { name: "Стандарт" });
+		const second = screen.getByRole("button", { name: "Премиум" });
+
+		await user.click(first);
+		await user.click(second);
+
+		expect(first).toHaveAttribute("aria-pressed", "false");
+		expect(second).toHaveAttribute("aria-pressed", "true");
+	});
+
+	test("clicking the same chip again toggles it off", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const chip = screen.getByRole("button", { name: "Стандарт" });
+		await user.click(chip);
+		await user.click(chip);
+		expect(chip).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("Step 3 state preserved across Назад / Далее", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await user.click(screen.getByRole("button", { name: "Стандарт" }));
+		const firstTextarea = screen.getAllByPlaceholderText("Свой вариант")[0];
+		await user.type(firstTextarea, "особые требования");
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		expect(screen.getByRole("button", { name: "Стандарт" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getAllByPlaceholderText("Свой вариант")[0]).toHaveValue("особые требования");
+	});
+
+	test("submit with chip + free-text emits generatedAnswers for answered questions only", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await user.click(screen.getByRole("button", { name: "Стандарт" }));
+		const textareas = screen.getAllByPlaceholderText("Свой вариант");
+		await user.type(textareas[1], "евро-палеты");
+
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0];
+		expect(payload.generatedAnswers).toEqual([
+			{ questionId: "material-grade", selectedOption: "Стандарт" },
+			{ questionId: "packaging", freeText: "евро-палеты" },
+		]);
+	});
+
+	test("submit with no Step 3 answers omits generatedAnswers", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0];
+		expect(payload.generatedAnswers).toBeUndefined();
+	});
+
+	test("Step 3 answers mark form dirty", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		// Step 1 is already dirty from fillStep1Minimum; verify selection persists the dirty state
+		await user.click(screen.getByRole("button", { name: "Стандарт" }));
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+});
+
 describe("AddPositionsDrawer — submit", () => {
 	test("completing wizard with minimal data emits single NewItemInput", async () => {
 		const onSubmit = vi.fn();

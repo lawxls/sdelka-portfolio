@@ -398,6 +398,37 @@ describe("useAddPositionForm", () => {
 		]);
 	});
 
+	test("toPayload preserves both selectedOption and freeText on same question", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+		act(() => result.current.update3("q1", { selectedOption: "A" }));
+		act(() => result.current.update3("q1", { freeText: "extra" }));
+
+		const payload = result.current.toPayload();
+		expect(payload.generatedAnswers).toEqual([{ questionId: "q1", selectedOption: "A", freeText: "extra" }]);
+	});
+
+	test("toPayload drops question when selectedOption cleared and no freeText", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+		act(() => result.current.update3("q1", { selectedOption: "A" }));
+		act(() => result.current.update3("q1", { selectedOption: undefined }));
+
+		const payload = result.current.toPayload();
+		expect(payload.generatedAnswers).toBeUndefined();
+	});
+
+	test("toPayload omits generatedAnswers when no answers set", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+
+		const payload = result.current.toPayload();
+		expect(payload.generatedAnswers).toBeUndefined();
+	});
+
 	test("advance is a no-op on step 3", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
