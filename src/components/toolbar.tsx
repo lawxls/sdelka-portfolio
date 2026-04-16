@@ -1,11 +1,11 @@
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, ListFilter, Plus, Search, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Plus, Search, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { FiltersPopover } from "@/components/filters-popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { DeviationFilter, FilterState, SortField, SortState, StatusFilter } from "@/data/types";
-import { STATUS_LABELS } from "@/data/types";
+import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { cn } from "@/lib/utils";
 
@@ -20,19 +20,22 @@ interface ToolbarProps {
 	onExport?: () => void;
 	isArchiveView?: boolean;
 	onArchiveToggle?: () => void;
+	// Folder filter (Категория section)
+	folders: Folder[];
+	folderCounts: Record<string, number>;
+	foldersLoading?: boolean;
+	activeFolder: string | undefined;
+	onFolderSelect: (folder: string | undefined) => void;
+	onCreateFolder: (name: string) => void;
+	onRenameFolder: (id: string, name: string) => void;
+	onRecolorFolder: (id: string, color: string) => void;
+	onDeleteFolder: (id: string) => void;
+	// Company filter (Компания section, conditional)
+	companies?: CompanySummary[];
+	selectedCompany?: string | undefined;
+	onCompanySelect?: (company: string | undefined) => void;
+	showCompanies?: boolean;
 }
-
-const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
-	{ label: "С переплатой", value: "overpaying" },
-	{ label: "С экономией", value: "saving" },
-];
-
-const STATUS_PRESETS: { label: string; value: StatusFilter }[] = [
-	{ label: STATUS_LABELS.awaiting_analytics, value: "awaiting_analytics" },
-	{ label: STATUS_LABELS.searching, value: "searching" },
-	{ label: STATUS_LABELS.negotiating, value: "negotiating" },
-	{ label: STATUS_LABELS.completed, value: "completed" },
-];
 
 const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
 	{ label: "Бюджет в год", field: "annualCost" },
@@ -42,10 +45,6 @@ const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
 	{ label: "Отклонение (%)", field: "deviation" },
 	{ label: "Переплата (₽)", field: "overpayment" },
 ];
-
-function hasActiveFilter(filters: FilterState): boolean {
-	return filters.deviation !== "all" || filters.status !== "all";
-}
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -62,6 +61,19 @@ export function Toolbar({
 	onExport,
 	isArchiveView = false,
 	onArchiveToggle,
+	folders,
+	folderCounts,
+	foldersLoading,
+	activeFolder,
+	onFolderSelect,
+	onCreateFolder,
+	onRenameFolder,
+	onRecolorFolder,
+	onDeleteFolder,
+	companies,
+	selectedCompany,
+	onCompanySelect,
+	showCompanies,
 }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -86,24 +98,6 @@ export function Toolbar({
 		// Flush pending search immediately on collapse
 		clearTimeout(debounceRef.current);
 		onSearchChange(latestQueryRef.current);
-	}
-
-	function handleDeviationClick(value: DeviationFilter) {
-		onFiltersChange({
-			...filters,
-			deviation: filters.deviation === value ? "all" : value,
-		});
-	}
-
-	function handleStatusClick(value: StatusFilter) {
-		onFiltersChange({
-			...filters,
-			status: filters.status === value ? "all" : value,
-		});
-	}
-
-	function handleResetFilters() {
-		onFiltersChange({ deviation: "all", status: "all" });
 	}
 
 	return (
@@ -195,54 +189,23 @@ export function Toolbar({
 					</PopoverContent>
 				</Popover>
 
-				<Popover>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<PopoverTrigger asChild>
-								<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
-									<ListFilter aria-hidden="true" />
-									{hasActiveFilter(filters) && (
-										<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />
-									)}
-								</Button>
-							</PopoverTrigger>
-						</TooltipTrigger>
-						<TooltipContent>Фильтры</TooltipContent>
-					</Tooltip>
-					<PopoverContent align="end" className="w-56">
-						<div className="flex flex-col gap-1">
-							<button
-								type="button"
-								className={`${FILTER_BTN} ${!hasActiveFilter(filters) ? FILTER_BTN_ACTIVE : ""}`}
-								onClick={handleResetFilters}
-							>
-								Все
-							</button>
-							<div className="my-1 h-px bg-border" />
-							{DEVIATION_PRESETS.map((preset) => (
-								<button
-									key={preset.value}
-									type="button"
-									className={`${FILTER_BTN} ${filters.deviation === preset.value ? FILTER_BTN_ACTIVE : ""}`}
-									onClick={() => handleDeviationClick(preset.value)}
-								>
-									{preset.label}
-								</button>
-							))}
-							<div className="my-1 h-px bg-border" />
-							{STATUS_PRESETS.map((preset) => (
-								<button
-									key={preset.value}
-									type="button"
-									className={`${FILTER_BTN} ${filters.status === preset.value ? FILTER_BTN_ACTIVE : ""}`}
-									onClick={() => handleStatusClick(preset.value)}
-								>
-									{preset.label}
-								</button>
-							))}
-						</div>
-					</PopoverContent>
-				</Popover>
+				<FiltersPopover
+					filters={filters}
+					onFiltersChange={onFiltersChange}
+					folders={folders}
+					folderCounts={folderCounts}
+					foldersLoading={foldersLoading}
+					activeFolder={activeFolder}
+					onFolderSelect={onFolderSelect}
+					onCreateFolder={onCreateFolder}
+					onRenameFolder={onRenameFolder}
+					onRecolorFolder={onRecolorFolder}
+					onDeleteFolder={onDeleteFolder}
+					companies={companies}
+					selectedCompany={selectedCompany}
+					onCompanySelect={onCompanySelect}
+					showCompanies={showCompanies}
+				/>
 
 				{onArchiveToggle && (
 					<Tooltip>

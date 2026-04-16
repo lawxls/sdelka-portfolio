@@ -367,6 +367,19 @@ export function ProcurementPage() {
 			onExport={handleExport}
 			isArchiveView={isArchiveView}
 			onArchiveToggle={handleArchiveToggle}
+			folders={folders}
+			folderCounts={counts}
+			foldersLoading={foldersLoading || statsLoading}
+			activeFolder={folder}
+			onFolderSelect={handleFolderSelect}
+			onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
+			onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
+			onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
+			onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
+			companies={companies}
+			selectedCompany={company}
+			onCompanySelect={handleCompanySelect}
+			showCompanies={isMultiCompany}
 		/>
 	);
 
