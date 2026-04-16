@@ -67,9 +67,9 @@ describe("FolderSelect", () => {
 		renderSelect();
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Категория" }));
-		await user.click(screen.getByRole("button", { name: /Создать раздел/ }));
+		await user.click(screen.getByRole("button", { name: /Создать категорию/ }));
 
-		expect(await screen.findByRole("textbox", { name: "Название раздела" })).toBeInTheDocument();
+		expect(await screen.findByRole("textbox", { name: "Название категории" })).toBeInTheDocument();
 	});
 
 	test("inline input Enter calls onCreateFolder with trimmed value", async () => {
@@ -77,12 +77,32 @@ describe("FolderSelect", () => {
 		renderSelect({ onCreateFolder });
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Категория" }));
-		await user.click(screen.getByRole("button", { name: /Создать раздел/ }));
+		await user.click(screen.getByRole("button", { name: /Создать категорию/ }));
 
-		const input = await screen.findByRole("textbox", { name: "Название раздела" });
+		const input = await screen.findByRole("textbox", { name: "Название категории" });
 		await user.type(input, "Новый{Enter}");
 
-		expect(onCreateFolder).toHaveBeenCalledWith("Новый");
+		expect(onCreateFolder).toHaveBeenCalledWith("Новый", "red");
+	});
+
+	test("color picker toggles open and changes the selected color before save", async () => {
+		const onCreateFolder = vi.fn();
+		renderSelect({ onCreateFolder, nextFolderColor: "red" });
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Категория" }));
+		await user.click(screen.getByRole("button", { name: /Создать категорию/ }));
+
+		const colorToggle = await screen.findByRole("button", { name: "Выбрать цвет категории" });
+		expect(colorToggle).toHaveAttribute("aria-expanded", "false");
+		await user.click(colorToggle);
+		expect(colorToggle).toHaveAttribute("aria-expanded", "true");
+
+		await user.click(screen.getByRole("button", { name: "Цвет: purple" }));
+
+		const input = screen.getByRole("textbox", { name: "Название категории" });
+		await user.type(input, "Разное{Enter}");
+
+		expect(onCreateFolder).toHaveBeenCalledWith("Разное", "purple");
 	});
 
 	test("inline input Escape cancels without calling onCreateFolder", async () => {
@@ -90,9 +110,9 @@ describe("FolderSelect", () => {
 		renderSelect({ onCreateFolder });
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Категория" }));
-		await user.click(screen.getByRole("button", { name: /Создать раздел/ }));
+		await user.click(screen.getByRole("button", { name: /Создать категорию/ }));
 
-		const input = await screen.findByRole("textbox", { name: "Название раздела" });
+		const input = await screen.findByRole("textbox", { name: "Название категории" });
 		await user.type(input, "Канцелярия{Escape}");
 
 		expect(onCreateFolder).not.toHaveBeenCalled();
