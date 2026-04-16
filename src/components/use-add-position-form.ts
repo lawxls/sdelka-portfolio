@@ -23,8 +23,6 @@ interface Step1State {
 	quantityPerDelivery: string;
 	annualQuantity: string;
 	addressIds: string[];
-	deliveryCostType: DeliveryCostType | null;
-	deliveryCost: string;
 	unloading: UnloadingType | null;
 	paymentMethod: PaymentMethod;
 	deferralRequired: boolean;
@@ -40,6 +38,8 @@ interface Step2State {
 	pricePerUnit: string;
 	paymentType: PaymentType;
 	deferralDays: string;
+	deliveryCostType: DeliveryCostType | null;
+	deliveryCost: string;
 }
 
 interface Step3Answer {
@@ -70,8 +70,6 @@ function defaultStep1(): Step1State {
 		quantityPerDelivery: "",
 		annualQuantity: "",
 		addressIds: [],
-		deliveryCostType: null,
-		deliveryCost: "",
 		unloading: null,
 		paymentMethod: "bank_transfer",
 		deferralRequired: false,
@@ -89,6 +87,8 @@ function defaultStep2(): Step2State {
 		pricePerUnit: "",
 		paymentType: "prepayment",
 		deferralDays: "",
+		deliveryCostType: null,
+		deliveryCost: "",
 	};
 }
 
@@ -171,10 +171,10 @@ function buildNewItemInput(
 
 	if (addressStrings.length > 0) payload.deliveryAddresses = addressStrings;
 
-	if (step1.deliveryCostType !== null) {
-		payload.deliveryCostType = step1.deliveryCostType;
-		if (step1.deliveryCostType === "paid") {
-			const cost = toNumber(step1.deliveryCost);
+	if (step2.deliveryCostType !== null) {
+		payload.deliveryCostType = step2.deliveryCostType;
+		if (step2.deliveryCostType === "paid") {
+			const cost = toNumber(step2.deliveryCost);
 			if (cost !== undefined) payload.deliveryCost = cost;
 		}
 	}
@@ -286,8 +286,6 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 			step1.quantityPerDelivery !== "" ||
 			step1.annualQuantity !== "" ||
 			step1.addressIds.length > 0 ||
-			step1.deliveryCostType !== null ||
-			step1.deliveryCost !== "" ||
 			step1.unloading !== null ||
 			step1.paymentMethod !== "bank_transfer" ||
 			step1.deferralRequired ||
@@ -300,6 +298,8 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 			step2.pricePerUnit !== "" ||
 			step2.paymentType !== "prepayment" ||
 			step2.deferralDays !== "" ||
+			step2.deliveryCostType !== null ||
+			step2.deliveryCost !== "" ||
 			Object.values(step3.answers).some((a) => a.selectedOption || a.freeText),
 		[step1, step2, step3],
 	);

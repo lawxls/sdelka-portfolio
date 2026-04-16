@@ -332,8 +332,8 @@ describe("useAddPositionForm", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
 		act(() => result.current.update1("name", "X"));
-		act(() => result.current.update1("deliveryCostType", "free"));
-		act(() => result.current.update1("deliveryCost", "500"));
+		act(() => result.current.update2("deliveryCostType", "free"));
+		act(() => result.current.update2("deliveryCost", "500"));
 
 		const payload = result.current.toPayload();
 		expect(payload.deliveryCostType).toBe("free");
@@ -344,8 +344,8 @@ describe("useAddPositionForm", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
 		act(() => result.current.update1("name", "X"));
-		act(() => result.current.update1("deliveryCostType", "paid"));
-		act(() => result.current.update1("deliveryCost", "1500"));
+		act(() => result.current.update2("deliveryCostType", "paid"));
+		act(() => result.current.update2("deliveryCost", "1500"));
 
 		const payload = result.current.toPayload();
 		expect(payload.deliveryCostType).toBe("paid");
@@ -356,8 +356,8 @@ describe("useAddPositionForm", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
 		act(() => result.current.update1("name", "X"));
-		act(() => result.current.update1("deliveryCostType", "pickup"));
-		act(() => result.current.update1("deliveryCost", "900"));
+		act(() => result.current.update2("deliveryCostType", "pickup"));
+		act(() => result.current.update2("deliveryCost", "900"));
 
 		const payload = result.current.toPayload();
 		expect(payload.deliveryCostType).toBe("pickup");
@@ -374,8 +374,8 @@ describe("useAddPositionForm", () => {
 			result.current.update1("quantityPerDelivery", "50");
 			result.current.update1("annualQuantity", "600");
 			result.current.update1("addressIds", ["a-1"]);
-			result.current.update1("deliveryCostType", "paid");
-			result.current.update1("deliveryCost", "2000");
+			result.current.update2("deliveryCostType", "paid");
+			result.current.update2("deliveryCost", "2000");
 			result.current.update1("unloading", "supplier");
 			result.current.update1("paymentMethod", "cash");
 			result.current.update1("deferralRequired", true);

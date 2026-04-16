@@ -370,7 +370,7 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		expect(screen.getByText("Добавить позицию", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Название *")).toBeInTheDocument();
+		expect(screen.getByLabelText("Название")).toBeInTheDocument();
 	});
 
 	test("Отмена on dirty drawer prompts discard and closes", async () => {
@@ -379,12 +379,12 @@ describe("ProcurementPage", () => {
 
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-		await user.type(screen.getByPlaceholderText("Название *"), "Should not appear");
+		await user.type(screen.getByLabelText("Название"), "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
-		expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -483,12 +483,9 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		await user.type(screen.getByPlaceholderText("Название *"), name);
+		await user.type(screen.getByLabelText("Название"), name);
 
-		const companyTrigger = await screen.findByLabelText("Компания");
-		await user.click(companyTrigger);
-		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
-
+		// Single company → auto-selected and locked; no manual pick needed.
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Создать" }));
@@ -501,7 +498,7 @@ describe("ProcurementPage", () => {
 		await completeWizard(user, "Тестовая позиция");
 
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
+			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
 		});
 	});
 
@@ -514,7 +511,7 @@ describe("ProcurementPage", () => {
 		await completeWizard(user, "Большая партия");
 
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
+			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
 		});
 	});
 
@@ -527,7 +524,7 @@ describe("ProcurementPage", () => {
 		await completeWizard(user, "Test");
 
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
+			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
 		});
 	});
 

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import type { Address, Company, NewItemInput } from "@/data/types";
@@ -59,9 +59,16 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 	};
 }
 
+const SINGLE_COMPANY: Company[] = [makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES)];
+
+const MULTI_COMPANY: Company[] = [
+	makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES),
+	makeCompanyDoc("company-2", "Вторая компания", TEST_ADDRESSES),
+];
+
 beforeEach(() => {
 	_resetCompaniesStore();
-	_setCompanies([makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES)]);
+	_setCompanies(SINGLE_COMPANY);
 	_resetFoldersStore();
 	_setFolders([
 		{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
@@ -88,14 +95,13 @@ function renderDrawer(
 	};
 }
 
-async function pickCompany(user: ReturnType<typeof userEvent.setup>) {
+async function pickCompany(user: ReturnType<typeof userEvent.setup>, name: string) {
 	await user.click(await screen.findByLabelText("Компания"));
-	await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
+	await user.click(await screen.findByRole("option", { name }));
 }
 
 async function fillStep1Minimum(user: ReturnType<typeof userEvent.setup>, name = "Арматура") {
-	await user.type(screen.getByPlaceholderText("Название *"), name);
-	await pickCompany(user);
+	await user.type(screen.getByLabelText("Название"), name);
 }
 
 async function advance(user: ReturnType<typeof userEvent.setup>) {
@@ -132,11 +138,13 @@ describe("AddPositionsDrawer — wizard chrome", () => {
 		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
 	});
 
-	test("step indicator uses aria-live so SR users hear step changes", () => {
+	test("step indicator uses aria-live so SR users hear step changes", async () => {
 		renderDrawer();
-		const indicator = screen.getByText(/Шаг 1 из 3/);
-		expect(indicator).toHaveAttribute("aria-live", "polite");
-		expect(indicator).toHaveAttribute("aria-atomic", "true");
+		const indicator = await screen.findByText(/Шаг 1 из 3/);
+		// aria-live is on the paragraph wrapping the indicator spans
+		const liveRegion = indicator.closest("[aria-live]");
+		expect(liveRegion).toHaveAttribute("aria-live", "polite");
+		expect(liveRegion).toHaveAttribute("aria-atomic", "true");
 	});
 
 	test("step 1 footer has Отмена + Далее only", () => {
@@ -146,25 +154,25 @@ describe("AddPositionsDrawer — wizard chrome", () => {
 		expect(screen.queryByRole("button", { name: "Назад" })).not.toBeInTheDocument();
 	});
 
-	test("step 2 footer has Отмена + Назад + Далее", async () => {
+	test("step 2 footer has Назад + Далее (no Отмена)", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await fillStep1Minimum(user);
 		await advance(user);
 
-		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Отмена" })).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Далее" })).toBeInTheDocument();
 	});
 
-	test("step 3 footer has Отмена + Назад + Создать", async () => {
+	test("step 3 footer has Назад + Создать (no Отмена)", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await fillStep1Minimum(user);
 		await advance(user);
 		await advance(user);
 
-		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Отмена" })).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Создать" })).toBeInTheDocument();
 	});
@@ -172,19 +180,19 @@ describe("AddPositionsDrawer — wizard chrome", () => {
 	test("Назад preserves step 1 state", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await user.type(screen.getByPlaceholderText("Название *"), "Арматура");
-		await user.type(screen.getByPlaceholderText("Спецификация (Описание)"), "А500С");
-		await pickCompany(user);
+		await user.type(screen.getByLabelText("Название"), "Арматура");
+		await user.type(screen.getByLabelText("Спецификация"), "А500С");
 		await advance(user);
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
-		expect(screen.getByPlaceholderText("Название *")).toHaveValue("Арматура");
-		expect(screen.getByPlaceholderText("Спецификация (Описание)")).toHaveValue("А500С");
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура");
+		expect(screen.getByLabelText("Спецификация")).toHaveValue("А500С");
 	});
 });
 
 describe("AddPositionsDrawer — Step 1 validation", () => {
-	test("Далее with empty name + no company shows both errors", async () => {
+	test("Далее with empty name + multiple companies unselected shows both errors", async () => {
+		_setCompanies(MULTI_COMPANY);
 		renderDrawer();
 		const user = userEvent.setup();
 		await advance(user);
@@ -194,10 +202,11 @@ describe("AddPositionsDrawer — Step 1 validation", () => {
 		expect(screen.getByText(/Шаг 1 из 3/)).toBeInTheDocument();
 	});
 
-	test("Далее with only name filled shows company error", async () => {
+	test("Далее with only name filled and no company shows company error", async () => {
+		_setCompanies(MULTI_COMPANY);
 		renderDrawer();
 		const user = userEvent.setup();
-		await user.type(screen.getByPlaceholderText("Название *"), "Цемент");
+		await user.type(screen.getByLabelText("Название"), "Цемент");
 		await advance(user);
 
 		expect(screen.getByText("Выберите компанию")).toBeInTheDocument();
@@ -210,13 +219,13 @@ describe("AddPositionsDrawer — Step 1 validation", () => {
 		await advance(user);
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
 
-		await user.type(screen.getByPlaceholderText("Название *"), "A");
+		await user.type(screen.getByLabelText("Название"), "A");
 		expect(screen.queryByText("Укажите название позиции")).not.toBeInTheDocument();
 	});
 
 	test("required inputs advertise aria-required", () => {
 		renderDrawer();
-		expect(screen.getByPlaceholderText("Название *")).toHaveAttribute("aria-required", "true");
+		expect(screen.getByLabelText("Название")).toHaveAttribute("aria-required", "true");
 		expect(screen.getByLabelText("Компания")).toHaveAttribute("aria-required", "true");
 	});
 
@@ -229,11 +238,10 @@ describe("AddPositionsDrawer — Step 1 validation", () => {
 });
 
 describe("AddPositionsDrawer — Step 1 sections", () => {
-	test("renders four section group headers", () => {
+	test("renders three section group headers", () => {
 		renderDrawer();
 		expect(screen.getByRole("heading", { name: "Позиция" })).toBeInTheDocument();
-		expect(screen.getByRole("heading", { name: "Логистика" })).toBeInTheDocument();
-		expect(screen.getByRole("heading", { name: "Финансы" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Логистика и Финансы" })).toBeInTheDocument();
 		expect(screen.getByRole("heading", { name: "Дополнительно" })).toBeInTheDocument();
 	});
 
@@ -245,34 +253,31 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		expect(options.length).toBeGreaterThanOrEqual(10);
 	});
 
-	test("address picker shows 'сначала выберите компанию' when no company selected", () => {
+	test("sole-company mode auto-selects the company and pre-fills addresses", async () => {
 		renderDrawer();
-		expect(screen.getByText("Сначала выберите компанию")).toBeInTheDocument();
+		await screen.findByText("Выбрано: 2 из 2");
 	});
 
-	test("selecting company pre-selects all its addresses", async () => {
+	test("multi-company mode requires manual pick and then pre-selects addresses", async () => {
+		_setCompanies(MULTI_COMPANY);
 		renderDrawer();
 		const user = userEvent.setup();
-		await pickCompany(user);
+
+		expect(screen.getByText("Сначала выберите компанию")).toBeInTheDocument();
+		await pickCompany(user, "Тестовая компания");
 		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 2 из 2");
 	});
 
-	test("stoimost' dostavki appears only when paid selected", async () => {
+	test("comment textarea and file dropzone are rendered inside Позиция", () => {
 		renderDrawer();
-		const user = userEvent.setup();
-		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Комментарий")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Прикрепить файлы" })).toBeInTheDocument();
+	});
 
-		await user.click(screen.getByLabelText("Доставка"));
-		await user.click(await screen.findByRole("option", { name: "Платная" }));
-		expect(screen.getByLabelText("Стоимость доставки")).toBeInTheDocument();
-
-		await user.click(screen.getByLabelText("Доставка"));
-		await user.click(await screen.findByRole("option", { name: "Самовывоз" }));
-		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
-
-		await user.click(screen.getByLabelText("Доставка"));
-		await user.click(await screen.findByRole("option", { name: "Бесплатная" }));
-		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
+	test("file dropzone is a labeled button with a focus-visible ring", () => {
+		renderDrawer();
+		const dropzone = screen.getByRole("button", { name: "Прикрепить файлы" });
+		expect(dropzone).toHaveClass("focus-visible:ring-3");
 	});
 
 	test("checkboxes are visible and unchecked by default", () => {
@@ -280,18 +285,6 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		expect(screen.getByRole("checkbox", { name: "Отсрочка нужна" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Нужен образец" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Аналоги допускаются" })).not.toBeChecked();
-	});
-
-	test("comment textarea and file dropzone render in Дополнительно", () => {
-		renderDrawer();
-		expect(screen.getByPlaceholderText("Введите комментарий…")).toBeInTheDocument();
-		expect(screen.getByText(/Перетащите файлы сюда/)).toBeInTheDocument();
-	});
-
-	test("file dropzone is a labeled button with a focus-visible ring", () => {
-		renderDrawer();
-		const dropzone = screen.getByRole("button", { name: "Прикрепить файлы" });
-		expect(dropzone).toHaveClass("focus-visible:ring-3");
 	});
 });
 
@@ -308,35 +301,23 @@ describe("AddPositionsDrawer — FolderSelect integration", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Категория" }));
-		await user.click(screen.getByRole("button", { name: /Создать раздел/ }));
+		await user.click(screen.getByRole("button", { name: /Создать категорию/ }));
 
-		const input = await screen.findByRole("textbox", { name: "Название раздела" });
+		const input = await screen.findByRole("textbox", { name: "Название категории" });
 		await user.type(input, "Канцелярия{Enter}");
 
 		await screen.findByRole("button", { name: /Категория/ });
-		// Trigger should now show the created folder name
 		await screen.findByText("Канцелярия");
 	});
 });
 
 describe("AddPositionsDrawer — discard confirmation", () => {
-	test("Отмена on clean form closes immediately", async () => {
-		const onOpenChange = vi.fn();
-		renderDrawer({ onOpenChange });
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();
-		expect(onOpenChange).toHaveBeenCalledWith(false);
-	});
-
 	test("Отмена on dirty form shows confirmation", async () => {
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название *"), "Something");
+		await user.type(screen.getByLabelText("Название"), "Something");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -347,12 +328,12 @@ describe("AddPositionsDrawer — discard confirmation", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название *"), "My item");
+		await user.type(screen.getByLabelText("Название"), "My item");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
 		expect(screen.queryByText("Закрыть без сохранения?")).not.toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Название *")).toHaveValue("My item");
+		expect(screen.getByLabelText("Название")).toHaveValue("My item");
 	});
 
 	test("Закрыть без сохранения closes and resets", async () => {
@@ -360,25 +341,11 @@ describe("AddPositionsDrawer — discard confirmation", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название *"), "Discard");
+		await user.type(screen.getByLabelText("Название"), "Discard");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
 		expect(onOpenChange).toHaveBeenCalledWith(false);
-	});
-
-	test("dirty detection fires on step 2/3 state too", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		await fillStep1Minimum(user);
-		await advance(user);
-		await advance(user);
-		await user.click(screen.getByRole("button", { name: "Назад" }));
-		await user.click(screen.getByRole("button", { name: "Назад" }));
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		// Step 1 has name + company → dirty regardless
-		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 });
 
@@ -388,7 +355,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await advance(user);
 	}
 
-	test("renders the four supplier fields", async () => {
+	test("renders the supplier fields", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
@@ -398,6 +365,22 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		expect(screen.getByLabelText("Текущая цена без НДС")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
+	});
+
+	test("delivery dropdown now lives in step 2 and reveals cost when paid", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
+
+		await user.click(screen.getByLabelText("Доставка"));
+		await user.click(await screen.findByRole("option", { name: "Платная" }));
+		expect(screen.getByLabelText("Стоимость доставки")).toBeInTheDocument();
+
+		await user.click(screen.getByLabelText("Доставка"));
+		await user.click(await screen.findByRole("option", { name: "Самовывоз" }));
+		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
 	});
 
 	test("дней input appears only when Отсрочка is selected", async () => {
@@ -494,14 +477,16 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 	});
 
 	test("dirty detection fires when only Step 2 fields touched", async () => {
+		_setCompanies(MULTI_COMPANY);
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		// Reach step 2 without entering anything that would dirty step 1 beyond required
-		await fillStep1Minimum(user);
+		await user.type(screen.getByLabelText("Название"), "Арматура");
+		await pickCompany(user, "Тестовая компания");
 		await advance(user);
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "Acme");
+		await user.click(screen.getByRole("button", { name: "Назад" }));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -509,25 +494,40 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 });
 
 describe("AddPositionsDrawer — Step 3 generated questions", () => {
+	beforeEach(() => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
 	async function reachStep3(user: ReturnType<typeof userEvent.setup>) {
 		await fillStep1Minimum(user);
 		await advance(user);
 		await advance(user);
+		// Fast-forward the simulated generation loader.
+		vi.advanceTimersByTime(5000);
+		await screen.findByText("Уточните марку / сорт материала");
 	}
 
-	test("renders all 5 questions with label + option chips + free-text", async () => {
+	test("shows generation loader then renders all 5 questions", async () => {
 		renderDrawer();
-		const user = userEvent.setup();
-		await reachStep3(user);
+		const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+		await fillStep1Minimum(user);
+		await advance(user);
+		await advance(user);
 
-		expect(screen.getByText("Уточните марку / сорт материала")).toBeInTheDocument();
+		expect(screen.getByText("Генерируем уточняющие вопросы…")).toBeInTheDocument();
+
+		vi.advanceTimersByTime(5000);
+		await screen.findByText("Уточните марку / сорт материала");
+
 		expect(screen.getByText("Требования к упаковке")).toBeInTheDocument();
 		expect(screen.getByText("Нужны ли сертификаты и паспорта качества")).toBeInTheDocument();
 		expect(screen.getByText("Насколько срочна поставка")).toBeInTheDocument();
 		expect(screen.getByText("Особые требования к поставщику")).toBeInTheDocument();
 
-		// 5 "Свой вариант" textareas, one per question
-		expect(screen.getAllByPlaceholderText("Свой вариант")).toHaveLength(5);
+		expect(screen.getAllByPlaceholderText("Введите свой вариант")).toHaveLength(5);
 	});
 
 	test("clicking an option chip selects it (aria-pressed=true)", async () => {
@@ -567,20 +567,33 @@ describe("AddPositionsDrawer — Step 3 generated questions", () => {
 		expect(chip).toHaveAttribute("aria-pressed", "false");
 	});
 
+	test("loader is skipped on re-entry to step 3 within the same session", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		// No loader this time — questions are shown immediately
+		expect(screen.queryByText("Генерируем уточняющие вопросы…")).not.toBeInTheDocument();
+		expect(screen.getByText("Уточните марку / сорт материала")).toBeInTheDocument();
+	});
+
 	test("Step 3 state preserved across Назад / Далее", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep3(user);
 
 		await user.click(screen.getByRole("button", { name: "Стандарт" }));
-		const firstTextarea = screen.getAllByPlaceholderText("Свой вариант")[0];
-		await user.type(firstTextarea, "особые требования");
+		const firstFree = screen.getAllByPlaceholderText("Введите свой вариант")[0];
+		await user.type(firstFree, "особые требования");
 
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 		await advance(user);
 
 		expect(screen.getByRole("button", { name: "Стандарт" })).toHaveAttribute("aria-pressed", "true");
-		expect(screen.getAllByPlaceholderText("Свой вариант")[0]).toHaveValue("особые требования");
+		expect(screen.getAllByPlaceholderText("Введите свой вариант")[0]).toHaveValue("особые требования");
 	});
 
 	test("submit with chip + free-text emits generatedAnswers for answered questions only", async () => {
@@ -590,8 +603,8 @@ describe("AddPositionsDrawer — Step 3 generated questions", () => {
 		await reachStep3(user);
 
 		await user.click(screen.getByRole("button", { name: "Стандарт" }));
-		const textareas = screen.getAllByPlaceholderText("Свой вариант");
-		await user.type(textareas[1], "евро-палеты");
+		const freeInputs = screen.getAllByPlaceholderText("Введите свой вариант");
+		await user.type(freeInputs[1], "евро-палеты");
 
 		await create(user);
 
@@ -612,18 +625,6 @@ describe("AddPositionsDrawer — Step 3 generated questions", () => {
 
 		const [payload] = onSubmit.mock.calls[0];
 		expect(payload.generatedAnswers).toBeUndefined();
-	});
-
-	test("Step 3 answers mark form dirty", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		await reachStep3(user);
-
-		// Step 1 is already dirty from fillStep1Minimum; verify selection persists the dirty state
-		await user.click(screen.getByRole("button", { name: "Стандарт" }));
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
 	});
 });
 
@@ -669,15 +670,14 @@ describe("AddPositionsDrawer — submit", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByPlaceholderText("Название *"), "Цемент М500");
-		await user.type(screen.getByPlaceholderText("Спецификация (Описание)"), "Портландцемент");
-		await pickCompany(user);
+		await user.type(screen.getByLabelText("Название"), "Цемент М500");
+		await user.type(screen.getByLabelText("Спецификация"), "Портландцемент");
 
 		await user.click(screen.getByLabelText("Единица измерения"));
 		await user.click(await screen.findByRole("option", { name: "т" }));
 
-		await user.type(screen.getByPlaceholderText("Объём в год"), "600");
-		await user.type(screen.getByPlaceholderText("Кол-во в поставке"), "50");
+		await user.type(screen.getByLabelText("Объём в год"), "600");
+		await user.type(screen.getByLabelText("Количество в поставке"), "50");
 
 		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 		await user.click(screen.getByRole("button", { name: "Наличные" }));
@@ -686,7 +686,7 @@ describe("AddPositionsDrawer — submit", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Нужен образец" }));
 		await user.click(screen.getByRole("checkbox", { name: "Аналоги допускаются" }));
 
-		await user.type(screen.getByPlaceholderText("Введите комментарий…"), "Срочно");
+		await user.type(screen.getByLabelText("Комментарий"), "Срочно");
 
 		await advance(user);
 		await advance(user);
@@ -734,6 +734,6 @@ describe("AddPositionsDrawer — submit", () => {
 
 		rerender(<AddPositionsDrawer open={true} onOpenChange={vi.fn()} onSubmit={vi.fn()} />);
 
-		expect(screen.getByPlaceholderText("Название *")).toHaveValue("");
+		expect(screen.getByLabelText("Название")).toHaveValue("");
 	});
 });
