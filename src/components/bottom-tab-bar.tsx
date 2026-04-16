@@ -1,12 +1,6 @@
-import { ListTodo, Package, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router";
+import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
-
-const TAB_ITEMS = [
-	{ path: "/procurement", label: "Закупки", icon: Package },
-	{ path: "/tasks", label: "Задачи", icon: ListTodo },
-	{ path: "/settings", label: "Настройки", icon: Settings },
-] as const;
 
 export function BottomTabBar() {
 	const { pathname } = useLocation();
@@ -16,7 +10,7 @@ export function BottomTabBar() {
 			className="flex shrink-0 border-t border-sidebar-border bg-sidebar md:hidden"
 			data-testid="bottom-tab-bar"
 		>
-			{TAB_ITEMS.map(({ path, label, icon: Icon }) => {
+			{NAV_ITEMS.map(({ path, label, icon: Icon }) => {
 				const active = pathname.startsWith(path);
 				return (
 					<Link

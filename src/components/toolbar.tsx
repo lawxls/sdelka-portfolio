@@ -20,7 +20,6 @@ interface ToolbarProps {
 	onExport?: () => void;
 	isArchiveView?: boolean;
 	onArchiveToggle?: () => void;
-	// Folder filter (Категория section)
 	folders: Folder[];
 	folderCounts: Record<string, number>;
 	foldersLoading?: boolean;
@@ -30,7 +29,6 @@ interface ToolbarProps {
 	onRenameFolder: (id: string, name: string) => void;
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
-	// Company filter (Компания section, conditional)
 	companies?: CompanySummary[];
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
@@ -95,7 +93,6 @@ export function Toolbar({
 
 	function handleSearchCollapse() {
 		setSearchExpanded(false);
-		// Flush pending search immediately on collapse
 		clearTimeout(debounceRef.current);
 		onSearchChange(latestQueryRef.current);
 	}

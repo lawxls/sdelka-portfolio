@@ -80,8 +80,6 @@ export function ProcurementPage() {
 
 	const { data: companies = [] } = useProcurementCompanies();
 	const isMultiCompany = companies.length > 1;
-
-	// Show company badge when multi-company and no company selected
 	const showCompanyBadge = isMultiCompany && !company;
 
 	const companyMap = useMemo(() => {
@@ -175,7 +173,6 @@ export function ProcurementPage() {
 			} else {
 				next.delete("company");
 			}
-			// Changing company clears folder
 			next.delete("folder");
 			return next;
 		});

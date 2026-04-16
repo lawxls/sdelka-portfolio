@@ -1,13 +1,7 @@
-import { ListTodo, Package, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
-
-const RAIL_ITEMS = [
-	{ path: "/procurement", label: "Закупки", icon: Package },
-	{ path: "/tasks", label: "Задачи", icon: ListTodo },
-	{ path: "/settings", label: "Настройки", icon: Settings },
-] as const;
 
 export function AppRail() {
 	const { pathname } = useLocation();
@@ -17,7 +11,7 @@ export function AppRail() {
 			className="hidden w-12 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-2 md:flex"
 			data-testid="app-rail"
 		>
-			{RAIL_ITEMS.map(({ path, label, icon: Icon }) => {
+			{NAV_ITEMS.map(({ path, label, icon: Icon }) => {
 				const active = pathname.startsWith(path);
 				return (
 					<Tooltip key={path}>
