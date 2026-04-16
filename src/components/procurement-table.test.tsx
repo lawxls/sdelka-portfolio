@@ -1,4 +1,3 @@
-import { DndContext } from "@dnd-kit/core";
 import { fireEvent, type RenderOptions, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -579,27 +578,6 @@ describe("ProcurementTable responsive card/table switch", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} isMobile isFetchingNextPage />);
 		expect(screen.getByTestId("loading-more-spinner")).toBeInTheDocument();
 	});
-
-	test("card mode does not have draggable attributes", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable
-					{...defaultProps}
-					isMobile
-					draggable
-					onDeleteItem={() => {}}
-					onRenameItem={() => {}}
-					onAssignFolder={() => {}}
-					folders={testFolders}
-				/>
-			</DndContext>,
-		);
-		// Cards should not have aria-roledescription="draggable"
-		const cards = screen.getAllByRole("button");
-		for (const card of cards) {
-			expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
-		}
-	});
 });
 
 describe("ProcurementTable name truncation", () => {
@@ -630,58 +608,5 @@ describe("ProcurementTable name truncation", () => {
 		expect(screen.getByText("Арматура А500")).toBeInTheDocument();
 		// No tooltip trigger wrapper needed
 		expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-	});
-});
-
-describe("ProcurementTable drag-and-drop", () => {
-	test("rows have draggable aria-roledescription when draggable", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable {...contextMenuProps} draggable />
-			</DndContext>,
-		);
-		const row = screen.getByTestId("row-1");
-		expect(row.getAttribute("aria-roledescription")).toBe("draggable");
-	});
-
-	test("rows do not have draggable attributes when draggable prop is omitted", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable {...contextMenuProps} />
-			</DndContext>,
-		);
-		const row = screen.getByTestId("row-1");
-		expect(row.getAttribute("aria-roledescription")).toBeNull();
-	});
-
-	test("rows have tabIndex for keyboard dragging when draggable", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable {...contextMenuProps} draggable />
-			</DndContext>,
-		);
-		const row = screen.getByTestId("row-1");
-		expect(row).toHaveAttribute("tabindex", "0");
-	});
-
-	test("dragging row reduces opacity", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable {...contextMenuProps} draggable />
-			</DndContext>,
-		);
-		// Actual drag state requires pointer simulation which doesn't work in jsdom.
-		const row = screen.getByTestId("row-1");
-		expect(row).toBeInTheDocument();
-	});
-
-	test("active dragged row gets drag-state class", () => {
-		renderWithTooltip(
-			<DndContext>
-				<ProcurementTable {...contextMenuProps} draggable activeItemId="1" />
-			</DndContext>,
-		);
-		const row = screen.getByTestId("row-1");
-		expect(row.className).toContain("dragging-row");
 	});
 });

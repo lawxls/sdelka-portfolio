@@ -1,4 +1,3 @@
-import { useDraggable } from "@dnd-kit/core";
 import {
 	AlertTriangle,
 	Archive,
@@ -15,7 +14,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { TaskCountBadge } from "@/components/task-count-badge";
 import {
 	AlertDialog,
@@ -92,8 +91,6 @@ interface ProcurementTableProps {
 	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	onArchiveItem?: (id: string, isArchived: boolean) => void;
 	isArchiveView?: boolean;
-	draggable?: boolean;
-	activeItemId?: string | null;
 	isLoading?: boolean;
 	isFetchingNextPage?: boolean;
 	error?: Error | null;
@@ -116,8 +113,6 @@ export function ProcurementTable({
 	onAssignFolder,
 	onArchiveItem,
 	isArchiveView,
-	draggable,
-	activeItemId,
 	isLoading,
 	isFetchingNextPage,
 	error,
@@ -391,12 +386,7 @@ export function ProcurementTable({
 									</TableCell>
 								);
 
-								const isDragActive = activeItemId === item.id;
-								const rowClassName = cn(
-									rowCls,
-									item.status === "searching" && "negotiating-stripe",
-									isDragActive && "dragging-row",
-								);
+								const rowClassName = cn(rowCls, item.status === "searching" && "negotiating-stripe");
 								const rowProps = {
 									className: rowClassName,
 									onClick: onRowClick && !isEditing ? () => onRowClick(item) : undefined,
@@ -417,11 +407,7 @@ export function ProcurementTable({
 									</>
 								);
 
-								const row = draggable ? (
-									<DraggableRow key={item.id} id={item.id} {...rowProps}>
-										{rowChildren}
-									</DraggableRow>
-								) : (
+								const row = (
 									<TableRow key={item.id} {...rowProps}>
 										{rowChildren}
 									</TableRow>
@@ -548,37 +534,5 @@ export function ProcurementTable({
 				</AlertDialog>
 			)}
 		</div>
-	);
-}
-
-function DraggableRow({
-	id,
-	children,
-	className,
-	ref: externalRef,
-	...props
-}: { id: string } & React.ComponentProps<typeof TableRow>) {
-	const { listeners, setNodeRef } = useDraggable({ id });
-
-	const composedRef = useCallback(
-		(node: HTMLTableRowElement | null) => {
-			setNodeRef(node);
-			if (typeof externalRef === "function") externalRef(node);
-			else if (externalRef) externalRef.current = node;
-		},
-		[setNodeRef, externalRef],
-	);
-
-	return (
-		<TableRow
-			ref={composedRef}
-			className={className}
-			tabIndex={0}
-			aria-roledescription="draggable"
-			{...props}
-			{...listeners}
-		>
-			{children}
-		</TableRow>
 	);
 }

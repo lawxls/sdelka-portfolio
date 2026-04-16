@@ -12,6 +12,7 @@ import { ProcurementPage } from "@/pages/procurement-page";
 import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
+import { SettingsIndexPage } from "@/pages/settings-index-page";
 import { TasksPage } from "@/pages/tasks-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
@@ -40,8 +41,8 @@ function App() {
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					{/* Settings */}
-					<Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
 					<Route element={<SettingsLayout />}>
+						<Route path="/settings" element={<SettingsIndexPage />} />
 						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
 						<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
 						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />

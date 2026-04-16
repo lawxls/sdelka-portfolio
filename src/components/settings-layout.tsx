@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
 import { Button } from "@/components/ui/button";
-import { DESKTOP_QUERY } from "./folder-sidebar";
+import { DESKTOP_QUERY } from "@/lib/desktop-query";
 import { SettingsSidebar } from "./settings-sidebar";
 
 type SettingsOutletContext = {

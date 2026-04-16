@@ -13,7 +13,6 @@ import * as mockParser from "@/data/mock-file-parser";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
-import { DragItemOverlay } from "@/pages/procurement-page";
 import { makeItem } from "@/test-utils";
 import App from "./App";
 
@@ -105,12 +104,12 @@ function renderApp(initialEntries?: string[]) {
 	);
 }
 
-/** Render and wait for both folder and item data to load */
+/** Render and wait for items to load */
 async function renderAppReady(initialEntries?: string[]) {
 	const result = renderApp(initialEntries);
 	await waitFor(() => {
-		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
 		expect(screen.queryAllByTestId("skeleton-row")).toHaveLength(0);
+		expect(screen.getByRole("table")).toBeInTheDocument();
 	});
 	return result;
 }
@@ -188,11 +187,6 @@ describe("Routing", () => {
 		// No action buttons like "Добавить компанию" or "Отправить приглашения"
 		expect(screen.queryByRole("button", { name: /Добавить компанию/ })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: /Отправить приглашения/ })).not.toBeInTheDocument();
-	});
-
-	test("FolderSidebar renders on /procurement", async () => {
-		await renderAppReady();
-		expect(screen.getByTestId("sidebar")).toBeInTheDocument();
 	});
 
 	test("URL query params preserved under /procurement", async () => {
@@ -339,15 +333,6 @@ describe("ProcurementPage", () => {
 		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("renders sidebar with folders and counts", async () => {
-		await renderAppReady();
-		expect(screen.getByRole("heading", { name: "Категории" })).toBeInTheDocument();
-		expect(screen.getByText("Все закупки")).toBeInTheDocument();
-		expect(screen.getByText("Без категории")).toBeInTheDocument();
-		const sidebar = screen.getByTestId("sidebar");
-		expect(within(sidebar).getByText("Металлопрокат")).toBeInTheDocument();
-	});
-
 	test("deep-link with folder param filters table to folder items", async () => {
 		await renderAppReady(["/procurement?folder=folder-1"]);
 
@@ -364,118 +349,6 @@ describe("ProcurementPage", () => {
 		const rows = within(table).getAllByRole("row");
 		// Only items with folderId=null (15 items + header)
 		expect(rows).toHaveLength(16);
-	});
-
-	test("folder selection filters table via sidebar click", async () => {
-		await renderAppReady();
-
-		const table = screen.getByRole("table");
-		const initialRowCount = within(table).getAllByRole("row").length;
-
-		const sidebar = screen.getByTestId("sidebar");
-		await userEvent.setup().click(within(sidebar).getByText("Металлопрокат"));
-
-		await waitFor(() => {
-			const filteredRowCount = within(table).getAllByRole("row").length;
-			expect(filteredRowCount).toBeLessThan(initialRowCount);
-		});
-	});
-
-	test("creating a folder adds it to sidebar (optimistic)", async () => {
-		await renderAppReady();
-
-		const user = userEvent.setup();
-		const sidebar = screen.getByTestId("sidebar");
-
-		await user.click(within(sidebar).getByRole("button", { name: /Новая категория/ }));
-
-		const input = within(sidebar).getByRole("textbox", { name: "Название категории" });
-		await user.type(input, "Тест раздел{Enter}");
-
-		await waitFor(() => {
-			expect(within(sidebar).getByText("Тест раздел")).toBeInTheDocument();
-		});
-	});
-
-	test("deleting active folder clears folder filter", async () => {
-		await renderAppReady(["/procurement?folder=folder-1"]);
-
-		const user = userEvent.setup();
-		const sidebar = screen.getByTestId("sidebar");
-
-		await user.click(screen.getByRole("button", { name: "Меню категории Металлопрокат" }));
-		await screen.findByText("Удалить");
-		fireEvent.click(screen.getByText("Удалить"));
-
-		await screen.findByText("Удалить категорию?");
-		fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
-
-		// Folder gone from sidebar
-		await waitFor(() => {
-			expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
-		});
-	});
-
-	test("renaming a folder updates sidebar (optimistic)", async () => {
-		await renderAppReady();
-
-		const user = userEvent.setup();
-		const sidebar = screen.getByTestId("sidebar");
-
-		await user.click(screen.getByRole("button", { name: "Меню категории Металлопрокат" }));
-		await screen.findByText("Переименовать");
-		fireEvent.click(screen.getByText("Переименовать"));
-
-		const input = within(sidebar).getByDisplayValue("Металлопрокат");
-		await user.clear(input);
-		await user.type(input, "Сталь{Enter}");
-
-		await waitFor(() => {
-			expect(within(sidebar).getByText("Сталь")).toBeInTheDocument();
-		});
-		expect(within(sidebar).queryByText("Металлопрокат")).not.toBeInTheDocument();
-	});
-
-	test("table rows are draggable", async () => {
-		await renderAppReady();
-		const rows = screen.getAllByRole("row");
-		const dataRow = rows[1];
-		expect(dataRow.getAttribute("aria-roledescription")).toBe("draggable");
-	});
-
-	test("sidebar folders are droppable targets", async () => {
-		await renderAppReady();
-		expect(screen.getByTestId("droppable-folder-1")).toBeInTheDocument();
-		expect(screen.getByTestId("droppable-none")).toBeInTheDocument();
-	});
-
-	test("'Все закупки' is not a droppable target", async () => {
-		await renderAppReady();
-		expect(screen.queryByTestId("droppable-all")).not.toBeInTheDocument();
-	});
-
-	test("drag overlay container exists", async () => {
-		await renderAppReady();
-		expect(screen.getByTestId("dnd-overlay-container")).toBeInTheDocument();
-	});
-
-	test("drag overlay shrink-wraps the item label", () => {
-		render(
-			<DragItemOverlay
-				item={{
-					id: "item-1",
-					name: "Арматура А500С ∅12",
-					status: "searching",
-					annualQuantity: 1,
-					currentPrice: 1,
-					bestPrice: 1,
-					averagePrice: 1,
-					folderId: null,
-					companyId: "company-1",
-				}}
-			/>,
-		);
-		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
 	test("clicking Добавить позиции opens choice dialog", async () => {
