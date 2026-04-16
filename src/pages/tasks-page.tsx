@@ -17,6 +17,7 @@ import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { TaskTable } from "@/components/task-table";
 import { TaskToolbar } from "@/components/task-toolbar";
+import { TotalCount } from "@/components/total-count";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useProcurementCompanies } from "@/data/use-companies";
@@ -68,6 +69,11 @@ export function TasksPage() {
 
 	const columns = useTaskColumns(filterParams);
 	const updateStatus = useUpdateTaskStatus();
+
+	const taskTotalLoading = columns.assigned.isLoading;
+	const taskTotal = taskTotalLoading
+		? undefined
+		: columns.assigned.count + columns.in_progress.count + columns.completed.count + columns.archived.count;
 
 	// Drag state
 	const [reducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -198,7 +204,10 @@ export function TasksPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				<PageToolbar middle={taskToolbar} />
+				<PageToolbar
+					left={<TotalCount value={taskTotal} isLoading={taskTotalLoading} suffix="задач" />}
+					middle={taskToolbar}
+				/>
 				{view === "board" ? (
 					<TaskBoard
 						columns={columns}

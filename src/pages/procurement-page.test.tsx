@@ -393,3 +393,124 @@ describe("ProcurementPage — archive toggle", () => {
 		});
 	});
 });
+
+describe("ProcurementPage — toolbar left zone", () => {
+	test("shows total count reflecting all items when no filters active", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+
+		await waitFor(() => {
+			expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 3");
+		});
+	});
+
+	test("total count reflects folder filter scope", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?folder=f1"]);
+
+		await waitFor(() => {
+			// Only item i1 is in folder f1
+			expect(screen.getByTestId("total-count")).toHaveTextContent(/Всего:\s*1$/);
+		});
+	});
+
+	test("total count updates when company filter changes", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/procurement?company=c1"]);
+
+		// Start scoped to Альфа (c1) — 2 items
+		await waitFor(
+			() => {
+				expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 2");
+			},
+			{ timeout: 3000 },
+		);
+
+		const user = userEvent.setup();
+		// Clear company via chip ×
+		await user.click(screen.getByRole("button", { name: /Снять фильтр компании/ }));
+
+		// All 3 items now visible
+		await waitFor(
+			() => {
+				expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 3");
+			},
+			{ timeout: 3000 },
+		);
+	});
+
+	test("renders company chip when company filter active", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/procurement?company=c1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
+		});
+		expect(screen.getByTestId("chip-company")).toHaveTextContent("Альфа");
+	});
+
+	test("clicking × on company chip clears only the company param", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/procurement?company=c1&folder=f1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
+			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
+		});
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Снять фильтр компании/ }));
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("chip-company")).not.toBeInTheDocument();
+		});
+		// Folder chip remains
+		expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
+	});
+
+	test("renders folder chip with color and name when folder filter active", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?folder=f1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
+		});
+		expect(screen.getByTestId("chip-folder")).toHaveTextContent("Металлопрокат");
+	});
+
+	test("clicking × on folder chip clears only the folder param", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/procurement?company=c1&folder=f1"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
+		});
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Снять фильтр категории/ }));
+
+		await waitFor(() => {
+			expect(screen.queryByTestId("chip-folder")).not.toBeInTheDocument();
+		});
+		// Company chip remains
+		expect(screen.getByTestId("chip-company")).toBeInTheDocument();
+	});
+
+	test("renders 'Без категории' chip when folder=none", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?folder=none"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Без категории");
+		});
+	});
+
+	test("renders 'Архив' chip when folder=archive", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?folder=archive"]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Архив");
+		});
+	});
+});

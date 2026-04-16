@@ -15,12 +15,14 @@ import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { CompanyDrawer, parseCompanyTab } from "@/components/company-drawer";
+import { FilterChip } from "@/components/filter-chip";
 import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementSidebar } from "@/components/procurement-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
+import { TotalCount } from "@/components/total-count";
 import { Button } from "@/components/ui/button";
 import type {
 	DeviationFilter,
@@ -48,6 +50,7 @@ import {
 	useDeleteItem,
 	useExportItems,
 	useItems,
+	useTotals,
 	useUpdateItem,
 } from "@/data/use-items";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -128,6 +131,8 @@ export function ProcurementPage() {
 		error: itemsError,
 		refetch: refetchItems,
 	} = useItems({ search, filters, sort, folder, company });
+
+	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder, company });
 
 	// Server-backed folder hooks — scoped to selected company
 	const { data: folders = [], isLoading: foldersLoading } = useFolders(company);
@@ -318,6 +323,38 @@ export function ProcurementPage() {
 		});
 	}
 
+	function handleClearCompanyFilter() {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.delete("company");
+			return next;
+		});
+	}
+
+	function handleClearFolderFilter() {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			next.delete("folder");
+			return next;
+		});
+	}
+
+	const companyChipLabel = company ? companyMap[company] : undefined;
+
+	let folderChipLabel: string | undefined;
+	let folderChipColor: string | undefined;
+	if (folder === "archive") {
+		folderChipLabel = "Архив";
+	} else if (folder === "none") {
+		folderChipLabel = "Без категории";
+	} else if (folder) {
+		const f = folders.find((ff) => ff.id === folder);
+		if (f) {
+			folderChipLabel = f.name;
+			folderChipColor = f.color;
+		}
+	}
+
 	const toolbar = (
 		<Toolbar
 			defaultSearch={search}
@@ -343,17 +380,37 @@ export function ProcurementPage() {
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 				<PageToolbar
 					left={
-						isMobile ? (
-							<Button
-								variant="ghost"
-								size="icon-sm"
-								className="shrink-0"
-								onClick={() => setSidebarOpen(true)}
-								aria-label="Открыть боковую панель"
-							>
-								<PanelLeft className="size-4" />
-							</Button>
-						) : undefined
+						<>
+							{isMobile && (
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									className="shrink-0"
+									onClick={() => setSidebarOpen(true)}
+									aria-label="Открыть боковую панель"
+								>
+									<PanelLeft className="size-4" />
+								</Button>
+							)}
+							<TotalCount value={totals?.itemCount} isLoading={totalsLoading} />
+							{companyChipLabel && (
+								<FilterChip
+									testId="chip-company"
+									label={companyChipLabel}
+									onRemove={handleClearCompanyFilter}
+									removeAriaLabel={`Снять фильтр компании ${companyChipLabel}`}
+								/>
+							)}
+							{folderChipLabel && (
+								<FilterChip
+									testId="chip-folder"
+									label={folderChipLabel}
+									color={folderChipColor}
+									onRemove={handleClearFolderFilter}
+									removeAriaLabel={`Снять фильтр категории ${folderChipLabel}`}
+								/>
+							)}
+						</>
 					}
 					middle={toolbar}
 				/>
