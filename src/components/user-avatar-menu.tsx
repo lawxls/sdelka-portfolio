@@ -1,4 +1,4 @@
-import { Building2, CircleUser, ListTodo, LogOut, Moon, Sun, User, Users } from "lucide-react";
+import { ChevronDown, CircleUser, LogOut, Moon, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
@@ -19,12 +19,18 @@ interface UserAvatarMenuProps {
 	iconClassName?: string;
 }
 
+function formatTriggerName(firstName: string, lastName: string): string {
+	const initial = lastName.trim().charAt(0);
+	return initial ? `${firstName} ${initial}.` : firstName;
+}
+
 export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-7" }: UserAvatarMenuProps) {
 	const navigate = useNavigate();
 	const { data: settings } = useSettings();
 
 	const initials = settings ? getInitials(settings.first_name, settings.last_name) : null;
 	const avatarColor = settings ? getAvatarColor(settings.avatar_icon) : "";
+	const displayName = settings ? formatTriggerName(settings.first_name, settings.last_name) : null;
 
 	return (
 		<DropdownMenu>
@@ -32,7 +38,7 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 				<button
 					type="button"
 					aria-label="Меню пользователя"
-					className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+					className="flex items-center gap-1.5 rounded-md p-1 pr-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 				>
 					{initials ? (
 						<span
@@ -47,25 +53,14 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					) : (
 						<CircleUser className={iconClassName} />
 					)}
+					{displayName && <span className="text-sm text-foreground">{displayName}</span>}
+					<ChevronDown className="size-4 shrink-0" aria-hidden="true" />
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side={side} align={align} className="w-56">
 				<DropdownMenuItem onSelect={() => navigate("/settings/profile")}>
 					<User />
 					Мой профиль
-				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={() => navigate("/settings/companies")}>
-					<Building2 />
-					Компании
-				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={() => navigate("/settings/employees")}>
-					<Users />
-					Сотрудники
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem onSelect={() => navigate("/tasks")}>
-					<ListTodo />
-					Задачи
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem

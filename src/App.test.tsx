@@ -215,7 +215,7 @@ describe("Routing", () => {
 		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Компании" })).toBeInTheDocument();
+		expect(screen.getByRole("menuitem", { name: /Сменить тему/ })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
 	});
 
