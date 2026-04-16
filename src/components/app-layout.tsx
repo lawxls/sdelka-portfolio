@@ -23,9 +23,6 @@ export function AppLayout() {
 						<Link to="/procurement" aria-label="На главную">
 							<LogoWordmark className="h-4 w-auto" />
 						</Link>
-						<span className="hidden -translate-y-px select-none items-center rounded-full px-1.5 py-0.5 text-[0.5625rem] font-medium tracking-wide text-muted-foreground/70 ring-1 ring-border md:inline-flex">
-							Beta
-						</span>
 					</div>
 					<div ref={setToolbarEl} className="hidden min-w-0 flex-1 items-center md:flex" data-testid="toolbar-slot" />
 					<UserAvatarMenu />

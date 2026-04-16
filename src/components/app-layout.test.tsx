@@ -46,11 +46,6 @@ describe("AppLayout — global header", () => {
 		expect(screen.getByText("procurement-content")).toBeInTheDocument();
 	});
 
-	test("renders Beta badge on desktop", () => {
-		renderLayout();
-		expect(screen.getByText("Beta")).toBeInTheDocument();
-	});
-
 	test("renders user avatar menu", () => {
 		renderLayout();
 		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
