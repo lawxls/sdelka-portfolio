@@ -138,9 +138,9 @@ describe("ProcurementTable", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} items={[mockItems[1]]} />);
 		// Труба: deviation = (30000-35000)/35000*100 = -14.3%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
-		const primaryCells = [...cells].filter((cell) => cell.className.includes("text-primary"));
+		const greenCells = [...cells].filter((cell) => cell.className.includes("text-green-600"));
 		// deviation cell + overpayment cell
-		expect(primaryCells).toHaveLength(2);
+		expect(greenCells).toHaveLength(2);
 	});
 
 	test("rows have cursor-pointer class when onRowClick provided", () => {
