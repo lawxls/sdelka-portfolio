@@ -9,15 +9,15 @@ import {
 	useSensors,
 } from "@dnd-kit/core";
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { useToolbarPortal } from "@/components/app-layout";
+import { PageToolbar } from "@/components/page-toolbar";
 import { isValidTransition, TaskBoard } from "@/components/task-board";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { TaskTable } from "@/components/task-table";
 import { TaskToolbar } from "@/components/task-toolbar";
+import { TotalCount } from "@/components/total-count";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "@/data/task-types";
 import { TASK_STATUSES } from "@/data/task-types";
 import { useProcurementCompanies } from "@/data/use-companies";
@@ -69,6 +69,11 @@ export function TasksPage() {
 
 	const columns = useTaskColumns(filterParams);
 	const updateStatus = useUpdateTaskStatus();
+
+	const taskTotalLoading = columns.assigned.isLoading;
+	const taskTotal = taskTotalLoading
+		? undefined
+		: columns.assigned.count + columns.in_progress.count + columns.completed.count + columns.archived.count;
 
 	// Drag state
 	const [reducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -173,9 +178,6 @@ export function TasksPage() {
 		setPendingDrag(null);
 	}
 
-	const toolbarPortal = useToolbarPortal();
-	const portalTarget = !isMobile && toolbarPortal ? toolbarPortal : null;
-
 	const taskToolbar = (
 		<TaskToolbar
 			defaultSearch={search}
@@ -202,13 +204,10 @@ export function TasksPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				{portalTarget ? (
-					createPortal(taskToolbar, portalTarget)
-				) : (
-					<header className="sticky top-0 z-20 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
-						{taskToolbar}
-					</header>
-				)}
+				<PageToolbar
+					left={<TotalCount value={taskTotal} isLoading={taskTotalLoading} suffix="задач" />}
+					middle={taskToolbar}
+				/>
 				{view === "board" ? (
 					<TaskBoard
 						columns={columns}

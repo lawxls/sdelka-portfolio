@@ -529,4 +529,26 @@ describe("TasksPage", () => {
 			});
 		});
 	});
+
+	describe("toolbar left zone", () => {
+		it("shows total tasks count with задач suffix", async () => {
+			renderPage();
+
+			await waitFor(() => {
+				expect(screen.getByTestId("total-count")).toHaveTextContent(/Всего:\s*12\s*задач$/);
+			});
+		});
+
+		it("shows skeleton while loading then resolves to count", async () => {
+			renderPage();
+
+			// Skeleton present on first render (before query resolves)
+			expect(screen.getByTestId("total-count-skeleton")).toBeInTheDocument();
+
+			await waitFor(() => {
+				expect(screen.getByTestId("total-count")).toBeInTheDocument();
+			});
+			expect(screen.queryByTestId("total-count-skeleton")).not.toBeInTheDocument();
+		});
+	});
 });

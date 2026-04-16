@@ -2,8 +2,8 @@ import { Building2, ChevronLeft, LogOut, PanelLeft, Settings, User, Users } from
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { clearTokens } from "@/data/auth";
+import { DESKTOP_QUERY } from "@/lib/desktop-query";
 import { cn } from "@/lib/utils";
-import { DESKTOP_QUERY } from "./folder-sidebar";
 
 interface SettingsSidebarProps {
 	open: boolean;

@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { FilterState, SortState } from "@/data/types";
+import type { FilterState, Folder, SortState } from "@/data/types";
 import { Toolbar } from "./toolbar";
 
 const defaultFilters: FilterState = { deviation: "all", status: "all" };
+const defaultFolders: Folder[] = [];
+const defaultFolderCounts: Record<string, number> = { all: 0, none: 0 };
 
 function renderToolbar(
 	overrides: Partial<{
@@ -21,6 +23,14 @@ function renderToolbar(
 		onFiltersChange: overrides.onFiltersChange ?? vi.fn(),
 		sort: overrides.sort ?? null,
 		onSort: overrides.onSort ?? vi.fn(),
+		folders: defaultFolders,
+		folderCounts: defaultFolderCounts,
+		activeFolder: undefined,
+		onFolderSelect: vi.fn(),
+		onCreateFolder: vi.fn(),
+		onRenameFolder: vi.fn(),
+		onRecolorFolder: vi.fn(),
+		onDeleteFolder: vi.fn(),
 	};
 	return {
 		...render(
@@ -64,7 +74,6 @@ describe("Toolbar", () => {
 		renderToolbar();
 
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
-		expect(screen.getByText("Все")).toBeInTheDocument();
 		expect(screen.getByText("С переплатой")).toBeInTheDocument();
 		expect(screen.getByText("С экономией")).toBeInTheDocument();
 		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
@@ -99,16 +108,6 @@ describe("Toolbar", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		fireEvent.click(screen.getByText("С переплатой"));
-
-		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "all" });
-	});
-
-	test("Все preset resets all filters", () => {
-		const onFiltersChange = vi.fn();
-		renderToolbar({ filters: { deviation: "overpaying", status: "searching" }, onFiltersChange });
-
-		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
-		fireEvent.click(screen.getByText("Все"));
 
 		expect(onFiltersChange).toHaveBeenCalledWith({ deviation: "all", status: "all" });
 	});

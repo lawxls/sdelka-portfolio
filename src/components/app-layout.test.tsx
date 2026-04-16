@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
-import { createTestQueryClient, makeSettings } from "@/test-utils";
+import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppLayout } from "./app-layout";
 
 beforeEach(() => {
@@ -19,14 +19,16 @@ function renderLayout(initialEntry = "/procurement") {
 	const queryClient = createTestQueryClient();
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[initialEntry]}>
-				<Routes>
-					<Route element={<AppLayout />}>
-						<Route path="/procurement" element={<div>procurement-content</div>} />
-						<Route path="/tasks" element={<div>tasks-content</div>} />
-					</Route>
-				</Routes>
-			</MemoryRouter>
+			<TooltipWrapper>
+				<MemoryRouter initialEntries={[initialEntry]}>
+					<Routes>
+						<Route element={<AppLayout />}>
+							<Route path="/procurement" element={<div>procurement-content</div>} />
+							<Route path="/tasks" element={<div>tasks-content</div>} />
+						</Route>
+					</Routes>
+				</MemoryRouter>
+			</TooltipWrapper>
 		</QueryClientProvider>,
 	);
 }
@@ -51,14 +53,20 @@ describe("AppLayout — global header", () => {
 		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
-	test("renders toolbar slot in header for desktop", () => {
-		renderLayout();
-		const header = screen.getByTestId("global-header");
-		expect(header.querySelector('[data-testid="toolbar-slot"]')).toBeInTheDocument();
-	});
-
 	test("renders child route content", () => {
 		renderLayout();
 		expect(screen.getByText("procurement-content")).toBeInTheDocument();
+	});
+});
+
+describe("AppLayout — top-level navigation", () => {
+	test("mounts AppRail", () => {
+		renderLayout();
+		expect(screen.getByTestId("app-rail")).toBeInTheDocument();
+	});
+
+	test("mounts BottomTabBar", () => {
+		renderLayout();
+		expect(screen.getByTestId("bottom-tab-bar")).toBeInTheDocument();
 	});
 });

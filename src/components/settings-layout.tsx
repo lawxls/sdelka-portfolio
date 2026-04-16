@@ -1,8 +1,9 @@
-import { Menu, MoveLeft, Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { Link, Outlet, useLocation, useOutletContext } from "react-router";
+import { Outlet, useLocation, useOutletContext } from "react-router";
+import { PageToolbar } from "@/components/page-toolbar";
 import { Button } from "@/components/ui/button";
-import { DESKTOP_QUERY } from "./folder-sidebar";
+import { DESKTOP_QUERY } from "@/lib/desktop-query";
 import { SettingsSidebar } from "./settings-sidebar";
 
 type SettingsOutletContext = {
@@ -89,26 +90,7 @@ export function SettingsLayout() {
 			className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground"
 			data-testid="settings-layout"
 		>
-			<header className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-md border-b border-border bg-background px-lg py-sm">
-				<div className="flex items-center gap-sm">
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						aria-label="Открыть меню настроек"
-						onClick={() => setOpen(true)}
-						className="shrink-0 md:hidden"
-					>
-						<Menu className="size-4" />
-					</Button>
-					<Button variant="ghost" size="icon-sm" aria-label="Назад" asChild>
-						<Link to="/procurement">
-							<MoveLeft className="size-4" />
-						</Link>
-					</Button>
-					{renderBreadcrumb()}
-				</div>
-				{renderHeaderAction()}
-			</header>
+			<PageToolbar left={renderBreadcrumb()} right={renderHeaderAction()} />
 			<div className="flex min-h-0 flex-1">
 				<SettingsSidebar open={open} onOpenChange={setOpen} />
 				<div className="flex min-w-0 flex-1 flex-col overflow-auto">
