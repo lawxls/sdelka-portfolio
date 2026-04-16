@@ -25,7 +25,7 @@ export function LoginPage() {
 
 		try {
 			const result = await login(email, password);
-			setTokens(result.access, result.refresh);
+			setTokens(result.access);
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
 			const result = extractFormErrors(err);

@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { UpdatePermissionsData, WorkspaceEmployeeDetail } from "@/data/api-client";
 import type { EmployeePermissions, PermissionLevel } from "@/data/types";
 import { useUpdateWorkspaceEmployeePermissions, useWorkspaceEmployeeDetail } from "@/data/use-workspace-employees";
+import type { UpdatePermissionsData, WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
 

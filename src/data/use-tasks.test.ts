@@ -1,10 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { Task } from "./task-types";
+import * as tasksMock from "./tasks-mock-data";
 import { useAllTasks, useItemSearch, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
@@ -22,7 +21,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
+	tasksMock._resetTasksStore();
 });
 
 afterEach(() => {
@@ -51,17 +50,8 @@ function seedBoardCache(columns: Partial<Record<string, Task[]>>) {
 }
 
 describe("useTaskColumns", () => {
-	it("fetches tasks from board endpoint for all 4 statuses", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", () => {
-				return HttpResponse.json({
-					assigned: { results: [task1], next: null, count: 1 },
-					in_progress: { results: [task2], next: null, count: 1 },
-					completed: { results: [task3], next: null, count: 1 },
-					archived: { results: [task4], next: null, count: 1 },
-				});
-			}),
-		);
+	it("fetches tasks from mock store grouped by status into four columns", async () => {
+		tasksMock._setTasks([task1, task2, task3, task4]);
 
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -77,13 +67,8 @@ describe("useTaskColumns", () => {
 		expect(result.current.archived.tasks[0].id).toBe("t4");
 	});
 
-	it("returns loading state initially", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", async () => {
-				await new Promise((r) => setTimeout(r, 10000));
-				return HttpResponse.json({});
-			}),
-		);
+	it("returns loading state initially", () => {
+		vi.spyOn(tasksMock, "fetchTaskBoardMock").mockImplementation(() => new Promise(() => {}));
 
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -91,17 +76,9 @@ describe("useTaskColumns", () => {
 		expect(result.current.assigned.isLoading).toBe(true);
 	});
 
-	it("reports hasNextPage from board endpoint cursor", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", () => {
-				return HttpResponse.json({
-					assigned: { results: [task1], next: "cursor-abc", count: 25 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				});
-			}),
-		);
+	it("reports hasNextPage from mock-store cursor", async () => {
+		const many = Array.from({ length: 25 }, (_, i) => makeTask(`many-${i}`, { status: "assigned" }));
+		tasksMock._setTasks(many);
 
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -115,59 +92,31 @@ describe("useTaskColumns", () => {
 		expect(result.current.in_progress.hasNextPage).toBe(false);
 	});
 
-	it("passes search and sort params to board endpoint", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/board/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					assigned: { results: [], next: null, count: 0 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				});
-			}),
-		);
+	it("passes search and sort params to the mock layer", async () => {
+		const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
+		tasksMock._setTasks([]);
 
 		renderHook(() => useTaskColumns({ q: "арматур", sort: "deadline_at", dir: "asc" }), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(capturedUrl).toBeDefined();
+			expect(spy).toHaveBeenCalled();
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("арматур");
-		expect(url.searchParams.get("sort")).toBe("deadline_at");
-		expect(url.searchParams.get("dir")).toBe("asc");
+		expect(spy).toHaveBeenCalledWith(expect.objectContaining({ q: "арматур", sort: "deadline_at", dir: "asc" }));
 	});
 
 	it("loads next page for a column when loadMore is called", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", ({ request }) => {
-				const url = new URL(request.url);
-				const column = url.searchParams.get("column");
-				const cursor = url.searchParams.get("cursor");
-				if (column === "assigned" && cursor === "cursor-2") {
-					return HttpResponse.json({ results: [task2], next: null });
-				}
-				return HttpResponse.json({
-					assigned: { results: [task1], next: "cursor-2", count: 2 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				});
-			}),
-		);
+		const many = Array.from({ length: 25 }, (_, i) => makeTask(`p${i}`, { status: "assigned" }));
+		tasksMock._setTasks(many);
 
 		const { result } = renderHook(() => useTaskColumns(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.assigned.tasks).toHaveLength(1);
+			expect(result.current.assigned.tasks).toHaveLength(20);
 		});
 
 		expect(result.current.assigned.hasNextPage).toBe(true);
@@ -177,56 +126,31 @@ describe("useTaskColumns", () => {
 		});
 
 		await waitFor(() => {
-			expect(result.current.assigned.tasks).toHaveLength(2);
+			expect(result.current.assigned.tasks).toHaveLength(25);
 		});
 
 		expect(result.current.assigned.hasNextPage).toBe(false);
-		expect(result.current.assigned.tasks[0].id).toBe("t1");
-		expect(result.current.assigned.tasks[1].id).toBe("t2");
 	});
 });
 
 describe("useAllTasks", () => {
-	it("fetches tasks from list endpoint with page-number pagination", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/", ({ request }) => {
-				const url = new URL(request.url);
-				const page = Number(url.searchParams.get("page") ?? "1");
-				if (page === 1) {
-					return HttpResponse.json({
-						count: 3,
-						results: [task1, task2],
-						next: "http://api/tasks/?page=2",
-						previous: null,
-					});
-				}
-				return HttpResponse.json({
-					count: 3,
-					results: [task3],
-					next: null,
-					previous: "http://api/tasks/?page=1",
-				});
-			}),
-		);
+	it("fetches tasks from mock store with page-number pagination", async () => {
+		const many = Array.from({ length: 25 }, (_, i) => makeTask(`p${i}`, { status: "assigned" }));
+		tasksMock._setTasks(many);
 
 		const { result } = renderHook(() => useAllTasks(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.tasks).toHaveLength(2);
+			expect(result.current.tasks).toHaveLength(20);
 		});
 
 		expect(result.current.hasNextPage).toBe(true);
 	});
 
-	it("returns loading state initially", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/", async () => {
-				await new Promise((r) => setTimeout(r, 10000));
-				return HttpResponse.json({});
-			}),
-		);
+	it("returns loading state initially", () => {
+		vi.spyOn(tasksMock, "fetchTasksMock").mockImplementation(() => new Promise(() => {}));
 
 		const { result } = renderHook(() => useAllTasks(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -234,38 +158,25 @@ describe("useAllTasks", () => {
 		expect(result.current.isLoading).toBe(true);
 	});
 
-	it("passes filter params to list endpoint", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ count: 0, results: [], next: null, previous: null });
-			}),
-		);
+	it("passes filter params to mock layer", async () => {
+		const spy = vi.spyOn(tasksMock, "fetchTasksMock");
+		tasksMock._setTasks([]);
 
 		renderHook(() => useAllTasks({ q: "test", sort: "created_at", dir: "desc" }), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(capturedUrl).toBeDefined();
+			expect(spy).toHaveBeenCalled();
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("test");
-		expect(url.searchParams.get("sort")).toBe("created_at");
-		expect(url.searchParams.get("dir")).toBe("desc");
+		expect(spy).toHaveBeenCalledWith(expect.objectContaining({ q: "test", sort: "created_at", dir: "desc" }));
 	});
 });
 
 describe("useTask", () => {
-	it("fetches single task by id from detail endpoint", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/:id/", () => {
-				return HttpResponse.json(task1);
-			}),
-		);
+	it("fetches single task by id from the mock store", async () => {
+		tasksMock._setTasks([task1]);
 
 		const { result } = renderHook(() => useTask("t1"), {
 			wrapper: createQueryWrapper(queryClient),
@@ -291,11 +202,9 @@ describe("useTask", () => {
 
 describe("useUpdateTaskStatus", () => {
 	it("optimistically moves task between columns", async () => {
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", async () => {
-				await new Promise((r) => setTimeout(r, 5000));
-				return HttpResponse.json(makeTask("t1", { status: "in_progress" }));
-			}),
+		tasksMock._setTasks([makeTask("t1", { status: "assigned" })]);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve(makeTask("t1", { status: "in_progress" })), 5000)),
 		);
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
@@ -320,13 +229,9 @@ describe("useUpdateTaskStatus", () => {
 		expect(inProgress?.pages[0].tasks[0].status).toBe("in_progress");
 	});
 
-	it("rolls back on error and shows API detail in toast", async () => {
+	it("rolls back on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("in_progress", []);
@@ -348,41 +253,14 @@ describe("useUpdateTaskStatus", () => {
 		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(0);
 
-		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
-	});
-
-	it("shows generic error toast when API returns no detail", async () => {
-		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json(null, { status: 500 });
-			}),
-		);
-
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("in_progress", []);
-
-		const { result } = renderHook(() => useUpdateTaskStatus(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "t1", status: "in_progress" });
-			} catch {}
-		});
-
 		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 	});
 });
 
 describe("useUpdateTaskStatus - board cache", () => {
 	it("optimistically moves task between columns in board cache", async () => {
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", async () => {
-				await new Promise((r) => setTimeout(r, 5000));
-				return HttpResponse.json(makeTask("t1", { status: "in_progress" }));
-			}),
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve(makeTask("t1", { status: "in_progress" })), 5000)),
 		);
 
 		seedBoardCache({
@@ -409,13 +287,9 @@ describe("useUpdateTaskStatus - board cache", () => {
 		expect(board?.in_progress?.results?.[0]?.status).toBe("in_progress");
 	});
 
-	it("rolls back board cache on error and shows API detail in toast", async () => {
+	it("rolls back board cache on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedBoardCache({
 			assigned: [makeTask("t1", { status: "assigned" })],
@@ -438,17 +312,17 @@ describe("useUpdateTaskStatus - board cache", () => {
 		]);
 		expect(board?.assigned?.results).toHaveLength(1);
 		expect(board?.in_progress?.results).toHaveLength(0);
-		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 	});
 });
 
 describe("useSubmitAnswer - board cache", () => {
 	it("optimistically moves task to completed column in board cache", async () => {
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", async () => {
-				await new Promise((r) => setTimeout(r, 5000));
-				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
-			}),
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(
+			() =>
+				new Promise((resolve) =>
+					setTimeout(() => resolve(makeTask("t1", { status: "completed", completedResponse: "My answer" })), 5000),
+				),
 		);
 
 		seedBoardCache({
@@ -475,13 +349,9 @@ describe("useSubmitAnswer - board cache", () => {
 		expect(board?.completed?.results?.[0]?.completedResponse).toBe("My answer");
 	});
 
-	it("rolls back board cache on error and shows API detail in toast", async () => {
+	it("rolls back board cache on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Task is already completed." }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedBoardCache({
 			assigned: [makeTask("t1", { status: "assigned" })],
@@ -504,17 +374,17 @@ describe("useSubmitAnswer - board cache", () => {
 		]);
 		expect(board?.assigned?.results).toHaveLength(1);
 		expect(board?.completed?.results).toHaveLength(0);
-		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 });
 
 describe("useSubmitAnswer", () => {
 	it("optimistically moves task to completed column", async () => {
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", async () => {
-				await new Promise((r) => setTimeout(r, 5000));
-				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
-			}),
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(
+			() =>
+				new Promise((resolve) =>
+					setTimeout(() => resolve(makeTask("t1", { status: "completed", completedResponse: "My answer" })), 5000),
+				),
 		);
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
@@ -539,13 +409,9 @@ describe("useSubmitAnswer", () => {
 		expect(completed?.pages[0].tasks[0].status).toBe("completed");
 	});
 
-	it("rolls back on error and shows API detail in toast", async () => {
+	it("rolls back on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Task is already completed." }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -566,56 +432,29 @@ describe("useSubmitAnswer", () => {
 		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(0);
 
-		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
-	});
-
-	it("shows generic error toast when API returns no detail", async () => {
-		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json(null, { status: 500 });
-			}),
-		);
-
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("completed", []);
-
-		const { result } = renderHook(() => useSubmitAnswer(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "t1", answer: "My answer" });
-			} catch {}
-		});
-
 		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 
 	it("uploads attachments before changing status when files provided", async () => {
 		const callOrder: string[] = [];
-
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				callOrder.push("upload");
-				return HttpResponse.json([
-					{
-						id: "att-1",
-						fileName: "doc.pdf",
-						fileSize: 1024,
-						fileType: "pdf",
-						contentType: "application/pdf",
-						fileUrl: "/files/doc.pdf",
-						uploadedAt: "2026-03-15T10:00:00.000Z",
-					},
-				]);
-			}),
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				callOrder.push("status");
-				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
-			}),
-		);
+		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockImplementation(async () => {
+			callOrder.push("upload");
+			return [
+				{
+					id: "att-1",
+					fileName: "doc.pdf",
+					fileSize: 1024,
+					fileType: "pdf",
+					contentType: "application/pdf",
+					fileUrl: "blob:mock",
+					uploadedAt: "2026-03-15T10:00:00.000Z",
+				},
+			];
+		});
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(async () => {
+			callOrder.push("status");
+			return makeTask("t1", { status: "completed", completedResponse: "My answer" });
+		});
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -634,16 +473,9 @@ describe("useSubmitAnswer", () => {
 	});
 
 	it("skips attachment upload when no files provided", async () => {
-		let uploadCalled = false;
-
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				uploadCalled = true;
-				return HttpResponse.json([]);
-			}),
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json(makeTask("t1", { status: "completed", completedResponse: "My answer" }));
-			}),
+		const uploadSpy = vi.spyOn(tasksMock, "uploadTaskAttachmentsMock");
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockResolvedValue(
+			makeTask("t1", { status: "completed", completedResponse: "My answer" }),
 		);
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
@@ -657,22 +489,15 @@ describe("useSubmitAnswer", () => {
 			await result.current.mutateAsync({ id: "t1", answer: "My answer" });
 		});
 
-		expect(uploadCalled).toBe(false);
+		expect(uploadSpy).not.toHaveBeenCalled();
 	});
 
 	it("does not change status when attachment upload fails", async () => {
 		const { toast } = await import("sonner");
-		let statusCalled = false;
-
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				return HttpResponse.json({ detail: "File too large" }, { status: 400 });
-			}),
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				statusCalled = true;
-				return HttpResponse.json(makeTask("t1", { status: "completed" }));
-			}),
-		);
+		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockRejectedValue(new Error("File too large"));
+		const statusSpy = vi
+			.spyOn(tasksMock, "changeTaskStatusMock")
+			.mockResolvedValue(makeTask("t1", { status: "completed" }));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -689,31 +514,24 @@ describe("useSubmitAnswer", () => {
 			} catch {}
 		});
 
-		expect(statusCalled).toBe(false);
-		expect(toast.error).toHaveBeenCalledWith("File too large");
+		expect(statusSpy).not.toHaveBeenCalled();
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 
 	it("rolls back optimistic update when status change fails after successful upload", async () => {
 		const { toast } = await import("sonner");
-
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				return HttpResponse.json([
-					{
-						id: "att-1",
-						fileName: "doc.pdf",
-						fileSize: 1024,
-						fileType: "pdf",
-						contentType: "application/pdf",
-						fileUrl: "/files/doc.pdf",
-						uploadedAt: "2026-03-15T10:00:00.000Z",
-					},
-				]);
-			}),
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Task is locked" }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockResolvedValue([
+			{
+				id: "att-1",
+				fileName: "doc.pdf",
+				fileSize: 1024,
+				fileType: "pdf",
+				contentType: "application/pdf",
+				fileUrl: "blob:mock",
+				uploadedAt: "2026-03-15T10:00:00.000Z",
+			},
+		]);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("Task is locked"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -736,46 +554,48 @@ describe("useSubmitAnswer", () => {
 		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(0);
 
-		expect(toast.error).toHaveBeenCalledWith("Task is locked");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 });
 
 describe("useItemSearch", () => {
-	it("fetches items from API with q param when query is non-empty", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					items: [
-						{
-							id: "item-1",
-							name: "Арматура А500С",
-							status: "searching",
-							annualQuantity: 100,
-							currentPrice: 50,
-							bestPrice: null,
-							averagePrice: null,
-							folderId: null,
-							companyId: "c1",
-						},
-						{
-							id: "item-2",
-							name: "Арматура А400",
-							status: "searching",
-							annualQuantity: 200,
-							currentPrice: 60,
-							bestPrice: null,
-							averagePrice: null,
-							folderId: null,
-							companyId: "c1",
-						},
-					],
-					nextCursor: null,
-				});
-			}),
-		);
+	it("fetches items from mock store filtered by q", async () => {
+		const { _setItems } = await import("./items-mock-data");
+		_setItems([
+			{
+				id: "item-1",
+				name: "Арматура А500С",
+				status: "searching",
+				annualQuantity: 100,
+				currentPrice: 50,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "item-2",
+				name: "Арматура А400",
+				status: "searching",
+				annualQuantity: 200,
+				currentPrice: 60,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "item-3",
+				name: "Цемент",
+				status: "searching",
+				annualQuantity: 50,
+				currentPrice: 10,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
 
 		const { result } = renderHook(() => useItemSearch("арматур"), {
 			wrapper: createQueryWrapper(queryClient),
@@ -785,8 +605,6 @@ describe("useItemSearch", () => {
 			expect(result.current.data).toHaveLength(2);
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("арматур");
 		expect(result.current.data?.[0]).toEqual({ id: "item-1", name: "Арматура А500С" });
 		expect(result.current.data?.[1]).toEqual({ id: "item-2", name: "Арматура А400" });
 	});

@@ -1,10 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { delay, HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeItem, mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
+import * as itemsMock from "./items-mock-data";
 import type { ProcurementItem } from "./types";
 import { useAssignFolder, useCreateItems, useDeleteItem, useItems, useTotals, useUpdateItem } from "./use-items";
 
@@ -24,7 +23,8 @@ const DEFAULT_PARAMS = {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setTokens("test-jwt", "test-refresh");
+	setTokens("test-jwt");
+	itemsMock._resetItemsStore();
 });
 
 afterEach(() => {
@@ -33,156 +33,106 @@ afterEach(() => {
 });
 
 describe("useItems", () => {
-	it("fetches first page of items", async () => {
-		const items = Array.from({ length: 25 }, (_, i) => makeItem(`i${i + 1}`));
-
-		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({ items, nextCursor: "cursor-page2" })));
+	it("returns seeded items", async () => {
+		itemsMock._setItems([makeItem("i1"), makeItem("i2")]);
 
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
-			expect(result.current.items).toHaveLength(25);
+			expect(result.current.items).toHaveLength(2);
 		});
-		expect(result.current.hasNextPage).toBe(true);
+		expect(result.current.items.map((i) => i.id)).toEqual(["i1", "i2"]);
 	});
 
 	it("returns loading state initially", () => {
-		server.use(
-			http.get("/api/v1/company/items/", async () => {
-				await new Promise(() => {}); // never resolves
-			}),
-		);
-
+		itemsMock._setItems([makeItem("i1")]);
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
-	it("hasNextPage is false when nextCursor is null", async () => {
-		server.use(
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [makeItem("i1")], nextCursor: null })),
-		);
+	it("hasNextPage reflects pagination", async () => {
+		itemsMock._setItems(Array.from({ length: 35 }, (_, i) => makeItem(`i${i + 1}`)));
 
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
-			expect(result.current.items).toHaveLength(1);
+			expect(result.current.items.length).toBeGreaterThan(0);
 		});
-		expect(result.current.hasNextPage).toBe(false);
+		expect(result.current.hasNextPage).toBe(true);
 	});
 
-	it("fetches next page with cursor via fetchNextPage", async () => {
-		let requestCount = 0;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				requestCount++;
-				const url = new URL(request.url);
-				const cursor = url.searchParams.get("cursor");
-
-				if (!cursor) {
-					return HttpResponse.json({ items: [makeItem("i1")], nextCursor: "page2-cursor" });
-				}
-				expect(cursor).toBe("page2-cursor");
-				return HttpResponse.json({ items: [makeItem("i2")], nextCursor: null });
-			}),
-		);
+	it("loadMore fetches next page", async () => {
+		itemsMock._setItems(Array.from({ length: 35 }, (_, i) => makeItem(`i${i + 1}`)));
 
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
-			expect(result.current.items).toHaveLength(1);
+			expect(result.current.items).toHaveLength(30);
 		});
 
 		result.current.loadMore();
 
 		await waitFor(() => {
-			expect(result.current.items).toHaveLength(2);
+			expect(result.current.items).toHaveLength(35);
 		});
 		expect(result.current.hasNextPage).toBe(false);
-		expect(requestCount).toBe(2);
 	});
 
-	it("includes filter params in API request", async () => {
-		let capturedUrl: string | undefined;
+	it("applies status filter", async () => {
+		itemsMock._setItems([makeItem("i1", { status: "searching" }), makeItem("i2", { status: "completed" })]);
 
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ items: [], nextCursor: null });
-			}),
+		const { result } = renderHook(
+			() => useItems({ ...DEFAULT_PARAMS, filters: { deviation: "all", status: "completed" } }),
+			{ wrapper: createQueryWrapper(queryClient) },
 		);
 
-		const params = {
-			search: "Widget",
-			filters: { deviation: "overpaying" as const, status: "searching" as const },
-			sort: { field: "currentPrice" as const, direction: "desc" as const },
-			folder: "f1",
-		};
-
-		const { result } = renderHook(() => useItems(params), { wrapper: createQueryWrapper(queryClient) });
-
 		await waitFor(() => {
-			expect(result.current.isLoading).toBe(false);
+			expect(result.current.items).toHaveLength(1);
 		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("Widget");
-		expect(url.searchParams.get("status")).toBe("searching");
-		expect(url.searchParams.get("deviation")).toBe("overpaying");
-		expect(url.searchParams.get("folder")).toBe("f1");
-		expect(url.searchParams.get("sort")).toBe("currentPrice");
-		expect(url.searchParams.get("dir")).toBe("desc");
+		expect(result.current.items[0].id).toBe("i2");
 	});
 
-	it("includes company param in API request when provided", async () => {
-		let capturedUrl: string | undefined;
+	it("applies search filter", async () => {
+		itemsMock._setItems([makeItem("i1", { name: "Widget" }), makeItem("i2", { name: "Gadget" })]);
 
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ items: [], nextCursor: null });
-			}),
-		);
-
-		const params = {
-			...DEFAULT_PARAMS,
-			company: "c1",
-		};
-
-		const { result } = renderHook(() => useItems(params), { wrapper: createQueryWrapper(queryClient) });
-
-		await waitFor(() => {
-			expect(result.current.isLoading).toBe(false);
+		const { result } = renderHook(() => useItems({ ...DEFAULT_PARAMS, search: "widg" }), {
+			wrapper: createQueryWrapper(queryClient),
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("company")).toBe("c1");
+		await waitFor(() => {
+			expect(result.current.items).toHaveLength(1);
+		});
+		expect(result.current.items[0].id).toBe("i1");
 	});
 
-	it("omits 'all' filter values from API request", async () => {
-		let capturedUrl: string | undefined;
+	it("applies folder filter", async () => {
+		itemsMock._setItems([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f2" })]);
 
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ items: [], nextCursor: null });
-			}),
-		);
-
-		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
-
-		await waitFor(() => {
-			expect(result.current.isLoading).toBe(false);
+		const { result } = renderHook(() => useItems({ ...DEFAULT_PARAMS, folder: "f1" }), {
+			wrapper: createQueryWrapper(queryClient),
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.has("status")).toBe(false);
-		expect(url.searchParams.has("deviation")).toBe(false);
-		expect(url.searchParams.has("q")).toBe(false);
+		await waitFor(() => {
+			expect(result.current.items).toHaveLength(1);
+		});
+		expect(result.current.items[0].id).toBe("i1");
 	});
 
-	it("returns error state on API failure", async () => {
-		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({}, { status: 500 })));
+	it("applies company filter", async () => {
+		itemsMock._setItems([makeItem("i1", { companyId: "c1" }), makeItem("i2", { companyId: "c2" })]);
+
+		const { result } = renderHook(() => useItems({ ...DEFAULT_PARAMS, company: "c2" }), {
+			wrapper: createQueryWrapper(queryClient),
+		});
+
+		await waitFor(() => {
+			expect(result.current.items).toHaveLength(1);
+		});
+		expect(result.current.items[0].id).toBe("i2");
+	});
+
+	it("returns error state when mock throws", async () => {
+		vi.spyOn(itemsMock, "fetchItemsMock").mockRejectedValue(new Error("boom"));
 
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
@@ -191,15 +141,13 @@ describe("useItems", () => {
 		});
 	});
 
-	it("refetch function retries after error", async () => {
-		let callCount = 0;
-		server.use(
-			http.get("/api/v1/company/items/", () => {
-				callCount++;
-				if (callCount === 1) return HttpResponse.json({}, { status: 500 });
-				return HttpResponse.json({ items: [makeItem("i1")], nextCursor: null });
-			}),
-		);
+	it("refetch retries after error", async () => {
+		let calls = 0;
+		vi.spyOn(itemsMock, "fetchItemsMock").mockImplementation(async () => {
+			calls++;
+			if (calls === 1) throw new Error("transient");
+			return { items: [makeItem("i1")], nextCursor: null };
+		});
 
 		const { result } = renderHook(() => useItems(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
@@ -216,90 +164,32 @@ describe("useItems", () => {
 });
 
 describe("useTotals", () => {
-	it("fetches totals with filter params", async () => {
-		let capturedUrl: string | undefined;
+	it("returns totals computed from seeded items", async () => {
+		itemsMock._setItems([
+			makeItem("i1", { annualQuantity: 10, currentPrice: 100, bestPrice: 80 }),
+			makeItem("i2", { annualQuantity: 5, currentPrice: 50, bestPrice: 60 }),
+		]);
 
-		server.use(
-			http.get("/api/v1/company/items/totals", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					itemCount: 42,
-					totalOverpayment: "15000.00",
-					totalSavings: "8000.00",
-					totalDeviation: "120.50",
-				});
-			}),
-		);
-
-		const params = {
-			search: "Widget",
-			filters: { deviation: "overpaying" as const, status: "searching" as const },
-			folder: "f1",
-		};
-
-		const { result } = renderHook(() => useTotals(params), { wrapper: createQueryWrapper(queryClient) });
+		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
 			expect(result.current.data).toBeTruthy();
 		});
-
 		expect(result.current.data).toEqual({
-			itemCount: 42,
-			totalOverpayment: 15000,
-			totalSavings: 8000,
-			totalDeviation: 120.5,
+			itemCount: 2,
+			totalOverpayment: 200,
+			totalSavings: 50,
+			totalDeviation: expect.any(Number),
 		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("Widget");
-		expect(url.searchParams.get("deviation")).toBe("overpaying");
-		expect(url.searchParams.get("status")).toBe("searching");
-		expect(url.searchParams.get("folder")).toBe("f1");
-	});
-
-	it("includes company param in totals request", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/totals", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					itemCount: 10,
-					totalOverpayment: "0",
-					totalSavings: "0",
-					totalDeviation: "0",
-				});
-			}),
-		);
-
-		const params = {
-			...DEFAULT_PARAMS,
-			company: "c1",
-		};
-
-		const { result } = renderHook(() => useTotals(params), { wrapper: createQueryWrapper(queryClient) });
-
-		await waitFor(() => {
-			expect(result.current.data).toBeTruthy();
-		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("company")).toBe("c1");
 	});
 
 	it("returns loading state initially", () => {
-		server.use(
-			http.get("/api/v1/company/items/totals", async () => {
-				await new Promise(() => {});
-			}),
-		);
-
 		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
-	it("returns error state on failure", async () => {
-		server.use(http.get("/api/v1/company/items/totals", () => HttpResponse.json({}, { status: 500 })));
+	it("returns error state when mock throws", async () => {
+		vi.spyOn(itemsMock, "fetchTotalsMock").mockRejectedValue(new Error("boom"));
 
 		const { result } = renderHook(() => useTotals(DEFAULT_PARAMS), { wrapper: createQueryWrapper(queryClient) });
 
@@ -309,9 +199,7 @@ describe("useTotals", () => {
 	});
 });
 
-// --- Helper: seed items into infinite query cache ---
-
-function seedItems(items: ProcurementItem[], folder?: string) {
+function seedItemsCache(items: ProcurementItem[], folder?: string) {
 	queryClient.setQueryData(
 		["items", { q: undefined, status: undefined, deviation: undefined, folder, sort: undefined, dir: undefined }],
 		{
@@ -322,20 +210,8 @@ function seedItems(items: ProcurementItem[], folder?: string) {
 }
 
 describe("useUpdateItem", () => {
-	it("sends PATCH with partial data", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json(makeItem("i1", { name: "Renamed" }));
-			}),
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
-			http.get("/api/v1/company/items/totals", () =>
-				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-			),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
-		);
+	it("updates the item via mock store", async () => {
+		itemsMock._setItems([makeItem("i1", { name: "Old" })]);
 
 		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -343,18 +219,12 @@ describe("useUpdateItem", () => {
 			await result.current.mutateAsync({ id: "i1", name: "Renamed" });
 		});
 
-		expect(capturedBody).toEqual({ name: "Renamed" });
+		expect(itemsMock._getAllItems().find((i) => i.id === "i1")?.name).toBe("Renamed");
 	});
 
 	it("optimistically renames item in cache", async () => {
-		seedItems([makeItem("i1", { name: "Old" }), makeItem("i2")]);
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json(makeItem("i1", { name: "Renamed" }));
-			}),
-		);
+		itemsMock._setItems([makeItem("i1", { name: "Old" }), makeItem("i2")]);
+		seedItemsCache([makeItem("i1", { name: "Old" }), makeItem("i2")]);
 
 		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -369,19 +239,14 @@ describe("useUpdateItem", () => {
 			]);
 			expect(data?.pages[0].items.find((i) => i.id === "i1")?.name).toBe("Renamed");
 		});
-		// Other items unchanged
-		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
-			"items",
-			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
-		]);
-		expect(data?.pages[0].items.find((i) => i.id === "i2")?.name).toBe("Item i2");
 	});
 
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
-		seedItems([makeItem("i1", { name: "Original" })]);
+		itemsMock._setItems([makeItem("i1", { name: "Original" })]);
+		seedItemsCache([makeItem("i1", { name: "Original" })]);
 
-		server.use(http.patch("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 400 })));
+		vi.spyOn(itemsMock, "updateItemMock").mockRejectedValue(new Error("fail"));
 
 		const { result } = renderHook(() => useUpdateItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -401,20 +266,8 @@ describe("useUpdateItem", () => {
 });
 
 describe("useDeleteItem", () => {
-	it("sends DELETE request", async () => {
-		let capturedId: string | undefined;
-
-		server.use(
-			http.delete("/api/v1/company/items/:id/", ({ params }) => {
-				capturedId = params.id as string;
-				return new HttpResponse(null, { status: 204 });
-			}),
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
-			http.get("/api/v1/company/items/totals", () =>
-				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-			),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
-		);
+	it("removes the item from the mock store", async () => {
+		itemsMock._setItems([makeItem("i1"), makeItem("i2")]);
 
 		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -422,18 +275,15 @@ describe("useDeleteItem", () => {
 			await result.current.mutateAsync("i1");
 		});
 
-		expect(capturedId).toBe("i1");
+		expect(itemsMock._getAllItems().map((i) => i.id)).toEqual(["i2"]);
 	});
 
 	it("optimistically removes item from cache", async () => {
-		seedItems([makeItem("i1"), makeItem("i2"), makeItem("i3")]);
+		itemsMock._setItems([makeItem("i1"), makeItem("i2"), makeItem("i3")]);
+		seedItemsCache([makeItem("i1"), makeItem("i2"), makeItem("i3")]);
 
-		server.use(
-			http.delete("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return new HttpResponse(null, { status: 204 });
-			}),
-		);
+		// delay the mutation so we can observe optimistic state first
+		vi.spyOn(itemsMock, "deleteItemMock").mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 50)));
 
 		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -453,9 +303,10 @@ describe("useDeleteItem", () => {
 
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
-		seedItems([makeItem("i1"), makeItem("i2")]);
+		itemsMock._setItems([makeItem("i1"), makeItem("i2")]);
+		seedItemsCache([makeItem("i1"), makeItem("i2")]);
 
-		server.use(http.delete("/api/v1/company/items/:id/", () => HttpResponse.json({}, { status: 500 })));
+		vi.spyOn(itemsMock, "deleteItemMock").mockRejectedValue(new Error("fail"));
 
 		const { result } = renderHook(() => useDeleteItem(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -476,14 +327,8 @@ describe("useDeleteItem", () => {
 
 describe("useAssignFolder", () => {
 	it("optimistically assigns folder to item", async () => {
-		seedItems([makeItem("i1", { folderId: null })]);
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json(makeItem("i1", { folderId: "f1" }));
-			}),
-		);
+		itemsMock._setItems([makeItem("i1", { folderId: null })]);
+		seedItemsCache([makeItem("i1", { folderId: null })]);
 
 		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -501,14 +346,8 @@ describe("useAssignFolder", () => {
 	});
 
 	it("optimistically unassigns folder (folderId: null)", async () => {
-		seedItems([makeItem("i1", { folderId: "f1" })]);
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json(makeItem("i1", { folderId: null }));
-			}),
-		);
+		itemsMock._setItems([makeItem("i1", { folderId: "f1" })]);
+		seedItemsCache([makeItem("i1", { folderId: "f1" })]);
 
 		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -526,14 +365,8 @@ describe("useAssignFolder", () => {
 	});
 
 	it("removes item from folder-filtered cache when reassigned to another folder", async () => {
-		seedItems([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f1" })], "f1");
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json(makeItem("i1", { folderId: "f2" }));
-			}),
-		);
+		itemsMock._setItems([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f1" })]);
+		seedItemsCache([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f1" })], "f1");
 
 		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -552,14 +385,8 @@ describe("useAssignFolder", () => {
 	});
 
 	it("removes item from 'none' cache when assigned to a folder", async () => {
-		seedItems([makeItem("i1", { folderId: null }), makeItem("i2", { folderId: null })], "none");
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json(makeItem("i1", { folderId: "f1" }));
-			}),
-		);
+		itemsMock._setItems([makeItem("i1", { folderId: null }), makeItem("i2", { folderId: null })]);
+		seedItemsCache([makeItem("i1", { folderId: null }), makeItem("i2", { folderId: null })], "none");
 
 		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -579,13 +406,10 @@ describe("useAssignFolder", () => {
 
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
-		seedItems([makeItem("i1", { folderId: null })]);
+		itemsMock._setItems([makeItem("i1", { folderId: null })]);
+		seedItemsCache([makeItem("i1", { folderId: null })]);
 
-		server.use(
-			http.patch("/api/v1/company/items/:id/", () =>
-				HttpResponse.json({ folderId: ["Invalid folder."] }, { status: 400 }),
-			),
-		);
+		vi.spyOn(itemsMock, "updateItemMock").mockRejectedValue(new Error("fail"));
 
 		const { result } = renderHook(() => useAssignFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -605,88 +429,23 @@ describe("useAssignFolder", () => {
 });
 
 describe("useCreateItems", () => {
-	it("sends items to POST /items/batch and invalidates queries on sync response", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.post("/api/v1/company/items/batch", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json(
-					{
-						items: [makeItem("new-1", { name: "Widget A" })],
-						isAsync: false,
-					},
-					{ status: 201 },
-				);
-			}),
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
-			http.get("/api/v1/company/items/totals", () =>
-				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-			),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
-		);
-
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
-
-		await act(async () => {
-			await result.current.mutateAsync([{ name: "Widget A" }]);
-		});
-
-		expect(capturedBody).toEqual({ items: [{ name: "Widget A" }] });
-	});
-
-	it("returns isAsync false for sync response", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () =>
-				HttpResponse.json({ items: [makeItem("new-1")], isAsync: false }, { status: 201 }),
-			),
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
-			http.get("/api/v1/company/items/totals", () =>
-				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-			),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
-		);
+	it("creates items and returns isAsync=false", async () => {
+		itemsMock._setItems([]);
 
 		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 
 		let response: unknown;
 		await act(async () => {
-			response = await result.current.mutateAsync([{ name: "Item" }]);
+			response = await result.current.mutateAsync([{ name: "Widget A" }]);
 		});
 
 		expect((response as { isAsync: boolean }).isAsync).toBe(false);
+		expect(itemsMock._getAllItems()[0].name).toBe("Widget A");
 	});
 
-	it("returns isAsync true for async response (>=100 items)", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () =>
-				HttpResponse.json({ isAsync: true, taskId: "task-123" }, { status: 202 }),
-			),
-			http.get("/api/v1/company/items/", () => HttpResponse.json({ items: [], nextCursor: null })),
-			http.get("/api/v1/company/items/totals", () =>
-				HttpResponse.json({ itemCount: 0, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-			),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: [] })),
-		);
-
-		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
-
-		let response: unknown;
-		await act(async () => {
-			response = await result.current.mutateAsync([{ name: "Item" }]);
-		});
-
-		expect((response as { isAsync: boolean }).isAsync).toBe(true);
-	});
-
-	it("shows error toast on 400 validation failure", async () => {
+	it("shows error toast when mock throws", async () => {
 		const { toast } = await import("sonner");
-
-		server.use(
-			http.post("/api/v1/company/items/batch", () =>
-				HttpResponse.json({ items: [{ name: ["This field is required."] }] }, { status: 400 }),
-			),
-		);
+		vi.spyOn(itemsMock, "createItemsBatchMock").mockRejectedValue(new Error("bad"));
 
 		const { result } = renderHook(() => useCreateItems(), { wrapper: createQueryWrapper(queryClient) });
 

@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UpdatePermissionsData } from "./api-client";
 import {
-	fetchWorkspaceEmployee,
-	fetchWorkspaceEmployees,
+	fetchWorkspaceEmployeeMock as fetchWorkspaceEmployee,
+	fetchWorkspaceEmployeesMock as fetchWorkspaceEmployees,
 	type InviteEmployeeData,
-	inviteEmployees,
-	updateWorkspaceEmployeePermissions,
-} from "./api-client";
+	inviteEmployeesMock as inviteEmployees,
+	type UpdatePermissionsData,
+	updateWorkspaceEmployeePermissionsMock as updateWorkspaceEmployeePermissions,
+} from "./workspace-mock-data";
 
 export function useWorkspaceEmployees() {
 	const query = useQuery({

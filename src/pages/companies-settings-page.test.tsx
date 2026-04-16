@@ -1,28 +1,123 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
-import { server } from "@/test-msw";
-import { createTestQueryClient, makeCompany, mockHostname } from "@/test-utils";
+import { _setCompanies } from "@/data/companies-mock-data";
+import type { Company } from "@/data/types";
+import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { CompaniesSettingsPage } from "./companies-settings-page";
 
-const MOCK_COMPANIES = [
-	makeCompany("company-1", {
+function makeStored(id: string, overrides: Partial<Company> = {}): Company {
+	return {
+		id,
+		name: `Company ${id}`,
+		industry: "",
+		website: "",
+		description: "",
+		preferredPayment: "",
+		preferredDelivery: "",
+		additionalComments: "",
+		isMain: false,
+		employeeCount: 0,
+		procurementItemCount: 0,
+		addresses: [
+			{
+				id: `addr-${id}`,
+				name: "Офис",
+				type: "office",
+				postalCode: "",
+				address: "г. Москва",
+				contactPerson: "",
+				phone: "",
+				isMain: true,
+			},
+		],
+		employees: [],
+		...overrides,
+	};
+}
+
+const MOCK_COMPANIES: Company[] = [
+	makeStored("company-1", {
 		name: "Сделка",
 		addresses: [
-			{ id: "addr-1", name: "Офис", type: "office", address: "г. Москва", isMain: true },
-			{ id: "addr-2", name: "Склад", type: "warehouse", address: "г. Подольск", isMain: false },
+			{
+				id: "addr-1",
+				name: "Офис",
+				type: "office",
+				postalCode: "",
+				address: "г. Москва",
+				contactPerson: "",
+				phone: "",
+				isMain: true,
+			},
+			{
+				id: "addr-2",
+				name: "Склад",
+				type: "warehouse",
+				postalCode: "",
+				address: "г. Подольск",
+				contactPerson: "",
+				phone: "",
+				isMain: false,
+			},
 		],
-		employeeCount: 12,
+		employees: Array.from({ length: 12 }, (_, i) => ({
+			id: i + 1,
+			firstName: "x",
+			lastName: "y",
+			patronymic: "",
+			position: "",
+			role: "user" as const,
+			phone: "",
+			email: "",
+			isResponsible: i === 0,
+			permissions: {
+				id: `p${i}`,
+				employeeId: i + 1,
+				analytics: "none" as const,
+				procurement: "none" as const,
+				companies: "none" as const,
+				tasks: "none" as const,
+			},
+		})),
 		procurementItemCount: 25,
 	}),
-	makeCompany("company-2", {
+	makeStored("company-2", {
 		name: "СтройМастер",
-		addresses: [{ id: "addr-3", name: "Центральный", type: "office", address: "г. Казань", isMain: true }],
-		employeeCount: 5,
+		addresses: [
+			{
+				id: "addr-3",
+				name: "Центральный",
+				type: "office",
+				postalCode: "",
+				address: "г. Казань",
+				contactPerson: "",
+				phone: "",
+				isMain: true,
+			},
+		],
+		employees: Array.from({ length: 5 }, (_, i) => ({
+			id: 100 + i,
+			firstName: "x",
+			lastName: "y",
+			patronymic: "",
+			position: "",
+			role: "user" as const,
+			phone: "",
+			email: "",
+			isResponsible: i === 0,
+			permissions: {
+				id: `p2-${i}`,
+				employeeId: 100 + i,
+				analytics: "none" as const,
+				procurement: "none" as const,
+				companies: "none" as const,
+				tasks: "none" as const,
+			},
+		})),
 		procurementItemCount: 10,
 	}),
 ];
@@ -72,12 +167,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
-	server.use(
-		http.get("/api/v1/companies/", () => {
-			return HttpResponse.json({ companies: MOCK_COMPANIES, nextCursor: null });
-		}),
-	);
+	_setCompanies(MOCK_COMPANIES);
 });
 
 afterEach(() => {
@@ -85,7 +175,7 @@ afterEach(() => {
 });
 
 describe("CompaniesSettingsPage table", () => {
-	test("renders company names from MSW", async () => {
+	test("renders company names from mock store", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByText("Сделка")).toBeInTheDocument();
@@ -122,16 +212,8 @@ describe("CompaniesSettingsPage row click", () => {
 
 describe("CompaniesSettingsPage pagination", () => {
 	test("auto-loads all pages when hasNextPage is true", async () => {
-		const page2Company = makeCompany("company-3", { name: "ТретьяКомпания" });
-		server.use(
-			http.get("/api/v1/companies/", ({ request }) => {
-				const cursor = new URL(request.url).searchParams.get("cursor");
-				if (!cursor) {
-					return HttpResponse.json({ companies: MOCK_COMPANIES, nextCursor: "cursor-page2" });
-				}
-				return HttpResponse.json({ companies: [page2Company], nextCursor: null });
-			}),
-		);
+		const filler = Array.from({ length: 32 }, (_, i) => makeStored(`fill-${i}`, { name: `Filler ${i}` }));
+		_setCompanies([...filler, makeStored("company-last", { name: "ТретьяКомпания" })]);
 
 		renderPage();
 		await waitFor(() => {

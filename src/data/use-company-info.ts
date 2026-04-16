@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCompanyInfo } from "./api-client";
+import { fetchCompanyInfoMock } from "./workspace-mock-data";
 
 export function useCompanyInfo() {
 	return useQuery({
 		queryKey: ["companyInfo"],
-		queryFn: fetchCompanyInfo,
+		queryFn: fetchCompanyInfoMock,
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 }

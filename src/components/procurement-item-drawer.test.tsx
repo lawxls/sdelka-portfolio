@@ -1,15 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 
 import type { ProcurementItem } from "@/data/types";
-import { server } from "@/test-msw";
 import { makeTask, mockHostname } from "@/test-utils";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
@@ -88,14 +87,7 @@ const archivedTasks = [
 	}),
 ];
 
-function taskBoardResponse() {
-	return {
-		assigned: { results: assignedTasks, next: null, count: assignedTasks.length },
-		in_progress: { results: inProgressTasks, next: null, count: inProgressTasks.length },
-		completed: { results: completedTasks, next: null, count: completedTasks.length },
-		archived: { results: archivedTasks, next: null, count: archivedTasks.length },
-	};
-}
+const ALL_TASKS = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
 
 beforeEach(() => {
 	queryClient = new QueryClient({
@@ -103,26 +95,18 @@ beforeEach(() => {
 	});
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
 	_resetItemDetailStore();
 	_setItemDetailMockDelay(0, 0);
-
-	server.use(
-		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(taskBoardResponse())),
-		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
-			const all = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
-			const task = all.find((t) => t.id === params.id);
-			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
-		}),
-	);
+	_setTasks(ALL_TASKS);
 });
 
 afterEach(() => {
 	localStorage.clear();
 	_resetSupplierStore();
 	_resetItemDetailStore();
+	_resetTasksStore();
 });
 
 describe("ProcurementItemDrawer", () => {
@@ -455,7 +439,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		// Now editable fields and save/cancel appear
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 
@@ -485,7 +469,7 @@ describe("ProcurementItemDrawer", () => {
 
 		// Back to read-only — input gone, value shown as text
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(within(panel).getByText("Арматура А500С")).toBeInTheDocument();
+		expect(within(panel).getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
 	test("details tab has edit buttons for all four sections", async () => {
@@ -679,7 +663,9 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		});
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// МеталлТрейд appears in the current-supplier card AND in the supplier list
+		// (one of item-1's получено_кп suppliers matches its currentSupplier).
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
 	test("suppliers tab hides current supplier card when item has no currentSupplier", async () => {
@@ -756,8 +742,8 @@ describe("ProcurementItemDrawer", () => {
 
 		// Dialog should be gone
 		expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
-		// Original current supplier still shown
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// Original current supplier still shown (also appears in the supplier row due to coherence)
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
 	test("confirming select supplier dialog fires mutation and closes dialog", async () => {
@@ -767,8 +753,8 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(11);
 		});
 
-		// Verify current supplier before selection
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// Verify current supplier before selection (also appears in the supplier row due to coherence)
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 
 		const rows = screen.getAllByRole("row");
 		fireEvent.contextMenu(rows[1]);

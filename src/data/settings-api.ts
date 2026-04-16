@@ -1,44 +1,16 @@
-import { request } from "./api-client";
+import type { ChangePasswordResponse, SettingsPatch, UserSettings } from "./workspace-mock-data";
+import { changePasswordMock, fetchSettingsMock, patchSettingsMock } from "./workspace-mock-data";
 
-const BASE = "/api/v1/auth";
-
-export interface UserSettings {
-	first_name: string;
-	last_name: string;
-	patronymic?: string | null;
-	email: string;
-	phone: string;
-	avatar_icon: string;
-	date_joined: string;
-	mailing_allowed: boolean;
-}
-
-export type SettingsPatch = Partial<
-	Pick<UserSettings, "first_name" | "last_name" | "patronymic" | "phone" | "mailing_allowed">
->;
+export type { ChangePasswordResponse, SettingsPatch, UserSettings };
 
 export async function fetchSettings(): Promise<UserSettings> {
-	return request("/settings", { base: BASE });
-}
-
-export interface ChangePasswordResponse {
-	detail: string;
+	return fetchSettingsMock();
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
-	return request("/change-password", {
-		base: BASE,
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-	});
+	return changePasswordMock(currentPassword, newPassword);
 }
 
 export async function patchSettings(data: SettingsPatch): Promise<UserSettings> {
-	return request("/settings", {
-		base: BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return patchSettingsMock(data);
 }

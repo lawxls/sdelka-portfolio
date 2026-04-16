@@ -1,17 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { TaskBoardResponse } from "./api-client";
-import {
-	changeTaskStatus,
-	fetchItems,
-	fetchTask,
-	fetchTaskBoard,
-	fetchTasks,
-	uploadTaskAttachments,
-} from "./api-client";
-import { getErrorDetail } from "./api-error";
+import { fetchItemsMock as fetchItems } from "./items-mock-data";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
+import {
+	changeTaskStatusMock as changeTaskStatus,
+	fetchTaskMock as fetchTask,
+	fetchTaskBoardMock as fetchTaskBoard,
+	fetchTasksMock as fetchTasks,
+	type TaskBoardResponse,
+	uploadTaskAttachmentsMock as uploadTaskAttachments,
+} from "./tasks-mock-data";
 
 type TasksCache = {
 	pages: Array<{ tasks: Task[]; nextCursor: string | null }>;
@@ -76,8 +75,8 @@ export function useTaskColumns(params?: TaskFilterParams) {
 					};
 				});
 			})
-			.catch((err: unknown) => {
-				toast.error(getErrorDetail(err) ?? "Ошибка загрузки");
+			.catch(() => {
+				toast.error("Ошибка загрузки");
 			});
 	}
 
@@ -240,9 +239,9 @@ export function useUpdateTaskStatus() {
 
 			return { snapshots };
 		},
-		onError: (err, _vars, context) => {
+		onError: (_err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			toast.error(getErrorDetail(err) ?? "Не удалось обновить статус задачи");
+			toast.error("Не удалось обновить статус задачи");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});
@@ -313,9 +312,9 @@ export function useSubmitAnswer() {
 
 			return { snapshots };
 		},
-		onError: (err, _vars, context) => {
+		onError: (_err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			toast.error(getErrorDetail(err) ?? "Не удалось отправить ответ");
+			toast.error("Не удалось отправить ответ");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});

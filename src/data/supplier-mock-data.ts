@@ -1,4 +1,4 @@
-import { setItemCurrentSupplier } from "./item-detail-mock-data";
+import { _getItem, _patchItem } from "./items-mock-data";
 import type {
 	Supplier,
 	SupplierChatMessage,
@@ -10,7 +10,14 @@ import type {
 } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
 
+// First 5 names match supplier companies seeded in companies-mock-data
+// so that the currentSupplier displayed on an item maps to a real CRM entry.
 const COMPANY_NAMES = [
+	"МеталлТрейд",
+	"ТрубоСталь",
+	"ЦементСтрой",
+	"КрепёжОпт",
+	"АкваПром",
 	"ООО «СтройТорг»",
 	"ЗАО «МеталлПром»",
 	"ООО «Техносервис»",
@@ -152,7 +159,7 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 	const seed = Math.abs(hash) % 1000;
 	const count = LARGE_DATASET_ITEMS.has(itemId) ? 200 : 10;
 
-	return Array.from({ length: count }, (_, i) => {
+	const suppliers = Array.from({ length: count }, (_, i) => {
 		const idx = seed + i;
 		const status = STATUS_PATTERN[i % STATUS_PATTERN.length];
 		const isKp = status === "получено_кп";
@@ -183,6 +190,17 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			positionOffers: isKp ? makePositionOffers(idx) : [],
 		};
 	});
+
+	// Coherence with items-mock-data: if the item has a currentSupplier with a
+	// specific companyName, reflect it in the получено_кп slot so the "current
+	// supplier" card on the item matches a real row in its supplier list.
+	const currentSupplierName = _getItem(itemId)?.currentSupplier?.companyName;
+	if (currentSupplierName) {
+		const kpIdx = suppliers.findIndex((s) => s.status === "получено_кп");
+		if (kpIdx !== -1) suppliers[kpIdx].companyName = currentSupplierName;
+	}
+
+	return suppliers;
 }
 
 // --- Mutable store (lazily populated per item) ---
@@ -346,12 +364,14 @@ export async function selectSupplier(itemId: string, supplierId: string): Promis
 	const suppliers = getSuppliersForItem(itemId);
 	const supplier = suppliers.find((s) => s.id === supplierId);
 	if (!supplier) throw new Error("Supplier not found");
-	setItemCurrentSupplier(itemId, {
-		companyName: supplier.companyName,
-		deliveryCost: supplier.deliveryCost,
-		deferralDays: supplier.deferralDays,
-		pricePerUnit: supplier.pricePerUnit,
-		tco: supplier.tco,
+	_patchItem(itemId, {
+		currentSupplier: {
+			companyName: supplier.companyName,
+			deliveryCost: supplier.deliveryCost,
+			deferralDays: supplier.deferralDays,
+			pricePerUnit: supplier.pricePerUnit,
+			tco: supplier.tco,
+		},
 	});
 }
 

@@ -30,14 +30,14 @@ describe("ProtectedRoute", () => {
 	});
 
 	test("renders children when authenticated", () => {
-		setTokens("access", "refresh");
+		setTokens("access");
 		renderWithRouter();
 		expect(screen.getByText("Protected Content")).toBeInTheDocument();
 		expect(screen.queryByText("Login Page")).not.toBeInTheDocument();
 	});
 
 	test("redirects on auth:cleared event", async () => {
-		setTokens("access", "refresh");
+		setTokens("access");
 		renderWithRouter();
 		expect(screen.getByText("Protected Content")).toBeInTheDocument();
 

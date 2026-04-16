@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
-import { server } from "@/test-msw";
+import * as authApi from "@/data/auth-api";
+import * as settingsApi from "@/data/settings-api";
+import { _resetWorkspaceStore, _setUserSettings, fetchSettingsMock } from "@/data/workspace-mock-data";
 import { makeSettings, mockHostname } from "@/test-utils";
 import { ProfileSettingsPage } from "./profile-settings-page";
 
@@ -33,16 +34,21 @@ function renderPage() {
 beforeEach(() => {
 	localStorage.clear();
 	mockHostname("acme.localhost");
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	vi.spyOn(console, "error").mockImplementation(() => {});
-	server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
+	_setUserSettings(MOCK_SETTINGS);
+});
+
+afterEach(() => {
+	_resetWorkspaceStore();
+	vi.restoreAllMocks();
 });
 
 describe("ProfileSettingsPage", () => {
-	test("renders user data from MSW in form fields", async () => {
+	test("renders user data from mock store in form fields", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
@@ -60,15 +66,7 @@ describe("ProfileSettingsPage", () => {
 		expect(screen.getByLabelText("Почта")).toHaveAttribute("readOnly");
 	});
 
-	test("save calls useUpdateSettings with changed fields only", async () => {
-		let patchBody: Record<string, unknown> | null = null;
-		server.use(
-			http.patch("/api/v1/auth/settings", async ({ request }) => {
-				patchBody = (await request.json()) as Record<string, unknown>;
-				return HttpResponse.json({ ...MOCK_SETTINGS, ...patchBody });
-			}),
-		);
-
+	test("save patches the store with changed fields only", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
@@ -80,8 +78,10 @@ describe("ProfileSettingsPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Пётр");
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-		await waitFor(() => {
-			expect(patchBody).toEqual({ first_name: "Пётр" });
+		await waitFor(async () => {
+			const current = await fetchSettingsMock();
+			expect(current.first_name).toBe("Пётр");
+			expect(current.last_name).toBe(MOCK_SETTINGS.last_name);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});
@@ -111,13 +111,7 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("Изменить пароль calls forgotPassword with user email", async () => {
-		let forgotBody: unknown = null;
-		server.use(
-			http.post("/api/v1/auth/forgot-password", async ({ request }) => {
-				forgotBody = await request.json();
-				return HttpResponse.json({ detail: "Письмо отправлено" });
-			}),
-		);
+		const forgotSpy = vi.spyOn(authApi, "forgotPassword");
 
 		renderPage();
 		const user = userEvent.setup();
@@ -129,13 +123,13 @@ describe("ProfileSettingsPage", () => {
 		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
 
 		await waitFor(() => {
-			expect(forgotBody).toEqual({ email: "ivan@example.com" });
+			expect(forgotSpy).toHaveBeenCalledWith("ivan@example.com");
 		});
 		expect(toast.success).toHaveBeenCalledWith("Письмо отправлено");
 	});
 
 	test("shows error state with retry button when settings request fails", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.error()));
+		vi.spyOn(settingsApi, "fetchSettings").mockRejectedValueOnce(new Error("boom"));
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
@@ -144,7 +138,7 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("submit button is disabled during in-flight request", async () => {
-		server.use(http.patch("/api/v1/auth/settings", () => new Promise<never>(() => {})));
+		vi.spyOn(settingsApi, "patchSettings").mockReturnValueOnce(new Promise<never>(() => {}));
 
 		renderPage();
 		const user = userEvent.setup();
@@ -163,11 +157,7 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("email notifications checkbox reflects mailing_allowed from API", async () => {
-		server.use(
-			http.get("/api/v1/auth/settings", () =>
-				HttpResponse.json(makeSettings({ patronymic: "Иванович", mailing_allowed: false })),
-			),
-		);
+		_setUserSettings(makeSettings({ patronymic: "Иванович", mailing_allowed: false }));
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByRole("checkbox", { name: /уведомления/i })).toBeInTheDocument();
@@ -188,15 +178,7 @@ describe("ProfileSettingsPage", () => {
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 	});
 
-	test("save includes mailing_allowed in PATCH payload", async () => {
-		let patchBody: Record<string, unknown> | null = null;
-		server.use(
-			http.patch("/api/v1/auth/settings", async ({ request }) => {
-				patchBody = (await request.json()) as Record<string, unknown>;
-				return HttpResponse.json({ ...MOCK_SETTINGS, ...patchBody });
-			}),
-		);
-
+	test("save includes mailing_allowed in the persisted store", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
@@ -207,8 +189,9 @@ describe("ProfileSettingsPage", () => {
 		await user.click(screen.getByRole("checkbox", { name: /уведомления/i }));
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-		await waitFor(() => {
-			expect(patchBody).toEqual({ mailing_allowed: false });
+		await waitFor(async () => {
+			const current = await fetchSettingsMock();
+			expect(current.mailing_allowed).toBe(false);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});

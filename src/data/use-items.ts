@@ -1,16 +1,22 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { BatchCreateResult, FetchItemsParams } from "./api-client";
 import {
-	deleteItem as apiDeleteItem,
-	updateItem as apiUpdateItem,
-	createItemsBatch,
-	exportItems,
-	fetchItems,
-	fetchTotals,
-} from "./api-client";
+	deleteItemMock as apiDeleteItem,
+	updateItemMock as apiUpdateItem,
+	createItemsBatchMock as createItemsBatch,
+	exportItemsMock as exportItems,
+	type FilterParams as FetchItemsParams,
+	fetchItemsMock as fetchItems,
+	fetchTotalsMock as fetchTotals,
+} from "./items-mock-data";
 import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
+
+type BatchCreateResult = {
+	items?: ProcurementItem[];
+	isAsync: boolean;
+	taskId?: string;
+};
 
 interface ItemQueryParams {
 	search: string;

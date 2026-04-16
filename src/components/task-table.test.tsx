@@ -2,10 +2,9 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
+import * as tasksMock from "@/data/tasks-mock-data";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskTable } from "./task-table";
 
@@ -20,36 +19,18 @@ const task1 = makeTask("task-1", {
 });
 const task2 = makeTask("task-2", { name: "Запрос КП", status: "in_progress" });
 
-const boardResponse = {
-	assigned: { results: [task1], next: null, count: 1 },
-	in_progress: { results: [task2], next: null, count: 1 },
-	completed: { results: [], next: null, count: 0 },
-	archived: { results: [], next: null, count: 0 },
-};
-
-const flatResponse = {
-	count: 2,
-	results: [task1, task2],
-	next: null,
-	previous: null,
-};
-
 let queryClient: QueryClient;
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
-
-	server.use(
-		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(boardResponse)),
-		http.get("/api/v1/company/tasks/", () => HttpResponse.json(flatResponse)),
-	);
+	tasksMock._setTasks([task1, task2]);
 });
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 function renderTable(onTaskClick = vi.fn(), isMobile = false, showQuestionCount = false) {
@@ -111,12 +92,7 @@ describe("TaskTable desktop", () => {
 	});
 
 	it("shows loading skeletons before data arrives", () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", async () => {
-				await new Promise((r) => setTimeout(r, 10000));
-				return HttpResponse.json(boardResponse);
-			}),
-		);
+		vi.spyOn(tasksMock, "fetchTaskBoardMock").mockImplementation(() => new Promise(() => {}));
 		renderTable();
 		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
 	});
@@ -129,16 +105,7 @@ describe("TaskRow question count", () => {
 			status: "assigned",
 			questionCount: 3,
 		});
-		server.use(
-			http.get("/api/v1/company/tasks/board/", () =>
-				HttpResponse.json({
-					assigned: { results: [taskWithQuestions], next: null, count: 1 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				}),
-			),
-		);
+		tasksMock._setTasks([taskWithQuestions]);
 		renderTable(vi.fn(), false, true);
 		await waitFor(() => {
 			expect(screen.getByTestId("task-row-task-q")).toBeInTheDocument();
@@ -152,16 +119,7 @@ describe("TaskRow question count", () => {
 			status: "assigned",
 			questionCount: 3,
 		});
-		server.use(
-			http.get("/api/v1/company/tasks/board/", () =>
-				HttpResponse.json({
-					assigned: { results: [taskWithQuestions], next: null, count: 1 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				}),
-			),
-		);
+		tasksMock._setTasks([taskWithQuestions]);
 		renderTable();
 		await waitFor(() => {
 			expect(screen.getByTestId("task-row-task-q2")).toBeInTheDocument();
@@ -175,16 +133,7 @@ describe("TaskRow question count", () => {
 			status: "assigned",
 			questionCount: 0,
 		});
-		server.use(
-			http.get("/api/v1/company/tasks/board/", () =>
-				HttpResponse.json({
-					assigned: { results: [taskNoQuestions], next: null, count: 1 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				}),
-			),
-		);
+		tasksMock._setTasks([taskNoQuestions]);
 		renderTable(vi.fn(), false, true);
 		await waitFor(() => {
 			expect(screen.getByTestId("task-row-task-q3")).toBeInTheDocument();
@@ -222,12 +171,7 @@ describe("TaskTable mobile", () => {
 	});
 
 	it("shows skeleton cards while loading", () => {
-		server.use(
-			http.get("/api/v1/company/tasks/", async () => {
-				await new Promise((r) => setTimeout(r, 10000));
-				return HttpResponse.json({});
-			}),
-		);
+		vi.spyOn(tasksMock, "fetchTasksMock").mockImplementation(() => new Promise(() => {}));
 		renderTable(vi.fn(), true);
 		expect(screen.getAllByTestId("skeleton-card").length).toBeGreaterThan(0);
 	});

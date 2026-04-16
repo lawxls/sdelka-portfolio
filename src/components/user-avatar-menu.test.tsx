@@ -1,22 +1,24 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import { server } from "@/test-msw";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import * as settingsApi from "@/data/settings-api";
+import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
 import { createTestQueryClient, makeSettings } from "@/test-utils";
 import { UserAvatarMenu } from "./user-avatar-menu";
 
 const MOCK_SETTINGS = makeSettings({ last_name: "Петров", date_joined: "2025-01-15T10:00:00Z" });
 
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
-
 beforeEach(() => {
 	localStorage.clear();
+	_setUserSettings(MOCK_SETTINGS);
 	vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => {
+	_resetWorkspaceStore();
+	vi.restoreAllMocks();
 });
 
 function renderMenu(initialEntries = ["/"]) {
@@ -53,8 +55,6 @@ function renderMenu(initialEntries = ["/"]) {
 
 describe("UserAvatarMenu", () => {
 	test("shows user initials avatar when settings load", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 
 		await waitFor(() => {
@@ -63,7 +63,7 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("shows fallback icon before settings load", () => {
-		server.use(http.get("/api/v1/auth/settings", () => new Promise(() => {})));
+		vi.spyOn(settingsApi, "fetchSettings").mockReturnValueOnce(new Promise(() => {}));
 
 		renderMenu();
 
@@ -72,8 +72,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("Мой профиль navigates to /settings/profile", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -91,8 +89,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("Компании navigates to /settings/companies", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -110,8 +106,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("Сотрудники navigates to /settings/employees", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -129,8 +123,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("Задачи navigates to /tasks", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -148,8 +140,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("menu items are in correct order: settings → Задачи → theme → Выйти", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -166,8 +156,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("menu shows Сменить тему item", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 
@@ -179,8 +167,6 @@ describe("UserAvatarMenu", () => {
 	});
 
 	test("menu shows Выйти item", async () => {
-		server.use(http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)));
-
 		renderMenu();
 		const user = userEvent.setup();
 

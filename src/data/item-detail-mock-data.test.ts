@@ -20,7 +20,7 @@ describe("getItemDetail", () => {
 		const item = await getItemDetail("item-1");
 		expect(item).not.toBeNull();
 		expect(item?.id).toBe("item-1");
-		expect(item?.name).toBe("Арматура А500С");
+		expect(item?.name).toBe("Арматура А500С ∅12");
 		expect(item?.status).toBe("searching");
 	});
 
@@ -37,7 +37,7 @@ describe("getItemDetail", () => {
 		expect(item?.frequencyCount).toBe(2);
 		expect(item?.paymentType).toBe("deferred");
 		expect(item?.deliveryType).toBe("warehouse");
-		expect(item?.folderId).toBeNull();
+		expect(item?.folderId).toBe("folder-metal");
 	});
 
 	it("includes read-only fields", async () => {
@@ -52,7 +52,6 @@ describe("updateItemDetail", () => {
 		const updated = await updateItemDetail("item-1", { name: "Арматура А400", annualQuantity: 2000 });
 		expect(updated.name).toBe("Арматура А400");
 		expect(updated.annualQuantity).toBe(2000);
-		// Unchanged fields preserved
 		expect(updated.currentPrice).toBe(4500);
 		expect(updated.status).toBe("searching");
 	});

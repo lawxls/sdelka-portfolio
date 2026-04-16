@@ -1,10 +1,10 @@
 import "@testing-library/jest-dom/vitest";
-import { afterAll, afterEach, beforeAll } from "vitest";
-import { server } from "@/test-msw";
+import { beforeAll } from "vitest";
+import { _setMockDelay } from "@/data/mock-utils";
 
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => {
+	_setMockDelay(0, 0);
+});
 
 // Node 22 ships a built-in localStorage that lacks standard Web Storage API methods.
 // Override it with a spec-compliant in-memory implementation for tests.

@@ -1,36 +1,55 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { AddressSummary, NewItemInput } from "@/data/types";
-import { server } from "@/test-msw";
+import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
+import type { Address, Company, NewItemInput } from "@/data/types";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
 import { AddPositionsDrawer } from "./add-positions-drawer";
 
-const TEST_ADDRESSES: AddressSummary[] = [
-	{ id: "addr-1", name: "Главный офис", type: "office", address: "г. Москва, ул. Ленина, д. 15", isMain: true },
-	{ id: "addr-2", name: "Склад", type: "warehouse", address: "г. Москва, ул. Складская, д. 1", isMain: false },
+const TEST_ADDRESSES: Address[] = [
+	{
+		id: "addr-1",
+		name: "Главный офис",
+		type: "office",
+		postalCode: "",
+		address: "г. Москва, ул. Ленина, д. 15",
+		contactPerson: "",
+		phone: "",
+		isMain: true,
+	},
+	{
+		id: "addr-2",
+		name: "Склад",
+		type: "warehouse",
+		postalCode: "",
+		address: "г. Москва, ул. Складская, д. 1",
+		contactPerson: "",
+		phone: "",
+		isMain: false,
+	},
 ];
 
+function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company {
+	return {
+		id,
+		name,
+		industry: "",
+		website: "",
+		description: "",
+		preferredPayment: "",
+		preferredDelivery: "",
+		additionalComments: "",
+		isMain: false,
+		employeeCount: 0,
+		procurementItemCount: 0,
+		addresses,
+		employees: [],
+	};
+}
+
 beforeEach(() => {
-	server.use(
-		http.get("/api/v1/companies/", () =>
-			HttpResponse.json({
-				companies: [
-					{
-						id: "company-1",
-						name: "Тестовая компания",
-						isMain: true,
-						responsibleEmployeeName: "Иванов",
-						addresses: TEST_ADDRESSES,
-						employeeCount: 1,
-						procurementItemCount: 0,
-					},
-				],
-				nextCursor: null,
-			}),
-		),
-	);
+	_resetCompaniesStore();
+	_setCompanies([makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES)]);
 });
 
 function renderDrawer(
@@ -714,50 +733,42 @@ describe("AddPositionsDrawer", () => {
 	});
 
 	test("changing company resets addresses to all addresses of new company", async () => {
-		server.use(
-			http.get("/api/v1/companies/", () =>
-				HttpResponse.json({
-					companies: [
-						{
-							id: "company-1",
-							name: "Первая компания",
-							isMain: false,
-							responsibleEmployeeName: null,
-							addresses: [
-								{ id: "c1-addr-1", name: "Офис", type: "office", address: "г. Москва, ул. Первая, д. 1", isMain: true },
-							],
-							employeeCount: 1,
-							procurementItemCount: 0,
-						},
-						{
-							id: "company-2",
-							name: "Вторая компания",
-							isMain: false,
-							responsibleEmployeeName: null,
-							addresses: [
-								{
-									id: "c2-addr-1",
-									name: "Склад А",
-									type: "warehouse",
-									address: "г. СПб, ул. Вторая, д. 2",
-									isMain: false,
-								},
-								{
-									id: "c2-addr-2",
-									name: "Склад Б",
-									type: "warehouse",
-									address: "г. СПб, ул. Третья, д. 3",
-									isMain: false,
-								},
-							],
-							employeeCount: 1,
-							procurementItemCount: 0,
-						},
-					],
-					nextCursor: null,
-				}),
-			),
-		);
+		_setCompanies([
+			makeCompanyDoc("company-1", "Первая компания", [
+				{
+					id: "c1-addr-1",
+					name: "Офис",
+					type: "office",
+					postalCode: "",
+					address: "г. Москва, ул. Первая, д. 1",
+					contactPerson: "",
+					phone: "",
+					isMain: true,
+				},
+			]),
+			makeCompanyDoc("company-2", "Вторая компания", [
+				{
+					id: "c2-addr-1",
+					name: "Склад А",
+					type: "warehouse",
+					postalCode: "",
+					address: "г. СПб, ул. Вторая, д. 2",
+					contactPerson: "",
+					phone: "",
+					isMain: false,
+				},
+				{
+					id: "c2-addr-2",
+					name: "Склад Б",
+					type: "warehouse",
+					postalCode: "",
+					address: "г. СПб, ул. Третья, д. 3",
+					contactPerson: "",
+					phone: "",
+					isMain: false,
+				},
+			]),
+		]);
 
 		renderDrawer();
 		const user = userEvent.setup();

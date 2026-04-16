@@ -2,9 +2,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
+import * as tasksMock from "@/data/tasks-mock-data";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
 
@@ -32,22 +31,12 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
-
-	server.use(
-		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
-			if (params.id === "task-1") return HttpResponse.json(unansweredTask);
-			if (params.id === "task-51") return HttpResponse.json(completedTask);
-			return HttpResponse.json({ detail: "Not found" }, { status: 404 });
-		}),
-		http.patch("/api/v1/company/tasks/:id/status/", () => {
-			return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Done" });
-		}),
-	);
+	tasksMock._setTasks([unansweredTask, completedTask]);
 });
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 function renderDrawer(taskId: string | null, onClose = vi.fn()) {
@@ -177,13 +166,9 @@ describe("TaskDrawer", () => {
 		expect(screen.queryByText("report.xlsx")).not.toBeInTheDocument();
 	});
 
-	it("shows API error detail in toast when status change fails", async () => {
+	it("shows fallback toast when status change fails", async () => {
 		const { toast } = await import("sonner");
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				return HttpResponse.json({ detail: "Completed tasks cannot change status." }, { status: 400 });
-			}),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 		renderDrawer("task-1");
 		const user = userEvent.setup();
 
@@ -195,32 +180,30 @@ describe("TaskDrawer", () => {
 		await user.click(screen.getByRole("option", { name: "В работе" }));
 
 		await waitFor(() => {
-			expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+			expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 		});
 	});
 
 	it("submitting answer with files uploads attachments then changes status", async () => {
 		const callOrder: string[] = [];
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				callOrder.push("upload");
-				return HttpResponse.json([
-					{
-						id: "att-1",
-						fileName: "report.pdf",
-						fileSize: 2048,
-						fileType: "pdf",
-						contentType: "application/pdf",
-						fileUrl: "/files/report.pdf",
-						uploadedAt: "2026-03-15T10:00:00.000Z",
-					},
-				]);
-			}),
-			http.patch("/api/v1/company/tasks/:id/status/", () => {
-				callOrder.push("status");
-				return HttpResponse.json({ ...unansweredTask, status: "completed", completedResponse: "Принято" });
-			}),
-		);
+		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockImplementation(async () => {
+			callOrder.push("upload");
+			return [
+				{
+					id: "att-1",
+					fileName: "report.pdf",
+					fileSize: 2048,
+					fileType: "pdf",
+					contentType: "application/pdf",
+					fileUrl: "blob:mock",
+					uploadedAt: "2026-03-15T10:00:00.000Z",
+				},
+			];
+		});
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(async () => {
+			callOrder.push("status");
+			return { ...unansweredTask, status: "completed", completedResponse: "Принято" };
+		});
 
 		const onClose = vi.fn();
 		renderDrawer("task-1", onClose);
@@ -243,13 +226,7 @@ describe("TaskDrawer", () => {
 	});
 
 	it("submitting answer without files only calls status endpoint", async () => {
-		let uploadCalled = false;
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", () => {
-				uploadCalled = true;
-				return HttpResponse.json([]);
-			}),
-		);
+		const uploadSpy = vi.spyOn(tasksMock, "uploadTaskAttachmentsMock");
 
 		const onClose = vi.fn();
 		renderDrawer("task-1", onClose);
@@ -266,7 +243,7 @@ describe("TaskDrawer", () => {
 			expect(onClose).toHaveBeenCalled();
 		});
 
-		expect(uploadCalled).toBe(false);
+		expect(uploadSpy).not.toHaveBeenCalled();
 	});
 
 	it("does not render drawer content when taskId is null", () => {

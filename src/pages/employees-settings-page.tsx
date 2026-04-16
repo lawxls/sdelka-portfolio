@@ -2,8 +2,8 @@ import { useSearchParams } from "react-router";
 import { EmployeeDetailDrawer } from "@/components/employee-detail-drawer";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { useSettingsOutletContext } from "@/components/settings-layout";
-import type { WorkspaceEmployee } from "@/data/api-client";
 import { useWorkspaceEmployees } from "@/data/use-workspace-employees";
+import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
 

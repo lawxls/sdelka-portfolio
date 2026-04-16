@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import type { CreateCompanyPayload } from "@/data/api-client";
+import type { CreateCompanyPayload } from "@/data/companies-mock-data";
 import type { AddressType } from "@/data/types";
 import { ADDRESS_TYPE_LABELS, ADDRESS_TYPES } from "@/data/types";
 import { cn } from "@/lib/utils";

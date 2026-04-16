@@ -2,13 +2,14 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
+import * as tasksMock from "@/data/tasks-mock-data";
+import type { Company } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { server } from "@/test-msw";
-import { createTestQueryClient, makeCompany, makeTask, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeCompanyDetail, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
@@ -31,20 +32,7 @@ const completedTasks = Array.from({ length: 2 }, (_, i) =>
 const archivedTasks = Array.from({ length: 2 }, (_, i) =>
 	makeTask(`task-ar-${i + 1}`, { status: "archived", name: `Archived ${i + 1}` }),
 );
-
-function boardResponse(overrides: Record<string, unknown> = {}) {
-	return {
-		assigned: { results: assignedTasks, next: null, count: assignedTasks.length },
-		in_progress: { results: inProgressTasks, next: null, count: inProgressTasks.length },
-		completed: { results: completedTasks, next: null, count: completedTasks.length },
-		archived: { results: archivedTasks, next: null, count: archivedTasks.length },
-		...overrides,
-	};
-}
-
-function listResponse(tasks = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks]) {
-	return { count: tasks.length, results: tasks, next: null, previous: null };
-}
+const allTasks = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
 
 let queryClient: QueryClient;
 
@@ -52,22 +40,13 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
-
-	// Default MSW handlers
-	server.use(
-		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(boardResponse())),
-		http.get("/api/v1/company/tasks/", () => HttpResponse.json(listResponse())),
-		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
-			const all = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
-			const task = all.find((t) => t.id === params.id);
-			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
-		}),
-	);
+	_resetCompaniesStore();
+	tasksMock._setTasks(allTasks);
 });
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 function renderPage(initialEntries?: string[]) {
@@ -225,25 +204,6 @@ describe("TasksPage", () => {
 	});
 
 	it("search input filters displayed tasks in board view", async () => {
-		server.use(
-			http.get("/api/v1/company/tasks/board/", ({ request }) => {
-				const url = new URL(request.url);
-				const q = url.searchParams.get("q");
-				if (q) {
-					const filtered = assignedTasks.filter((t) => t.name.toLowerCase().includes(q.toLowerCase()));
-					return HttpResponse.json(
-						boardResponse({
-							assigned: { results: filtered, next: null, count: filtered.length },
-							in_progress: { results: [], next: null, count: 0 },
-							completed: { results: [], next: null, count: 0 },
-							archived: { results: [], next: null, count: 0 },
-						}),
-					);
-				}
-				return HttpResponse.json(boardResponse());
-			}),
-		);
-
 		renderPage();
 		const user = userEvent.setup();
 
@@ -299,10 +259,13 @@ describe("TasksPage", () => {
 	});
 
 	describe("company filter", () => {
-		const companies = [makeCompany("c1", { name: "ООО Альфа" }), makeCompany("c2", { name: "ООО Бета" })];
+		const companies: Company[] = [
+			makeCompanyDetail("c1", { name: "ООО Альфа" }),
+			makeCompanyDetail("c2", { name: "ООО Бета" }),
+		];
 
 		beforeEach(() => {
-			server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+			_setCompanies(companies);
 		});
 
 		it("shows company button when multi-company", async () => {
@@ -313,9 +276,7 @@ describe("TasksPage", () => {
 		});
 
 		it("hides company button for single company", async () => {
-			server.use(
-				http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [companies[0]], nextCursor: null })),
-			);
+			_setCompanies([companies[0]]);
 			renderPage();
 			await waitFor(() => {
 				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
@@ -323,15 +284,8 @@ describe("TasksPage", () => {
 			expect(screen.queryByRole("button", { name: "Компания" })).not.toBeInTheDocument();
 		});
 
-		it("selecting company passes company param to board API", async () => {
-			let capturedCompany: string | null = null;
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedCompany = url.searchParams.get("company");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+		it("selecting company passes company param to board mock", async () => {
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage();
 			const user = userEvent.setup();
@@ -344,19 +298,12 @@ describe("TasksPage", () => {
 			await user.click(screen.getByText("ООО Альфа"));
 
 			await waitFor(() => {
-				expect(capturedCompany).toBe("c1");
+				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ company: "c1" }));
 			});
 		});
 
 		it("clearing company selection removes company param", async () => {
-			let capturedCompany: string | null = "initial";
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedCompany = url.searchParams.get("company");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage(["/tasks?company=c1"]);
 			const user = userEvent.setup();
@@ -369,24 +316,18 @@ describe("TasksPage", () => {
 			await user.click(screen.getByText("Все компании"));
 
 			await waitFor(() => {
-				expect(capturedCompany).toBeNull();
+				const lastCall = spy.mock.calls.at(-1)?.[0];
+				expect(lastCall?.company).toBeUndefined();
 			});
 		});
 
 		it("company param persists from URL on initial load", async () => {
-			let capturedCompany: string | null = null;
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedCompany = url.searchParams.get("company");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage(["/tasks?company=c2"]);
 
 			await waitFor(() => {
-				expect(capturedCompany).toBe("c2");
+				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ company: "c2" }));
 			});
 		});
 	});
@@ -417,18 +358,9 @@ describe("TasksPage", () => {
 			},
 		];
 
-		beforeEach(() => {
-			server.use(
-				http.get("/api/v1/company/items/", ({ request }) => {
-					const url = new URL(request.url);
-					const q = url.searchParams.get("q");
-					if (q) {
-						const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
-						return HttpResponse.json({ items: filtered, nextCursor: null });
-					}
-					return HttpResponse.json({ items, nextCursor: null });
-				}),
-			);
+		beforeEach(async () => {
+			const { _setItems } = await import("@/data/items-mock-data");
+			_setItems(items as Parameters<typeof _setItems>[0]);
 		});
 
 		it("typing in item search shows results from API", async () => {
@@ -447,15 +379,8 @@ describe("TasksPage", () => {
 			});
 		});
 
-		it("selecting an item passes item UUID to board API", async () => {
-			let capturedItem: string | null = null;
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedItem = url.searchParams.get("item");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+		it("selecting an item passes item UUID to board mock", async () => {
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage();
 			const user = userEvent.setup();
@@ -474,19 +399,12 @@ describe("TasksPage", () => {
 			await user.click(screen.getByText("Кабель ВВГнг 3×2.5"));
 
 			await waitFor(() => {
-				expect(capturedItem).toBe("item-2");
+				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ item: "item-2" }));
 			});
 		});
 
-		it("clearing item selection removes item param from API", async () => {
-			let capturedItem: string | null = "initial";
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedItem = url.searchParams.get("item");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+		it("clearing item selection removes item param from mock", async () => {
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage(["/tasks?item=item-1"]);
 			const user = userEvent.setup();
@@ -499,24 +417,18 @@ describe("TasksPage", () => {
 			await user.click(screen.getByText("Все"));
 
 			await waitFor(() => {
-				expect(capturedItem).toBeNull();
+				const lastCall = spy.mock.calls.at(-1)?.[0];
+				expect(lastCall?.item).toBeUndefined();
 			});
 		});
 
 		it("item param persists from URL on initial load", async () => {
-			let capturedItem: string | null = null;
-			server.use(
-				http.get("/api/v1/company/tasks/board/", ({ request }) => {
-					const url = new URL(request.url);
-					capturedItem = url.searchParams.get("item");
-					return HttpResponse.json(boardResponse());
-				}),
-			);
+			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
 
 			renderPage(["/tasks?item=item-1"]);
 
 			await waitFor(() => {
-				expect(capturedItem).toBe("item-1");
+				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ item: "item-1" }));
 			});
 		});
 
