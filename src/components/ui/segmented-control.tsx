@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 export function SegmentedControl<T extends string>({
 	options,
 	labels,
@@ -42,7 +44,7 @@ export function OptionalSegmentedControl<T extends string>({
 	onChange: (v: T | null) => void;
 }) {
 	return (
-		<div className={`flex rounded-lg border border-input${value === null ? " divide-x divide-input" : ""}`}>
+		<div className={cn("flex w-fit rounded-lg border border-input", value === null && "divide-x divide-input")}>
 			{options.map((opt) => (
 				<button
 					key={opt}
