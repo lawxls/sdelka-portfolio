@@ -132,6 +132,13 @@ describe("AddPositionsDrawer — wizard chrome", () => {
 		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
 	});
 
+	test("step indicator uses aria-live so SR users hear step changes", () => {
+		renderDrawer();
+		const indicator = screen.getByText(/Шаг 1 из 3/);
+		expect(indicator).toHaveAttribute("aria-live", "polite");
+		expect(indicator).toHaveAttribute("aria-atomic", "true");
+	});
+
 	test("step 1 footer has Отмена + Далее only", () => {
 		renderDrawer();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
@@ -275,6 +282,12 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		renderDrawer();
 		expect(screen.getByPlaceholderText("Введите комментарий…")).toBeInTheDocument();
 		expect(screen.getByText(/Перетащите файлы сюда/)).toBeInTheDocument();
+	});
+
+	test("file dropzone is a labeled button with a focus-visible ring", () => {
+		renderDrawer();
+		const dropzone = screen.getByRole("button", { name: "Прикрепить файлы" });
+		expect(dropzone).toHaveClass("focus-visible:ring-3");
 	});
 });
 

@@ -217,7 +217,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									style={{ width: `${progressPercent}%` }}
 								/>
 							</div>
-							<p className="text-xs text-muted-foreground">
+							<p className="text-xs text-muted-foreground" aria-live="polite" aria-atomic="true">
 								Шаг {step} из 3 — {STEP_TITLES[step]}
 							</p>
 						</div>
@@ -670,7 +670,8 @@ function Step1Body({
 					<span className="text-sm font-medium">Прикрепить файл</span>
 					<button
 						type="button"
-						className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary"
+						aria-label="Прикрепить файлы"
+						className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
 						onClick={() => fileInputRef.current?.click()}
 						onDragOver={(e) => {
 							e.preventDefault();
