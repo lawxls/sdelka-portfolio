@@ -1,4 +1,6 @@
 import { Link, Outlet } from "react-router";
+import { AppRail } from "@/components/app-rail";
+import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { LogoWordmark } from "@/components/logo-wordmark";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
 
@@ -19,9 +21,13 @@ export function AppLayout() {
 				</div>
 				<UserAvatarMenu />
 			</header>
-			<div className="flex min-h-0 flex-1 flex-col">
-				<Outlet />
+			<div className="flex min-h-0 flex-1">
+				<AppRail />
+				<div className="flex min-w-0 flex-1 flex-col">
+					<Outlet />
+				</div>
 			</div>
+			<BottomTabBar />
 		</div>
 	);
 }
