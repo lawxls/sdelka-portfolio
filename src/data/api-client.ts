@@ -1,6 +1,5 @@
 import { ApiError } from "./api-error";
-import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "./auth";
-import { refreshToken } from "./auth-api";
+import { clearTokens, getAccessToken } from "./auth";
 import type { Attachment, Task, TaskStatus } from "./task-types";
 import { getTenant } from "./tenant";
 import type {
@@ -71,44 +70,13 @@ async function ensureOk(response: Response): Promise<void> {
 	}
 }
 
-let refreshPromise: Promise<void> | null = null;
-
-function attemptRefresh(): Promise<void> {
-	if (refreshPromise) return refreshPromise;
-
-	const refresh = getRefreshToken();
-	if (!refresh) return Promise.reject(new Error("No refresh token"));
-
-	refreshPromise = refreshToken(refresh)
-		.then(({ access }) => {
-			if (getRefreshToken() === refresh) {
-				setTokens(access, refresh);
-			}
-		})
-		.finally(() => {
-			refreshPromise = null;
-		});
-
-	return refreshPromise;
-}
-
 export async function request<T>(
 	path: string,
 	options: RequestInit & { skipAuth?: boolean; base?: string } = {},
 ): Promise<T> {
 	const { base = BASE, skipAuth, ...fetchOpts } = options;
 	const headers = buildAuthHeaders(fetchOpts.headers, skipAuth);
-	let response = await fetch(`${base}${path}`, { ...fetchOpts, headers });
-
-	if (response.status === 401 && !skipAuth && getRefreshToken()) {
-		try {
-			await attemptRefresh();
-			const retryHeaders = buildAuthHeaders(fetchOpts.headers, skipAuth);
-			response = await fetch(`${base}${path}`, { ...fetchOpts, headers: retryHeaders });
-		} catch {
-			// Refresh failed — fall through to ensureOk with original 401 response
-		}
-	}
+	const response = await fetch(`${base}${path}`, { ...fetchOpts, headers });
 
 	await ensureOk(response);
 
@@ -219,17 +187,7 @@ export interface ExportResult {
 export async function exportItems(params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
 	const url = `${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`;
 	const headers = buildAuthHeaders();
-	let response = await fetch(url, { headers });
-
-	if (response.status === 401 && getRefreshToken()) {
-		try {
-			await attemptRefresh();
-			const retryHeaders = buildAuthHeaders();
-			response = await fetch(url, { headers: retryHeaders });
-		} catch {
-			// Refresh failed — fall through to ensureOk
-		}
-	}
+	const response = await fetch(url, { headers });
 
 	await ensureOk(response);
 

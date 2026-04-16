@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
-import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { ResetPasswordPage } from "./reset-password-page";
 
@@ -77,12 +75,6 @@ describe("ResetPasswordPage", () => {
 	});
 
 	test("submits and shows success message", async () => {
-		server.use(
-			http.post("/api/v1/auth/reset-password", () => {
-				return HttpResponse.json({ detail: "Password has been reset" });
-			}),
-		);
-
 		renderResetPassword(["/reset-password?token=uid-token-123"]);
 		const user = userEvent.setup();
 
@@ -94,44 +86,6 @@ describe("ResetPasswordPage", () => {
 			expect(screen.getByText("Пароль изменён")).toBeInTheDocument();
 		});
 		expect(screen.getByRole("link", { name: "Перейти к входу" })).toBeInTheDocument();
-	});
-
-	test("shows error on invalid/expired token", async () => {
-		server.use(
-			http.post("/api/v1/auth/reset-password", () => {
-				return HttpResponse.json({ detail: "Недействительный или просроченный токен" }, { status: 400 });
-			}),
-		);
-
-		renderResetPassword(["/reset-password?token=bad-token"]);
-		const user = userEvent.setup();
-
-		await user.type(screen.getByLabelText("Пароль"), "newSecure1");
-		await user.type(screen.getByLabelText("Подтвердите пароль"), "newSecure1");
-		await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Недействительный или просроченный токен")).toBeInTheDocument();
-		});
-	});
-
-	test("shows inline error on weak password from server", async () => {
-		server.use(
-			http.post("/api/v1/auth/reset-password", () => {
-				return HttpResponse.json({ password: "Пароль слишком простой" }, { status: 400 });
-			}),
-		);
-
-		renderResetPassword(["/reset-password?token=uid-token-123"]);
-		const user = userEvent.setup();
-
-		await user.type(screen.getByLabelText("Пароль"), "password1");
-		await user.type(screen.getByLabelText("Подтвердите пароль"), "password1");
-		await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Пароль слишком простой")).toBeInTheDocument();
-		});
 	});
 
 	test("shows error when passwords do not match", async () => {
@@ -146,12 +100,6 @@ describe("ResetPasswordPage", () => {
 	});
 
 	test("login link navigates on success", async () => {
-		server.use(
-			http.post("/api/v1/auth/reset-password", () => {
-				return HttpResponse.json({ detail: "Password has been reset" });
-			}),
-		);
-
 		renderResetPassword(["/reset-password?token=uid-token-123"]);
 		const user = userEvent.setup();
 

@@ -13,7 +13,6 @@ import {
 	deleteFolder,
 	deleteItem,
 	deleteTaskAttachment,
-	exportItems,
 	fetchCompanyInfo,
 	fetchFolderStats,
 	fetchFolders,
@@ -30,7 +29,7 @@ import {
 	updateItem,
 	uploadTaskAttachments,
 } from "./api-client";
-import { clearTokens, setTokens } from "./auth";
+import { setTokens } from "./auth";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
@@ -109,13 +108,10 @@ describe("fetchCompanyInfo", () => {
 		expect(result).toEqual({ name: "Acme Corp" });
 	});
 
-	it("clears token on 401 when refresh also fails", async () => {
+	it("clears tokens and throws on 401", async () => {
 		server.use(
 			http.get("/api/v1/company/info/", () => {
 				return HttpResponse.json({ detail: "Invalid credentials." }, { status: 401 });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				return HttpResponse.json({ detail: "Token expired" }, { status: 401 });
 			}),
 		);
 
@@ -472,154 +468,6 @@ describe("fetchTotals", () => {
 		expect(result.totalSavings).toBe(8000);
 		expect(result.totalDeviation).toBe(120.5);
 		expect(result.itemCount).toBe(42);
-	});
-});
-
-describe("401 refresh interceptor", () => {
-	it("refreshes token and retries request on 401", async () => {
-		let requestCount = 0;
-		server.use(
-			http.get("/api/v1/company/info/", ({ request }) => {
-				requestCount++;
-				if (request.headers.get("Authorization") === "Bearer expired-token") {
-					return HttpResponse.json({ detail: "Unauthorized" }, { status: 401 });
-				}
-				return HttpResponse.json({ name: "Acme Corp" });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				return HttpResponse.json({ access: "new-access-token" });
-			}),
-		);
-
-		setTokens("expired-token", "valid-refresh");
-		const result = await fetchCompanyInfo();
-		expect(result).toEqual({ name: "Acme Corp" });
-		expect(requestCount).toBe(2);
-		expect(localStorage.getItem("auth-access-token")).toBe("new-access-token");
-	});
-
-	it("clears tokens and throws when refresh fails", async () => {
-		server.use(
-			http.get("/api/v1/company/info/", () => {
-				return HttpResponse.json({}, { status: 401 });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				return HttpResponse.json({ detail: "expired" }, { status: 401 });
-			}),
-		);
-
-		setTokens("expired-token", "expired-refresh");
-		await expect(fetchCompanyInfo()).rejects.toThrow();
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
-		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
-	});
-
-	it("does not attempt refresh when no refresh token exists", async () => {
-		let refreshCalled = false;
-		server.use(
-			http.get("/api/v1/company/info/", () => {
-				return HttpResponse.json({}, { status: 401 });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				refreshCalled = true;
-				return HttpResponse.json({ access: "new" });
-			}),
-		);
-
-		localStorage.setItem("auth-access-token", "expired-token");
-		await expect(fetchCompanyInfo()).rejects.toThrow();
-		expect(refreshCalled).toBe(false);
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
-	});
-
-	it("deduplicates concurrent refresh requests", async () => {
-		let refreshCount = 0;
-		server.use(
-			http.get("/api/v1/company/info/", ({ request }) => {
-				if (request.headers.get("Authorization") === "Bearer expired-token") {
-					return HttpResponse.json({}, { status: 401 });
-				}
-				return HttpResponse.json({ name: "Acme Corp" });
-			}),
-			http.get("/api/v1/company/folders/", ({ request }) => {
-				if (request.headers.get("Authorization") === "Bearer expired-token") {
-					return HttpResponse.json({}, { status: 401 });
-				}
-				return HttpResponse.json({ folders: [] });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				refreshCount++;
-				return HttpResponse.json({ access: "new-token" });
-			}),
-		);
-
-		setTokens("expired-token", "valid-refresh");
-		const [info, folders] = await Promise.all([fetchCompanyInfo(), fetchFolders()]);
-
-		expect(info).toEqual({ name: "Acme Corp" });
-		expect(folders).toEqual({ folders: [] });
-		expect(refreshCount).toBe(1);
-	});
-
-	it("does not write tokens back if user logged out during refresh", async () => {
-		let resolveRefresh: ((value: Response | PromiseLike<Response>) => void) | undefined;
-		server.use(
-			http.get("/api/v1/company/info/", ({ request }) => {
-				const auth = request.headers.get("Authorization");
-				if (!auth || auth === "Bearer expired-token") {
-					return HttpResponse.json({}, { status: 401 });
-				}
-				return HttpResponse.json({ name: "Acme Corp" });
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				return new Promise((resolve) => {
-					resolveRefresh = resolve;
-				});
-			}),
-		);
-
-		setTokens("expired-token", "valid-refresh");
-		const promise = fetchCompanyInfo();
-
-		// Simulate logout while refresh is in flight
-		await vi.waitFor(() => expect(resolveRefresh).toBeDefined());
-		clearTokens();
-
-		// Now let refresh succeed
-		resolveRefresh?.(HttpResponse.json({ access: "new-access-token" }));
-
-		// Retry uses empty auth (logged out) → 401 → clears tokens → throws
-		await expect(promise).rejects.toThrow();
-		// Tokens must NOT have been written back
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
-		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
-	});
-
-	it("refreshes token and retries for export requests", async () => {
-		let requestCount = 0;
-		server.use(
-			http.get("/api/v1/company/items/export", ({ request }) => {
-				requestCount++;
-				if (request.headers.get("Authorization") === "Bearer expired-token") {
-					return HttpResponse.json({ detail: "Unauthorized" }, { status: 401 });
-				}
-				return new HttpResponse("file-content", {
-					headers: {
-						"Content-Type": "application/octet-stream",
-						"Content-Disposition": 'attachment; filename="items.xlsx"',
-					},
-				});
-			}),
-			http.post("/api/v1/auth/token/refresh", () => {
-				return HttpResponse.json({ access: "new-access-token" });
-			}),
-		);
-
-		setTokens("expired-token", "valid-refresh");
-		const result = await exportItems({});
-		expect(result.filename).toBe("items.xlsx");
-		expect(requestCount).toBe(2);
-		expect(localStorage.getItem("auth-access-token")).toBe("new-access-token");
 	});
 });
 

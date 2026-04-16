@@ -283,7 +283,6 @@ describe("Routing", () => {
 
 	test("/register renders registration page with valid invitation", async () => {
 		localStorage.clear(); // no auth token — public route
-		server.use(http.post("/api/v1/auth/verify-invitation-code", () => HttpResponse.json({ valid: true })));
 
 		renderApp(["/register?code=ABC12"]);
 		await waitFor(() => {
@@ -293,9 +292,6 @@ describe("Routing", () => {
 
 	test("/confirm-email renders confirmation page", async () => {
 		localStorage.clear(); // no auth token — public route
-		server.use(
-			http.post("/api/v1/auth/confirm-email", () => HttpResponse.json({ message: "Email confirmed successfully" })),
-		);
 
 		renderApp(["/confirm-email?token=test-token"]);
 		await waitFor(() => {

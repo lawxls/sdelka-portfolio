@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
+import * as authApi from "@/data/auth-api";
 import { server } from "@/test-msw";
 import { makeSettings, mockHostname } from "@/test-utils";
 import { ProfileSettingsPage } from "./profile-settings-page";
@@ -111,13 +112,7 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("Изменить пароль calls forgotPassword with user email", async () => {
-		let forgotBody: unknown = null;
-		server.use(
-			http.post("/api/v1/auth/forgot-password", async ({ request }) => {
-				forgotBody = await request.json();
-				return HttpResponse.json({ detail: "Письмо отправлено" });
-			}),
-		);
+		const forgotSpy = vi.spyOn(authApi, "forgotPassword");
 
 		renderPage();
 		const user = userEvent.setup();
@@ -129,7 +124,7 @@ describe("ProfileSettingsPage", () => {
 		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
 
 		await waitFor(() => {
-			expect(forgotBody).toEqual({ email: "ivan@example.com" });
+			expect(forgotSpy).toHaveBeenCalledWith("ivan@example.com");
 		});
 		expect(toast.success).toHaveBeenCalledWith("Письмо отправлено");
 	});

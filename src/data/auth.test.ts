@@ -4,7 +4,6 @@ import {
 	clearTokens,
 	getAccessToken,
 	getInvitationCode,
-	getRefreshToken,
 	isAuthenticated,
 	setInvitationCode,
 	setTokens,
@@ -29,15 +28,6 @@ describe("auth tokens", () => {
 
 	test("getAccessToken returns null when no token stored", () => {
 		expect(getAccessToken()).toBeNull();
-	});
-
-	test("getRefreshToken returns stored refresh token", () => {
-		localStorage.setItem("auth-refresh-token", "my-refresh");
-		expect(getRefreshToken()).toBe("my-refresh");
-	});
-
-	test("getRefreshToken returns null when no token stored", () => {
-		expect(getRefreshToken()).toBeNull();
 	});
 
 	test("clearTokens removes both tokens from localStorage", () => {

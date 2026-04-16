@@ -1,8 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
+import { _setMockDelay } from "@/data/mock-utils";
 import { server } from "@/test-msw";
 
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeAll(() => {
+	server.listen({ onUnhandledRequest: "bypass" });
+	_setMockDelay(0, 0);
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

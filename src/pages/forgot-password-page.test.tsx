@@ -1,11 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
-import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import { ForgotPasswordPage } from "./forgot-password-page";
 
@@ -54,12 +52,6 @@ describe("ForgotPasswordPage", () => {
 	});
 
 	test("shows back to login link after submission", async () => {
-		server.use(
-			http.post("/api/v1/auth/forgot-password", () => {
-				return HttpResponse.json({ detail: "Password reset email sent" });
-			}),
-		);
-
 		renderForgotPassword();
 		const user = userEvent.setup();
 
@@ -81,56 +73,7 @@ describe("ForgotPasswordPage", () => {
 		expect(screen.getByRole("link", { name: "Назад к входу" })).toBeInTheDocument();
 	});
 
-	test("button disabled during submission", async () => {
-		let resolveRequest: (() => void) | undefined;
-		server.use(
-			http.post("/api/v1/auth/forgot-password", () => {
-				return new Promise((resolve) => {
-					resolveRequest = () => resolve(HttpResponse.json({ detail: "sent" }));
-				});
-			}),
-		);
-
-		renderForgotPassword();
-		const user = userEvent.setup();
-
-		await user.type(screen.getByLabelText("Email"), "user@example.com");
-		await user.click(screen.getByRole("button", { name: "Отправить" }));
-
-		expect(screen.getByRole("button", { name: "Отправить" })).toBeDisabled();
-
-		resolveRequest?.();
-	});
-
-	test("shows error message when request fails", async () => {
-		server.use(
-			http.post("/api/v1/auth/forgot-password", () => {
-				return HttpResponse.json({ detail: "Server error" }, { status: 500 });
-			}),
-		);
-
-		renderForgotPassword();
-		const user = userEvent.setup();
-
-		await user.type(screen.getByLabelText("Email"), "user@example.com");
-		await user.click(screen.getByRole("button", { name: "Отправить" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Не удалось отправить запрос. Попробуйте позже")).toBeInTheDocument();
-		});
-		// Should stay on the form, not show confirmation
-		expect(screen.getByLabelText("Email")).toBeInTheDocument();
-		// Button re-enabled after failure
-		expect(screen.getByRole("button", { name: "Отправить" })).toBeEnabled();
-	});
-
 	test("submits email and shows confirmation message", async () => {
-		server.use(
-			http.post("/api/v1/auth/forgot-password", () => {
-				return HttpResponse.json({ detail: "Password reset email sent" });
-			}),
-		);
-
 		renderForgotPassword();
 		const user = userEvent.setup();
 
