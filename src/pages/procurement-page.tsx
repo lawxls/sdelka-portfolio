@@ -412,7 +412,11 @@ export function ProcurementPage() {
 				onManual={() => setDrawerOpen(true)}
 				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
 			/>
-			<AddPositionsDrawer open={drawerOpen} onOpenChange={setDrawerOpen} onSubmit={handleCreateItems} />
+			<AddPositionsDrawer
+				open={drawerOpen}
+				onOpenChange={setDrawerOpen}
+				onSubmit={(item) => handleCreateItems([item], "Позиция создана")}
+			/>
 			<ProcurementItemDrawer item={selectedItem} />
 			<CompanyDrawer
 				companyId={settingsCompanyId}

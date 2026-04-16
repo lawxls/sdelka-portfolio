@@ -10,29 +10,6 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
-export type FrequencyPeriod = "week" | "month" | "quarter" | "half_year" | "year";
-
-export const FREQUENCY_PERIOD_LABELS: Record<FrequencyPeriod, string> = {
-	week: "Неделя",
-	month: "Месяц",
-	quarter: "Квартал",
-	half_year: "Полгода",
-	year: "Год",
-};
-
-export const FREQUENCY_PERIODS = Object.keys(FREQUENCY_PERIOD_LABELS) as FrequencyPeriod[];
-
-export type PriceMonitoringPeriod = "quarter" | "half_year" | "year" | "on_demand";
-
-export const PRICE_MONITORING_PERIOD_LABELS: Record<PriceMonitoringPeriod, string> = {
-	quarter: "Квартал",
-	half_year: "Полгода",
-	year: "Год",
-	on_demand: "По запросу",
-};
-
-export const PRICE_MONITORING_PERIODS = Object.keys(PRICE_MONITORING_PERIOD_LABELS) as PriceMonitoringPeriod[];
-
 export type PaymentType = "prepayment" | "deferred";
 
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
@@ -47,10 +24,11 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 	cash: "Наличные",
 };
 
-export type DeliveryType = "warehouse" | "pickup";
+export type DeliveryCostType = "free" | "paid" | "pickup";
 
-export const DELIVERY_TYPE_LABELS: Record<DeliveryType, string> = {
-	warehouse: "До склада",
+export const DELIVERY_COST_TYPE_LABELS: Record<DeliveryCostType, string> = {
+	free: "Бесплатная",
+	paid: "Платная",
 	pickup: "Самовывоз",
 };
 
@@ -64,14 +42,19 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 export const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
-export const DELIVERY_TYPES = Object.keys(DELIVERY_TYPE_LABELS) as DeliveryType[];
 
 export interface CurrentSupplier {
 	companyName: string;
-	deliveryCost: number | null;
+	inn?: string;
+	paymentType?: PaymentType;
 	deferralDays: number;
 	pricePerUnit: number | null;
-	tco: number | null;
+}
+
+export interface GeneratedAnswer {
+	questionId: string;
+	selectedOption?: string;
+	freeText?: string;
 }
 
 export interface ProcurementItem {
@@ -87,19 +70,18 @@ export interface ProcurementItem {
 	taskCount?: number;
 	description?: string;
 	unit?: Unit;
-	frequencyCount?: number;
-	frequencyPeriod?: FrequencyPeriod;
-	hideCompanyInfo?: boolean;
+	quantityPerDelivery?: number;
 	paymentType?: PaymentType;
-	paymentDeferralDays?: number;
 	paymentMethod?: PaymentMethod;
-	deliveryType?: DeliveryType;
+	deliveryCostType?: DeliveryCostType;
+	deliveryCost?: number;
 	deliveryAddresses?: string[];
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
+	sampleRequired?: boolean;
 	additionalInfo?: string;
-	priceMonitoringPeriod?: PriceMonitoringPeriod;
 	currentSupplier?: CurrentSupplier;
+	generatedAnswers?: GeneratedAnswer[];
 }
 
 export interface Folder {
@@ -138,23 +120,23 @@ export interface Totals {
 
 export interface NewItemInput {
 	name: string;
+	folderId?: string | null;
 	description?: string;
 	unit?: Unit;
 	annualQuantity?: number;
+	quantityPerDelivery?: number;
 	currentPrice?: number;
-	frequencyCount?: number;
-	frequencyPeriod?: FrequencyPeriod;
-	hideCompanyInfo?: boolean;
 	paymentType?: PaymentType;
-	paymentDeferralDays?: number;
 	paymentMethod?: PaymentMethod;
-	deliveryType?: DeliveryType;
+	deliveryCostType?: DeliveryCostType;
+	deliveryCost?: number;
 	deliveryAddresses?: string[];
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
+	sampleRequired?: boolean;
 	additionalInfo?: string;
-	priceMonitoringPeriod?: PriceMonitoringPeriod;
 	currentSupplier?: CurrentSupplier;
+	generatedAnswers?: GeneratedAnswer[];
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

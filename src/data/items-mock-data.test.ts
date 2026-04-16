@@ -218,6 +218,13 @@ describe("createItemsBatchMock", () => {
 				.slice(0, 2),
 		).toEqual([result.items?.[0].id, result.items?.[1].id]);
 	});
+
+	it("persists folderId from input onto created item", async () => {
+		_setItems([]);
+		const result = await createItemsBatchMock([{ name: "In folder", folderId: "folder-metal" }, { name: "No folder" }]);
+		expect(result.items?.[0].folderId).toBe("folder-metal");
+		expect(result.items?.[1].folderId).toBeNull();
+	});
 });
 
 describe("exportItemsMock", () => {

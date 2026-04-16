@@ -6,10 +6,10 @@ import { CurrentSupplierCard } from "./current-supplier-card";
 
 const FULL_SUPPLIER: CurrentSupplier = {
 	companyName: "МеталлТрейд",
-	deliveryCost: 15000,
+	inn: "7701234567",
+	paymentType: "deferred",
 	deferralDays: 30,
 	pricePerUnit: 4500,
-	tco: 5400000,
 };
 
 describe("CurrentSupplierCard", () => {
@@ -18,40 +18,31 @@ describe("CurrentSupplierCard", () => {
 
 		expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
-		// deliveryCost 15000 → "15 000 ₽" (Intl.NumberFormat ru-RU)
-		expect(screen.getByText(/15\s?000\s?₽/)).toBeInTheDocument();
+		expect(screen.getByText("7701234567")).toBeInTheDocument();
 		// deferralDays 30 → "30 дней"
 		expect(screen.getByText(/30\s?дней/)).toBeInTheDocument();
 		// pricePerUnit 4500 → "4 500 ₽"
 		expect(screen.getByText(/4\s?500\s?₽/)).toBeInTheDocument();
-		// tco 5400000 → "5 400 000 ₽"
-		expect(screen.getByText(/5\s?400\s?000\s?₽/)).toBeInTheDocument();
 	});
 
-	test("displays delivery as 'Включена' when deliveryCost is 0", () => {
-		render(<CurrentSupplierCard currentSupplier={{ ...FULL_SUPPLIER, deliveryCost: 0 }} />);
-		expect(screen.getByText("Включена")).toBeInTheDocument();
+	test("displays 'Предоплата' when deferralDays is 0", () => {
+		render(<CurrentSupplierCard currentSupplier={{ ...FULL_SUPPLIER, deferralDays: 0 }} />);
+		expect(screen.getByText("Предоплата")).toBeInTheDocument();
 	});
 
-	test("handles null values for optional numeric fields", () => {
+	test("handles null pricePerUnit and missing inn", () => {
 		render(
 			<CurrentSupplierCard
 				currentSupplier={{
 					companyName: "ТестКомпания",
-					deliveryCost: null,
 					deferralDays: 0,
 					pricePerUnit: null,
-					tco: null,
 				}}
 			/>,
 		);
 
 		expect(screen.getByText("ТестКомпания")).toBeInTheDocument();
-		// null delivery → "Самовывоз"
-		expect(screen.getByText("Самовывоз")).toBeInTheDocument();
-		// deferralDays 0 → "Предоплата"
 		expect(screen.getByText("Предоплата")).toBeInTheDocument();
-		// null pricePerUnit and tco → "—"
 		const dashes = screen.getAllByText("—");
 		expect(dashes.length).toBeGreaterThanOrEqual(2);
 	});

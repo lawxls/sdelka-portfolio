@@ -367,10 +367,9 @@ export async function selectSupplier(itemId: string, supplierId: string): Promis
 	_patchItem(itemId, {
 		currentSupplier: {
 			companyName: supplier.companyName,
-			deliveryCost: supplier.deliveryCost,
+			paymentType: supplier.deferralDays > 0 ? "deferred" : "prepayment",
 			deferralDays: supplier.deferralDays,
 			pricePerUnit: supplier.pricePerUnit,
-			tco: supplier.tco,
 		},
 	});
 }
