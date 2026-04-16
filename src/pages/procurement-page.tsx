@@ -309,6 +309,15 @@ export function ProcurementPage() {
 		});
 	}
 
+	function handleArchiveToggle() {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (next.get("folder") === "archive") next.delete("folder");
+			else next.set("folder", "archive");
+			return next;
+		});
+	}
+
 	const toolbar = (
 		<Toolbar
 			defaultSearch={search}
@@ -319,6 +328,8 @@ export function ProcurementPage() {
 			onSort={handleSort}
 			onAddPositions={() => setDialogOpen(true)}
 			onExport={handleExport}
+			isArchiveView={isArchiveView}
+			onArchiveToggle={handleArchiveToggle}
 		/>
 	);
 

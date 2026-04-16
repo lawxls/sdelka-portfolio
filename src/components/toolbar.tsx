@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, ListFilter, Plus, Search, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, ListFilter, Plus, Search, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ interface ToolbarProps {
 	onSort: (field: SortField) => void;
 	onAddPositions?: () => void;
 	onExport?: () => void;
+	isArchiveView?: boolean;
+	onArchiveToggle?: () => void;
 }
 
 const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
@@ -58,6 +60,8 @@ export function Toolbar({
 	onSort,
 	onAddPositions,
 	onExport,
+	isArchiveView = false,
+	onArchiveToggle,
 }: ToolbarProps) {
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -239,6 +243,25 @@ export function Toolbar({
 						</div>
 					</PopoverContent>
 				</Popover>
+
+				{onArchiveToggle && (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Архив"
+								aria-pressed={isArchiveView}
+								onClick={onArchiveToggle}
+								className={cn(isArchiveView && "bg-muted text-highlight-foreground")}
+							>
+								<Archive aria-hidden="true" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Архив</TooltipContent>
+					</Tooltip>
+				)}
 
 				<Tooltip>
 					<TooltipTrigger asChild>

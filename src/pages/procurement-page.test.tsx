@@ -338,3 +338,58 @@ describe("ProcurementPage — item drawer", () => {
 		});
 	});
 });
+
+describe("ProcurementPage — archive toggle", () => {
+	test("archive button appears between filters and download", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+		await waitForSidebar();
+
+		const filters = screen.getByRole("button", { name: "Фильтры" });
+		const archive = screen.getByRole("button", { name: "Архив" });
+		const download = screen.getByRole("button", { name: "Скачать таблицу" });
+
+		// Compare document order via compareDocumentPosition
+		expect(filters.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		expect(archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
+
+	test("toggle off-state has aria-pressed=false and no folder param", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+		await waitForSidebar();
+
+		const archive = screen.getByRole("button", { name: "Архив" });
+		expect(archive).toHaveAttribute("aria-pressed", "false");
+	});
+
+	test("clicking sets folder=archive and aria-pressed=true", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+		await waitForSidebar();
+
+		const user = userEvent.setup();
+		const archive = screen.getByRole("button", { name: "Архив" });
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "true");
+		});
+	});
+
+	test("clicking while in archive view clears folder param", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage(["/procurement?folder=archive"]);
+		await waitForSidebar();
+
+		const archive = screen.getByRole("button", { name: "Архив" });
+		expect(archive).toHaveAttribute("aria-pressed", "true");
+
+		const user = userEvent.setup();
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "false");
+		});
+	});
+});
