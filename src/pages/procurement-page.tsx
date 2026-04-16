@@ -10,14 +10,13 @@ import {
 } from "@dnd-kit/core";
 import { PanelLeft } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { AddPositionsDrawer } from "@/components/add-positions-drawer";
-import { useToolbarPortal } from "@/components/app-layout";
 import { CompanyDrawer, parseCompanyTab } from "@/components/company-drawer";
 import { DESKTOP_QUERY, LS_SIDEBAR_KEY } from "@/components/folder-sidebar";
+import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementSidebar } from "@/components/procurement-sidebar";
 import { ProcurementTable } from "@/components/procurement-table";
@@ -310,9 +309,6 @@ export function ProcurementPage() {
 		});
 	}
 
-	const toolbarPortal = useToolbarPortal();
-	const portalTarget = !isMobile && toolbarPortal ? toolbarPortal : null;
-
 	const toolbar = (
 		<Toolbar
 			defaultSearch={search}
@@ -334,11 +330,9 @@ export function ProcurementPage() {
 			onDragEnd={handleDragEnd}
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
-				{portalTarget ? (
-					createPortal(toolbar, portalTarget)
-				) : (
-					<header className="sticky top-0 z-20 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm">
-						{isMobile && (
+				<PageToolbar
+					left={
+						isMobile ? (
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -348,10 +342,10 @@ export function ProcurementPage() {
 							>
 								<PanelLeft className="size-4" />
 							</Button>
-						)}
-						{toolbar}
-					</header>
-				)}
+						) : undefined
+					}
+					middle={toolbar}
+				/>
 
 				<div className="flex min-h-0 min-w-0 flex-1">
 					<ProcurementSidebar
