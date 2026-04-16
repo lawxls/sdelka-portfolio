@@ -1,7 +1,7 @@
 import { Check, Clock, LoaderCircle, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
-import { CurrentSupplierCard } from "@/components/current-supplier-card";
+import { BestOfferCard } from "@/components/best-offer-card";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
@@ -280,7 +280,7 @@ function SuppliersTabPanel({
 	return (
 		<div data-testid="tab-panel-suppliers">
 			<div className="mb-3 grid grid-cols-1 gap-3 px-4 xl:grid-cols-2">
-				{currentSupplier && <CurrentSupplierCard currentSupplier={currentSupplier} />}
+				<BestOfferCard suppliers={allSuppliers} currentSupplier={currentSupplier} onSupplierClick={onSupplierClick} />
 				<SupplierResponseStatusCard suppliers={allSuppliers} />
 			</div>
 			<SuppliersTable

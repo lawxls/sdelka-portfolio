@@ -656,19 +656,17 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("suppliers tab shows current supplier card when item has currentSupplier", async () => {
+	test("suppliers tab shows best offer card with savings vs current supplier", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 
-		// item-1 mock has currentSupplier with companyName "МеталлТрейд"
 		await waitFor(() => {
-			expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
+			expect(screen.getByText("Экономия")).toBeInTheDocument();
 		});
-		// МеталлТрейд appears in the current-supplier card AND in the supplier list
-		// (one of item-1's получено_кп suppliers matches its currentSupplier).
-		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
+		const savingsValue = screen.getByText("Экономия").nextElementSibling;
+		expect(savingsValue?.textContent).not.toBe("\u2014");
 	});
 
-	test("suppliers tab hides current supplier card when item has no currentSupplier", async () => {
+	test("suppliers tab best offer card shows em-dash savings when item has no currentSupplier", async () => {
 		render(
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
@@ -680,12 +678,11 @@ describe("ProcurementItemDrawer", () => {
 			</QueryClientProvider>,
 		);
 
-		// Wait for suppliers table to load
 		await waitFor(() => {
-			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
+			expect(screen.getByText("Экономия")).toBeInTheDocument();
 		});
-
-		expect(screen.queryByText(/Текущий поставщик/)).not.toBeInTheDocument();
+		const savingsValue = screen.getByText("Экономия").nextElementSibling;
+		expect(savingsValue?.textContent).toBe("\u2014");
 	});
 
 	test("context menu shows Выбрать поставщика for получено_кп supplier", async () => {

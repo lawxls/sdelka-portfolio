@@ -14,6 +14,13 @@ export function formatCurrency(value: number | null | undefined): string {
 	return currencyFormatter.format(value);
 }
 
+export function formatSignedCurrency(value: number | null | undefined): string {
+	if (value == null) return "\u2014";
+	if (value === 0) return formatCurrency(0);
+	const sign = value < 0 ? "\u2212" : "+";
+	return `${sign}${currencyFormatter.format(Math.abs(value))}`;
+}
+
 export function formatPercent(value: number | null | undefined): string {
 	if (value == null) return "\u2014";
 	const sign = value > 0 ? "+" : "";
