@@ -76,6 +76,10 @@ async function selectCompany(user: ReturnType<typeof userEvent.setup>) {
 	await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 }
 
+async function openAddressPicker(user: ReturnType<typeof userEvent.setup>) {
+	await user.click(screen.getByRole("button", { name: "Адреса доставки" }));
+}
+
 const ALWAYS_INCLUDED_DEFAULTS = {
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",
@@ -600,14 +604,14 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await selectCompany(user);
-		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
-		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).toBeChecked();
+		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 2 из 2");
 	});
 
 	test("can deselect individual address", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await selectCompany(user);
+		await openAddressPicker(user);
 		await user.click(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" }));
 		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
@@ -617,6 +621,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await selectCompany(user);
+		await openAddressPicker(user);
 		await user.click(screen.getByRole("button", { name: "Снять все" }));
 		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" })).not.toBeChecked();
@@ -626,6 +631,7 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await selectCompany(user);
+		await openAddressPicker(user);
 		await user.click(screen.getByRole("button", { name: "Снять все" }));
 		await user.click(screen.getByRole("button", { name: "Выбрать все" }));
 		expect(screen.getByRole("checkbox", { name: "Главный офис — г. Москва, ул. Ленина, д. 15" })).toBeChecked();
@@ -638,6 +644,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await selectCompany(user);
+		await openAddressPicker(user);
 		await user.click(screen.getByRole("button", { name: "Снять все" }));
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 		expect(onSubmit).not.toHaveBeenCalled();
@@ -688,10 +695,12 @@ describe("AddPositionsDrawer", () => {
 		const companyTrigger = await screen.findByLabelText("Компания");
 		await user.click(companyTrigger);
 		await user.click(await screen.findByRole("option", { name: "Первая компания" }));
-		expect(screen.getByRole("checkbox", { name: "Офис — г. Москва, ул. Первая, д. 1" })).toBeChecked();
+		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 1 из 1");
 
 		await user.click(screen.getByLabelText("Компания"));
 		await user.click(await screen.findByRole("option", { name: "Вторая компания" }));
+		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 2 из 2");
+		await openAddressPicker(user);
 		expect(screen.getByRole("checkbox", { name: "Склад А — г. СПб, ул. Вторая, д. 2" })).toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Склад Б — г. СПб, ул. Третья, д. 3" })).toBeChecked();
 	});
@@ -702,6 +711,7 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await selectCompany(user);
+		await openAddressPicker(user);
 		await user.click(screen.getByRole("checkbox", { name: "Склад — г. Москва, ул. Складская, д. 1" }));
 		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
 		expect(onSubmit).toHaveBeenCalledWith([

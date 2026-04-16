@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, CircleHelp, Plus, Trash2, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -535,38 +536,15 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									</div>
 									{selectedCompany && selectedCompany.addresses.length > 0 && (
 										<div className="flex flex-col gap-1.5">
-											<div className="flex items-center justify-between">
-												<span className="text-sm text-muted-foreground">Адреса доставки</span>
-												<button
-													type="button"
-													className="text-xs text-primary hover:underline"
-													onClick={() => {
-														const allSelected = selectedAddressIds.length === selectedCompany.addresses.length;
-														setSelectedAddressIds(allSelected ? [] : selectedCompany.addresses.map((a) => a.id));
-														setCompanyError("");
-													}}
-												>
-													{selectedAddressIds.length === selectedCompany.addresses.length ? "Снять все" : "Выбрать все"}
-												</button>
-											</div>
-											{selectedCompany.addresses.map((a) => (
-												// biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally
-												<label key={a.id} className="flex cursor-pointer items-center gap-2">
-													<Checkbox
-														checked={selectedAddressIds.includes(a.id)}
-														onCheckedChange={(checked) => {
-															setSelectedAddressIds((prev) =>
-																checked ? [...prev, a.id] : prev.filter((id) => id !== a.id),
-															);
-															setCompanyError("");
-														}}
-														aria-label={`${a.name} — ${a.address}`}
-													/>
-													<span className="min-w-0 flex-1 text-sm">
-														{a.name} — {a.address}
-													</span>
-												</label>
-											))}
+											<span className="text-sm text-muted-foreground">Адреса доставки</span>
+											<AddressMultiSelect
+												addresses={selectedCompany.addresses}
+												selectedIds={selectedAddressIds}
+												onChange={(ids) => {
+													setSelectedAddressIds(ids);
+													setCompanyError("");
+												}}
+											/>
 										</div>
 									)}
 									{companyError && <p className="text-sm text-destructive">{companyError}</p>}
