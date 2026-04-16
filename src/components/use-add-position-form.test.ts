@@ -215,6 +215,32 @@ describe("useAddPositionForm", () => {
 		expect(result.current.step2Errors.inn).toBeTruthy();
 	});
 
+	test("blurInn surfaces error for invalid non-empty value", () => {
+		const { result } = setup();
+		act(() => result.current.update2("inn", "abc"));
+		act(() => result.current.blurInn());
+		expect(result.current.step2Errors.inn).toBeTruthy();
+	});
+
+	test("blurInn keeps error empty for empty value", () => {
+		const { result } = setup();
+		act(() => result.current.update2("inn", ""));
+		act(() => result.current.blurInn());
+		expect(result.current.step2Errors.inn).toBeFalsy();
+	});
+
+	test("blurInn clears prior error when value becomes valid", () => {
+		const { result } = setup();
+		act(() => result.current.update2("inn", "abc"));
+		act(() => result.current.blurInn());
+		expect(result.current.step2Errors.inn).toBeTruthy();
+
+		act(() => result.current.update2("inn", "1234567890"));
+		// update2 already clears the error on edit; blur re-validates and keeps it clear
+		act(() => result.current.blurInn());
+		expect(result.current.step2Errors.inn).toBeFalsy();
+	});
+
 	test("INN with letters surfaces error", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));

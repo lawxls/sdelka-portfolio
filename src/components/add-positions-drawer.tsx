@@ -26,6 +26,8 @@ import {
 	DELIVERY_COST_TYPE_LABELS,
 	PAYMENT_METHOD_LABELS,
 	PAYMENT_METHODS,
+	PAYMENT_TYPE_LABELS,
+	PAYMENT_TYPES,
 	UNITS,
 	UNLOADING_LABELS,
 } from "@/data/types";
@@ -236,7 +238,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									onFileRemove={handleFileRemove}
 								/>
 							)}
-							{step === 2 && <StepPlaceholder title="Текущий поставщик — скоро" />}
+							{step === 2 && <Step2Body form={form} />}
 							{step === 3 && <StepPlaceholder title="Дополнительные вопросы — скоро" />}
 						</TooltipProvider>
 					</div>
@@ -274,6 +276,84 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 				</AlertDialogContent>
 			</AlertDialog>
 		</>
+	);
+}
+
+function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
+	const { step2, step2Errors, update2, blurInn } = form;
+
+	return (
+		<div className="flex flex-col gap-4 pt-4">
+			<Input
+				placeholder="Название"
+				value={step2.companyName}
+				onChange={(e) => update2("companyName", e.target.value)}
+				autoComplete="organization"
+				aria-label="Название текущего поставщика"
+			/>
+
+			<div>
+				<Input
+					placeholder="ИНН"
+					value={step2.inn}
+					onChange={(e) => update2("inn", e.target.value)}
+					onBlur={blurInn}
+					inputMode="numeric"
+					autoComplete="off"
+					spellCheck={false}
+					aria-label="ИНН"
+					aria-invalid={step2Errors.inn ? true : undefined}
+					aria-describedby={step2Errors.inn ? "inn-error" : undefined}
+					className={step2Errors.inn ? "border-destructive" : undefined}
+				/>
+				{step2Errors.inn && (
+					<p id="inn-error" className="mt-1 text-sm text-destructive">
+						{step2Errors.inn}
+					</p>
+				)}
+			</div>
+
+			<div className="flex items-center gap-1.5">
+				<Input
+					placeholder="Текущая цена без НДС"
+					value={step2.pricePerUnit}
+					onChange={(e) => update2("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
+					inputMode="decimal"
+					autoComplete="off"
+					aria-label="Текущая цена без НДС"
+					className="flex-1"
+				/>
+				<span className="text-sm text-muted-foreground">₽</span>
+			</div>
+
+			<div className="flex flex-col gap-2">
+				<span className="text-sm font-medium">Условия оплаты</span>
+				<div className="flex flex-wrap items-center gap-3">
+					<SegmentedControl
+						options={PAYMENT_TYPES}
+						labels={PAYMENT_TYPE_LABELS}
+						value={step2.paymentType}
+						onChange={(v) => update2("paymentType", v)}
+					/>
+					{step2.paymentType === "deferred" && (
+						<div className="flex items-center gap-1.5">
+							<Input
+								type="number"
+								inputMode="numeric"
+								min={0}
+								placeholder="Дней"
+								value={step2.deferralDays}
+								onChange={(e) => update2("deferralDays", e.target.value)}
+								aria-label="Дней отсрочки"
+								autoComplete="off"
+								className="w-24"
+							/>
+							<span className="text-sm text-muted-foreground">дней</span>
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
 	);
 }
 

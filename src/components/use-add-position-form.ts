@@ -214,6 +214,11 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		if (key === "inn" && step2Errors.inn) setStep2Errors((prev) => ({ ...prev, inn: undefined }));
 	}
 
+	function blurInn() {
+		const result = validateInn(step2.inn);
+		setStep2Errors((prev) => ({ ...prev, inn: result.ok ? undefined : result.error }));
+	}
+
 	function update3(questionId: string, patch: Step3Answer) {
 		setStep3((prev) => {
 			const current = prev.answers[questionId] ?? {};
@@ -308,6 +313,7 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		update1,
 		update2,
 		update3,
+		blurInn,
 		advance,
 		goBack,
 		reset,

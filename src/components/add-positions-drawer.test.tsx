@@ -365,6 +365,132 @@ describe("AddPositionsDrawer — discard confirmation", () => {
 	});
 });
 
+describe("AddPositionsDrawer — Step 2 supplier form", () => {
+	async function reachStep2(user: ReturnType<typeof userEvent.setup>) {
+		await fillStep1Minimum(user);
+		await advance(user);
+	}
+
+	test("renders the four supplier fields", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		expect(screen.getByLabelText("Название текущего поставщика")).toBeInTheDocument();
+		expect(screen.getByLabelText("ИНН")).toBeInTheDocument();
+		expect(screen.getByLabelText("Текущая цена без НДС")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
+	});
+
+	test("дней input appears only when Отсрочка is selected", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
+		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Предоплата" }));
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
+	});
+
+	test("invalid ИНН surfaces inline error on blur", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		const inn = screen.getByLabelText("ИНН");
+		await user.type(inn, "12345");
+		await user.tab();
+
+		expect(screen.getByText(/ИНН должен содержать 10 или 12 цифр/)).toBeInTheDocument();
+		expect(inn).toHaveAttribute("aria-invalid", "true");
+	});
+
+	test("valid ИНН (10 digits) does not show error on blur", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		await user.tab();
+
+		expect(screen.queryByText(/ИНН должен содержать/)).not.toBeInTheDocument();
+	});
+
+	test("ИНН error does not block Далее", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		await user.type(screen.getByLabelText("ИНН"), "12345");
+		await user.tab();
+		await advance(user);
+
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+	});
+
+	test("Step 2 state preserved across Назад / Далее", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
+		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		expect(screen.getByLabelText("Название текущего поставщика")).toHaveValue("МеталлТрейд");
+		expect(screen.getByLabelText("ИНН")).toHaveValue("1234567890");
+		expect(screen.getByLabelText("Дней отсрочки")).toHaveValue(30);
+	});
+
+	test("submit with populated Step 2 emits currentSupplier", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
+		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
+		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
+
+		await advance(user);
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0];
+		expect(payload.currentSupplier).toEqual({
+			companyName: "МеталлТрейд",
+			inn: "1234567890",
+			paymentType: "deferred",
+			deferralDays: 30,
+			pricePerUnit: 1200,
+		});
+	});
+
+	test("dirty detection fires when only Step 2 fields touched", async () => {
+		const onOpenChange = vi.fn();
+		renderDrawer({ onOpenChange });
+		const user = userEvent.setup();
+
+		// Reach step 2 without entering anything that would dirty step 1 beyond required
+		await fillStep1Minimum(user);
+		await advance(user);
+		await user.type(screen.getByLabelText("Название текущего поставщика"), "Acme");
+		await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
+	});
+});
+
 describe("AddPositionsDrawer — submit", () => {
 	test("completing wizard with minimal data emits single NewItemInput", async () => {
 		const onSubmit = vi.fn();
