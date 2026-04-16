@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { seedItemDetail } from "@/data/item-detail-mock-data";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
@@ -442,9 +441,6 @@ function ProcurementItemDrawerContent({
 	onTaskClick: (id: string) => void;
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
-	// Idempotent — only seeds if item.id is missing from the mock store
-	if (item) seedItemDetail(item);
-
 	const itemName = item?.name;
 	const itemStatus = item?.status;
 	const taskColumns = useTaskColumns({ item: itemId });

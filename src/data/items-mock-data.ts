@@ -1,4 +1,3 @@
-import { _registerDetailUpdateListener, seedItemDetail, setItemDetail } from "./item-detail-mock-data";
 import { delay, nextId, paginate } from "./mock-utils";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getOverpayment } from "./types";
@@ -287,16 +286,9 @@ function seedStore() {
 	itemsStore = SEED_ITEMS.map((item) => ({ ...item }));
 	archivedIds = new Set(SEED_ARCHIVED.map((item) => item.id));
 	for (const item of SEED_ARCHIVED) itemsStore.push({ ...item });
-	for (const item of itemsStore) seedItemDetail(item);
-}
-
-function syncFromDetail(item: ProcurementItem) {
-	const idx = itemsStore.findIndex((i) => i.id === item.id);
-	if (idx !== -1) itemsStore[idx] = { ...item };
 }
 
 seedStore();
-_registerDetailUpdateListener(syncFromDetail);
 
 export function _resetItemsStore(): void {
 	seedStore();
@@ -306,11 +298,23 @@ export function _resetItemsStore(): void {
 export function _setItems(items: ProcurementItem[], archived: string[] = []): void {
 	itemsStore = items.map((item) => ({ ...item }));
 	archivedIds = new Set(archived);
-	for (const item of itemsStore) seedItemDetail(item);
 }
 
 export function _getAllItems(): ProcurementItem[] {
 	return itemsStore.map((item) => ({ ...item }));
+}
+
+export function _getItem(id: string): ProcurementItem | null {
+	const item = itemsStore.find((i) => i.id === id);
+	return item ? { ...item } : null;
+}
+
+export function _patchItem(id: string, data: Partial<ProcurementItem>): ProcurementItem | null {
+	const idx = itemsStore.findIndex((i) => i.id === id);
+	if (idx === -1) return null;
+	const updated = { ...itemsStore[idx], ...data };
+	itemsStore[idx] = updated;
+	return { ...updated };
 }
 
 export function _isArchived(id: string): boolean {
@@ -439,15 +443,12 @@ export async function updateItemMock(
 	data: { name?: string; folderId?: string | null; isArchived?: boolean },
 ): Promise<ProcurementItem> {
 	await delay();
-	const idx = itemsStore.findIndex((item) => item.id === id);
-	if (idx === -1) throw new Error(`Item ${id} not found`);
 	const { isArchived, ...rest } = data;
-	const updated: ProcurementItem = { ...itemsStore[idx], ...rest };
-	itemsStore[idx] = updated;
+	const updated = _patchItem(id, rest);
+	if (!updated) throw new Error(`Item ${id} not found`);
 	if (isArchived === true) archivedIds.add(id);
 	else if (isArchived === false) archivedIds.delete(id);
-	setItemDetail(updated);
-	return { ...updated };
+	return updated;
 }
 
 export async function deleteItemMock(id: string): Promise<void> {
@@ -492,7 +493,6 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 		return item;
 	});
 	itemsStore = [...created, ...itemsStore];
-	for (const item of created) seedItemDetail(item);
 	return { items: created, isAsync: false };
 }
 
@@ -524,7 +524,6 @@ export function _unassignItemsFromFolder(folderId: string): void {
 	for (let i = 0; i < itemsStore.length; i++) {
 		if (itemsStore[i].folderId === folderId) {
 			itemsStore[i] = { ...itemsStore[i], folderId: null };
-			setItemDetail(itemsStore[i]);
 		}
 	}
 }

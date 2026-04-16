@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { _resetItemsStore } from "./items-mock-data";
 import {
 	_resetSupplierStore,
 	_setSendShouldFail,
@@ -12,11 +13,13 @@ import { SUPPLIER_STATUSES } from "./supplier-types";
 
 beforeEach(() => {
 	_resetSupplierStore();
+	_resetItemsStore();
 	_setSupplierMockDelay(0, 0);
 });
 
 afterEach(() => {
 	_resetSupplierStore();
+	_resetItemsStore();
 });
 
 describe("supplier mock store", () => {
@@ -96,6 +99,20 @@ describe("supplier mock store", () => {
 		for (const id of ids2) {
 			expect(ids1.has(id)).toBe(false);
 		}
+	});
+
+	it("coherent with items-mock-data: item-1's currentSupplier name appears in получено_кп list", async () => {
+		const { suppliers } = await getSuppliers("item-1");
+		// item-1 seeded with currentSupplier.companyName = "МеталлТрейд"
+		const kp = suppliers.filter((s) => s.status === "получено_кп");
+		expect(kp.some((s) => s.companyName === "МеталлТрейд")).toBe(true);
+	});
+
+	it("coherent with items-mock-data: item-2's currentSupplier name appears in получено_кп list", async () => {
+		const { suppliers } = await getSuppliers("item-2");
+		// item-2 seeded with currentSupplier.companyName = "ТрубоСталь"
+		const kp = suppliers.filter((s) => s.status === "получено_кп");
+		expect(kp.some((s) => s.companyName === "ТрубоСталь")).toBe(true);
 	});
 });
 

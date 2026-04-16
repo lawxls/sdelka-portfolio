@@ -261,10 +261,17 @@ describe("_unassignItemsFromFolder", () => {
 	});
 });
 
-describe("detail→list sync via _registerDetailUpdateListener", () => {
+describe("shared store between items and item-detail", () => {
 	it("updating via item-detail-mock-data propagates back to list store", async () => {
 		_setItems([makeItem("a", { name: "Original" })]);
 		await updateItemDetail("a", { name: "FromDrawer" });
 		expect(_getAllItems().find((i) => i.id === "a")?.name).toBe("FromDrawer");
+	});
+
+	it("updating via items-mock-data reflects in item-detail", async () => {
+		_setItems([makeItem("a", { name: "Original" })]);
+		await updateItemMock("a", { name: "FromList" });
+		const detail = await getItemDetail("a");
+		expect(detail?.name).toBe("FromList");
 	});
 });

@@ -440,7 +440,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		// Now editable fields and save/cancel appear
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 
@@ -470,7 +470,7 @@ describe("ProcurementItemDrawer", () => {
 
 		// Back to read-only — input gone, value shown as text
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(within(panel).getByText("Арматура А500С")).toBeInTheDocument();
+		expect(within(panel).getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
 	test("details tab has edit buttons for all four sections", async () => {
@@ -664,7 +664,9 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		});
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// МеталлТрейд appears in the current-supplier card AND in the supplier list
+		// (coherence per #204 — one of item-1's получено_кп suppliers matches).
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
 	test("suppliers tab hides current supplier card when item has no currentSupplier", async () => {
@@ -741,8 +743,8 @@ describe("ProcurementItemDrawer", () => {
 
 		// Dialog should be gone
 		expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
-		// Original current supplier still shown
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// Original current supplier still shown (also appears in the supplier row per #204 coherence)
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
 	test("confirming select supplier dialog fires mutation and closes dialog", async () => {
@@ -752,8 +754,8 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(11);
 		});
 
-		// Verify current supplier before selection
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		// Verify current supplier before selection (also appears in the supplier row per #204 coherence)
+		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 
 		const rows = screen.getAllByRole("row");
 		fireEvent.contextMenu(rows[1]);

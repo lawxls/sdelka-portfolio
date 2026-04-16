@@ -37,7 +37,7 @@ describe("DetailsTabPanel", () => {
 		});
 
 		// Values displayed as text
-		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
+		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 		expect(screen.getByText("1200")).toBeInTheDocument();
 
 		// Edit buttons for all editable sections
@@ -89,7 +89,7 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С");
+		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
 		expect(screen.getByLabelText("Количество")).toHaveValue(1200);
 		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
 		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
@@ -151,7 +151,7 @@ describe("DetailsTabPanel", () => {
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
+		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
 	test("save button shows loading state during request", async () => {

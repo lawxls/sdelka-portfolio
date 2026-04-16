@@ -27,7 +27,7 @@ describe("useItemDetail", () => {
 		await waitFor(() => expect(result.current.data).toBeTruthy());
 
 		expect(result.current.data?.id).toBe("item-1");
-		expect(result.current.data?.name).toBe("Арматура А500С");
+		expect(result.current.data?.name).toBe("Арматура А500С ∅12");
 		expect(result.current.data?.annualQuantity).toBe(1200);
 	});
 
