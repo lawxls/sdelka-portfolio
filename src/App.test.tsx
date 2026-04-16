@@ -279,7 +279,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить позицию/ })).toBeInTheDocument();
 	});
 
 	test("shows skeleton rows during initial load", () => {
@@ -478,40 +478,40 @@ describe("ProcurementPage", () => {
 		expect(screen.getByTestId("drag-overlay").className).toContain("inline-flex");
 	});
 
-	test("clicking Добавить позиции opens choice dialog", async () => {
+	test("clicking Добавить позицию opens choice dialog", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
 	});
 
-	test("clicking Вручную in dialog opens the drawer", async () => {
+	test("clicking Вручную in dialog opens the wizard drawer", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getAllByPlaceholderText("Название позиции *")).toHaveLength(1);
+		expect(screen.getByText("Добавить позицию", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Название *")).toBeInTheDocument();
 	});
 
-	test("Отмена closes drawer", async () => {
+	test("Отмена on dirty drawer prompts discard and closes", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-		await user.type(screen.getAllByPlaceholderText("Название позиции *")[0], "Should not appear");
+		await user.type(screen.getByPlaceholderText("Название *"), "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
-		expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
+		expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -606,25 +606,29 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("drawer submit sends batch create and closes drawer", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+	async function completeWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
-		await user.type(nameInput, "Тестовая позиция");
+		await user.type(screen.getByPlaceholderText("Название *"), name);
 
 		const companyTrigger = await screen.findByLabelText("Компания");
 		await user.click(companyTrigger);
 		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
+		await user.click(screen.getByRole("button", { name: "Далее" }));
+		await user.click(screen.getByRole("button", { name: "Далее" }));
+		await user.click(screen.getByRole("button", { name: "Создать" }));
+	}
 
-		// Drawer closes
+	test("drawer submit sends batch create and closes drawer", async () => {
+		await renderAppReady();
+		const user = userEvent.setup();
+
+		await completeWizard(user, "Тестовая позиция");
+
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
 		});
 	});
 
@@ -634,21 +638,10 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
+		await completeWizard(user, "Большая партия");
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
-		await user.type(nameInput, "Большая партия");
-
-		const companyTrigger = await screen.findByLabelText("Компания");
-		await user.click(companyTrigger);
-		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
-
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		// Drawer closes
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
 		});
 	});
 
@@ -658,21 +651,10 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
+		await completeWizard(user, "Test");
 
-		const nameInput = screen.getAllByPlaceholderText("Название позиции *")[0];
-		await user.type(nameInput, "Test");
-
-		const companyTrigger = await screen.findByLabelText("Компания");
-		await user.click(companyTrigger);
-		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
-
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		// Drawer still closes (form resets on submit before mutation resolves)
 		await waitFor(() => {
-			expect(screen.queryByPlaceholderText("Название позиции *")).not.toBeInTheDocument();
+			expect(screen.queryByPlaceholderText("Название *")).not.toBeInTheDocument();
 		});
 	});
 
@@ -682,14 +664,13 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
 		await user.click(screen.getByRole("button", { name: /Из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
 		await waitFor(() => expect(screen.getByText("Import 1")).toBeInTheDocument());
 
 		await user.click(screen.getByRole("button", { name: /Импортировать/ }));
 
-		// Dialog closes (dialog title gone)
 		await waitFor(() => {
 			expect(
 				screen.queryByText("Добавить позиции", { selector: "[data-slot='dialog-title']" }),
