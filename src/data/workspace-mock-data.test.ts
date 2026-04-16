@@ -136,6 +136,16 @@ describe("inviteEmployees", () => {
 		expect(list.find((e) => e.email === "a@x.com")).toBeDefined();
 		expect(list.find((e) => e.email === "b@x.com")).toBeDefined();
 	});
+
+	it("persists selected companies on the invitee", async () => {
+		await inviteEmployeesMock([
+			{ email: "newhire@x.com", position: "Менеджер", role: "user", companies: ["company-1"] },
+		]);
+		const list = await fetchWorkspaceEmployeesMock();
+		const added = list.find((e) => e.email === "newhire@x.com");
+		if (!added) throw new Error("invitee not found");
+		expect(added.companies.map((c) => c.id)).toEqual(["company-1"]);
+	});
 });
 
 describe("updateWorkspaceEmployeePermissions", () => {

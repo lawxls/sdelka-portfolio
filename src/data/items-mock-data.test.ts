@@ -226,6 +226,14 @@ describe("exportItemsMock", () => {
 		expect(result.blob).toBeInstanceOf(Blob);
 		expect(result.filename).toBe("items.xlsx");
 	});
+
+	it("scopes the export to the provided filters", async () => {
+		_setItems([makeItem("x", { name: "Keep", companyId: "c1" }), makeItem("y", { name: "Drop", companyId: "c2" })]);
+		const result = await exportItemsMock({ company: "c1" });
+		const text = await result.blob.text();
+		expect(text).toContain("Keep");
+		expect(text).not.toContain("Drop");
+	});
 });
 
 describe("_statsByFolder and _archivedCount", () => {
@@ -243,6 +251,24 @@ describe("_statsByFolder and _archivedCount", () => {
 		expect(stats.get("f1")).toBe(2);
 		expect(stats.get(null)).toBe(1);
 		expect(_archivedCount()).toBe(1);
+	});
+
+	it("scopes counts by company when provided", async () => {
+		_setItems(
+			[
+				makeItem("a", { folderId: "f1", companyId: "c1" }),
+				makeItem("b", { folderId: "f1", companyId: "c2" }),
+				makeItem("c", { folderId: "f1", companyId: "c1" }),
+				makeItem("d", { folderId: "f2", companyId: "c2" }),
+				makeItem("e", { folderId: "f1", companyId: "c1" }),
+			],
+			["e"],
+		);
+		const c1 = _statsByFolder("c1");
+		expect(c1.get("f1")).toBe(2);
+		expect(c1.get("f2")).toBeUndefined();
+		expect(_archivedCount("c1")).toBe(1);
+		expect(_archivedCount("c2")).toBe(0);
 	});
 });
 

@@ -221,7 +221,7 @@ export function useArchiveItem() {
 
 export function useExportItems() {
 	return useMutation({
-		mutationFn: (_params: Omit<FetchItemsParams, "cursor" | "limit">) => exportItems(),
+		mutationFn: (params: Omit<FetchItemsParams, "cursor" | "limit">) => exportItems(params),
 		onSuccess: ({ blob, filename }) => {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");

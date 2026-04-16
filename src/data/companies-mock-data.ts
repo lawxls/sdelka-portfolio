@@ -514,6 +514,11 @@ export function _getCompanies(): Company[] {
 	return companiesStore.map(cloneCompany);
 }
 
+export function _getCompanySummariesByIds(ids: string[]): CompanySummary[] {
+	const set = new Set(ids);
+	return companiesStore.filter((c) => set.has(c.id)).map(toSummary);
+}
+
 // --- Internal helpers ---
 
 function findCompanyIndex(id: string): number {

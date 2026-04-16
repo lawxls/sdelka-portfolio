@@ -1,3 +1,4 @@
+import { _getCompanySummariesByIds } from "./companies-mock-data";
 import { delay, nextId } from "./mock-utils";
 import type { CompanySummary, Employee, EmployeePermissions, EmployeeRole, PermissionLevel } from "./types";
 
@@ -351,7 +352,7 @@ export async function inviteEmployeesMock(invites: InviteEmployeeData[]): Promis
 			email: invite.email,
 			isResponsible: false,
 			registeredAt: null,
-			companies: [],
+			companies: _getCompanySummariesByIds(invite.companies),
 			permissions: {
 				id: nextId("perm-w"),
 				employeeId: id,

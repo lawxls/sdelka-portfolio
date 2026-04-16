@@ -31,7 +31,7 @@ export function useFolders(company?: string) {
 export function useFolderStats(company?: string) {
 	return useQuery({
 		queryKey: ["folderStats", { company }],
-		queryFn: () => fetchFolderStats(),
+		queryFn: () => fetchFolderStats({ company }),
 		select: (data) => {
 			const counts: Record<string, number> = {};
 			let total = 0;

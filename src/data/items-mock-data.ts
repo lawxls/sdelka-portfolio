@@ -496,9 +496,19 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 	return { items: created, isAsync: false };
 }
 
-export async function exportItemsMock(): Promise<{ blob: Blob; filename: string }> {
+export async function exportItemsMock(
+	params: Omit<FilterParams, "cursor" | "limit"> = {},
+): Promise<{ blob: Blob; filename: string }> {
 	await delay();
-	const blob = new Blob([""], {
+	const filtered = applyFilters(itemsStore, params);
+	const header = "id\tname\tstatus\tcompanyId\tfolderId\tcurrentPrice\tbestPrice\tannualQuantity\n";
+	const rows = filtered
+		.map(
+			(i) =>
+				`${i.id}\t${i.name}\t${i.status}\t${i.companyId ?? ""}\t${i.folderId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
+		)
+		.join("\n");
+	const blob = new Blob([header + rows], {
 		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 	});
 	return { blob, filename: "items.xlsx" };
@@ -506,17 +516,24 @@ export async function exportItemsMock(): Promise<{ blob: Blob; filename: string 
 
 // --- Filter helper for folder stats (used by folders-mock-data) ---
 
-export function _statsByFolder(): Map<string | null, number> {
+export function _statsByFolder(company?: string): Map<string | null, number> {
 	const counts = new Map<string | null, number>();
 	for (const item of itemsStore) {
 		if (archivedIds.has(item.id)) continue;
+		if (company && item.companyId !== company) continue;
 		counts.set(item.folderId, (counts.get(item.folderId) ?? 0) + 1);
 	}
 	return counts;
 }
 
-export function _archivedCount(): number {
-	return archivedIds.size;
+export function _archivedCount(company?: string): number {
+	if (!company) return archivedIds.size;
+	let count = 0;
+	for (const id of archivedIds) {
+		const item = itemsStore.find((i) => i.id === id);
+		if (item && item.companyId === company) count += 1;
+	}
+	return count;
 }
 
 /** Used by folders-mock-data when a folder is deleted — reassign items to uncategorized. */

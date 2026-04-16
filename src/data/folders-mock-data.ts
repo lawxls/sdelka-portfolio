@@ -40,12 +40,12 @@ export async function fetchFoldersMock(): Promise<{ folders: Folder[] }> {
 	return { folders: foldersStore.map((f) => ({ ...f })) };
 }
 
-export async function fetchFolderStatsMock(): Promise<{
+export async function fetchFolderStatsMock(params?: { company?: string }): Promise<{
 	stats: Array<{ folderId: string | null; itemCount: number }>;
 	archiveCount: number;
 }> {
 	await delay();
-	const counts = _statsByFolder();
+	const counts = _statsByFolder(params?.company);
 	const stats: Array<{ folderId: string | null; itemCount: number }> = [];
 	const noneCount = counts.get(null);
 	if (noneCount !== undefined) stats.push({ folderId: null, itemCount: noneCount });
@@ -53,7 +53,7 @@ export async function fetchFolderStatsMock(): Promise<{
 		const c = counts.get(folder.id);
 		if (c !== undefined) stats.push({ folderId: folder.id, itemCount: c });
 	}
-	return { stats, archiveCount: _archivedCount() };
+	return { stats, archiveCount: _archivedCount(params?.company) };
 }
 
 export async function createFolderMock(data: { name: string; color: string }): Promise<Folder> {
