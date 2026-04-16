@@ -1,15 +1,14 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
-import { server } from "@/test-msw";
+import { _resetWorkspaceStore, _setWorkspaceEmployees, type WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
 
-const MOCK_EMPLOYEES = [
+const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
 		id: 1,
 		firstName: "Иван",
@@ -32,6 +31,14 @@ const MOCK_EMPLOYEES = [
 				procurementItemCount: 5,
 			},
 		],
+		permissions: {
+			id: "perm-1",
+			employeeId: 1,
+			analytics: "edit",
+			procurement: "edit",
+			companies: "edit",
+			tasks: "edit",
+		},
 	},
 	{
 		id: 2,
@@ -45,6 +52,14 @@ const MOCK_EMPLOYEES = [
 		isResponsible: false,
 		registeredAt: null,
 		companies: [],
+		permissions: {
+			id: "perm-2",
+			employeeId: 2,
+			analytics: "none",
+			procurement: "none",
+			companies: "none",
+			tasks: "none",
+		},
 	},
 ];
 
@@ -94,19 +109,16 @@ beforeEach(() => {
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
-	server.use(
-		http.get("/api/v1/workspace/employees/", () => {
-			return HttpResponse.json(MOCK_EMPLOYEES);
-		}),
-	);
+	_setWorkspaceEmployees(MOCK_EMPLOYEES);
 });
 
 afterEach(() => {
 	localStorage.clear();
+	_resetWorkspaceStore();
 });
 
 describe("EmployeesSettingsPage table", () => {
-	test("renders employee ФИО, Должность, Почта from MSW", async () => {
+	test("renders employee ФИО, Должность, Почта from mock store", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
@@ -130,7 +142,6 @@ describe("EmployeesSettingsPage table", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
 		});
-		// registeredAt: "2024-01-15T10:00:00Z" → ru-RU short date → "15.01.2024"
 		expect(screen.getByText("15.01.2024")).toBeInTheDocument();
 	});
 

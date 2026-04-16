@@ -1,26 +1,22 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
+import * as apiClient from "./api-client";
 import { setTokens } from "./auth";
 import { useCompanyInfo } from "./use-company-info";
+import { _resetWorkspaceStore, _setCompanyInfo } from "./workspace-mock-data";
 
 afterEach(() => {
 	localStorage.clear();
+	_resetWorkspaceStore();
 	vi.restoreAllMocks();
 });
 
 describe("useCompanyInfo", () => {
-	it("fetches company info and returns data", async () => {
+	it("fetches company info from the mock store", async () => {
 		mockHostname("acme.localhost");
 		setTokens("valid-jwt", "valid-refresh");
-
-		server.use(
-			http.get("/api/v1/company/info/", () => {
-				return HttpResponse.json({ name: "Acme Corp" });
-			}),
-		);
+		_setCompanyInfo({ name: "Acme Corp" });
 
 		const { result } = renderHook(() => useCompanyInfo(), {
 			wrapper: createQueryWrapper(createTestQueryClient()),
@@ -34,12 +30,7 @@ describe("useCompanyInfo", () => {
 	it("returns error state on failure", async () => {
 		mockHostname("acme.localhost");
 		setTokens("valid-jwt", "valid-refresh");
-
-		server.use(
-			http.get("/api/v1/company/info/", () => {
-				return HttpResponse.json({ detail: "error" }, { status: 500 });
-			}),
-		);
+		vi.spyOn(apiClient, "fetchCompanyInfo").mockRejectedValueOnce(new Error("boom"));
 
 		const { result } = renderHook(() => useCompanyInfo(), {
 			wrapper: createQueryWrapper(createTestQueryClient()),

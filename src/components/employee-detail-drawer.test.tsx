@@ -1,15 +1,19 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { server } from "@/test-msw";
+import {
+	_resetWorkspaceStore,
+	_setWorkspaceEmployees,
+	fetchWorkspaceEmployeeMock,
+	type WorkspaceEmployeeDetail,
+} from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 
-const MOCK_EMPLOYEE = {
+const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
 	id: 1,
 	firstName: "Иван",
 	lastName: "Иванов",
@@ -41,7 +45,7 @@ const MOCK_EMPLOYEE = {
 	},
 };
 
-const MOCK_EMPLOYEE_PENDING = {
+const MOCK_EMPLOYEE_PENDING: WorkspaceEmployeeDetail = {
 	id: 2,
 	firstName: "Мария",
 	lastName: "Петрова",
@@ -84,14 +88,12 @@ beforeEach(() => {
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
-	server.use(
-		http.get("/api/v1/workspace/employees/1/", () => HttpResponse.json(MOCK_EMPLOYEE)),
-		http.get("/api/v1/workspace/employees/2/", () => HttpResponse.json(MOCK_EMPLOYEE_PENDING)),
-	);
+	_setWorkspaceEmployees([MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING]);
 });
 
 afterEach(() => {
 	localStorage.clear();
+	_resetWorkspaceStore();
 });
 
 describe("EmployeeDetailDrawer — Информация tab", () => {
@@ -102,7 +104,6 @@ describe("EmployeeDetailDrawer — Информация tab", () => {
 			expect(screen.getByTestId("employee-drawer-title")).toHaveTextContent("Иванов Иван Иванович");
 		});
 
-		// Информация tab is active by default
 		expect(screen.getByTestId("employee-info-tab")).toBeInTheDocument();
 		expect(screen.getByText("Директор")).toBeInTheDocument();
 		expect(screen.getByText("ivan@example.com")).toBeInTheDocument();
@@ -139,16 +140,7 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 		expect(screen.getByTestId("perm-row-tasks")).toBeInTheDocument();
 	});
 
-	test("permission change fires update mutation with correct payload", async () => {
-		let capturedBody: unknown = null;
-
-		server.use(
-			http.patch("/api/v1/workspace/employees/1/permissions/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ ...MOCK_EMPLOYEE.permissions, procurement: "edit" });
-			}),
-		);
-
+	test("permission change persists through the mock store", async () => {
 		renderWithUrl("/?employee=1");
 
 		await waitFor(() => {
@@ -158,14 +150,12 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 		const user = userEvent.setup();
 		await user.click(screen.getByTestId("employee-tab-permissions"));
 
-		// Open edit mode
 		await user.click(screen.getByRole("button", { name: "Редактировать права доступа" }));
-
-		// Click "Редактирование" for procurement
 		await user.click(screen.getByTestId("perm-procurement-edit"));
 
-		await waitFor(() => {
-			expect(capturedBody).toEqual({ procurement: "edit" });
+		await waitFor(async () => {
+			const detail = await fetchWorkspaceEmployeeMock(1);
+			expect(detail.permissions.procurement).toBe("edit");
 		});
 	});
 });

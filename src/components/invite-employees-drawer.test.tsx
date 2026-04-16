@@ -1,12 +1,11 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { _setCompanies } from "@/data/companies-mock-data";
 import type { Company } from "@/data/types";
-import { server } from "@/test-msw";
+import * as workspaceMock from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { InviteEmployeesDrawer } from "./invite-employees-drawer";
 
@@ -50,15 +49,12 @@ beforeEach(() => {
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
 	_setCompanies(MOCK_COMPANIES);
-	server.use(
-		http.post("/api/v1/workspace/employees/invite/", () => {
-			return HttpResponse.json({}, { status: 201 });
-		}),
-	);
+	workspaceMock._resetWorkspaceStore();
 });
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 describe("InviteEmployeesDrawer default state", () => {
@@ -102,14 +98,11 @@ describe("InviteEmployeesDrawer remove card", () => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
 		const user = userEvent.setup();
-		// Fill email then add second card
 		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "a@b.com");
 		await user.click(screen.getByRole("button", { name: /Добавить/i }));
 		expect(screen.getByText("Сотрудник 2")).toBeInTheDocument();
-		// Remove first card
 		const removeButtons = screen.getAllByRole("button", { name: /Удалить приглашение/i });
 		await user.click(removeButtons[0]);
-		// Only one card remains, renumbered to 1
 		expect(screen.queryByText("Сотрудник 2")).not.toBeInTheDocument();
 		expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 	});
@@ -124,14 +117,8 @@ describe("InviteEmployeesDrawer remove card", () => {
 });
 
 describe("InviteEmployeesDrawer submit", () => {
-	test("submit fires correct bulk payload to POST /api/v1/workspace/employees/invite/", async () => {
-		let captured: unknown = null;
-		server.use(
-			http.post("/api/v1/workspace/employees/invite/", async ({ request }) => {
-				captured = await request.json();
-				return HttpResponse.json({}, { status: 201 });
-			}),
-		);
+	test("submit appends the invitee to the workspace store", async () => {
+		workspaceMock._setWorkspaceEmployees([]);
 		renderDrawer();
 		await waitFor(() => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
@@ -139,10 +126,10 @@ describe("InviteEmployeesDrawer submit", () => {
 		const user = userEvent.setup();
 		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "test@example.com");
 		await user.click(screen.getByRole("button", { name: /Отправить/i }));
-		await waitFor(() => {
-			expect(captured).toEqual({
-				invites: [{ email: "test@example.com", position: "", role: "user", companies: [] }],
-			});
+
+		await waitFor(async () => {
+			const list = await workspaceMock.fetchWorkspaceEmployeesMock();
+			expect(list.some((e) => e.email === "test@example.com")).toBe(true);
 		});
 	});
 });

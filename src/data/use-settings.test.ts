@@ -1,13 +1,13 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
 import { createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { getAccessToken, setTokens } from "@/data/auth";
-import { server } from "@/test-msw";
 import { createQueryWrapper, createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
+import * as settingsApi from "./settings-api";
 import { useChangePassword, useSettings, useUpdateSettings } from "./use-settings";
+import { _resetWorkspaceStore, _setUserSettings } from "./workspace-mock-data";
 
 const MOCK_SETTINGS = makeSettings();
 
@@ -15,16 +15,16 @@ beforeEach(() => {
 	localStorage.clear();
 	mockHostname("acme.localhost");
 	setTokens("test-access", "test-refresh");
+	_setUserSettings(MOCK_SETTINGS);
+});
+
+afterEach(() => {
+	_resetWorkspaceStore();
+	vi.restoreAllMocks();
 });
 
 describe("useSettings", () => {
 	test("fetches settings and returns data", async () => {
-		server.use(
-			http.get("/api/v1/auth/settings", () => {
-				return HttpResponse.json(MOCK_SETTINGS);
-			}),
-		);
-
 		const queryClient = createTestQueryClient();
 		const { result } = renderHook(() => useSettings(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -41,11 +41,7 @@ describe("useSettings", () => {
 	});
 
 	test("returns error on fetch failure", async () => {
-		server.use(
-			http.get("/api/v1/auth/settings", () => {
-				return HttpResponse.json({ detail: "Server error" }, { status: 500 });
-			}),
-		);
+		vi.spyOn(settingsApi, "fetchSettings").mockRejectedValueOnce(new Error("boom"));
 
 		const queryClient = createTestQueryClient();
 		const { result } = renderHook(() => useSettings(), {
@@ -61,18 +57,7 @@ describe("useSettings", () => {
 });
 
 describe("useUpdateSettings", () => {
-	test("calls PATCH and invalidates settings query on success", async () => {
-		let patchBody: Record<string, unknown> | null = null;
-		const updated = { ...MOCK_SETTINGS, first_name: "Пётр" };
-
-		server.use(
-			http.get("/api/v1/auth/settings", () => HttpResponse.json(MOCK_SETTINGS)),
-			http.patch("/api/v1/auth/settings", async ({ request }) => {
-				patchBody = (await request.json()) as Record<string, unknown>;
-				return HttpResponse.json(updated);
-			}),
-		);
-
+	test("persists the patch and invalidates settings query on success", async () => {
 		const queryClient = createTestQueryClient();
 		queryClient.setQueryData(["settings"], MOCK_SETTINGS);
 
@@ -81,28 +66,17 @@ describe("useUpdateSettings", () => {
 		});
 
 		await act(async () => {
-			await result.current.mutateAsync({ first_name: "Пётр" });
+			const updated = await result.current.mutateAsync({ first_name: "Пётр" });
+			expect(updated.first_name).toBe("Пётр");
 		});
 
-		expect(patchBody).toEqual({ first_name: "Пётр" });
-
-		// Query should be invalidated (marked stale)
 		const state = queryClient.getQueryState(["settings"]);
 		expect(state?.isInvalidated).toBe(true);
 	});
 });
 
 describe("useChangePassword", () => {
-	test("calls POST change-password, clears tokens, and navigates to /login on success", async () => {
-		let postBody: unknown = null;
-
-		server.use(
-			http.post("/api/v1/auth/change-password", async ({ request }) => {
-				postBody = await request.json();
-				return HttpResponse.json({ detail: "Пароль успешно изменён" });
-			}),
-		);
-
+	test("clears tokens and navigates to /login on success", async () => {
 		const queryClient = createTestQueryClient();
 
 		function Wrapper({ children }: { children: ReactNode }) {
@@ -119,7 +93,6 @@ describe("useChangePassword", () => {
 			await result.current.mutateAsync({ currentPassword: "old123", newPassword: "new456" });
 		});
 
-		expect(postBody).toEqual({ current_password: "old123", new_password: "new456" });
 		expect(getAccessToken()).toBeNull();
 	});
 });

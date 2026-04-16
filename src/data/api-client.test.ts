@@ -1,6 +1,4 @@
-import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
 import { mockHostname } from "@/test-utils";
 import {
 	changeTaskStatus,
@@ -29,11 +27,11 @@ import {
 	updateItem,
 	uploadTaskAttachments,
 } from "./api-client";
-import { setTokens } from "./auth";
 import * as companiesMock from "./companies-mock-data";
 import * as foldersMock from "./folders-mock-data";
 import * as itemsMock from "./items-mock-data";
 import * as tasksMock from "./tasks-mock-data";
+import * as workspaceMock from "./workspace-mock-data";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
@@ -41,6 +39,7 @@ beforeEach(() => {
 	foldersMock._resetFoldersStore();
 	companiesMock._resetCompaniesStore();
 	tasksMock._resetTasksStore();
+	workspaceMock._resetWorkspaceStore();
 });
 
 afterEach(() => {
@@ -99,34 +98,10 @@ describe("parseDecimals", () => {
 });
 
 describe("fetchCompanyInfo", () => {
-	it("sends GET /api/v1/company/info/ with auth headers", async () => {
-		let capturedHeaders: Headers | undefined;
-
-		server.use(
-			http.get("/api/v1/company/info/", ({ request }) => {
-				capturedHeaders = request.headers;
-				return HttpResponse.json({ name: "Acme Corp" });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("returns the seeded company name from the mock store", async () => {
+		workspaceMock._setCompanyInfo({ name: "Acme Corp" });
 		const result = await fetchCompanyInfo();
-		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
-		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
 		expect(result).toEqual({ name: "Acme Corp" });
-	});
-
-	it("clears tokens and throws on 401", async () => {
-		server.use(
-			http.get("/api/v1/company/info/", () => {
-				return HttpResponse.json({ detail: "Invalid credentials." }, { status: 401 });
-			}),
-		);
-
-		setTokens("expired-token", "expired-refresh");
-		await expect(fetchCompanyInfo()).rejects.toThrow();
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
-		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
 	});
 });
 

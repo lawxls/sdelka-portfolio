@@ -53,9 +53,24 @@ import type {
 	ProcurementItem,
 	Totals,
 } from "./types";
+import type {
+	CurrentEmployee,
+	InviteEmployeeData,
+	WorkspaceEmployee,
+	WorkspaceEmployeeDetail,
+} from "./workspace-mock-data";
+import {
+	fetchCompanyInfoMock,
+	fetchMeMock,
+	fetchWorkspaceEmployeeMock,
+	fetchWorkspaceEmployeesMock,
+	inviteEmployeesMock,
+	updateWorkspaceEmployeePermissionsMock,
+} from "./workspace-mock-data";
+
+export type { CurrentEmployee, InviteEmployeeData, WorkspaceEmployee, WorkspaceEmployeeDetail };
 
 const BASE = "/api/v1/company";
-const WORKSPACE_BASE = "/api/v1/workspace";
 
 const DECIMAL_FIELDS = new Set([
 	"currentPrice",
@@ -126,7 +141,7 @@ export async function request<T>(
 // --- Company ---
 
 export async function fetchCompanyInfo(): Promise<{ name: string }> {
-	return request("/info/");
+	return fetchCompanyInfoMock();
 }
 
 // --- Folders ---
@@ -365,57 +380,29 @@ export async function updateEmployeePermissions(
 
 // --- Workspace Employees ---
 
-export interface WorkspaceEmployee extends Employee {
-	companies: CompanySummary[];
-}
-
-export type WorkspaceEmployeeDetail = WorkspaceEmployee & { permissions: EmployeePermissions };
-
-export interface InviteEmployeeData {
-	email: string;
-	position: string;
-	role: EmployeeRole;
-	companies: string[];
-}
-
 export async function fetchWorkspaceEmployees(): Promise<WorkspaceEmployee[]> {
-	return request("/employees/", { base: WORKSPACE_BASE });
+	return fetchWorkspaceEmployeesMock();
 }
 
 export async function fetchWorkspaceEmployee(id: number): Promise<WorkspaceEmployeeDetail> {
-	return request(`/employees/${id}/`, { base: WORKSPACE_BASE });
+	return fetchWorkspaceEmployeeMock(id);
 }
 
 export async function inviteEmployees(invites: InviteEmployeeData[]): Promise<void> {
-	return request("/employees/invite/", {
-		base: WORKSPACE_BASE,
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ invites }),
-	});
+	return inviteEmployeesMock(invites);
 }
 
 export async function updateWorkspaceEmployeePermissions(
 	id: number,
 	data: UpdatePermissionsData,
 ): Promise<EmployeePermissions> {
-	return request(`/employees/${id}/permissions/`, {
-		base: WORKSPACE_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateWorkspaceEmployeePermissionsMock(id, data);
 }
 
 // --- Me ---
 
-export interface CurrentEmployee {
-	id: number;
-	role: EmployeeRole;
-}
-
 export async function fetchMe(): Promise<CurrentEmployee> {
-	return request("/me/");
+	return fetchMeMock();
 }
 
 // --- Tasks ---
