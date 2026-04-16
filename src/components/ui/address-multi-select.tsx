@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,6 +26,7 @@ export function AddressMultiSelect({
 	const selectedCount = selectedIds.length;
 	const allSelected = addresses.length > 0 && selectedCount === addresses.length;
 	const triggerLabel = selectedCount === 0 ? placeholder : `Выбрано: ${selectedCount} из ${addresses.length}`;
+	const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
 	const toggleOne = (id: string, checked: boolean) => {
 		onChange(checked ? [...selectedIds, id] : selectedIds.filter((x) => x !== id));
@@ -63,7 +65,7 @@ export function AddressMultiSelect({
 						// biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally
 						<label key={a.id} className="flex cursor-pointer items-center gap-2">
 							<Checkbox
-								checked={selectedIds.includes(a.id)}
+								checked={selectedSet.has(a.id)}
 								onCheckedChange={(checked) => toggleOne(a.id, checked === true)}
 								aria-label={`${a.name} — ${a.address}`}
 							/>

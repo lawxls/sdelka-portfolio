@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
 	CurrentSupplier,
 	DeliveryCostType,
@@ -10,7 +10,7 @@ import type {
 	UnloadingType,
 } from "@/data/types";
 
-type WizardStep = 1 | 2 | 3;
+export type WizardStep = 1 | 2 | 3;
 
 interface Step1State {
 	companyId: string;
@@ -204,13 +204,13 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	const [step2Errors, setStep2Errors] = useState<Step2Errors>({});
 
 	function update1<K extends keyof Step1State>(key: K, value: Step1State[K]) {
-		setStep1((prev) => ({ ...prev, [key]: value }));
+		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (key === "name" && step1Errors.name) setStep1Errors((prev) => ({ ...prev, name: undefined }));
 		if (key === "companyId" && step1Errors.company) setStep1Errors((prev) => ({ ...prev, company: undefined }));
 	}
 
 	function update2<K extends keyof Step2State>(key: K, value: Step2State[K]) {
-		setStep2((prev) => ({ ...prev, [key]: value }));
+		setStep2((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (key === "inn" && step2Errors.inn) setStep2Errors((prev) => ({ ...prev, inn: undefined }));
 	}
 
@@ -272,31 +272,33 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		setStep2Errors({});
 	}
 
-	const defaults1 = defaultStep1();
-	const isDirty =
-		step1.companyId !== defaults1.companyId ||
-		step1.folderId !== defaults1.folderId ||
-		step1.name !== "" ||
-		step1.description !== "" ||
-		step1.unit !== "" ||
-		step1.quantityPerDelivery !== "" ||
-		step1.annualQuantity !== "" ||
-		step1.addressIds.length > 0 ||
-		step1.deliveryCostType !== null ||
-		step1.deliveryCost !== "" ||
-		step1.unloading !== null ||
-		step1.paymentMethod !== defaults1.paymentMethod ||
-		step1.deferralRequired ||
-		step1.sampleRequired ||
-		step1.analoguesAllowed ||
-		step1.additionalInfo !== "" ||
-		step1.files.length > 0 ||
-		step2.companyName !== "" ||
-		step2.inn !== "" ||
-		step2.pricePerUnit !== "" ||
-		step2.paymentType !== "prepayment" ||
-		step2.deferralDays !== "" ||
-		Object.values(step3.answers).some((a) => a.selectedOption || a.freeText);
+	const isDirty = useMemo(
+		() =>
+			step1.companyId !== "" ||
+			step1.folderId !== null ||
+			step1.name !== "" ||
+			step1.description !== "" ||
+			step1.unit !== "" ||
+			step1.quantityPerDelivery !== "" ||
+			step1.annualQuantity !== "" ||
+			step1.addressIds.length > 0 ||
+			step1.deliveryCostType !== null ||
+			step1.deliveryCost !== "" ||
+			step1.unloading !== null ||
+			step1.paymentMethod !== "bank_transfer" ||
+			step1.deferralRequired ||
+			step1.sampleRequired ||
+			step1.analoguesAllowed ||
+			step1.additionalInfo !== "" ||
+			step1.files.length > 0 ||
+			step2.companyName !== "" ||
+			step2.inn !== "" ||
+			step2.pricePerUnit !== "" ||
+			step2.paymentType !== "prepayment" ||
+			step2.deferralDays !== "" ||
+			Object.values(step3.answers).some((a) => a.selectedOption || a.freeText),
+		[step1, step2, step3],
+	);
 
 	function toPayload(): NewItemInput {
 		const addressStrings = resolveAddressStrings(step1.companyId, step1.addressIds);

@@ -1,5 +1,5 @@
 import { CircleHelp, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import {
@@ -36,7 +36,7 @@ import { useProcurementCompanies } from "@/data/use-companies";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { formatFileSize, formatGroupedInteger } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useAddPositionForm } from "./use-add-position-form";
+import { useAddPositionForm, type WizardStep } from "./use-add-position-form";
 
 interface AddPositionsDrawerProps {
 	open: boolean;
@@ -47,7 +47,7 @@ interface AddPositionsDrawerProps {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
-const STEP_TITLES: Record<1 | 2 | 3, string> = {
+const STEP_TITLES: Record<WizardStep, string> = {
 	1: "Заполните данные по позиции",
 	2: "Заполните данные по текущему поставщику",
 	3: "Дополнительные вопросы",
@@ -87,12 +87,14 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const { data: folders = [] } = useFolders();
 	const createFolderMutation = useCreateFolder();
 
+	const companiesById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
+
 	const form = useAddPositionForm({
 		resolveAddressStrings: (companyId, ids) => {
-			if (!companyId) return [];
-			const company = companies.find((c) => c.id === companyId);
+			const company = companiesById.get(companyId);
 			if (!company) return [];
-			return company.addresses.filter((a) => ids.includes(a.id)).map((a) => a.address);
+			const wanted = new Set(ids);
+			return company.addresses.filter((a) => wanted.has(a.id)).map((a) => a.address);
 		},
 	});
 
@@ -103,11 +105,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const selectedCompany = step1.companyId ? companies.find((c) => c.id === step1.companyId) : undefined;
+	const selectedCompany = step1.companyId ? companiesById.get(step1.companyId) : undefined;
+	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
 
 	function handleCreateFolder(name: string) {
 		createFolderMutation.mutate(
-			{ name, color: nextUnusedColor(folders) },
+			{ name, color: nextFolderColor },
 			{
 				onSuccess: (created) => {
 					form.update1("folderId", created.id);
@@ -138,15 +141,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		const payload = form.toPayload();
 		onSubmit(payload);
 		toast.success("Позиция создана");
-		form.reset();
-		onOpenChange(false);
-	}
-
-	function handleClose() {
-		if (form.isDirty) {
-			setShowConfirm(true);
-			return;
-		}
 		form.reset();
 		onOpenChange(false);
 	}
@@ -231,7 +225,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									companies={companies}
 									selectedCompany={selectedCompany}
 									folders={folders}
-									nextFolderColor={nextUnusedColor(folders)}
+									nextFolderColor={nextFolderColor}
 									onCreateFolder={handleCreateFolder}
 									nameInputRef={nameInputRef}
 									companyTriggerRef={companyTriggerRef}
@@ -247,7 +241,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
 						<div className="flex gap-2">
-							<Button type="button" variant="ghost" onClick={handleClose}>
+							<Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
 								Отмена
 							</Button>
 							{step > 1 && (
