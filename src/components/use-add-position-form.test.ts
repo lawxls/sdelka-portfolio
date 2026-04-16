@@ -29,12 +29,13 @@ describe("useAddPositionForm", () => {
 	test("advance from step 1 blocked when company and name missing", () => {
 		const { result } = setup();
 
-		let ok = false;
+		let outcome: ReturnType<typeof result.current.advance> | undefined;
 		act(() => {
-			ok = result.current.advance();
+			outcome = result.current.advance();
 		});
 
-		expect(ok).toBe(false);
+		expect(outcome?.advanced).toBe(false);
+		expect(outcome?.focus).toBe("company");
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1Errors.company).toBeTruthy();
 		expect(result.current.step1Errors.name).toBeTruthy();
@@ -44,13 +45,29 @@ describe("useAddPositionForm", () => {
 		const { result } = setup();
 
 		act(() => result.current.update1("name", "Арматура"));
+		let outcome: ReturnType<typeof result.current.advance> | undefined;
 		act(() => {
-			result.current.advance();
+			outcome = result.current.advance();
 		});
 
+		expect(outcome?.advanced).toBe(false);
+		expect(outcome?.focus).toBe("company");
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1Errors.company).toBeTruthy();
 		expect(result.current.step1Errors.name).toBeFalsy();
+	});
+
+	test("advance blocked when only company set returns focus:name", () => {
+		const { result } = setup();
+
+		act(() => result.current.update1("companyId", "c1"));
+		let outcome: ReturnType<typeof result.current.advance> | undefined;
+		act(() => {
+			outcome = result.current.advance();
+		});
+
+		expect(outcome?.advanced).toBe(false);
+		expect(outcome?.focus).toBe("name");
 	});
 
 	test("advance from step 1 succeeds when company + name set", () => {
@@ -59,12 +76,13 @@ describe("useAddPositionForm", () => {
 		act(() => result.current.update1("companyId", "c1"));
 		act(() => result.current.update1("name", "Арматура"));
 
-		let ok = false;
+		let outcome: ReturnType<typeof result.current.advance> | undefined;
 		act(() => {
-			ok = result.current.advance();
+			outcome = result.current.advance();
 		});
 
-		expect(ok).toBe(true);
+		expect(outcome?.advanced).toBe(true);
+		expect(outcome?.focus).toBeUndefined();
 		expect(result.current.step).toBe(2);
 		expect(result.current.step1Errors.company).toBeFalsy();
 		expect(result.current.step1Errors.name).toBeFalsy();
@@ -271,6 +289,25 @@ describe("useAddPositionForm", () => {
 		expect(payload.generatedAnswers).toBeUndefined();
 	});
 
+	test("toPayload includes folderId when one is selected", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+		act(() => result.current.update1("folderId", "folder-metal"));
+
+		const payload = result.current.toPayload();
+		expect(payload.folderId).toBe("folder-metal");
+	});
+
+	test("toPayload omits folderId when none is selected", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+
+		const payload = result.current.toPayload();
+		expect(payload.folderId).toBeUndefined();
+	});
+
 	test("toPayload includes deliveryAddresses when addresses selected", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
@@ -313,6 +350,18 @@ describe("useAddPositionForm", () => {
 		const payload = result.current.toPayload();
 		expect(payload.deliveryCostType).toBe("paid");
 		expect(payload.deliveryCost).toBe(1500);
+	});
+
+	test("toPayload omits deliveryCost when deliveryCostType is 'pickup'", () => {
+		const { result } = setup();
+		act(() => result.current.update1("companyId", "c1"));
+		act(() => result.current.update1("name", "X"));
+		act(() => result.current.update1("deliveryCostType", "pickup"));
+		act(() => result.current.update1("deliveryCost", "900"));
+
+		const payload = result.current.toPayload();
+		expect(payload.deliveryCostType).toBe("pickup");
+		expect(payload.deliveryCost).toBeUndefined();
 	});
 
 	test("toPayload includes fully populated step 1", () => {
@@ -440,11 +489,11 @@ describe("useAddPositionForm", () => {
 			result.current.advance();
 		});
 
-		let ok = true;
+		let outcome: ReturnType<typeof result.current.advance> | undefined;
 		act(() => {
-			ok = result.current.advance();
+			outcome = result.current.advance();
 		});
-		expect(ok).toBe(false);
+		expect(outcome?.advanced).toBe(false);
 		expect(result.current.step).toBe(3);
 	});
 });

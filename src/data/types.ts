@@ -120,6 +120,7 @@ export interface Totals {
 
 export interface NewItemInput {
 	name: string;
+	folderId?: string | null;
 	description?: string;
 	unit?: Unit;
 	annualQuantity?: number;

@@ -1,6 +1,5 @@
 import { CircleHelp, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import {
 	AlertDialog,
@@ -121,12 +120,10 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 	function handleAdvance() {
 		if (step === 1) {
-			const ok = form.advance();
-			if (!ok) {
-				setTimeout(() => {
-					if (!step1.companyId) companyTriggerRef.current?.focus();
-					else if (!step1.name.trim()) nameInputRef.current?.focus();
-				}, 0);
+			const result = form.advance();
+			if (!result.advanced) {
+				if (result.focus === "company") companyTriggerRef.current?.focus();
+				else if (result.focus === "name") nameInputRef.current?.focus();
 			}
 			return;
 		}
@@ -140,7 +137,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	function handleSubmit() {
 		const payload = form.toPayload();
 		onSubmit(payload);
-		toast.success("Позиция создана");
 		form.reset();
 		onOpenChange(false);
 	}
@@ -185,7 +181,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		);
 	}
 
-	const progressPercent = step === 1 ? 33 : step === 2 ? 66 : 100;
+	const progressPercent = Math.floor((step * 100) / 3);
 
 	return (
 		<>
@@ -218,8 +214,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 					</SheetHeader>
 
 					<div className="flex-1 overflow-y-auto px-4">
-						<TooltipProvider>
-							{step === 1 && (
+						{step === 1 && (
+							<TooltipProvider>
 								<Step1Body
 									form={form}
 									companies={companies}
@@ -233,10 +229,10 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									onFilesAdd={handleFilesAdd}
 									onFileRemove={handleFileRemove}
 								/>
-							)}
-							{step === 2 && <Step2Body form={form} />}
-							{step === 3 && <Step3Body form={form} />}
-						</TooltipProvider>
+							</TooltipProvider>
+						)}
+						{step === 2 && <Step2Body form={form} />}
+						{step === 3 && <Step3Body form={form} />}
 					</div>
 
 					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
@@ -433,7 +429,7 @@ function Step1Body({
 	onFileRemove,
 }: Step1BodyProps) {
 	const { step1, step1Errors, update1 } = form;
-	const deliveryCostVisible = step1.deliveryCostType === "paid" || step1.deliveryCostType === "pickup";
+	const deliveryCostVisible = step1.deliveryCostType === "paid";
 
 	return (
 		<div className="flex flex-col gap-0 pt-3">

@@ -257,7 +257,7 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 2 из 2");
 	});
 
-	test("stoimost' dostavki appears only when paid or pickup selected", async () => {
+	test("stoimost' dostavki appears only when paid selected", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
@@ -265,6 +265,10 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		await user.click(screen.getByLabelText("Доставка"));
 		await user.click(await screen.findByRole("option", { name: "Платная" }));
 		expect(screen.getByLabelText("Стоимость доставки")).toBeInTheDocument();
+
+		await user.click(screen.getByLabelText("Доставка"));
+		await user.click(await screen.findByRole("option", { name: "Самовывоз" }));
+		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
 
 		await user.click(screen.getByLabelText("Доставка"));
 		await user.click(await screen.findByRole("option", { name: "Бесплатная" }));
@@ -644,9 +648,10 @@ describe("AddPositionsDrawer — submit", () => {
 		expect(payload.deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15", "г. Москва, ул. Складская, д. 1"]);
 	});
 
-	test("submit fires toast.success and closes drawer", async () => {
+	test("submit invokes onSubmit and closes drawer without firing its own toast", async () => {
+		const onSubmit = vi.fn();
 		const onOpenChange = vi.fn();
-		renderDrawer({ onOpenChange });
+		renderDrawer({ onSubmit, onOpenChange });
 		const user = userEvent.setup();
 
 		await fillStep1Minimum(user);
@@ -654,7 +659,8 @@ describe("AddPositionsDrawer — submit", () => {
 		await advance(user);
 		await create(user);
 
-		expect(toast.success).toHaveBeenCalledWith("Позиция создана");
+		expect(onSubmit).toHaveBeenCalledTimes(1);
+		expect(toast.success).not.toHaveBeenCalled();
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 	});
 

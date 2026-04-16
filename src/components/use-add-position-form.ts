@@ -12,6 +12,8 @@ import type {
 
 export type WizardStep = 1 | 2 | 3;
 
+type AdvanceResult = { advanced: boolean; focus?: "company" | "name" };
+
 interface Step1State {
 	companyId: string;
 	folderId: string | null;
@@ -154,6 +156,8 @@ function buildNewItemInput(
 		paymentMethod: step1.paymentMethod,
 	};
 
+	if (step1.folderId !== null) payload.folderId = step1.folderId;
+
 	const description = step1.description.trim();
 	if (description) payload.description = description;
 
@@ -169,7 +173,7 @@ function buildNewItemInput(
 
 	if (step1.deliveryCostType !== null) {
 		payload.deliveryCostType = step1.deliveryCostType;
-		if (step1.deliveryCostType !== "free") {
+		if (step1.deliveryCostType === "paid") {
 			const cost = toNumber(step1.deliveryCost);
 			if (cost !== undefined) payload.deliveryCost = cost;
 		}
@@ -205,13 +209,13 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 
 	function update1<K extends keyof Step1State>(key: K, value: Step1State[K]) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
-		if (key === "name" && step1Errors.name) setStep1Errors((prev) => ({ ...prev, name: undefined }));
-		if (key === "companyId" && step1Errors.company) setStep1Errors((prev) => ({ ...prev, company: undefined }));
+		if (key === "name") setStep1Errors((prev) => (prev.name ? { ...prev, name: undefined } : prev));
+		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
 	}
 
 	function update2<K extends keyof Step2State>(key: K, value: Step2State[K]) {
 		setStep2((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
-		if (key === "inn" && step2Errors.inn) setStep2Errors((prev) => ({ ...prev, inn: undefined }));
+		if (key === "inn") setStep2Errors((prev) => (prev.inn ? { ...prev, inn: undefined } : prev));
 	}
 
 	function blurInn() {
@@ -238,24 +242,24 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		return result.ok ? {} : { inn: result.error };
 	}
 
-	function advance(): boolean {
+	function advance(): AdvanceResult {
 		if (step === 1) {
 			const errors = validateStep1();
-			if (errors.name || errors.company) {
+			if (errors.company || errors.name) {
 				setStep1Errors(errors);
-				return false;
+				return { advanced: false, focus: errors.company ? "company" : "name" };
 			}
 			setStep1Errors({});
 			setStep(2);
-			return true;
+			return { advanced: true };
 		}
 		if (step === 2) {
 			const errors = validateStep2Inn();
 			setStep2Errors(errors);
 			setStep(3);
-			return true;
+			return { advanced: true };
 		}
-		return false;
+		return { advanced: false };
 	}
 
 	function goBack() {
