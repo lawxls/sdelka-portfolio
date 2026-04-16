@@ -8,28 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ViewField } from "@/components/view-field";
-import type {
-	DeliveryType,
-	FrequencyPeriod,
-	PaymentType,
-	PriceMonitoringPeriod,
-	ProcurementItem,
-	Unit,
-	UnloadingType,
-} from "@/data/types";
-import {
-	DELIVERY_TYPE_LABELS,
-	DELIVERY_TYPES,
-	FREQUENCY_PERIOD_LABELS,
-	FREQUENCY_PERIODS,
-	PAYMENT_TYPE_LABELS,
-	PAYMENT_TYPES,
-	PRICE_MONITORING_PERIOD_LABELS,
-	PRICE_MONITORING_PERIODS,
-	UNITS,
-	UNLOADING_LABELS,
-	UNLOADING_TYPES,
-} from "@/data/types";
+import type { PaymentType, ProcurementItem, Unit, UnloadingType } from "@/data/types";
+import { PAYMENT_TYPE_LABELS, PAYMENT_TYPES, UNITS, UNLOADING_LABELS, UNLOADING_TYPES } from "@/data/types";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
 import { formatCurrency } from "@/lib/format";
 
@@ -49,16 +29,12 @@ interface InfoFormState {
 
 interface ConditionsFormState {
 	paymentType: PaymentType;
-	deliveryType: DeliveryType;
 	unloading: UnloadingType | "";
-	frequencyCount: number;
-	frequencyPeriod: FrequencyPeriod;
 }
 
 interface RequestParamsFormState {
-	priceMonitoringPeriod: PriceMonitoringPeriod;
 	analoguesAllowed: boolean;
-	hideCompanyInfo: boolean;
+	sampleRequired: boolean;
 }
 
 interface AdditionalFormState {
@@ -78,18 +54,14 @@ function initInfoForm(item: ProcurementItem): InfoFormState {
 function initConditionsForm(item: ProcurementItem): ConditionsFormState {
 	return {
 		paymentType: item.paymentType ?? "prepayment",
-		deliveryType: item.deliveryType ?? "warehouse",
 		unloading: item.unloading ?? "",
-		frequencyCount: item.frequencyCount ?? 1,
-		frequencyPeriod: item.frequencyPeriod ?? "month",
 	};
 }
 
 function initRequestParamsForm(item: ProcurementItem): RequestParamsFormState {
 	return {
-		priceMonitoringPeriod: item.priceMonitoringPeriod ?? "quarter",
 		analoguesAllowed: item.analoguesAllowed ?? false,
-		hideCompanyInfo: item.hideCompanyInfo ?? false,
+		sampleRequired: item.sampleRequired ?? false,
 	};
 }
 
@@ -262,14 +234,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 		if (conditionsForm.paymentType !== (currentItem.paymentType ?? "prepayment"))
 			data.paymentType = conditionsForm.paymentType;
-		if (conditionsForm.deliveryType !== (currentItem.deliveryType ?? "warehouse"))
-			data.deliveryType = conditionsForm.deliveryType;
 		if (conditionsForm.unloading !== (currentItem.unloading ?? ""))
 			data.unloading = conditionsForm.unloading || undefined;
-		if (conditionsForm.frequencyCount !== (currentItem.frequencyCount ?? 1))
-			data.frequencyCount = conditionsForm.frequencyCount;
-		if (conditionsForm.frequencyPeriod !== (currentItem.frequencyPeriod ?? "month"))
-			data.frequencyPeriod = conditionsForm.frequencyPeriod;
 
 		updateMutation.mutate(data as Parameters<typeof updateMutation.mutate>[0], {
 			onSuccess: () => setEditingSection(null),
@@ -280,10 +246,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (!conditionsForm) return false;
 		return (
 			conditionsForm.paymentType !== (currentItem.paymentType ?? "prepayment") ||
-			conditionsForm.deliveryType !== (currentItem.deliveryType ?? "warehouse") ||
-			conditionsForm.unloading !== (currentItem.unloading ?? "") ||
-			conditionsForm.frequencyCount !== (currentItem.frequencyCount ?? 1) ||
-			conditionsForm.frequencyPeriod !== (currentItem.frequencyPeriod ?? "month")
+			conditionsForm.unloading !== (currentItem.unloading ?? "")
 		);
 	}
 
@@ -302,12 +265,10 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (!requestParamsForm) return;
 		const data: Record<string, unknown> = { id: itemId };
 
-		if (requestParamsForm.priceMonitoringPeriod !== (currentItem.priceMonitoringPeriod ?? "quarter"))
-			data.priceMonitoringPeriod = requestParamsForm.priceMonitoringPeriod;
 		if (requestParamsForm.analoguesAllowed !== (currentItem.analoguesAllowed ?? false))
 			data.analoguesAllowed = requestParamsForm.analoguesAllowed;
-		if (requestParamsForm.hideCompanyInfo !== (currentItem.hideCompanyInfo ?? false))
-			data.hideCompanyInfo = requestParamsForm.hideCompanyInfo;
+		if (requestParamsForm.sampleRequired !== (currentItem.sampleRequired ?? false))
+			data.sampleRequired = requestParamsForm.sampleRequired;
 
 		updateMutation.mutate(data as Parameters<typeof updateMutation.mutate>[0], {
 			onSuccess: () => setEditingSection(null),
@@ -317,9 +278,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	function isRequestParamsDirty() {
 		if (!requestParamsForm) return false;
 		return (
-			requestParamsForm.priceMonitoringPeriod !== (currentItem.priceMonitoringPeriod ?? "quarter") ||
 			requestParamsForm.analoguesAllowed !== (currentItem.analoguesAllowed ?? false) ||
-			requestParamsForm.hideCompanyInfo !== (currentItem.hideCompanyInfo ?? false)
+			requestParamsForm.sampleRequired !== (currentItem.sampleRequired ?? false)
 		);
 	}
 
@@ -346,10 +306,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (!additionalForm) return false;
 		return additionalForm.additionalInfo !== (currentItem.additionalInfo ?? "");
 	}
-
-	const frequencyDisplay = item.frequencyCount
-		? `${item.frequencyCount} раз / ${FREQUENCY_PERIOD_LABELS[item.frequencyPeriod ?? "month"].toLowerCase()}`
-		: "Не указана";
 
 	return (
 		<div data-testid="tab-panel-details" className="flex flex-col gap-4">
@@ -458,15 +414,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							/>
 						</FieldRow>
 
-						<FieldRow label="Доставка">
-							<SegmentedControl
-								options={DELIVERY_TYPES}
-								labels={DELIVERY_TYPE_LABELS}
-								value={conditionsForm.deliveryType}
-								onChange={(v) => updateConditions("deliveryType", v)}
-							/>
-						</FieldRow>
-
 						<FieldRow label="Разгрузка">
 							<SegmentedControl
 								options={UNLOADING_TYPES}
@@ -475,39 +422,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								onChange={(v) => updateConditions("unloading", v)}
 							/>
 						</FieldRow>
-
-						<div className="grid grid-cols-2 gap-4 max-w-xs">
-							<FieldRow label="Частота поставок" htmlFor="detail-frequencyCount">
-								<Input
-									id="detail-frequencyCount"
-									aria-label="Частота поставок"
-									type="number"
-									inputMode="numeric"
-									min={1}
-									value={conditionsForm.frequencyCount}
-									onChange={(e) => updateConditions("frequencyCount", Number(e.target.value))}
-									autoComplete="off"
-								/>
-							</FieldRow>
-
-							<FieldRow label="Период">
-								<Select
-									value={conditionsForm.frequencyPeriod}
-									onValueChange={(v) => updateConditions("frequencyPeriod", v as FrequencyPeriod)}
-								>
-									<SelectTrigger aria-label="Период частоты поставок">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{FREQUENCY_PERIODS.map((p) => (
-											<SelectItem key={p} value={p}>
-												{FREQUENCY_PERIOD_LABELS[p]}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</FieldRow>
-						</div>
 					</div>
 					<SaveCancelButtons
 						onCancel={handleCancel}
@@ -522,9 +436,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					<SectionHeader title="Условия" />
 					<div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
 						<ViewField label="Условия оплаты" value={PAYMENT_TYPE_LABELS[item.paymentType ?? "prepayment"]} />
-						<ViewField label="Доставка" value={DELIVERY_TYPE_LABELS[item.deliveryType ?? "warehouse"]} />
 						<ViewField label="Разгрузка" value={item.unloading ? UNLOADING_LABELS[item.unloading] : ""} />
-						<ViewField label="Частота поставок" value={frequencyDisplay} />
 					</div>
 				</div>
 			)}
@@ -534,24 +446,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<div className="rounded-lg border border-border p-4">
 					<SectionHeader title="Параметры запроса" />
 					<div className="flex flex-col gap-3">
-						<FieldRow label="Периодичность мониторинга цен">
-							<Select
-								value={requestParamsForm.priceMonitoringPeriod}
-								onValueChange={(v) => updateRequestParams("priceMonitoringPeriod", v as PriceMonitoringPeriod)}
-							>
-								<SelectTrigger aria-label="Периодичность мониторинга цен">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PRICE_MONITORING_PERIODS.map((p) => (
-										<SelectItem key={p} value={p}>
-											{PRICE_MONITORING_PERIOD_LABELS[p]}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</FieldRow>
-
 						<CheckboxRow
 							id="detail-analoguesAllowed"
 							label="Допускаются аналоги"
@@ -560,10 +454,10 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 						/>
 
 						<CheckboxRow
-							id="detail-hideCompanyInfo"
-							label="Скрыть информацию о компании в запросе"
-							checked={requestParamsForm.hideCompanyInfo}
-							onCheckedChange={(v) => updateRequestParams("hideCompanyInfo", v)}
+							id="detail-sampleRequired"
+							label="Нужен образец"
+							checked={requestParamsForm.sampleRequired}
+							onCheckedChange={(v) => updateRequestParams("sampleRequired", v)}
 						/>
 					</div>
 					<SaveCancelButtons
@@ -578,12 +472,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					<EditButton onClick={handleEditRequestParams} label="Редактировать параметры запроса" />
 					<SectionHeader title="Параметры запроса" />
 					<div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-						<ViewField
-							label="Периодичность мониторинга цен"
-							value={PRICE_MONITORING_PERIOD_LABELS[item.priceMonitoringPeriod ?? "quarter"]}
-						/>
 						<ViewField label="Допускаются аналоги" value={item.analoguesAllowed ? "Да" : "Нет"} />
-						<ViewField label="Скрыть информацию о компании" value={item.hideCompanyInfo ? "Да" : "Нет"} />
+						<ViewField label="Нужен образец" value={item.sampleRequired ? "Да" : "Нет"} />
 					</div>
 				</div>
 			)}

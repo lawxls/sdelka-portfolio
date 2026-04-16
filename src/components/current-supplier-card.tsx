@@ -1,15 +1,14 @@
 import type { CurrentSupplier } from "@/data/types";
-import { formatCurrency, formatDeferral, formatDelivery } from "@/lib/format";
+import { formatCurrency, formatDeferral } from "@/lib/format";
 
 interface CurrentSupplierCardProps {
 	currentSupplier: CurrentSupplier;
 }
 
 const FIELDS: { label: string; render: (s: CurrentSupplier) => string }[] = [
-	{ label: "Доставка", render: (s) => formatDelivery(s.deliveryCost) },
+	{ label: "ИНН", render: (s) => s.inn ?? "\u2014" },
 	{ label: "Отсрочка", render: (s) => formatDeferral(s.deferralDays) },
 	{ label: "Цена/ед.", render: (s) => formatCurrency(s.pricePerUnit) },
-	{ label: "ТСО", render: (s) => formatCurrency(s.tco) },
 ];
 
 export function CurrentSupplierCard({ currentSupplier }: CurrentSupplierCardProps) {
@@ -18,7 +17,7 @@ export function CurrentSupplierCard({ currentSupplier }: CurrentSupplierCardProp
 			<p className="mb-3 text-xs font-medium text-muted-foreground">
 				Текущий поставщик: <span className="text-foreground">{currentSupplier.companyName}</span>
 			</p>
-			<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 				{FIELDS.map(({ label, render }) => (
 					<div key={label} className="flex flex-col gap-1">
 						<p className="flex h-5 items-center text-xs text-muted-foreground">{label}</p>

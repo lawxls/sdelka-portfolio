@@ -1,12 +1,5 @@
 import type { NewItemInput } from "@/data/types";
-import {
-	DELIVERY_TYPE_LABELS,
-	FREQUENCY_PERIOD_LABELS,
-	PAYMENT_METHOD_LABELS,
-	PAYMENT_TYPE_LABELS,
-	PRICE_MONITORING_PERIOD_LABELS,
-	UNLOADING_LABELS,
-} from "@/data/types";
+import { DELIVERY_COST_TYPE_LABELS, PAYMENT_METHOD_LABELS, PAYMENT_TYPE_LABELS, UNLOADING_LABELS } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 
 interface ImportItemCardProps {
@@ -34,7 +27,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function ImportItemCard({ item, index }: ImportItemCardProps) {
 	const hasBasicInfo = item.annualQuantity != null || item.unit != null || item.currentPrice != null;
-	const hasFrequency = item.frequencyCount != null && item.frequencyPeriod != null;
 	const hasPayment = item.paymentType != null || item.paymentMethod != null;
 	const hasAnalogues = item.analoguesAllowed != null;
 
@@ -49,42 +41,27 @@ export function ImportItemCard({ item, index }: ImportItemCardProps) {
 			</div>
 
 			<div className="mt-3 flex flex-col gap-2">
-				{(hasBasicInfo || hasFrequency) && (
+				{hasBasicInfo && (
 					<dl className="grid grid-cols-2 gap-x-4 gap-y-1">
 						{item.annualQuantity != null && <Field label="Количество" value={item.annualQuantity} />}
 						{item.unit != null && <Field label="Ед. измерения" value={item.unit} />}
 						{item.currentPrice != null && <Field label="Цена" value={formatCurrency(item.currentPrice)} />}
-						{hasFrequency && (
-							<Field
-								label="Частота поставок"
-								value={`${item.frequencyCount} раз(а) в ${item.frequencyPeriod ? FREQUENCY_PERIOD_LABELS[item.frequencyPeriod] : ""}`}
-							/>
-						)}
 					</dl>
-				)}
-
-				{item.hideCompanyInfo && (
-					<Section title="Компания">
-						<Field label="Видимость" value="Информация скрыта" />
-					</Section>
 				)}
 
 				{hasPayment && (
 					<Section title="Оплата">
 						{item.paymentType != null && <Field label="Тип оплаты" value={PAYMENT_TYPE_LABELS[item.paymentType]} />}
-						{item.paymentType === "deferred" && item.paymentDeferralDays != null && (
-							<Field label="Отсрочка (дн.)" value={item.paymentDeferralDays} />
-						)}
 						{item.paymentMethod != null && (
 							<Field label="Способ оплаты" value={PAYMENT_METHOD_LABELS[item.paymentMethod]} />
 						)}
 					</Section>
 				)}
 
-				{item.deliveryType != null && (
+				{item.deliveryCostType != null && (
 					<Section title="Доставка">
-						<Field label="Тип доставки" value={DELIVERY_TYPE_LABELS[item.deliveryType]} />
-						{item.deliveryType === "warehouse" && item.deliveryAddresses && item.deliveryAddresses.length > 0 && (
+						<Field label="Тип доставки" value={DELIVERY_COST_TYPE_LABELS[item.deliveryCostType]} />
+						{item.deliveryAddresses && item.deliveryAddresses.length > 0 && (
 							<Field label="Адрес" value={item.deliveryAddresses.join(", ")} />
 						)}
 					</Section>
@@ -102,17 +79,17 @@ export function ImportItemCard({ item, index }: ImportItemCardProps) {
 					</Section>
 				)}
 
+				{item.sampleRequired && (
+					<Section title="Образец">
+						<Field label="Запрошен" value="Да" />
+					</Section>
+				)}
+
 				{item.additionalInfo && (
 					<Section title="Дополнительная информация">
 						<div className="col-span-2">
 							<p className="text-sm">{item.additionalInfo}</p>
 						</div>
-					</Section>
-				)}
-
-				{item.priceMonitoringPeriod != null && (
-					<Section title="Мониторинг цен">
-						<Field label="Периодичность" value={PRICE_MONITORING_PERIOD_LABELS[item.priceMonitoringPeriod]} />
 					</Section>
 				)}
 			</div>

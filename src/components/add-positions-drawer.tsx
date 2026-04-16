@@ -18,27 +18,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type {
-	CurrentSupplier,
-	DeliveryType,
-	FrequencyPeriod,
-	NewItemInput,
-	PaymentMethod,
-	PaymentType,
-	PriceMonitoringPeriod,
-	UnloadingType,
-} from "@/data/types";
+import type { CurrentSupplier, NewItemInput, PaymentMethod, PaymentType, UnloadingType } from "@/data/types";
 import {
-	DELIVERY_TYPE_LABELS,
-	DELIVERY_TYPES,
-	FREQUENCY_PERIOD_LABELS,
-	FREQUENCY_PERIODS,
 	PAYMENT_METHOD_LABELS,
 	PAYMENT_METHODS,
 	PAYMENT_TYPE_LABELS,
 	PAYMENT_TYPES,
-	PRICE_MONITORING_PERIOD_LABELS,
-	PRICE_MONITORING_PERIODS,
 	UNITS,
 	UNLOADING_LABELS,
 } from "@/data/types";
@@ -77,25 +62,19 @@ const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25 MB
 
 interface DeliveryState {
 	paymentType: PaymentType;
-	paymentDeferralDays: string;
 	paymentMethod: PaymentMethod;
-	deliveryType: DeliveryType;
 	unloading: UnloadingType | null;
 	analoguesAllowed: boolean | null;
 	additionalInfo: string;
-	monitoringPeriod: PriceMonitoringPeriod;
 }
 
 function createDefaultDelivery(): DeliveryState {
 	return {
 		paymentType: "prepayment",
-		paymentDeferralDays: "",
 		paymentMethod: "bank_transfer",
-		deliveryType: "warehouse",
 		unloading: null,
 		analoguesAllowed: null,
 		additionalInfo: "",
-		monitoringPeriod: "quarter",
 	};
 }
 
@@ -130,9 +109,6 @@ function SectionGroupHeader({ title }: { title: string }) {
 
 export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
 	const [positions, setPositions] = useState<PositionRow[]>(() => [createEmptyRow()]);
-	const [frequencyCount, setFrequencyCount] = useState("1");
-	const [frequencyPeriod, setFrequencyPeriod] = useState<FrequencyPeriod>("month");
-	const [hideCompanyInfo, setHideCompanyInfo] = useState(false);
 	const [delivery, setDelivery] = useState<DeliveryState>(createDefaultDelivery);
 	const [files, setFiles] = useState<File[]>([]);
 	const [showConfirm, setShowConfirm] = useState(false);
@@ -141,10 +117,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	const [companyError, setCompanyError] = useState<string>("");
 	const [csExpanded, setCsExpanded] = useState(false);
 	const [csCompanyName, setCsCompanyName] = useState("");
-	const [csDeliveryCost, setCsDeliveryCost] = useState("");
 	const [csDeferralDays, setCsDeferralDays] = useState("");
 	const [csPricePerUnit, setCsPricePerUnit] = useState("");
-	const [csTco, setCsTco] = useState("");
 	const pendingFocusKey = useRef<string | null>(null);
 	const nameRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,31 +128,20 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 	const isDirty =
 		positions.some((p) => p.name || p.description || p.quantity || p.unit || p.price) ||
-		frequencyCount !== "1" ||
-		frequencyPeriod !== "month" ||
-		hideCompanyInfo ||
 		selectedCompanyId !== "" ||
 		selectedAddressIds.length > 0 ||
 		delivery.paymentType !== "prepayment" ||
-		delivery.paymentDeferralDays !== "" ||
 		delivery.paymentMethod !== "bank_transfer" ||
-		delivery.deliveryType !== "warehouse" ||
 		delivery.unloading !== null ||
 		delivery.analoguesAllowed !== null ||
 		delivery.additionalInfo !== "" ||
-		delivery.monitoringPeriod !== "quarter" ||
 		files.length > 0 ||
 		csCompanyName !== "" ||
-		csDeliveryCost !== "" ||
 		csDeferralDays !== "" ||
-		csPricePerUnit !== "" ||
-		csTco !== "";
+		csPricePerUnit !== "";
 
 	function resetForm() {
 		setPositions([createEmptyRow()]);
-		setFrequencyCount("1");
-		setFrequencyPeriod("month");
-		setHideCompanyInfo(false);
 		setSelectedCompanyId("");
 		setSelectedAddressIds([]);
 		setCompanyError("");
@@ -186,10 +149,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		setFiles([]);
 		setCsExpanded(false);
 		setCsCompanyName("");
-		setCsDeliveryCost("");
 		setCsDeferralDays("");
 		setCsPricePerUnit("");
-		setCsTco("");
 	}
 
 	function updateDelivery<K extends keyof DeliveryState>(field: K, value: DeliveryState[K]) {
@@ -197,37 +158,23 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	}
 
 	function buildCurrentSupplier(): CurrentSupplier | undefined {
-		const hasAnyValue = csCompanyName || csDeliveryCost || csDeferralDays || csPricePerUnit || csTco;
+		const hasAnyValue = csCompanyName || csDeferralDays || csPricePerUnit;
 		if (!hasAnyValue) return undefined;
+		const deferralDays = csDeferralDays ? Number(csDeferralDays) : 0;
 		return {
 			companyName: csCompanyName,
-			deliveryCost: csDeliveryCost ? Number(csDeliveryCost) : null,
-			deferralDays: csDeferralDays ? Number(csDeferralDays) : 0,
+			paymentType: deferralDays > 0 ? "deferred" : "prepayment",
+			deferralDays,
 			pricePerUnit: csPricePerUnit ? Number(csPricePerUnit) : null,
-			tco: csTco ? Number(csTco) : null,
 		};
 	}
 
 	function buildSharedFields(): Partial<NewItemInput> {
 		const fields: Partial<NewItemInput> = {};
 
-		const count = Number(frequencyCount);
-		if (count >= 1) {
-			fields.frequencyCount = count;
-			fields.frequencyPeriod = frequencyPeriod;
-		}
-
-		if (hideCompanyInfo) {
-			fields.hideCompanyInfo = true;
-		}
-
 		fields.paymentType = delivery.paymentType;
-		if (delivery.paymentType === "deferred" && delivery.paymentDeferralDays) {
-			fields.paymentDeferralDays = Number(delivery.paymentDeferralDays);
-		}
 		fields.paymentMethod = delivery.paymentMethod;
 
-		fields.deliveryType = delivery.deliveryType;
 		if (selectedAddressIds.length > 0 && selectedCompany) {
 			const addresses = selectedCompany.addresses
 				.filter((a) => selectedAddressIds.includes(a.id))
@@ -248,8 +195,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		if (delivery.additionalInfo.trim()) {
 			fields.additionalInfo = delivery.additionalInfo.trim();
 		}
-
-		fields.priceMonitoringPeriod = delivery.monitoringPeriod;
 
 		return fields;
 	}
@@ -528,18 +473,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 												type="number"
 												inputMode="numeric"
 												min={0}
-												value={csDeliveryCost}
-												onChange={(e) => setCsDeliveryCost(e.target.value)}
-												aria-label="Доставка, ₽"
-												placeholder="Доставка"
-												autoComplete="off"
-											/>
-										</div>
-										<div>
-											<Input
-												type="number"
-												inputMode="numeric"
-												min={0}
 												value={csDeferralDays}
 												onChange={(e) => setCsDeferralDays(e.target.value)}
 												aria-label="Отсрочка, дн."
@@ -556,18 +489,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 												onChange={(e) => setCsPricePerUnit(e.target.value)}
 												aria-label="Цена/ед., ₽"
 												placeholder="Цена/ед."
-												autoComplete="off"
-											/>
-										</div>
-										<div>
-											<Input
-												type="number"
-												inputMode="numeric"
-												min={0}
-												value={csTco}
-												onChange={(e) => setCsTco(e.target.value)}
-												aria-label="ТСО, ₽"
-												placeholder="ТСО"
 												autoComplete="off"
 											/>
 										</div>
@@ -654,33 +575,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 								{/* ── Условия поставки ── */}
 								<SectionGroupHeader title="Условия поставки" />
 
-								<SectionLabel label="Частота поставок">
-									<Input
-										type="number"
-										inputMode="numeric"
-										min={1}
-										placeholder="1"
-										value={frequencyCount}
-										onChange={(e) => setFrequencyCount(e.target.value)}
-										aria-label="Количество"
-										className="w-20"
-										autoComplete="off"
-									/>
-									<span className="text-sm text-muted-foreground">раз(а) в</span>
-									<Select value={frequencyPeriod} onValueChange={(v) => setFrequencyPeriod(v as FrequencyPeriod)}>
-										<SelectTrigger aria-label="Период">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{FREQUENCY_PERIODS.map((p) => (
-												<SelectItem key={p} value={p}>
-													{FREQUENCY_PERIOD_LABELS[p]}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</SectionLabel>
-
 								<SectionLabel label="Условия оплаты">
 									<SegmentedControl
 										options={PAYMENT_TYPES}
@@ -688,36 +582,11 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 										value={delivery.paymentType}
 										onChange={(v) => updateDelivery("paymentType", v)}
 									/>
-									{delivery.paymentType === "deferred" && (
-										<div className="flex items-center gap-2">
-											<Input
-												type="number"
-												inputMode="numeric"
-												min={0}
-												placeholder="0"
-												value={delivery.paymentDeferralDays}
-												onChange={(e) => updateDelivery("paymentDeferralDays", e.target.value)}
-												aria-label="Дней отсрочки"
-												className="w-20"
-												autoComplete="off"
-											/>
-											<span className="text-sm text-muted-foreground">дн.</span>
-										</div>
-									)}
 									<SegmentedControl
 										options={PAYMENT_METHODS}
 										labels={PAYMENT_METHOD_LABELS}
 										value={delivery.paymentMethod}
 										onChange={(v) => updateDelivery("paymentMethod", v)}
-									/>
-								</SectionLabel>
-
-								<SectionLabel label="Доставка">
-									<SegmentedControl
-										options={DELIVERY_TYPES}
-										labels={DELIVERY_TYPE_LABELS}
-										value={delivery.deliveryType}
-										onChange={(v) => updateDelivery("deliveryType", v)}
 									/>
 								</SectionLabel>
 
@@ -733,24 +602,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 								{/* ── Параметры запроса ── */}
 								<SectionGroupHeader title="Параметры запроса" />
 
-								<SectionLabel label="Периодичность мониторинга цен">
-									<Select
-										value={delivery.monitoringPeriod}
-										onValueChange={(v) => updateDelivery("monitoringPeriod", v as PriceMonitoringPeriod)}
-									>
-										<SelectTrigger aria-label="Период мониторинга">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{PRICE_MONITORING_PERIODS.map((p) => (
-												<SelectItem key={p} value={p}>
-													{PRICE_MONITORING_PERIOD_LABELS[p]}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</SectionLabel>
-
 								<div className="flex items-center gap-2 py-1">
 									<Checkbox
 										id="analogues-allowed"
@@ -761,21 +612,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									<label htmlFor="analogues-allowed" className="text-sm">
 										Допускаются аналоги
 									</label>
-								</div>
-
-								<div className="border-t border-border py-3">
-									<div className="flex items-center gap-2">
-										{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders a button internally */}
-										<label className="flex items-center gap-2">
-											<Checkbox
-												checked={hideCompanyInfo}
-												onCheckedChange={(v) => setHideCompanyInfo(v === true)}
-												aria-label="Скрыть информацию о компании"
-											/>
-											<span className="text-sm font-medium">Скрыть информацию о компании в запросе</span>
-										</label>
-										<HintTooltip text="Запрос будет от имени Sdelka.ai, название вашей компании будет скрыто. Это может снизить количество предложений от поставщиков" />
-									</div>
 								</div>
 
 								{/* ── Дополнительно ── */}

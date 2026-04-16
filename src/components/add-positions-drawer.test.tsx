@@ -77,12 +77,8 @@ async function selectCompany(user: ReturnType<typeof userEvent.setup>) {
 }
 
 const ALWAYS_INCLUDED_DEFAULTS = {
-	frequencyCount: 1,
-	frequencyPeriod: "month",
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",
-	deliveryType: "warehouse",
-	priceMonitoringPeriod: "quarter",
 };
 
 const BOTH_ADDRESSES = ["г. Москва, ул. Ленина, д. 15", "г. Москва, ул. Складская, д. 1"];
@@ -210,13 +206,6 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.queryAllByRole("switch")).toHaveLength(0);
 	});
 
-	test("frequency fields are always visible", () => {
-		renderDrawer();
-		expect(screen.getByText("Частота поставок")).toBeInTheDocument();
-		expect(screen.getByLabelText("Количество")).toBeInTheDocument();
-		expect(screen.getByLabelText("Период")).toBeInTheDocument();
-	});
-
 	test("payment controls are always visible", () => {
 		renderDrawer();
 		expect(screen.getByText("Условия оплаты")).toBeInTheDocument();
@@ -224,13 +213,6 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Р/С" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Наличные" })).toBeInTheDocument();
-	});
-
-	test("delivery controls are always visible", () => {
-		renderDrawer();
-		expect(screen.getByText("Доставка")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "До склада" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Самовывоз" })).toBeInTheDocument();
 	});
 
 	test("unloading controls visible with neither selected by default", () => {
@@ -246,12 +228,6 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByText("Допускаются аналоги")).toBeInTheDocument();
 	});
 
-	test("monitoring dropdown is always visible", () => {
-		renderDrawer();
-		expect(screen.getByText("Периодичность мониторинга цен")).toBeInTheDocument();
-		expect(screen.getByLabelText("Период мониторинга")).toBeInTheDocument();
-	});
-
 	test("comment textarea is always visible", () => {
 		renderDrawer();
 		expect(screen.getByText("Комментарий")).toBeInTheDocument();
@@ -262,12 +238,6 @@ describe("AddPositionsDrawer", () => {
 		renderDrawer();
 		expect(screen.getByText("Приложить файлы")).toBeInTheDocument();
 		expect(screen.getByText(/Перетащите файлы сюда/)).toBeInTheDocument();
-	});
-
-	test("hide company checkbox is visible and unchecked by default", () => {
-		renderDrawer();
-		expect(screen.getByText("Скрыть информацию о компании в запросе")).toBeInTheDocument();
-		expect(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" })).not.toBeChecked();
 	});
 
 	// --- Submit ---
@@ -393,18 +363,6 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit).toHaveBeenCalled();
 	});
 
-	// --- Payment ---
-
-	test("deferral days only shown when Отсрочка selected", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-
-		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
-		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
-	});
-
 	// --- Delivery ---
 
 	test("delivery section has no address input", () => {
@@ -466,35 +424,6 @@ describe("AddPositionsDrawer", () => {
 		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ analoguesAllowed: true })]);
 	});
 
-	// --- Monitoring ---
-
-	test("monitoring always included in submit with default", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-		const user = userEvent.setup();
-
-		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
-		await selectCompany(user);
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ priceMonitoringPeriod: "quarter" })]);
-	});
-
-	// --- Hide company ---
-
-	test("checking hide company includes hideCompanyInfo in submit", async () => {
-		const onSubmit = vi.fn();
-		renderDrawer({ onSubmit });
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" }));
-		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
-		await selectCompany(user);
-		await user.click(screen.getByRole("button", { name: "Создать позиции" }));
-
-		expect(onSubmit).toHaveBeenCalledWith([expect.objectContaining({ hideCompanyInfo: true })]);
-	});
-
 	// --- Comment ---
 
 	test("submit with comment includes additionalInfo", async () => {
@@ -525,14 +454,9 @@ describe("AddPositionsDrawer", () => {
 		const item = onSubmit.mock.calls[0][0][0];
 		expect(item.paymentType).toBe("prepayment");
 		expect(item.paymentMethod).toBe("bank_transfer");
-		expect(item.deliveryType).toBe("warehouse");
-		expect(item.frequencyCount).toBe(1);
-		expect(item.frequencyPeriod).toBe("month");
-		expect(item.priceMonitoringPeriod).toBe("quarter");
 		// Toggle-gated fields omitted when off
 		expect(item.unloading).toBeUndefined();
 		expect(item.analoguesAllowed).toBeUndefined();
-		expect(item.hideCompanyInfo).toBeUndefined();
 		expect(item.additionalInfo).toBeUndefined();
 	});
 
@@ -574,7 +498,6 @@ describe("AddPositionsDrawer", () => {
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "false");
 		expect(screen.getByRole("button", { name: "Своими силами" })).toHaveAttribute("aria-pressed", "false");
 		expect(screen.getByRole("checkbox", { name: "Аналоги допускаются" })).not.toBeChecked();
-		expect(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" })).not.toBeChecked();
 	});
 
 	// --- Validation & unsaved changes ---
@@ -661,17 +584,6 @@ describe("AddPositionsDrawer", () => {
 		const user = userEvent.setup();
 
 		await user.type(screen.getByPlaceholderText("Описание"), "desc");
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
-	});
-
-	test("dirty detection: hide company checkbox triggers confirmation", async () => {
-		const onOpenChange = vi.fn();
-		renderDrawer({ onOpenChange });
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("checkbox", { name: "Скрыть информацию о компании" }));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -848,10 +760,8 @@ describe("AddPositionsDrawer", () => {
 
 		expect(screen.getByRole("button", { name: "Текущий поставщик" })).toHaveAttribute("aria-expanded", "true");
 		expect(screen.getByPlaceholderText("Название компании")).toBeInTheDocument();
-		expect(screen.getByLabelText("Доставка, ₽")).toBeInTheDocument();
 		expect(screen.getByLabelText("Отсрочка, дн.")).toBeInTheDocument();
 		expect(screen.getByLabelText("Цена/ед., ₽")).toBeInTheDocument();
-		expect(screen.getByLabelText("ТСО, ₽")).toBeInTheDocument();
 	});
 
 	test("current supplier section collapses on second click", async () => {
@@ -886,10 +796,8 @@ describe("AddPositionsDrawer", () => {
 
 		await user.click(screen.getByRole("button", { name: "Текущий поставщик" }));
 		await user.type(screen.getByPlaceholderText("Название компании"), "МеталлТрейд");
-		await user.type(screen.getByLabelText("Доставка, ₽"), "5000");
 		await user.type(screen.getByLabelText("Отсрочка, дн."), "30");
 		await user.type(screen.getByLabelText("Цена/ед., ₽"), "1200");
-		await user.type(screen.getByLabelText("ТСО, ₽"), "15000");
 
 		await user.type(screen.getByPlaceholderText("Название позиции *"), "Item");
 		await selectCompany(user);
@@ -899,16 +807,15 @@ describe("AddPositionsDrawer", () => {
 			expect.objectContaining({
 				currentSupplier: {
 					companyName: "МеталлТрейд",
-					deliveryCost: 5000,
+					paymentType: "deferred",
 					deferralDays: 30,
 					pricePerUnit: 1200,
-					tco: 15000,
 				},
 			}),
 		]);
 	});
 
-	test("submit with only company name sends currentSupplier with null numerics", async () => {
+	test("submit with only company name sends currentSupplier with prepayment default", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -924,10 +831,9 @@ describe("AddPositionsDrawer", () => {
 			expect.objectContaining({
 				currentSupplier: {
 					companyName: "СтройМаркет",
-					deliveryCost: null,
+					paymentType: "prepayment",
 					deferralDays: 0,
 					pricePerUnit: null,
-					tco: null,
 				},
 			}),
 		]);

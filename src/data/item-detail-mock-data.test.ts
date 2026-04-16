@@ -34,9 +34,9 @@ describe("getItemDetail", () => {
 		expect(item?.annualQuantity).toBe(1200);
 		expect(item?.currentPrice).toBe(4500);
 		expect(item?.unit).toBe("т");
-		expect(item?.frequencyCount).toBe(2);
+		expect(item?.quantityPerDelivery).toBe(100);
 		expect(item?.paymentType).toBe("deferred");
-		expect(item?.deliveryType).toBe("warehouse");
+		expect(item?.deliveryCostType).toBe("free");
 		expect(item?.folderId).toBe("folder-metal");
 	});
 
