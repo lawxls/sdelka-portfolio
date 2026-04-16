@@ -6,9 +6,11 @@ import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
+import type { Company } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { server } from "@/test-msw";
-import { createTestQueryClient, makeCompany, makeTask, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeCompanyDetail, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
@@ -53,6 +55,7 @@ beforeEach(() => {
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
+	_resetCompaniesStore();
 
 	// Default MSW handlers
 	server.use(
@@ -299,10 +302,13 @@ describe("TasksPage", () => {
 	});
 
 	describe("company filter", () => {
-		const companies = [makeCompany("c1", { name: "ООО Альфа" }), makeCompany("c2", { name: "ООО Бета" })];
+		const companies: Company[] = [
+			makeCompanyDetail("c1", { name: "ООО Альфа" }),
+			makeCompanyDetail("c2", { name: "ООО Бета" }),
+		];
 
 		beforeEach(() => {
-			server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+			_setCompanies(companies);
 		});
 
 		it("shows company button when multi-company", async () => {
@@ -313,9 +319,7 @@ describe("TasksPage", () => {
 		});
 
 		it("hides company button for single company", async () => {
-			server.use(
-				http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [companies[0]], nextCursor: null })),
-			);
+			_setCompanies([companies[0]]);
 			renderPage();
 			await waitFor(() => {
 				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);

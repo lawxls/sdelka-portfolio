@@ -1,59 +1,81 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { server } from "@/test-msw";
-import { createQueryWrapper, createTestQueryClient, makeCompany, mockHostname } from "@/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
+import * as companiesMock from "./companies-mock-data";
+import type { Company } from "./types";
 import { useCompanies, useProcurementCompanies } from "./use-companies";
 
 let queryClient: QueryClient;
 
 const DEFAULT_PARAMS = { search: "", sort: null };
 
+function makeStored(id: string, overrides: Partial<Company> = {}): Company {
+	return {
+		id,
+		name: `Company ${id}`,
+		industry: "",
+		website: "",
+		description: "",
+		preferredPayment: "",
+		preferredDelivery: "",
+		additionalComments: "",
+		isMain: false,
+		employeeCount: 0,
+		procurementItemCount: 0,
+		addresses: [
+			{
+				id: `addr-${id}`,
+				name: "Офис",
+				type: "office",
+				postalCode: "",
+				address: "г. Москва",
+				contactPerson: "",
+				phone: "",
+				isMain: true,
+			},
+		],
+		employees: [],
+		...overrides,
+	};
+}
+
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	setTokens("test-jwt", "test-refresh");
+	companiesMock._resetCompaniesStore();
 });
 
 afterEach(() => {
 	localStorage.clear();
+	vi.restoreAllMocks();
 });
 
 describe("useCompanies", () => {
-	it("fetches first page of companies", async () => {
-		const companies = Array.from({ length: 10 }, (_, i) => makeCompany(`c${i + 1}`));
-
-		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: "cursor-page2" })));
+	it("fetches first page of companies from the mock store", async () => {
+		companiesMock._setCompanies(Array.from({ length: 35 }, (_, i) => makeStored(`c${i + 1}`)));
 
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.companies).toHaveLength(10);
+			expect(result.current.companies.length).toBeGreaterThan(0);
 		});
 		expect(result.current.hasNextPage).toBe(true);
 	});
 
 	it("returns loading state initially", () => {
-		server.use(
-			http.get("/api/v1/companies/", async () => {
-				await new Promise(() => {});
-			}),
-		);
-
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 		expect(result.current.isLoading).toBe(true);
 	});
 
-	it("hasNextPage is false when nextCursor is null", async () => {
-		server.use(
-			http.get("/api/v1/companies/", () => HttpResponse.json({ companies: [makeCompany("c1")], nextCursor: null })),
-		);
+	it("hasNextPage is false when result fits on one page", async () => {
+		companiesMock._setCompanies([makeStored("c1")]);
 
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
@@ -65,95 +87,40 @@ describe("useCompanies", () => {
 		expect(result.current.hasNextPage).toBe(false);
 	});
 
-	it("fetches next page with cursor via loadMore", async () => {
-		let requestCount = 0;
-
-		server.use(
-			http.get("/api/v1/companies/", ({ request }) => {
-				requestCount++;
-				const url = new URL(request.url);
-				const cursor = url.searchParams.get("cursor");
-
-				if (!cursor) {
-					return HttpResponse.json({ companies: [makeCompany("c1")], nextCursor: "page2-cursor" });
-				}
-				expect(cursor).toBe("page2-cursor");
-				return HttpResponse.json({ companies: [makeCompany("c2")], nextCursor: null });
-			}),
-		);
+	it("loads next page via loadMore", async () => {
+		companiesMock._setCompanies(Array.from({ length: 50 }, (_, i) => makeStored(`c${i + 1}`)));
 
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.companies).toHaveLength(1);
+			expect(result.current.companies.length).toBe(30);
 		});
 
 		result.current.loadMore();
 
 		await waitFor(() => {
-			expect(result.current.companies).toHaveLength(2);
+			expect(result.current.companies.length).toBe(50);
 		});
 		expect(result.current.hasNextPage).toBe(false);
-		expect(requestCount).toBe(2);
 	});
 
-	it("includes search and sort params in API request", async () => {
-		let capturedUrl: string | undefined;
+	it("filters by search term", async () => {
+		companiesMock._setCompanies([makeStored("c1", { name: "Альфа" }), makeStored("c2", { name: "Бета" })]);
 
-		server.use(
-			http.get("/api/v1/companies/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ companies: [], nextCursor: null });
-			}),
-		);
-
-		const params = {
-			search: "Сделка",
-			sort: { field: "employeeCount" as const, direction: "desc" as const },
-		};
-
-		const { result } = renderHook(() => useCompanies(params), {
+		const { result } = renderHook(() => useCompanies({ search: "альф", sort: null }), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.isLoading).toBe(false);
+			expect(result.current.companies).toHaveLength(1);
 		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("Сделка");
-		expect(url.searchParams.get("sort")).toBe("employeeCount");
-		expect(url.searchParams.get("dir")).toBe("desc");
+		expect(result.current.companies[0].name).toBe("Альфа");
 	});
 
-	it("omits empty search from API request", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/companies/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ companies: [], nextCursor: null });
-			}),
-		);
-
-		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.isLoading).toBe(false);
-		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.has("q")).toBe(false);
-		expect(url.searchParams.has("sort")).toBe(false);
-		expect(url.searchParams.has("dir")).toBe(false);
-	});
-
-	it("returns error state on API failure", async () => {
-		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({}, { status: 500 })));
+	it("returns error state when fetch fails", async () => {
+		vi.spyOn(companiesMock, "fetchCompaniesMock").mockRejectedValue(new Error("boom"));
 
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
@@ -165,14 +132,10 @@ describe("useCompanies", () => {
 	});
 
 	it("refetch retries after error", async () => {
-		let callCount = 0;
-		server.use(
-			http.get("/api/v1/companies/", () => {
-				callCount++;
-				if (callCount === 1) return HttpResponse.json({}, { status: 500 });
-				return HttpResponse.json({ companies: [makeCompany("c1")], nextCursor: null });
-			}),
-		);
+		const spy = vi
+			.spyOn(companiesMock, "fetchCompaniesMock")
+			.mockRejectedValueOnce(new Error("boom"))
+			.mockResolvedValueOnce({ companies: [], nextCursor: null });
 
 		const { result } = renderHook(() => useCompanies(DEFAULT_PARAMS), {
 			wrapper: createQueryWrapper(queryClient),
@@ -185,16 +148,18 @@ describe("useCompanies", () => {
 		result.current.refetch();
 
 		await waitFor(() => {
-			expect(result.current.companies).toHaveLength(1);
+			expect(result.current.error).toBeFalsy();
 		});
+		expect(spy).toHaveBeenCalledTimes(2);
 	});
 });
 
 describe("useProcurementCompanies", () => {
 	it("fetches all companies for procurement sidebar", async () => {
-		const companies = [makeCompany("c1", { procurementItemCount: 15 }), makeCompany("c2", { procurementItemCount: 8 })];
-
-		server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+		companiesMock._setCompanies([
+			makeStored("c1", { procurementItemCount: 15 }),
+			makeStored("c2", { procurementItemCount: 8 }),
+		]);
 
 		const { result } = renderHook(() => useProcurementCompanies(), {
 			wrapper: createQueryWrapper(queryClient),
@@ -203,28 +168,19 @@ describe("useProcurementCompanies", () => {
 		await waitFor(() => {
 			expect(result.current.data).toHaveLength(2);
 		});
-		expect(result.current.data?.[0].procurementItemCount).toBe(15);
+		const counts = result.current.data?.map((c) => c.procurementItemCount).sort((a, b) => b - a);
+		expect(counts).toEqual([15, 8]);
 	});
 
 	it("auto-paginates through all pages", async () => {
-		server.use(
-			http.get("/api/v1/companies/", ({ request }) => {
-				const url = new URL(request.url);
-				const cursor = url.searchParams.get("cursor");
-
-				if (!cursor) {
-					return HttpResponse.json({ companies: [makeCompany("c1")], nextCursor: "page2" });
-				}
-				return HttpResponse.json({ companies: [makeCompany("c2")], nextCursor: null });
-			}),
-		);
+		companiesMock._setCompanies(Array.from({ length: 45 }, (_, i) => makeStored(`c${i + 1}`)));
 
 		const { result } = renderHook(() => useProcurementCompanies(), {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
 		await waitFor(() => {
-			expect(result.current.data).toHaveLength(2);
+			expect(result.current.data).toHaveLength(45);
 		});
 		expect(result.current.isLoading).toBe(false);
 	});

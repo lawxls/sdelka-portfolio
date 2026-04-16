@@ -1,29 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
+import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
-import type { CompanySummary, Folder, ProcurementItem } from "@/data/types";
-import { server } from "@/test-msw";
-import { makeCompany, makeCompanyDetail, makeItem } from "@/test-utils";
+import type { Company, Folder, ProcurementItem } from "@/data/types";
+import { makeCompanyDetail, makeItem } from "@/test-utils";
 
 const MOCK_FOLDERS: Folder[] = [
 	{ id: "f1", name: "Металлопрокат", color: "blue" },
 	{ id: "f2", name: "Стройматериалы", color: "green" },
 ];
 
-const MULTI_COMPANIES: CompanySummary[] = [
-	makeCompany("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 }),
-	makeCompany("c2", { name: "Бета", procurementItemCount: 8 }),
-	makeCompany("c3", { name: "Гамма", procurementItemCount: 3 }),
+const MULTI_COMPANIES: Company[] = [
+	makeCompanyDetail("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 }),
+	makeCompanyDetail("c2", { name: "Бета", procurementItemCount: 8 }),
+	makeCompanyDetail("c3", { name: "Гамма", procurementItemCount: 3 }),
 ];
 
-const SINGLE_COMPANY: CompanySummary[] = [makeCompany("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 })];
+const SINGLE_COMPANY: Company[] = [makeCompanyDetail("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 })];
 
 const ITEMS_C1: ProcurementItem[] = [
 	makeItem("i1", { name: "Труба стальная", companyId: "c1", folderId: "f1" }),
@@ -35,13 +34,11 @@ const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150"
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
 
 let queryClient: QueryClient;
-let companies: CompanySummary[];
 
-function setupHandlers(companyList: CompanySummary[]) {
-	companies = companyList;
+function setupHandlers(companyList: Company[]) {
 	_setFolders(MOCK_FOLDERS);
 	_setItems(ALL_ITEMS);
-	server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
+	_setCompanies(companyList);
 }
 
 function renderPage(initialEntries?: string[]) {
@@ -75,6 +72,7 @@ beforeEach(() => {
 	setTokens("test-access", "test-refresh");
 	_resetItemsStore();
 	_resetFoldersStore();
+	_resetCompaniesStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -144,7 +142,6 @@ describe("ProcurementPage — multi-company, no selection", () => {
 
 	test("clicking settings button on company row opens company drawer", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		server.use(http.get("/api/v1/companies/c1/", () => HttpResponse.json(makeCompanyDetail("c1", { name: "Альфа" }))));
 		const user = userEvent.setup();
 		renderPage();
 

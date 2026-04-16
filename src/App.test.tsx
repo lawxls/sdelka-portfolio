@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
+import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
@@ -37,31 +38,55 @@ const TEST_FOLDERS: Folder[] = [
 function setupHandlers() {
 	_setFolders(TEST_FOLDERS);
 	_setItems(ITEMS_PAGE_1);
-	server.use(
-		http.get("/api/v1/companies/", () =>
-			HttpResponse.json({
-				companies: [
-					{
-						id: "company-1",
-						name: "Тестовая компания",
-						isMain: true,
-						responsibleEmployeeName: "Иванов",
-						addresses: [
-							{
-								id: "addr-1",
-								name: "Офис",
-								type: "office",
-								address: "г. Москва, ул. Тестовая, д. 1",
-								isMain: true,
-							},
-						],
-						employeeCount: 1,
-						procurementItemCount: 0,
+	_setCompanies([
+		{
+			id: "company-1",
+			name: "Тестовая компания",
+			industry: "",
+			website: "",
+			description: "",
+			preferredPayment: "",
+			preferredDelivery: "",
+			additionalComments: "",
+			isMain: true,
+			employeeCount: 1,
+			procurementItemCount: 0,
+			addresses: [
+				{
+					id: "addr-1",
+					name: "Офис",
+					type: "office",
+					postalCode: "",
+					address: "г. Москва, ул. Тестовая, д. 1",
+					contactPerson: "",
+					phone: "",
+					isMain: true,
+				},
+			],
+			employees: [
+				{
+					id: 1,
+					firstName: "Иван",
+					lastName: "Иванов",
+					patronymic: "",
+					position: "",
+					role: "admin",
+					phone: "",
+					email: "",
+					isResponsible: true,
+					permissions: {
+						id: "p1",
+						employeeId: 1,
+						analytics: "edit",
+						procurement: "edit",
+						companies: "edit",
+						tasks: "edit",
 					},
-				],
-				nextCursor: null,
-			}),
-		),
+				},
+			],
+		},
+	]);
+	server.use(
 		http.get("/api/v1/company/tasks/board/", () =>
 			HttpResponse.json({
 				assigned: { results: [], next: null, count: 0 },
@@ -106,6 +131,7 @@ beforeEach(() => {
 	setTokens("test-access", "test-refresh");
 	_resetItemsStore();
 	_resetFoldersStore();
+	_resetCompaniesStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

@@ -1,6 +1,20 @@
 import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken } from "./auth";
 import {
+	createAddressMock,
+	createCompanyMock,
+	createEmployeeMock,
+	deleteAddressMock,
+	deleteCompanyMock,
+	deleteEmployeeMock,
+	fetchCompaniesMock,
+	fetchCompanyMock,
+	updateAddressMock,
+	updateCompanyMock,
+	updateEmployeeMock,
+	updateEmployeePermissionsMock,
+} from "./companies-mock-data";
+import {
 	createFolderMock,
 	deleteFolderMock,
 	fetchFolderStatsMock,
@@ -33,7 +47,6 @@ import type {
 } from "./types";
 
 const BASE = "/api/v1/company";
-const COMPANIES_BASE = "/api/v1/companies";
 const TASKS_BASE = "/api/v1/company/tasks";
 const WORKSPACE_BASE = "/api/v1/workspace";
 
@@ -220,13 +233,11 @@ export async function fetchCompanies(params: FetchCompaniesParams): Promise<{
 	companies: CompanySummary[];
 	nextCursor: string | null;
 }> {
-	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
-		base: COMPANIES_BASE,
-	});
+	return fetchCompaniesMock(params);
 }
 
 export async function fetchCompany(id: string): Promise<Company> {
-	return request(`/${id}/`, { base: COMPANIES_BASE });
+	return fetchCompanyMock(id);
 }
 
 export interface UpdateCompanyData {
@@ -240,19 +251,11 @@ export interface UpdateCompanyData {
 }
 
 export async function updateCompany(id: string, data: UpdateCompanyData): Promise<Company> {
-	return request(`/${id}/`, {
-		base: COMPANIES_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateCompanyMock(id, data);
 }
 
 export async function deleteCompany(id: string): Promise<void> {
-	return request(`/${id}/`, {
-		base: COMPANIES_BASE,
-		method: "DELETE",
-	});
+	return deleteCompanyMock(id);
 }
 
 export interface CreateCompanyPayload {
@@ -267,12 +270,7 @@ export interface CreateCompanyPayload {
 }
 
 export async function createCompany(data: CreateCompanyPayload): Promise<Company> {
-	return request("/", {
-		base: COMPANIES_BASE,
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return createCompanyMock(data);
 }
 
 // --- Addresses ---
@@ -298,28 +296,15 @@ export interface UpdateAddressData {
 }
 
 export async function createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
-	return request(`/${companyId}/addresses/`, {
-		base: COMPANIES_BASE,
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return createAddressMock(companyId, data);
 }
 
 export async function updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address> {
-	return request(`/${companyId}/addresses/${addressId}/`, {
-		base: COMPANIES_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateAddressMock(companyId, addressId, data);
 }
 
 export async function deleteAddress(companyId: string, addressId: string): Promise<void> {
-	return request(`/${companyId}/addresses/${addressId}/`, {
-		base: COMPANIES_BASE,
-		method: "DELETE",
-	});
+	return deleteAddressMock(companyId, addressId);
 }
 
 // --- Employees ---
@@ -357,12 +342,7 @@ export async function createEmployee(
 	companyId: string,
 	data: CreateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
-	return request(`/${companyId}/employees/`, {
-		base: COMPANIES_BASE,
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return createEmployeeMock(companyId, data);
 }
 
 export async function updateEmployee(
@@ -370,19 +350,11 @@ export async function updateEmployee(
 	employeeId: number,
 	data: UpdateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
-	return request(`/${companyId}/employees/${employeeId}/`, {
-		base: COMPANIES_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateEmployeeMock(companyId, employeeId, data);
 }
 
 export async function deleteEmployee(companyId: string, employeeId: number): Promise<void> {
-	return request(`/${companyId}/employees/${employeeId}/`, {
-		base: COMPANIES_BASE,
-		method: "DELETE",
-	});
+	return deleteEmployeeMock(companyId, employeeId);
 }
 
 export async function updateEmployeePermissions(
@@ -390,12 +362,7 @@ export async function updateEmployeePermissions(
 	employeeId: number,
 	data: UpdatePermissionsData,
 ): Promise<EmployeePermissions> {
-	return request(`/${companyId}/employees/${employeeId}/permissions/`, {
-		base: COMPANIES_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateEmployeePermissionsMock(companyId, employeeId, data);
 }
 
 // --- Workspace Employees ---

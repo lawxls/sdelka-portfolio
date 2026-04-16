@@ -4,11 +4,31 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { _setCompanies } from "@/data/companies-mock-data";
+import type { Company } from "@/data/types";
 import { server } from "@/test-msw";
-import { createTestQueryClient, makeCompany, mockHostname } from "@/test-utils";
+import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { InviteEmployeesDrawer } from "./invite-employees-drawer";
 
-const MOCK_COMPANIES = [makeCompany("c1", { name: "Компания А" }), makeCompany("c2", { name: "Компания Б" })];
+function makeCompanyDoc(id: string, name: string): Company {
+	return {
+		id,
+		name,
+		industry: "",
+		website: "",
+		description: "",
+		preferredPayment: "",
+		preferredDelivery: "",
+		additionalComments: "",
+		isMain: false,
+		employeeCount: 0,
+		procurementItemCount: 0,
+		addresses: [],
+		employees: [],
+	};
+}
+
+const MOCK_COMPANIES: Company[] = [makeCompanyDoc("c1", "Компания А"), makeCompanyDoc("c2", "Компания Б")];
 
 let queryClient: QueryClient;
 
@@ -29,10 +49,8 @@ beforeEach(() => {
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
 	localStorage.setItem("auth-refresh-token", "test-refresh");
+	_setCompanies(MOCK_COMPANIES);
 	server.use(
-		http.get("/api/v1/companies/", () => {
-			return HttpResponse.json({ companies: MOCK_COMPANIES, nextCursor: null });
-		}),
 		http.post("/api/v1/workspace/employees/invite/", () => {
 			return HttpResponse.json({}, { status: 201 });
 		}),
