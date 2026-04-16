@@ -107,11 +107,9 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать условия" }));
 
-		// item-1 has paymentType: "deferred", deliveryType: "warehouse", unloading: "supplier"
+		// item-1 has paymentType: "deferred", unloading: "supplier"
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
-		expect(screen.getByRole("button", { name: "До склада" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
-		expect(screen.getByLabelText("Частота поставок")).toHaveValue(2);
 	});
 
 	test("save info section triggers mutation with changed values", async () => {
@@ -176,28 +174,26 @@ describe("DetailsTabPanel", () => {
 		expect(saveButton).toBeDisabled();
 	});
 
-	test("conditions section shows frequency with period", async () => {
+	test("conditions section shows unloading responsibility", async () => {
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Условия")).toBeInTheDocument();
 		});
 
-		// item-1 has frequencyCount: 2, frequencyPeriod: "quarter"
-		expect(screen.getByText("2 раз / квартал")).toBeInTheDocument();
 		expect(screen.getByText("Силами поставщика")).toBeInTheDocument();
 	});
 
-	test("request params section shows monitoring and toggles", async () => {
+	test("request params section shows analogues and sample toggles", async () => {
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
 		});
 
-		// item-1 has priceMonitoringPeriod: "quarter", analoguesAllowed: true
-		expect(screen.getByText("Квартал")).toBeInTheDocument();
-		expect(screen.getByText("Да")).toBeInTheDocument();
+		// item-1 has analoguesAllowed: true, sampleRequired: undefined
+		expect(screen.getByText("Допускаются аналоги")).toBeInTheDocument();
+		expect(screen.getByText("Нужен образец")).toBeInTheDocument();
 	});
 
 	test("additional section shows comment", async () => {

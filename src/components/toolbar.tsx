@@ -239,7 +239,7 @@ export function Toolbar({
 					className="bg-status-highlight hover:bg-status-highlight/80"
 				>
 					<Plus data-icon="inline-start" aria-hidden="true" />
-					<span className="hidden sm:inline">Добавить позиции</span>
+					<span className="hidden sm:inline">Добавить позицию</span>
 					<span className="sm:hidden">Добавить</span>
 				</Button>
 			</div>

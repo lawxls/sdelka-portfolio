@@ -48,8 +48,8 @@ describe("ProcurementCard", () => {
 
 		const deviationEl = container.querySelector("[data-field='deviation']");
 		const overpaymentEl = container.querySelector("[data-field='overpayment']");
-		expect(deviationEl?.className).toContain("text-primary");
-		expect(overpaymentEl?.className).toContain("text-primary");
+		expect(deviationEl?.className).toContain("text-green-600");
+		expect(overpaymentEl?.className).toContain("text-green-600");
 	});
 
 	it("does not render average price", () => {
