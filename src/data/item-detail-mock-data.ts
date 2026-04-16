@@ -83,6 +83,21 @@ export function seedItemDetail(item: ProcurementItem) {
 		});
 }
 
+/** Always-upsert variant — used by items-mock-data to keep stores in sync. */
+export function setItemDetail(item: ProcurementItem) {
+	store.set(item.id, {
+		...item,
+		currentSupplier: item.currentSupplier ?? DEFAULT_CURRENT_SUPPLIER,
+	});
+}
+
+/** Hook used by items-mock-data to pull detail edits back into the list store. */
+type DetailUpdateListener = (item: ProcurementItem) => void;
+let detailUpdateListener: DetailUpdateListener | null = null;
+export function _registerDetailUpdateListener(fn: DetailUpdateListener | null) {
+	detailUpdateListener = fn;
+}
+
 export function _resetItemDetailStore() {
 	store = new Map(Object.entries(MOCK_ITEMS));
 }
@@ -124,5 +139,6 @@ export async function updateItemDetail(
 	if (!existing) throw new Error(`Item ${id} not found`);
 	const updated = { ...existing, ...data };
 	store.set(id, updated);
+	detailUpdateListener?.(updated);
 	return updated;
 }

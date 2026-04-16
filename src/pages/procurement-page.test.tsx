@@ -6,6 +6,8 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
+import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
+import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import type { CompanySummary, Folder, ProcurementItem } from "@/data/types";
 import { server } from "@/test-msw";
 import { makeCompany, makeCompanyDetail, makeItem } from "@/test-utils";
@@ -13,12 +15,6 @@ import { makeCompany, makeCompanyDetail, makeItem } from "@/test-utils";
 const MOCK_FOLDERS: Folder[] = [
 	{ id: "f1", name: "Металлопрокат", color: "blue" },
 	{ id: "f2", name: "Стройматериалы", color: "green" },
-];
-
-const MOCK_STATS = [
-	{ folderId: "f1", itemCount: 10 },
-	{ folderId: "f2", itemCount: 5 },
-	{ folderId: null, itemCount: 20 },
 ];
 
 const MULTI_COMPANIES: CompanySummary[] = [
@@ -43,21 +39,9 @@ let companies: CompanySummary[];
 
 function setupHandlers(companyList: CompanySummary[]) {
 	companies = companyList;
-	server.use(
-		http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })),
-		http.get("/api/v1/company/items/", ({ request }) => {
-			const url = new URL(request.url);
-			const company = url.searchParams.get("company");
-			let items = ALL_ITEMS;
-			if (company) items = items.filter((i) => i.companyId === company);
-			return HttpResponse.json({ items, nextCursor: null });
-		}),
-		http.get("/api/v1/company/items/totals", () =>
-			HttpResponse.json({ itemCount: 10, totalOverpayment: "0", totalSavings: "0", totalDeviation: "0" }),
-		),
-		http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
-		http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS, archiveCount: 2 })),
-	);
+	_setFolders(MOCK_FOLDERS);
+	_setItems(ALL_ITEMS);
+	server.use(http.get("/api/v1/companies/", () => HttpResponse.json({ companies, nextCursor: null })));
 }
 
 function renderPage(initialEntries?: string[]) {
@@ -89,6 +73,8 @@ async function waitForSidebar() {
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access", "test-refresh");
+	_resetItemsStore();
+	_resetFoldersStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

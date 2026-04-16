@@ -3,9 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
+import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
+import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
@@ -19,23 +21,11 @@ const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
 		status: i < 5 ? "awaiting_analytics" : i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
 		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
+		// Ensure deviation=overpaying filter captures some rows
+		currentPrice: 100,
+		bestPrice: 80,
 	}),
 );
-
-const MOCK_TOTALS = {
-	itemCount: 35,
-	totalOverpayment: "15000.00",
-	totalSavings: "8000.00",
-	totalDeviation: "7000.00",
-};
-
-const FOLDER_STATS = [
-	{ folderId: "folder-1", itemCount: 9 },
-	{ folderId: "folder-2", itemCount: 9 },
-	{ folderId: "folder-3", itemCount: 5 },
-	{ folderId: "folder-4", itemCount: 5 },
-	{ folderId: null, itemCount: 7 },
-];
 
 const TEST_FOLDERS: Folder[] = [
 	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
@@ -44,84 +34,10 @@ const TEST_FOLDERS: Folder[] = [
 	{ id: "folder-4", name: "Электрика", color: "purple" },
 ];
 
-// --- MSW handlers ---
-
-let folderList = [...TEST_FOLDERS];
-let itemList = [...ITEMS_PAGE_1];
-
 function setupHandlers() {
-	folderList = [...TEST_FOLDERS];
-	itemList = [...ITEMS_PAGE_1];
+	_setFolders(TEST_FOLDERS);
+	_setItems(ITEMS_PAGE_1);
 	server.use(
-		http.get("/api/v1/company/items/", ({ request }) => {
-			const url = new URL(request.url);
-			const q = url.searchParams.get("q");
-			const folder = url.searchParams.get("folder");
-			const status = url.searchParams.get("status");
-			const deviation = url.searchParams.get("deviation");
-
-			let items = [...itemList];
-
-			if (q) {
-				items = items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase()));
-			}
-			if (folder) {
-				if (folder === "none") {
-					items = items.filter((item) => item.folderId == null);
-				} else {
-					items = items.filter((item) => item.folderId === folder);
-				}
-			}
-			if (status) {
-				items = items.filter((item) => item.status === status);
-			}
-			if (deviation === "overpaying") {
-				items = items.filter(
-					(item) => item.bestPrice != null && (item.currentPrice as number) > (item.bestPrice as number),
-				);
-			}
-
-			return HttpResponse.json({ items, nextCursor: null });
-		}),
-		http.get("/api/v1/company/items/totals", () => HttpResponse.json(MOCK_TOTALS)),
-		http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: folderList })),
-		http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: FOLDER_STATS })),
-		http.post("/api/v1/company/folders/", async ({ request }) => {
-			const body = (await request.json()) as { name: string; color: string };
-			const created = { id: `new-${Date.now()}`, ...body };
-			folderList = [...folderList, created];
-			return HttpResponse.json(created, { status: 201 });
-		}),
-		http.patch("/api/v1/company/folders/:id/", async ({ request, params }) => {
-			const body = (await request.json()) as { name?: string; color?: string };
-			const id = params.id as string;
-			folderList = folderList.map((f) => (f.id === id ? { ...f, ...body } : f));
-			const updated = folderList.find((f) => f.id === id);
-			return HttpResponse.json(updated);
-		}),
-		http.delete("/api/v1/company/folders/:id/", ({ params }) => {
-			const id = params.id as string;
-			folderList = folderList.filter((f) => f.id !== id);
-			return new HttpResponse(null, { status: 204 });
-		}),
-		http.patch("/api/v1/company/items/:id/", async ({ request, params }) => {
-			const body = (await request.json()) as Record<string, unknown>;
-			const id = params.id as string;
-			itemList = itemList.map((i) => (i.id === id ? { ...i, ...body } : i));
-			const updated = itemList.find((i) => i.id === id);
-			return HttpResponse.json(updated);
-		}),
-		http.delete("/api/v1/company/items/:id/", ({ params }) => {
-			const id = params.id as string;
-			itemList = itemList.filter((i) => i.id !== id);
-			return new HttpResponse(null, { status: 204 });
-		}),
-		http.post("/api/v1/company/items/batch", async ({ request }) => {
-			const body = (await request.json()) as { items: Array<{ name: string }> };
-			const created = body.items.map((item, i) => makeItem(`new-${i + 1}`, { name: item.name, folderId: null }));
-			itemList = [...itemList, ...created];
-			return HttpResponse.json({ items: created, isAsync: false }, { status: 201 });
-		}),
 		http.get("/api/v1/companies/", () =>
 			HttpResponse.json({
 				companies: [
@@ -188,10 +104,16 @@ async function renderAppReady(initialEntries?: string[]) {
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access", "test-refresh");
+	_resetItemsStore();
+	_resetFoldersStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	setupHandlers();
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
 });
 
 // ---- Route tests (TDD) ----
@@ -577,7 +499,8 @@ describe("ProcurementPage", () => {
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
-		server.use(http.get("/api/v1/company/items/", () => HttpResponse.json({}, { status: 500 })));
+		const itemsMock = await import("@/data/items-mock-data");
+		vi.spyOn(itemsMock, "fetchItemsMock").mockRejectedValue(new Error("boom"));
 
 		renderApp();
 
@@ -589,14 +512,13 @@ describe("ProcurementPage", () => {
 	});
 
 	test("retry button refetches items after error", async () => {
+		const itemsMock = await import("@/data/items-mock-data");
 		let callCount = 0;
-		server.use(
-			http.get("/api/v1/company/items/", () => {
-				callCount++;
-				if (callCount === 1) return HttpResponse.json({}, { status: 500 });
-				return HttpResponse.json({ items: ITEMS_PAGE_1, nextCursor: null });
-			}),
-		);
+		vi.spyOn(itemsMock, "fetchItemsMock").mockImplementation(async () => {
+			callCount++;
+			if (callCount === 1) throw new Error("transient");
+			return { items: ITEMS_PAGE_1, nextCursor: null };
+		});
 
 		renderApp();
 

@@ -741,41 +741,43 @@ describe("useSubmitAnswer", () => {
 });
 
 describe("useItemSearch", () => {
-	it("fetches items from API with q param when query is non-empty", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					items: [
-						{
-							id: "item-1",
-							name: "Арматура А500С",
-							status: "searching",
-							annualQuantity: 100,
-							currentPrice: 50,
-							bestPrice: null,
-							averagePrice: null,
-							folderId: null,
-							companyId: "c1",
-						},
-						{
-							id: "item-2",
-							name: "Арматура А400",
-							status: "searching",
-							annualQuantity: 200,
-							currentPrice: 60,
-							bestPrice: null,
-							averagePrice: null,
-							folderId: null,
-							companyId: "c1",
-						},
-					],
-					nextCursor: null,
-				});
-			}),
-		);
+	it("fetches items from mock store filtered by q", async () => {
+		const { _setItems } = await import("./items-mock-data");
+		_setItems([
+			{
+				id: "item-1",
+				name: "Арматура А500С",
+				status: "searching",
+				annualQuantity: 100,
+				currentPrice: 50,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "item-2",
+				name: "Арматура А400",
+				status: "searching",
+				annualQuantity: 200,
+				currentPrice: 60,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "item-3",
+				name: "Цемент",
+				status: "searching",
+				annualQuantity: 50,
+				currentPrice: 10,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
 
 		const { result } = renderHook(() => useItemSearch("арматур"), {
 			wrapper: createQueryWrapper(queryClient),
@@ -785,8 +787,6 @@ describe("useItemSearch", () => {
 			expect(result.current.data).toHaveLength(2);
 		});
 
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("арматур");
 		expect(result.current.data?.[0]).toEqual({ id: "item-1", name: "Арматура А500С" });
 		expect(result.current.data?.[1]).toEqual({ id: "item-2", name: "Арматура А400" });
 	});

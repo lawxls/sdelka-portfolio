@@ -417,18 +417,9 @@ describe("TasksPage", () => {
 			},
 		];
 
-		beforeEach(() => {
-			server.use(
-				http.get("/api/v1/company/items/", ({ request }) => {
-					const url = new URL(request.url);
-					const q = url.searchParams.get("q");
-					if (q) {
-						const filtered = items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase()));
-						return HttpResponse.json({ items: filtered, nextCursor: null });
-					}
-					return HttpResponse.json({ items, nextCursor: null });
-				}),
-			);
+		beforeEach(async () => {
+			const { _setItems } = await import("@/data/items-mock-data");
+			_setItems(items as Parameters<typeof _setItems>[0]);
 		});
 
 		it("typing in item search shows results from API", async () => {

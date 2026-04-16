@@ -1,10 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { delay, HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { server } from "@/test-msw";
-import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
+import { createQueryWrapper, createTestQueryClient, makeItem, mockHostname } from "@/test-utils";
 import { setTokens } from "./auth";
+import * as foldersMock from "./folders-mock-data";
+import { _resetItemsStore, _setItems } from "./items-mock-data";
 import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
 import {
@@ -25,18 +25,14 @@ const MOCK_FOLDERS: Folder[] = [
 	{ id: "f2", name: "Стройматериалы", color: "green" },
 ];
 
-const MOCK_STATS = [
-	{ folderId: "f1", itemCount: 10 },
-	{ folderId: "f2", itemCount: 5 },
-	{ folderId: null, itemCount: 20 },
-];
-
 let queryClient: QueryClient;
 
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	setTokens("test-jwt", "test-refresh");
+	foldersMock._resetFoldersStore();
+	_resetItemsStore();
 });
 
 afterEach(() => {
@@ -62,8 +58,8 @@ describe("nextUnusedColor", () => {
 });
 
 describe("useFolders", () => {
-	it("fetches folder list from API", async () => {
-		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })));
+	it("returns seeded folders", async () => {
+		foldersMock._setFolders(MOCK_FOLDERS);
 
 		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -72,40 +68,14 @@ describe("useFolders", () => {
 		});
 	});
 
-	it("includes company param in folders request", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/folders/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ folders: MOCK_FOLDERS });
-			}),
-		);
-
-		const { result } = renderHook(() => useFolders("c1"), { wrapper: createQueryWrapper(queryClient) });
-
-		await waitFor(() => {
-			expect(result.current.data).toBeTruthy();
-		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("company")).toBe("c1");
-	});
-
 	it("returns loading state initially", () => {
-		server.use(
-			http.get("/api/v1/company/folders/", async () => {
-				await delay(1000);
-				return HttpResponse.json({ folders: MOCK_FOLDERS });
-			}),
-		);
-
+		foldersMock._setFolders(MOCK_FOLDERS);
 		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 
-	it("returns error state on failure", async () => {
-		server.use(http.get("/api/v1/company/folders/", () => HttpResponse.json({}, { status: 500 })));
+	it("returns error state when mock throws", async () => {
+		vi.spyOn(foldersMock, "fetchFoldersMock").mockRejectedValue(new Error("boom"));
 
 		const { result } = renderHook(() => useFolders(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -116,69 +86,43 @@ describe("useFolders", () => {
 });
 
 describe("useFolderStats", () => {
-	it("fetches and transforms stats to counts format", async () => {
-		server.use(
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS, archiveCount: 3 })),
+	it("transforms stats into { all, none, folderId, archive } counts", async () => {
+		foldersMock._setFolders(MOCK_FOLDERS);
+		_setItems(
+			[
+				makeItem("a", { folderId: "f1" }),
+				makeItem("b", { folderId: "f1" }),
+				makeItem("c", { folderId: "f2" }),
+				makeItem("d", { folderId: null }),
+				makeItem("arc", { folderId: null }),
+			],
+			["arc"],
 		);
 
 		const { result } = renderHook(() => useFolderStats(), { wrapper: createQueryWrapper(queryClient) });
 
 		await waitFor(() => {
-			expect(result.current.data).toEqual({
-				all: 35,
-				none: 20,
-				f1: 10,
-				f2: 5,
-				archive: 3,
-			});
-		});
-	});
-
-	it("includes company param in stats request", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/folders/stats", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ stats: MOCK_STATS, archiveCount: 3 });
-			}),
-		);
-
-		const { result } = renderHook(() => useFolderStats("c1"), { wrapper: createQueryWrapper(queryClient) });
-
-		await waitFor(() => {
 			expect(result.current.data).toBeTruthy();
 		});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("company")).toBe("c1");
+		expect(result.current.data).toMatchObject({
+			all: 4,
+			none: 1,
+			f1: 2,
+			f2: 1,
+			archive: 1,
+		});
 	});
 
 	it("returns loading state initially", () => {
-		server.use(
-			http.get("/api/v1/company/folders/stats", async () => {
-				await delay(1000);
-				return HttpResponse.json({ stats: MOCK_STATS });
-			}),
-		);
-
+		foldersMock._setFolders(MOCK_FOLDERS);
 		const { result } = renderHook(() => useFolderStats(), { wrapper: createQueryWrapper(queryClient) });
 		expect(result.current.isLoading).toBe(true);
 	});
 });
 
 describe("useCreateFolder", () => {
-	it("sends POST with name and color", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.post("/api/v1/company/folders/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ id: "new-id", name: "New", color: "red" }, { status: 201 });
-			}),
-			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
-		);
+	it("creates folder via mock store", async () => {
+		foldersMock._setFolders(MOCK_FOLDERS);
 
 		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -186,17 +130,16 @@ describe("useCreateFolder", () => {
 			await result.current.mutateAsync({ name: "New", color: "red" });
 		});
 
-		expect(capturedBody).toEqual({ name: "New", color: "red" });
+		const folders = foldersMock._getFolders();
+		expect(folders.find((f) => f.name === "New")?.color).toBe("red");
 	});
 
 	it("optimistically adds folder to cache before server responds", async () => {
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.post("/api/v1/company/folders/", async () => {
-				await delay(5000);
-				return HttpResponse.json({ id: "new-id", name: "New", color: "red" }, { status: 201 });
-			}),
+		vi.spyOn(foldersMock, "createFolderMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve({ id: "new-id", name: "New", color: "red" }), 50)),
 		);
 
 		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
@@ -216,10 +159,9 @@ describe("useCreateFolder", () => {
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.post("/api/v1/company/folders/", () => HttpResponse.json({ name: ["Already exists."] }, { status: 400 })),
-		);
+		vi.spyOn(foldersMock, "createFolderMock").mockRejectedValue(new Error("dup"));
 
 		const { result } = renderHook(() => useCreateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -236,17 +178,8 @@ describe("useCreateFolder", () => {
 });
 
 describe("useUpdateFolder", () => {
-	it("sends PATCH with partial data", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/folders/:id/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
-			}),
-			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
-		);
+	it("updates the folder via mock store", async () => {
+		foldersMock._setFolders(MOCK_FOLDERS);
 
 		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -254,17 +187,15 @@ describe("useUpdateFolder", () => {
 			await result.current.mutateAsync({ id: "f1", name: "Renamed" });
 		});
 
-		expect(capturedBody).toEqual({ name: "Renamed" });
+		expect(foldersMock._getFolders().find((f) => f.id === "f1")?.name).toBe("Renamed");
 	});
 
 	it("optimistically updates folder in cache", async () => {
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.patch("/api/v1/company/folders/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
-			}),
+		vi.spyOn(foldersMock, "updateFolderMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve({ id: "f1", name: "Renamed", color: "blue" }), 50)),
 		);
 
 		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
@@ -281,12 +212,10 @@ describe("useUpdateFolder", () => {
 
 	it("optimistically recolors folder in cache", async () => {
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.patch("/api/v1/company/folders/:id/", async () => {
-				await delay(5000);
-				return HttpResponse.json({ id: "f1", name: "Металлопрокат", color: "pink" });
-			}),
+		vi.spyOn(foldersMock, "updateFolderMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve({ id: "f1", name: "Металлопрокат", color: "pink" }), 50)),
 		);
 
 		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
@@ -304,12 +233,9 @@ describe("useUpdateFolder", () => {
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.patch("/api/v1/company/folders/:id/", () =>
-				HttpResponse.json({ name: ["Already exists."] }, { status: 400 }),
-			),
-		);
+		vi.spyOn(foldersMock, "updateFolderMock").mockRejectedValue(new Error("dup"));
 
 		const { result } = renderHook(() => useUpdateFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -326,17 +252,8 @@ describe("useUpdateFolder", () => {
 });
 
 describe("useDeleteFolder", () => {
-	it("sends DELETE request", async () => {
-		let capturedId: string | undefined;
-
-		server.use(
-			http.delete("/api/v1/company/folders/:id/", ({ params }) => {
-				capturedId = params.id as string;
-				return new HttpResponse(null, { status: 204 });
-			}),
-			http.get("/api/v1/company/folders/", () => HttpResponse.json({ folders: MOCK_FOLDERS })),
-			http.get("/api/v1/company/folders/stats", () => HttpResponse.json({ stats: MOCK_STATS })),
-		);
+	it("removes folder via mock store", async () => {
+		foldersMock._setFolders(MOCK_FOLDERS);
 
 		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
 
@@ -344,17 +261,15 @@ describe("useDeleteFolder", () => {
 			await result.current.mutateAsync("f1");
 		});
 
-		expect(capturedId).toBe("f1");
+		expect(foldersMock._getFolders().map((f) => f.id)).toEqual(["f2"]);
 	});
 
 	it("optimistically removes folder from cache", async () => {
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(
-			http.delete("/api/v1/company/folders/:id/", async () => {
-				await delay(5000);
-				return new HttpResponse(null, { status: 204 });
-			}),
+		vi.spyOn(foldersMock, "deleteFolderMock").mockImplementation(
+			() => new Promise((resolve) => setTimeout(() => resolve(), 50)),
 		);
 
 		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
@@ -373,8 +288,9 @@ describe("useDeleteFolder", () => {
 	it("rolls back on error and shows toast", async () => {
 		const { toast } = await import("sonner");
 		queryClient.setQueryData(["folders"], { folders: MOCK_FOLDERS });
+		foldersMock._setFolders(MOCK_FOLDERS);
 
-		server.use(http.delete("/api/v1/company/folders/:id/", () => HttpResponse.json({}, { status: 500 })));
+		vi.spyOn(foldersMock, "deleteFolderMock").mockRejectedValue(new Error("fail"));
 
 		const { result } = renderHook(() => useDeleteFolder(), { wrapper: createQueryWrapper(queryClient) });
 

@@ -1,5 +1,20 @@
 import { ApiError } from "./api-error";
 import { clearTokens, getAccessToken } from "./auth";
+import {
+	createFolderMock,
+	deleteFolderMock,
+	fetchFolderStatsMock,
+	fetchFoldersMock,
+	updateFolderMock,
+} from "./folders-mock-data";
+import {
+	createItemsBatchMock,
+	deleteItemMock,
+	exportItemsMock,
+	fetchItemsMock,
+	fetchTotalsMock,
+	updateItemMock,
+} from "./items-mock-data";
 import type { Attachment, Task, TaskStatus } from "./task-types";
 import { getTenant } from "./tenant";
 import type {
@@ -96,35 +111,27 @@ export async function fetchCompanyInfo(): Promise<{ name: string }> {
 
 // --- Folders ---
 
-export async function fetchFolders(params?: { company?: string }): Promise<{ folders: Folder[] }> {
-	return request(`/folders/${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
+export async function fetchFolders(_params?: { company?: string }): Promise<{ folders: Folder[] }> {
+	return fetchFoldersMock();
 }
 
-export async function fetchFolderStats(params?: { company?: string }): Promise<{
+export async function fetchFolderStats(_params?: { company?: string }): Promise<{
 	stats: Array<{ folderId: string | null; itemCount: number }>;
 	archiveCount: number;
 }> {
-	return request(`/folders/stats${buildQuery((params ?? {}) as Record<string, string | number | undefined>)}`);
+	return fetchFolderStatsMock();
 }
 
 export async function createFolder(data: { name: string; color: string }): Promise<Folder> {
-	return request("/folders/", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return createFolderMock(data);
 }
 
 export async function updateFolder(id: string, data: { name?: string; color?: string }): Promise<Folder> {
-	return request(`/folders/${id}/`, {
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateFolderMock(id, data);
 }
 
 export async function deleteFolder(id: string): Promise<void> {
-	return request(`/folders/${id}/`, { method: "DELETE" });
+	return deleteFolderMock(id);
 }
 
 // --- Items ---
@@ -154,15 +161,11 @@ export async function updateItem(
 	id: string,
 	data: { name?: string; folderId?: string | null; isArchived?: boolean },
 ): Promise<ProcurementItem> {
-	return request(`/items/${id}/`, {
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return updateItemMock(id, data);
 }
 
 export async function deleteItem(id: string): Promise<void> {
-	return request(`/items/${id}/`, { method: "DELETE" });
+	return deleteItemMock(id);
 }
 
 export interface BatchCreateResult {
@@ -172,11 +175,7 @@ export interface BatchCreateResult {
 }
 
 export async function createItemsBatch(items: NewItemInput[]): Promise<BatchCreateResult> {
-	return request("/items/batch", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ items }),
-	});
+	return createItemsBatchMock(items);
 }
 
 export interface ExportResult {
@@ -184,25 +183,15 @@ export interface ExportResult {
 	filename: string;
 }
 
-export async function exportItems(params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
-	const url = `${BASE}/items/export${buildQuery(params as Record<string, string | number | undefined>)}`;
-	const headers = buildAuthHeaders();
-	const response = await fetch(url, { headers });
-
-	await ensureOk(response);
-
-	const disposition = response.headers.get("Content-Disposition") ?? "";
-	const filenameMatch = disposition.match(/filename\*?=(?:UTF-8''|"?)([^";]+)"?/i);
-	const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : "items.xlsx";
-
-	return { blob: await response.blob(), filename };
+export async function exportItems(_params: Omit<FetchItemsParams, "cursor" | "limit">): Promise<ExportResult> {
+	return exportItemsMock();
 }
 
 export async function fetchItems(params: FetchItemsParams): Promise<{
 	items: ProcurementItem[];
 	nextCursor: string | null;
 }> {
-	return request(`/items/${buildQuery(params as Record<string, string | number | undefined>)}`);
+	return fetchItemsMock(params);
 }
 
 export interface FetchTotalsParams {
@@ -214,7 +203,7 @@ export interface FetchTotalsParams {
 }
 
 export async function fetchTotals(params: FetchTotalsParams): Promise<Totals> {
-	return request(`/items/totals${buildQuery(params as Record<string, string | number | undefined>)}`);
+	return fetchTotalsMock(params);
 }
 
 // --- Companies ---

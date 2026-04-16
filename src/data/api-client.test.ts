@@ -30,9 +30,13 @@ import {
 	uploadTaskAttachments,
 } from "./api-client";
 import { setTokens } from "./auth";
+import * as foldersMock from "./folders-mock-data";
+import * as itemsMock from "./items-mock-data";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
+	itemsMock._resetItemsStore();
+	foldersMock._resetFoldersStore();
 });
 
 afterEach(() => {
@@ -123,351 +127,202 @@ describe("fetchCompanyInfo", () => {
 });
 
 describe("fetchFolders", () => {
-	it("sends GET /api/v1/company/folders/ with auth headers", async () => {
-		let capturedHeaders: Headers | undefined;
-		const folders = [{ id: "f1", name: "Test", color: "blue" }];
-
-		server.use(
-			http.get("/api/v1/company/folders/", ({ request }) => {
-				capturedHeaders = request.headers;
-				return HttpResponse.json({ folders });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("returns folders from the mock store", async () => {
+		foldersMock._setFolders([{ id: "f1", name: "Test", color: "blue" }]);
 		const result = await fetchFolders();
-		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
-		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
-		expect(result).toEqual({ folders });
+		expect(result.folders).toEqual([{ id: "f1", name: "Test", color: "blue" }]);
 	});
 });
 
 describe("fetchFolderStats", () => {
-	it("sends GET /api/v1/company/folders/stats with auth headers", async () => {
-		const stats = [
-			{ folderId: "f1", itemCount: 10 },
-			{ folderId: null, itemCount: 5 },
-		];
-
-		server.use(
-			http.get("/api/v1/company/folders/stats", () => {
-				return HttpResponse.json({ stats });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("returns stats + archive count from the mock store", async () => {
+		foldersMock._setFolders([{ id: "f1", name: "F1", color: "blue" }]);
+		itemsMock._setItems([
+			{
+				id: "a",
+				name: "A",
+				status: "searching",
+				annualQuantity: 1,
+				currentPrice: 1,
+				bestPrice: 1,
+				averagePrice: 1,
+				folderId: "f1",
+				companyId: "c1",
+			},
+		]);
 		const result = await fetchFolderStats();
-		expect(result).toEqual({ stats });
+		expect(result.stats.find((s) => s.folderId === "f1")?.itemCount).toBe(1);
+		expect(result.archiveCount).toBe(0);
 	});
 });
 
 describe("createFolder", () => {
-	it("sends POST /api/v1/company/folders/ with name and color", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.post("/api/v1/company/folders/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ id: "new-id", name: "Test", color: "blue" }, { status: 201 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("creates a folder in the mock store", async () => {
+		foldersMock._setFolders([]);
 		const result = await createFolder({ name: "Test", color: "blue" });
-		expect(capturedBody).toEqual({ name: "Test", color: "blue" });
-		expect(result).toEqual({ id: "new-id", name: "Test", color: "blue" });
-	});
-
-	it("throws on 400 (duplicate name)", async () => {
-		server.use(
-			http.post("/api/v1/company/folders/", () => {
-				return HttpResponse.json({ name: ["Folder with this name already exists."] }, { status: 400 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await expect(createFolder({ name: "Dup", color: "red" })).rejects.toThrow();
+		expect(result.name).toBe("Test");
+		expect(result.color).toBe("blue");
+		expect(result.id).toBeTruthy();
 	});
 });
 
 describe("updateFolder", () => {
-	it("sends PATCH /api/v1/company/folders/:id/ with partial data", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/folders/:id/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ id: "f1", name: "Renamed", color: "blue" });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("updates a folder in the mock store", async () => {
+		foldersMock._setFolders([{ id: "f1", name: "Old", color: "blue" }]);
 		const result = await updateFolder("f1", { name: "Renamed" });
-		expect(capturedBody).toEqual({ name: "Renamed" });
-		expect(result).toEqual({ id: "f1", name: "Renamed", color: "blue" });
+		expect(result.name).toBe("Renamed");
 	});
 });
 
 describe("deleteFolder", () => {
-	it("sends DELETE /api/v1/company/folders/:id/ and returns void", async () => {
-		let capturedMethod: string | undefined;
-
-		server.use(
-			http.delete("/api/v1/company/folders/:id/", ({ request }) => {
-				capturedMethod = request.method;
-				return new HttpResponse(null, { status: 204 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("deletes a folder from the mock store", async () => {
+		foldersMock._setFolders([{ id: "f1", name: "F1", color: "blue" }]);
 		const result = await deleteFolder("f1");
-		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
+		expect(foldersMock._getFolders()).toHaveLength(0);
 	});
 });
 
 describe("fetchItems", () => {
-	it("sends GET /api/v1/company/items/ with query params and auth headers", async () => {
-		let capturedHeaders: Headers | undefined;
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedHeaders = request.headers;
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					items: [
-						{
-							id: "i1",
-							name: "Widget",
-							status: "searching",
-							annualQuantity: 100,
-							currentPrice: "50.00",
-							bestPrice: "40.00",
-							averagePrice: "45.00",
-							folderId: null,
-							unit: "шт",
-						},
-					],
-					nextCursor: "abc123",
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await fetchItems({ q: "Widget", status: "searching", sort: "currentPrice", dir: "asc", limit: 25 });
-
-		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
-		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("Widget");
-		expect(url.searchParams.get("status")).toBe("searching");
-		expect(url.searchParams.get("sort")).toBe("currentPrice");
-		expect(url.searchParams.get("dir")).toBe("asc");
-		expect(url.searchParams.get("limit")).toBe("25");
+	it("returns items with decimal numbers from the mock store", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "Widget",
+				status: "searching",
+				annualQuantity: 100,
+				currentPrice: 50,
+				bestPrice: 40,
+				averagePrice: 45,
+				folderId: null,
+				companyId: "c1",
+				unit: "шт",
+			},
+		]);
+		const result = await fetchItems({});
 		expect(result.items[0].currentPrice).toBe(50);
 		expect(result.items[0].bestPrice).toBe(40);
-		expect(result.nextCursor).toBe("abc123");
 	});
 
-	it("omits undefined params from query string", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ items: [], nextCursor: null });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await fetchItems({});
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.toString()).toBe("");
-	});
-
-	it("sends cursor param for pagination", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({ items: [], nextCursor: null });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await fetchItems({ cursor: "eyJvcyI6MjV9" });
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("cursor")).toBe("eyJvcyI6MjV9");
+	it("paginates using cursor", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "A",
+				status: "searching",
+				annualQuantity: 1,
+				currentPrice: 1,
+				bestPrice: 1,
+				averagePrice: 1,
+				folderId: null,
+				companyId: "c1",
+			},
+			{
+				id: "i2",
+				name: "B",
+				status: "searching",
+				annualQuantity: 1,
+				currentPrice: 1,
+				bestPrice: 1,
+				averagePrice: 1,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
+		const first = await fetchItems({ limit: 1 });
+		expect(first.items).toHaveLength(1);
+		expect(first.nextCursor).toBe("i2");
 	});
 });
 
 describe("updateItem", () => {
-	it("sends PATCH /api/v1/company/items/:id/ with partial data and parses decimals", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({
-					id: "i1",
-					name: "Renamed",
-					status: "searching",
-					annualQuantity: 100,
-					currentPrice: "50.00",
-					bestPrice: "40.00",
-					averagePrice: "45.00",
-					folderId: null,
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("updates item in the mock store and returns result", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "Old",
+				status: "searching",
+				annualQuantity: 100,
+				currentPrice: 50,
+				bestPrice: 40,
+				averagePrice: 45,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
 		const result = await updateItem("i1", { name: "Renamed" });
-		expect(capturedBody).toEqual({ name: "Renamed" });
 		expect(result.name).toBe("Renamed");
-		expect(result.currentPrice).toBe(50);
-		expect(result.bestPrice).toBe(40);
+		expect(itemsMock._getAllItems().find((i) => i.id === "i1")?.name).toBe("Renamed");
 	});
 
-	it("sends folderId for folder assignment", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/items/:id/", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({
-					id: "i1",
-					name: "Item",
-					status: "searching",
-					annualQuantity: 100,
-					currentPrice: "50.00",
-					bestPrice: null,
-					averagePrice: null,
-					folderId: "f1",
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await updateItem("i1", { folderId: "f1" });
-		expect(capturedBody).toEqual({ folderId: "f1" });
+	it("moves item to a folder", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "A",
+				status: "searching",
+				annualQuantity: 1,
+				currentPrice: 1,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
+		const result = await updateItem("i1", { folderId: "f1" });
+		expect(result.folderId).toBe("f1");
 	});
 });
 
 describe("deleteItem", () => {
-	it("sends DELETE /api/v1/company/items/:id/ and returns void", async () => {
-		let capturedMethod: string | undefined;
-
-		server.use(
-			http.delete("/api/v1/company/items/:id/", ({ request }) => {
-				capturedMethod = request.method;
-				return new HttpResponse(null, { status: 204 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("removes the item from the mock store", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "A",
+				status: "searching",
+				annualQuantity: 1,
+				currentPrice: 1,
+				bestPrice: null,
+				averagePrice: null,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
 		const result = await deleteItem("i1");
-		expect(capturedMethod).toBe("DELETE");
 		expect(result).toBeUndefined();
+		expect(itemsMock._getAllItems()).toHaveLength(0);
 	});
 });
 
 describe("createItemsBatch", () => {
-	it("sends POST /api/v1/company/items/batch with items array and parses decimals", async () => {
-		let capturedBody: unknown;
-
-		server.use(
-			http.post("/api/v1/company/items/batch", async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json(
-					{
-						items: [
-							{
-								id: "new-1",
-								name: "Widget A",
-								status: "searching",
-								annualQuantity: 100,
-								currentPrice: "50.00",
-								bestPrice: null,
-								averagePrice: null,
-								folderId: null,
-								unit: "шт",
-							},
-						],
-						isAsync: false,
-					},
-					{ status: 201 },
-				);
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
+	it("creates items in the mock store and returns them", async () => {
+		itemsMock._setItems([]);
 		const result = await createItemsBatch([{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }]);
-
-		expect(capturedBody).toEqual({ items: [{ name: "Widget A", annualQuantity: 100, currentPrice: 50, unit: "шт" }] });
 		expect(result.isAsync).toBe(false);
-		expect(result.items?.[0].currentPrice).toBe(50);
 		expect(result.items?.[0].name).toBe("Widget A");
-	});
-
-	it("returns async response for large batches", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () => {
-				return HttpResponse.json({ isAsync: true, taskId: "task-uuid-123" }, { status: 202 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await createItemsBatch([{ name: "Item" }]);
-
-		expect(result.isAsync).toBe(true);
-		expect(result.taskId).toBe("task-uuid-123");
-		expect(result.items).toBeUndefined();
-	});
-
-	it("throws on 400 validation error", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () => {
-				return HttpResponse.json({ items: [{ name: ["This field is required."] }] }, { status: 400 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await expect(createItemsBatch([{ name: "" }])).rejects.toThrow();
+		expect(result.items?.[0].currentPrice).toBe(50);
 	});
 });
 
 describe("fetchTotals", () => {
-	it("sends GET /api/v1/company/items/totals with filter params and parses decimals", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/items/totals", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					itemCount: 42,
-					totalOverpayment: "15000.00",
-					totalSavings: "8000.00",
-					totalDeviation: "120.50",
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await fetchTotals({ q: "test", deviation: "overpaying", folder: "f1" });
-
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("test");
-		expect(url.searchParams.get("deviation")).toBe("overpaying");
-		expect(url.searchParams.get("folder")).toBe("f1");
-		expect(result.totalOverpayment).toBe(15000);
-		expect(result.totalSavings).toBe(8000);
-		expect(result.totalDeviation).toBe(120.5);
-		expect(result.itemCount).toBe(42);
+	it("returns totals computed from the mock store", async () => {
+		itemsMock._setItems([
+			{
+				id: "i1",
+				name: "A",
+				status: "searching",
+				annualQuantity: 10,
+				currentPrice: 100,
+				bestPrice: 80,
+				averagePrice: 90,
+				folderId: null,
+				companyId: "c1",
+			},
+		]);
+		const result = await fetchTotals({});
+		expect(result.itemCount).toBe(1);
+		expect(result.totalOverpayment).toBe(200);
 	});
 });
 
