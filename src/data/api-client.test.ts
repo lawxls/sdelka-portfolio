@@ -33,12 +33,14 @@ import { setTokens } from "./auth";
 import * as companiesMock from "./companies-mock-data";
 import * as foldersMock from "./folders-mock-data";
 import * as itemsMock from "./items-mock-data";
+import * as tasksMock from "./tasks-mock-data";
 
 beforeEach(() => {
 	mockHostname("acme.localhost");
 	itemsMock._resetItemsStore();
 	foldersMock._resetFoldersStore();
 	companiesMock._resetCompaniesStore();
+	tasksMock._resetTasksStore();
 });
 
 afterEach(() => {
@@ -418,193 +420,112 @@ describe("updateEmployeePermissions", () => {
 
 // --- Tasks ---
 
-const MOCK_TASK = {
-	id: "task-uuid-1",
-	name: "Согласование цены",
-	status: "assigned",
-	item: { id: "item-1", name: "Арматура А500С", companyId: "comp-1" },
-	assignee: { id: "user-1", firstName: "Алексей", lastName: "Иванов", email: "a@test.com", avatarIcon: "blue" },
-	createdAt: "2026-03-15T10:00:00.000Z",
-	deadlineAt: "2026-04-01T18:00:00.000Z",
-	description: "Test",
-	questionCount: 2,
-	completedResponse: null,
-	attachments: [],
-	statusBeforeArchive: null,
-	supplierQuestions: [],
-	updatedAt: "2026-03-15T10:00:00.000Z",
-};
+function makeStoredTask(id: string, status: "assigned" | "in_progress" | "completed" | "archived" = "assigned") {
+	return {
+		id,
+		name: `Task ${id}`,
+		status,
+		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		assignee: { id: "user-1", firstName: "Алексей", lastName: "Иванов", email: "a@test.com", avatarIcon: "blue" },
+		createdAt: "2026-03-15T10:00:00.000Z",
+		deadlineAt: "2026-04-01T18:00:00.000Z",
+		description: "Test",
+		questionCount: 2,
+		completedResponse: null,
+		attachments: [] as import("./task-types").Attachment[],
+		statusBeforeArchive: null,
+		supplierQuestions: [] as import("./task-types").SupplierQuestion[],
+		updatedAt: "2026-03-15T10:00:00.000Z",
+	};
+}
 
 describe("fetchTaskBoard", () => {
-	it("sends GET /api/v1/company/tasks/board/ with auth headers and query params", async () => {
-		let capturedHeaders: Headers | undefined;
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/board/", ({ request }) => {
-				capturedHeaders = request.headers;
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					assigned: { results: [MOCK_TASK], next: "cursor-1", count: 25 },
-					in_progress: { results: [], next: null, count: 0 },
-					completed: { results: [], next: null, count: 0 },
-					archived: { results: [], next: null, count: 0 },
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await fetchTaskBoard({ q: "test", sort: "created_at", dir: "asc" });
-		expect(capturedHeaders?.get("Authorization")).toBe("Bearer eyJ.test.jwt");
-		expect(capturedHeaders?.get("X-Tenant")).toBe("acme");
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("q")).toBe("test");
-		expect(url.searchParams.get("sort")).toBe("created_at");
+	it("returns four columns from the mock store", async () => {
+		tasksMock._setTasks([
+			makeStoredTask("t1", "assigned"),
+			makeStoredTask("t2", "in_progress"),
+			makeStoredTask("t3", "completed"),
+			makeStoredTask("t4", "archived"),
+		]);
+		const result = await fetchTaskBoard({ q: "Task", sort: "created_at", dir: "asc" });
 		expect(result.assigned?.results).toHaveLength(1);
-		expect(result.assigned?.results[0].name).toBe("Согласование цены");
-		expect(result.assigned?.next).toBe("cursor-1");
-		expect(result.assigned?.count).toBe(25);
+		expect(result.assigned?.results[0].id).toBe("t1");
+		expect(result.in_progress?.count).toBe(1);
+		expect(result.completed?.count).toBe(1);
+		expect(result.archived?.count).toBe(1);
 	});
 
-	it("sends column and cursor params for per-column pagination", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/board/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					results: [MOCK_TASK],
-					next: null,
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		await fetchTaskBoard({ column: "assigned", cursor: "abc123" });
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("column")).toBe("assigned");
-		expect(url.searchParams.get("cursor")).toBe("abc123");
+	it("returns paginated column when column + cursor are passed", async () => {
+		const many = Array.from({ length: 25 }, (_, i) => makeStoredTask(`t${i + 1}`, "assigned"));
+		tasksMock._setTasks(many);
+		const result = await fetchTaskBoard({ column: "assigned" });
+		expect(result.results).toHaveLength(20);
+		expect(result.next).toBeTruthy();
 	});
 });
 
 describe("fetchTasks", () => {
-	it("sends GET /api/v1/company/tasks/ with page-number pagination and query params", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json({
-					count: 100,
-					results: [MOCK_TASK],
-					next: "http://api/tasks/?page=2",
-					previous: null,
-				});
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await fetchTasks({ page: 1, page_size: 20, q: "test", sort: "deadline_at", dir: "desc" });
-		const url = new URL(capturedUrl as string);
-		expect(url.searchParams.get("page")).toBe("1");
-		expect(url.searchParams.get("page_size")).toBe("20");
-		expect(url.searchParams.get("q")).toBe("test");
-		expect(url.searchParams.get("sort")).toBe("deadline_at");
-		expect(url.searchParams.get("dir")).toBe("desc");
-		expect(result.results).toHaveLength(1);
-		expect(result.count).toBe(100);
+	it("returns paginated list from the mock store", async () => {
+		const many = Array.from({ length: 25 }, (_, i) => makeStoredTask(`t${i + 1}`, "assigned"));
+		tasksMock._setTasks(many);
+		const result = await fetchTasks({ page: 1, page_size: 20, q: "Task", sort: "deadline_at", dir: "desc" });
+		expect(result.results).toHaveLength(20);
+		expect(result.count).toBe(25);
 		expect(result.next).toBeTruthy();
 	});
 });
 
 describe("fetchTask", () => {
-	it("sends GET /api/v1/company/tasks/{id}/ with auth headers", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.get("/api/v1/company/tasks/:id/", ({ request }) => {
-				capturedUrl = request.url;
-				return HttpResponse.json(MOCK_TASK);
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await fetchTask("task-uuid-1");
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/");
-		expect(result.id).toBe("task-uuid-1");
-		expect(result.name).toBe("Согласование цены");
+	it("returns a single task by id from the mock store", async () => {
+		tasksMock._setTasks([makeStoredTask("only-1", "assigned")]);
+		const result = await fetchTask("only-1");
+		expect(result.id).toBe("only-1");
 		expect(result.item.name).toBe("Арматура А500С");
 	});
 });
 
 describe("changeTaskStatus", () => {
-	it("sends PATCH /api/v1/company/tasks/{id}/status/ with status and optional completedResponse", async () => {
-		let capturedUrl: string | undefined;
-		let capturedBody: unknown;
-
-		server.use(
-			http.patch("/api/v1/company/tasks/:id/status/", async ({ request }) => {
-				capturedUrl = request.url;
-				capturedBody = await request.json();
-				return HttpResponse.json({ ...MOCK_TASK, status: "completed", completedResponse: "Done" });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await changeTaskStatus("task-uuid-1", { status: "completed", completedResponse: "Done" });
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/status/");
-		expect(capturedBody).toEqual({ status: "completed", completedResponse: "Done" });
+	it("updates status in the mock store and returns the updated task", async () => {
+		tasksMock._setTasks([makeStoredTask("t1", "assigned")]);
+		const result = await changeTaskStatus("t1", { status: "completed", completedResponse: "Done" });
 		expect(result.status).toBe("completed");
+		expect(result.completedResponse).toBe("Done");
+		expect(tasksMock._getAllTasks().find((t) => t.id === "t1")?.status).toBe("completed");
 	});
 });
 
 describe("uploadTaskAttachments", () => {
-	it("sends POST /api/v1/company/tasks/{id}/attachments/ with multipart form data", async () => {
-		let capturedUrl: string | undefined;
-		let capturedContentType: string | null | undefined;
+	it("creates attachments on the task in the mock store", async () => {
+		tasksMock._setTasks([makeStoredTask("t1", "assigned")]);
+		const files = [new File(["content"], "doc.pdf", { type: "application/pdf" })];
+		const result = await uploadTaskAttachments("t1", files);
+		expect(result).toHaveLength(1);
+		expect(result[0].fileName).toBe("doc.pdf");
+		expect(result[0].contentType).toBe("application/pdf");
+		expect(tasksMock._getAllTasks().find((t) => t.id === "t1")?.attachments).toHaveLength(1);
+	});
+});
 
-		server.use(
-			http.post("/api/v1/company/tasks/:id/attachments/", ({ request }) => {
-				capturedUrl = request.url;
-				capturedContentType = request.headers.get("content-type");
-				return HttpResponse.json([
+describe("deleteTaskAttachment", () => {
+	it("removes the attachment from the task in the mock store", async () => {
+		tasksMock._setTasks([
+			{
+				...makeStoredTask("t1", "assigned"),
+				attachments: [
 					{
 						id: "att-1",
 						fileName: "doc.pdf",
 						fileSize: 1024,
 						fileType: "pdf",
 						contentType: "application/pdf",
-						fileUrl: "/files/doc.pdf",
+						fileUrl: "blob:mock",
 						uploadedAt: "2026-03-15T10:00:00.000Z",
 					},
-				]);
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const files = [new File(["content"], "doc.pdf", { type: "application/pdf" })];
-		const result = await uploadTaskAttachments("task-uuid-1", files);
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/attachments/");
-		expect(capturedContentType).toContain("multipart/form-data");
-		expect(result).toHaveLength(1);
-		expect(result[0].fileName).toBe("doc.pdf");
-	});
-});
-
-describe("deleteTaskAttachment", () => {
-	it("sends DELETE /api/v1/company/tasks/{id}/attachments/{attachmentId}/ and returns void", async () => {
-		let capturedUrl: string | undefined;
-
-		server.use(
-			http.delete("/api/v1/company/tasks/:id/attachments/:attachmentId/", ({ request }) => {
-				capturedUrl = request.url;
-				return new HttpResponse(null, { status: 204 });
-			}),
-		);
-
-		setTokens("eyJ.test.jwt", "eyJ.test.refresh");
-		const result = await deleteTaskAttachment("task-uuid-1", "att-1");
-		expect(new URL(capturedUrl as string).pathname).toBe("/api/v1/company/tasks/task-uuid-1/attachments/att-1/");
+				],
+			},
+		]);
+		const result = await deleteTaskAttachment("t1", "att-1");
 		expect(result).toBeUndefined();
+		expect(tasksMock._getAllTasks().find((t) => t.id === "t1")?.attachments).toHaveLength(0);
 	});
 });

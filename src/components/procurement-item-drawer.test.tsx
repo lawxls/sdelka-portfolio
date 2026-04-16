@@ -1,15 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 
 import type { ProcurementItem } from "@/data/types";
-import { server } from "@/test-msw";
 import { makeTask, mockHostname } from "@/test-utils";
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
@@ -88,14 +87,7 @@ const archivedTasks = [
 	}),
 ];
 
-function taskBoardResponse() {
-	return {
-		assigned: { results: assignedTasks, next: null, count: assignedTasks.length },
-		in_progress: { results: inProgressTasks, next: null, count: inProgressTasks.length },
-		completed: { results: completedTasks, next: null, count: completedTasks.length },
-		archived: { results: archivedTasks, next: null, count: archivedTasks.length },
-	};
-}
+const ALL_TASKS = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
 
 beforeEach(() => {
 	queryClient = new QueryClient({
@@ -108,21 +100,14 @@ beforeEach(() => {
 	_setSupplierMockDelay(0, 0);
 	_resetItemDetailStore();
 	_setItemDetailMockDelay(0, 0);
-
-	server.use(
-		http.get("/api/v1/company/tasks/board/", () => HttpResponse.json(taskBoardResponse())),
-		http.get("/api/v1/company/tasks/:id/", ({ params }) => {
-			const all = [...assignedTasks, ...inProgressTasks, ...completedTasks, ...archivedTasks];
-			const task = all.find((t) => t.id === params.id);
-			return task ? HttpResponse.json(task) : HttpResponse.json({ detail: "Not found" }, { status: 404 });
-		}),
-	);
+	_setTasks(ALL_TASKS);
 });
 
 afterEach(() => {
 	localStorage.clear();
 	_resetSupplierStore();
 	_resetItemDetailStore();
+	_resetTasksStore();
 });
 
 describe("ProcurementItemDrawer", () => {

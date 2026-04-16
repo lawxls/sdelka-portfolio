@@ -30,6 +30,14 @@ import {
 	updateItemMock,
 } from "./items-mock-data";
 import type { Attachment, Task, TaskStatus } from "./task-types";
+import {
+	changeTaskStatusMock,
+	deleteTaskAttachmentMock,
+	fetchTaskBoardMock,
+	fetchTaskMock,
+	fetchTasksMock,
+	uploadTaskAttachmentsMock,
+} from "./tasks-mock-data";
 import { getTenant } from "./tenant";
 import type {
 	Address,
@@ -47,7 +55,6 @@ import type {
 } from "./types";
 
 const BASE = "/api/v1/company";
-const TASKS_BASE = "/api/v1/company/tasks";
 const WORKSPACE_BASE = "/api/v1/workspace";
 
 const DECIMAL_FIELDS = new Set([
@@ -148,15 +155,6 @@ export async function deleteFolder(id: string): Promise<void> {
 }
 
 // --- Items ---
-
-function buildQuery(params: { [key: string]: string | number | undefined }): string {
-	const sp = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value != null && value !== "") sp.set(key, String(value));
-	}
-	const qs = sp.toString();
-	return qs ? `?${qs}` : "";
-}
 
 export interface FetchItemsParams {
 	q?: string;
@@ -450,9 +448,7 @@ export interface FetchTaskBoardParams {
 }
 
 export async function fetchTaskBoard(params: FetchTaskBoardParams = {}): Promise<TaskBoardResponse> {
-	return request(`/board/${buildQuery(params as Record<string, string | number | undefined>)}`, {
-		base: TASKS_BASE,
-	});
+	return fetchTaskBoardMock(params as Parameters<typeof fetchTaskBoardMock>[0]);
 }
 
 export interface FetchTasksParams {
@@ -473,42 +469,24 @@ export interface TaskListResponse {
 }
 
 export async function fetchTasks(params: FetchTasksParams = {}): Promise<TaskListResponse> {
-	return request(`/${buildQuery(params as Record<string, string | number | undefined>)}`, {
-		base: TASKS_BASE,
-	});
+	return fetchTasksMock(params as Parameters<typeof fetchTasksMock>[0]);
 }
 
 export async function fetchTask(id: string): Promise<Task> {
-	return request(`/${id}/`, { base: TASKS_BASE });
+	return fetchTaskMock(id);
 }
 
 export async function changeTaskStatus(
 	id: string,
 	data: { status: TaskStatus; completedResponse?: string },
 ): Promise<Task> {
-	return request(`/${id}/status/`, {
-		base: TASKS_BASE,
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(data),
-	});
+	return changeTaskStatusMock(id, data);
 }
 
 export async function uploadTaskAttachments(id: string, files: File[]): Promise<Attachment[]> {
-	const formData = new FormData();
-	for (const file of files) {
-		formData.append("files", file);
-	}
-	return request(`/${id}/attachments/`, {
-		base: TASKS_BASE,
-		method: "POST",
-		body: formData,
-	});
+	return uploadTaskAttachmentsMock(id, files);
 }
 
 export async function deleteTaskAttachment(id: string, attachmentId: string): Promise<void> {
-	return request(`/${id}/attachments/${attachmentId}/`, {
-		base: TASKS_BASE,
-		method: "DELETE",
-	});
+	return deleteTaskAttachmentMock(id, attachmentId);
 }
