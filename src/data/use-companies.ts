@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchCompanies } from "./api-client";
+import { fetchCompaniesMock as fetchCompanies } from "./companies-mock-data";
 import type { CompanySortState } from "./types";
 
 interface CompanyQueryParams {

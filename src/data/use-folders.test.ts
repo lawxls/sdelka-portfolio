@@ -30,7 +30,7 @@ let queryClient: QueryClient;
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setTokens("test-jwt", "test-refresh");
+	setTokens("test-jwt");
 	foldersMock._resetFoldersStore();
 	_resetItemsStore();
 });

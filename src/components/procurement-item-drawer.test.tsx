@@ -95,7 +95,6 @@ beforeEach(() => {
 	});
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
 	_resetItemDetailStore();

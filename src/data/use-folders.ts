@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-	createFolder as apiCreateFolder,
-	deleteFolder as apiDeleteFolder,
-	updateFolder as apiUpdateFolder,
-	fetchFolderStats,
-	fetchFolders,
-} from "./api-client";
+	createFolderMock as apiCreateFolder,
+	deleteFolderMock as apiDeleteFolder,
+	updateFolderMock as apiUpdateFolder,
+	fetchFolderStatsMock as fetchFolderStats,
+	fetchFoldersMock as fetchFolders,
+} from "./folders-mock-data";
 import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
 
@@ -23,7 +23,7 @@ export function nextUnusedColor(folders: Folder[]): string {
 export function useFolders(company?: string) {
 	return useQuery({
 		queryKey: ["folders", { company }],
-		queryFn: () => fetchFolders(company ? { company } : undefined),
+		queryFn: () => fetchFolders(),
 		select: (data) => data.folders,
 	});
 }
@@ -31,7 +31,7 @@ export function useFolders(company?: string) {
 export function useFolderStats(company?: string) {
 	return useQuery({
 		queryKey: ["folderStats", { company }],
-		queryFn: () => fetchFolderStats(company ? { company } : undefined),
+		queryFn: () => fetchFolderStats(),
 		select: (data) => {
 			const counts: Record<string, number> = {};
 			let total = 0;

@@ -3,7 +3,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/data/api-error";
 import * as tasksMock from "@/data/tasks-mock-data";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
@@ -32,7 +31,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
 	tasksMock._setTasks([unansweredTask, completedTask]);
 });
 
@@ -168,11 +166,9 @@ describe("TaskDrawer", () => {
 		expect(screen.queryByText("report.xlsx")).not.toBeInTheDocument();
 	});
 
-	it("shows API error detail in toast when status change fails", async () => {
+	it("shows fallback toast when status change fails", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(
-			new ApiError(400, { detail: "Completed tasks cannot change status." }),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 		renderDrawer("task-1");
 		const user = userEvent.setup();
 
@@ -184,7 +180,7 @@ describe("TaskDrawer", () => {
 		await user.click(screen.getByRole("option", { name: "В работе" }));
 
 		await waitFor(() => {
-			expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+			expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 		});
 	});
 

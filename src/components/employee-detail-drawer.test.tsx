@@ -87,7 +87,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
 	_setWorkspaceEmployees([MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING]);
 });
 

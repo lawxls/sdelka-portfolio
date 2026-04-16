@@ -15,10 +15,9 @@ afterEach(() => {
 });
 
 describe("auth tokens", () => {
-	test("setTokens stores access and refresh tokens in localStorage", () => {
-		setTokens("access-123", "refresh-456");
+	test("setTokens stores access token in localStorage", () => {
+		setTokens("access-123");
 		expect(localStorage.getItem("auth-access-token")).toBe("access-123");
-		expect(localStorage.getItem("auth-refresh-token")).toBe("refresh-456");
 	});
 
 	test("getAccessToken returns stored access token", () => {
@@ -30,11 +29,10 @@ describe("auth tokens", () => {
 		expect(getAccessToken()).toBeNull();
 	});
 
-	test("clearTokens removes both tokens from localStorage", () => {
-		setTokens("access", "refresh");
+	test("clearTokens removes access token from localStorage", () => {
+		setTokens("access");
 		clearTokens();
 		expect(localStorage.getItem("auth-access-token")).toBeNull();
-		expect(localStorage.getItem("auth-refresh-token")).toBeNull();
 	});
 
 	test("clearTokens dispatches auth:cleared event", () => {
@@ -46,7 +44,7 @@ describe("auth tokens", () => {
 	});
 
 	test("isAuthenticated returns true when access token exists", () => {
-		setTokens("access", "refresh");
+		setTokens("access");
 		expect(isAuthenticated()).toBe(true);
 	});
 

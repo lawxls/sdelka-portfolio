@@ -23,7 +23,7 @@ const DEFAULT_PARAMS = {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setTokens("test-jwt", "test-refresh");
+	setTokens("test-jwt");
 	itemsMock._resetItemsStore();
 });
 

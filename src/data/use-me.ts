@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchMe } from "./api-client";
+import { fetchMeMock } from "./workspace-mock-data";
 
 export function useMe() {
 	return useQuery({
 		queryKey: ["me"],
-		queryFn: fetchMe,
+		queryFn: fetchMeMock,
 		staleTime: 5 * 60_000,
 	});
 }

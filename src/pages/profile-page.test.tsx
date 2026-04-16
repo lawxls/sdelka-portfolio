@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { ApiError } from "@/data/api-error";
 import { setTokens } from "@/data/auth";
 import * as settingsApi from "@/data/settings-api";
 import { _resetWorkspaceStore, _setUserSettings, fetchSettingsMock } from "@/data/workspace-mock-data";
@@ -39,7 +38,7 @@ function renderProfile(initialEntries = ["/profile"]) {
 beforeEach(() => {
 	localStorage.clear();
 	mockHostname("acme.localhost");
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -215,10 +214,8 @@ describe("ProfilePage", () => {
 		});
 	});
 
-	test("server field-level errors display inline", async () => {
-		vi.spyOn(settingsApi, "patchSettings").mockRejectedValueOnce(
-			new ApiError(400, { first_name: ["Слишком длинное имя"] }),
-		);
+	test("save failure surfaces generic toast", async () => {
+		vi.spyOn(settingsApi, "patchSettings").mockRejectedValueOnce(new Error("boom"));
 
 		renderProfile();
 		const user = userEvent.setup();
@@ -232,26 +229,7 @@ describe("ProfilePage", () => {
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Слишком длинное имя")).toBeInTheDocument();
-		});
-	});
-
-	test("non-field server error shows toast", async () => {
-		vi.spyOn(settingsApi, "patchSettings").mockRejectedValueOnce(new ApiError(400, { detail: "Ошибка сервера" }));
-
-		renderProfile();
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getByLabelText("Имя")).toHaveValue("Иван");
-		});
-
-		await user.clear(screen.getByLabelText("Имя"));
-		await user.type(screen.getByLabelText("Имя"), "Пётр");
-		await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-		await waitFor(() => {
-			expect(toast.error).toHaveBeenCalledWith("Ошибка сервера");
+			expect(toast.error).toHaveBeenCalledWith("Произошла ошибка. Попробуйте ещё раз.");
 		});
 	});
 

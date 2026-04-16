@@ -1,19 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
+import * as itemsMock from "@/data/items-mock-data";
 import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
+import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 import type { Folder } from "@/data/types";
 import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { DragItemOverlay } from "@/pages/procurement-page";
-import { server } from "@/test-msw";
 import { makeItem } from "@/test-utils";
 import App from "./App";
 
@@ -86,18 +86,7 @@ function setupHandlers() {
 			],
 		},
 	]);
-	server.use(
-		http.get("/api/v1/company/tasks/board/", () =>
-			HttpResponse.json({
-				assigned: { results: [], next: null, count: 0 },
-				in_progress: { results: [], next: null, count: 0 },
-				completed: { results: [], next: null, count: 0 },
-				archived: { results: [], next: null, count: 0 },
-			}),
-		),
-		http.get("/api/v1/company/tasks/", () => HttpResponse.json({ count: 0, results: [], next: null, previous: null })),
-		http.get("/api/v1/company/tasks/:id/", () => HttpResponse.json({ detail: "Not found" }, { status: 404 })),
-	);
+	_setTasks([]);
 }
 
 // --- Render helpers ---
@@ -128,10 +117,11 @@ async function renderAppReady(initialEntries?: string[]) {
 
 beforeEach(() => {
 	localStorage.clear();
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	_resetItemsStore();
 	_resetFoldersStore();
 	_resetCompaniesStore();
+	_resetTasksStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -525,7 +515,6 @@ describe("ProcurementPage", () => {
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
-		const itemsMock = await import("@/data/items-mock-data");
 		vi.spyOn(itemsMock, "fetchItemsMock").mockRejectedValue(new Error("boom"));
 
 		renderApp();
@@ -538,7 +527,6 @@ describe("ProcurementPage", () => {
 	});
 
 	test("retry button refetches items after error", async () => {
-		const itemsMock = await import("@/data/items-mock-data");
 		let callCount = 0;
 		vi.spyOn(itemsMock, "fetchItemsMock").mockImplementation(async () => {
 			callCount++;
@@ -641,11 +629,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("drawer submit shows toast for async batch response", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () =>
-				HttpResponse.json({ isAsync: true, taskId: "task-123" }, { status: 202 }),
-			),
-		);
+		vi.spyOn(itemsMock, "createItemsBatchMock").mockResolvedValueOnce({ isAsync: true, taskId: "task-123" });
 
 		await renderAppReady();
 		const user = userEvent.setup();
@@ -669,11 +653,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("drawer submit shows error toast on 400 validation failure", async () => {
-		server.use(
-			http.post("/api/v1/company/items/batch", () =>
-				HttpResponse.json({ items: [{ name: ["Required."] }] }, { status: 400 }),
-			),
-		);
+		vi.spyOn(itemsMock, "createItemsBatchMock").mockRejectedValueOnce(new Error("validation"));
 
 		await renderAppReady();
 		const user = userEvent.setup();

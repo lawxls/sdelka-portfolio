@@ -5,7 +5,6 @@ import {
 	forgotPassword,
 	login,
 	logout,
-	parseApiError,
 	register,
 	resetPassword,
 	verifyInvitationCode,
@@ -39,37 +38,6 @@ describe("login", () => {
 describe("logout", () => {
 	test("resolves without throwing", async () => {
 		await expect(logout()).resolves.toBeUndefined();
-	});
-});
-
-describe("parseApiError", () => {
-	test("parses field-level errors", () => {
-		const result = parseApiError({ email: "Уже существует", password: "Слишком короткий" });
-		expect(result).toEqual({
-			fieldErrors: { email: "Уже существует", password: "Слишком короткий" },
-			detail: null,
-		});
-	});
-
-	test("parses detail error", () => {
-		const result = parseApiError({ detail: "Неверный email или пароль" });
-		expect(result).toEqual({
-			fieldErrors: {},
-			detail: "Неверный email или пароль",
-		});
-	});
-
-	test("handles null/undefined body", () => {
-		expect(parseApiError(null)).toEqual({ fieldErrors: {}, detail: null });
-		expect(parseApiError(undefined)).toEqual({ fieldErrors: {}, detail: null });
-	});
-
-	test("handles mixed body with detail and field errors", () => {
-		const result = parseApiError({ detail: "Error", email: "Bad" });
-		expect(result).toEqual({
-			fieldErrors: { email: "Bad" },
-			detail: "Error",
-		});
 	});
 });
 

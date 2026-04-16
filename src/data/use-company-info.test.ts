@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient, mockHostname } from "@/test-utils";
-import * as apiClient from "./api-client";
 import { setTokens } from "./auth";
 import { useCompanyInfo } from "./use-company-info";
+import * as workspaceMock from "./workspace-mock-data";
 import { _resetWorkspaceStore, _setCompanyInfo } from "./workspace-mock-data";
 
 afterEach(() => {
@@ -15,7 +15,7 @@ afterEach(() => {
 describe("useCompanyInfo", () => {
 	it("fetches company info from the mock store", async () => {
 		mockHostname("acme.localhost");
-		setTokens("valid-jwt", "valid-refresh");
+		setTokens("valid-jwt");
 		_setCompanyInfo({ name: "Acme Corp" });
 
 		const { result } = renderHook(() => useCompanyInfo(), {
@@ -29,8 +29,8 @@ describe("useCompanyInfo", () => {
 
 	it("returns error state on failure", async () => {
 		mockHostname("acme.localhost");
-		setTokens("valid-jwt", "valid-refresh");
-		vi.spyOn(apiClient, "fetchCompanyInfo").mockRejectedValueOnce(new Error("boom"));
+		setTokens("valid-jwt");
+		vi.spyOn(workspaceMock, "fetchCompanyInfoMock").mockRejectedValueOnce(new Error("boom"));
 
 		const { result } = renderHook(() => useCompanyInfo(), {
 			wrapper: createQueryWrapper(createTestQueryClient()),

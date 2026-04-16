@@ -69,7 +69,7 @@ async function waitForSidebar() {
 
 beforeEach(() => {
 	localStorage.clear();
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	_resetItemsStore();
 	_resetFoldersStore();
 	_resetCompaniesStore();

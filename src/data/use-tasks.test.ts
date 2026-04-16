@@ -2,7 +2,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
-import { ApiError } from "./api-error";
 import type { Task } from "./task-types";
 import * as tasksMock from "./tasks-mock-data";
 import { useAllTasks, useItemSearch, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
@@ -22,7 +21,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	localStorage.setItem("auth-refresh-token", "test-refresh");
 	tasksMock._resetTasksStore();
 });
 
@@ -231,11 +229,9 @@ describe("useUpdateTaskStatus", () => {
 		expect(inProgress?.pages[0].tasks[0].status).toBe("in_progress");
 	});
 
-	it("rolls back on error and shows API detail in toast", async () => {
+	it("rolls back on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(
-			new ApiError(400, { detail: "Completed tasks cannot change status." }),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("in_progress", []);
@@ -256,26 +252,6 @@ describe("useUpdateTaskStatus", () => {
 
 		const inProgress = queryClient.getQueryData<TasksCache>(["tasks", "in_progress", {}]);
 		expect(inProgress?.pages[0].tasks).toHaveLength(0);
-
-		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
-	});
-
-	it("shows generic error toast when error has no detail", async () => {
-		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
-
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("in_progress", []);
-
-		const { result } = renderHook(() => useUpdateTaskStatus(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "t1", status: "in_progress" });
-			} catch {}
-		});
 
 		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 	});
@@ -311,11 +287,9 @@ describe("useUpdateTaskStatus - board cache", () => {
 		expect(board?.in_progress?.results?.[0]?.status).toBe("in_progress");
 	});
 
-	it("rolls back board cache on error and shows API detail in toast", async () => {
+	it("rolls back board cache on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(
-			new ApiError(400, { detail: "Completed tasks cannot change status." }),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedBoardCache({
 			assigned: [makeTask("t1", { status: "assigned" })],
@@ -338,7 +312,7 @@ describe("useUpdateTaskStatus - board cache", () => {
 		]);
 		expect(board?.assigned?.results).toHaveLength(1);
 		expect(board?.in_progress?.results).toHaveLength(0);
-		expect(toast.error).toHaveBeenCalledWith("Completed tasks cannot change status.");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
 	});
 });
 
@@ -375,11 +349,9 @@ describe("useSubmitAnswer - board cache", () => {
 		expect(board?.completed?.results?.[0]?.completedResponse).toBe("My answer");
 	});
 
-	it("rolls back board cache on error and shows API detail in toast", async () => {
+	it("rolls back board cache on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(
-			new ApiError(400, { detail: "Task is already completed." }),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedBoardCache({
 			assigned: [makeTask("t1", { status: "assigned" })],
@@ -402,7 +374,7 @@ describe("useSubmitAnswer - board cache", () => {
 		]);
 		expect(board?.assigned?.results).toHaveLength(1);
 		expect(board?.completed?.results).toHaveLength(0);
-		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 });
 
@@ -437,11 +409,9 @@ describe("useSubmitAnswer", () => {
 		expect(completed?.pages[0].tasks[0].status).toBe("completed");
 	});
 
-	it("rolls back on error and shows API detail in toast", async () => {
+	it("rolls back on error and shows fallback toast", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(
-			new ApiError(400, { detail: "Task is already completed." }),
-		);
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -461,26 +431,6 @@ describe("useSubmitAnswer", () => {
 
 		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(0);
-
-		expect(toast.error).toHaveBeenCalledWith("Task is already completed.");
-	});
-
-	it("shows generic error toast when error has no detail", async () => {
-		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
-
-		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
-		seedTasks("completed", []);
-
-		const { result } = renderHook(() => useSubmitAnswer(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "t1", answer: "My answer" });
-			} catch {}
-		});
 
 		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
@@ -544,7 +494,7 @@ describe("useSubmitAnswer", () => {
 
 	it("does not change status when attachment upload fails", async () => {
 		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockRejectedValue(new ApiError(400, { detail: "File too large" }));
+		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockRejectedValue(new Error("File too large"));
 		const statusSpy = vi
 			.spyOn(tasksMock, "changeTaskStatusMock")
 			.mockResolvedValue(makeTask("t1", { status: "completed" }));
@@ -565,7 +515,7 @@ describe("useSubmitAnswer", () => {
 		});
 
 		expect(statusSpy).not.toHaveBeenCalled();
-		expect(toast.error).toHaveBeenCalledWith("File too large");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 
 	it("rolls back optimistic update when status change fails after successful upload", async () => {
@@ -581,7 +531,7 @@ describe("useSubmitAnswer", () => {
 				uploadedAt: "2026-03-15T10:00:00.000Z",
 			},
 		]);
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new ApiError(400, { detail: "Task is locked" }));
+		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("Task is locked"));
 
 		seedTasks("assigned", [makeTask("t1", { status: "assigned" })]);
 		seedTasks("completed", []);
@@ -604,7 +554,7 @@ describe("useSubmitAnswer", () => {
 		const completed = queryClient.getQueryData<TasksCache>(["tasks", "completed", {}]);
 		expect(completed?.pages[0].tasks).toHaveLength(0);
 
-		expect(toast.error).toHaveBeenCalledWith("Task is locked");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
 });
 

@@ -29,8 +29,7 @@ import type {
 	UpdateCompanyData,
 	UpdateEmployeeData,
 	UpdatePermissionsData,
-} from "@/data/api-client";
-import { ApiError, getErrorDetail } from "@/data/api-error";
+} from "@/data/companies-mock-data";
 import type {
 	Address,
 	AddressType,
@@ -460,8 +459,8 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 
 	function handleDelete(addressId: string) {
 		deleteMutation.mutate(addressId, {
-			onError: (err) => {
-				toast.error(getErrorDetail(err) ?? "Не удалось удалить адрес");
+			onError: () => {
+				toast.error("Не удалось удалить адрес");
 			},
 		});
 	}
@@ -751,19 +750,8 @@ function EmployeesTab({
 	function handleCreate(form: EmployeeFormState) {
 		createMutation.mutate(form as CreateEmployeeData, {
 			onSuccess: () => setShowAddForm(false),
-			onError: (err) => {
-				if (err instanceof ApiError) {
-					const body = err.body as Record<string, unknown> | null;
-					const msg =
-						typeof body?.detail === "string"
-							? body.detail
-							: Object.values(body ?? {})
-									.flat()
-									.find((v): v is string => typeof v === "string");
-					toast.error(msg ?? "Не удалось создать сотрудника");
-				} else {
-					toast.error("Не удалось создать сотрудника");
-				}
+			onError: () => {
+				toast.error("Не удалось создать сотрудника");
 			},
 		});
 	}
@@ -799,8 +787,8 @@ function EmployeesTab({
 
 	function handleDelete(employeeId: number) {
 		deleteMutation.mutate(employeeId, {
-			onError: (err) => {
-				toast.error(getErrorDetail(err) ?? "Не удалось удалить сотрудника");
+			onError: () => {
+				toast.error("Не удалось удалить сотрудника");
 			},
 		});
 	}

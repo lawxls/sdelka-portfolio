@@ -1,4 +1,3 @@
-import { ApiError } from "./api-error";
 import {
 	checkEmailMock,
 	confirmEmailMock,
@@ -76,36 +75,6 @@ export async function logout(): Promise<void> {
 	return logoutMock();
 }
 
-export interface ParsedApiError {
-	fieldErrors: Record<string, string>;
-	detail: string | null;
-}
-
-export function parseApiError(body: unknown): ParsedApiError {
-	const result: ParsedApiError = { fieldErrors: {}, detail: null };
-	if (!body || typeof body !== "object") return result;
-
-	const record = body as Record<string, unknown>;
-	for (const [key, value] of Object.entries(record)) {
-		if (key === "detail" && typeof value === "string") {
-			result.detail = value;
-		} else if (key === "detail" && Array.isArray(value)) {
-			result.detail = value.join(". ");
-		} else if (typeof value === "string") {
-			result.fieldErrors[key] = value;
-		} else if (Array.isArray(value) && value.length > 0) {
-			result.fieldErrors[key] = value.join(". ");
-		}
-	}
-	return result;
-}
-
-export function extractFormErrors(err: unknown): { error: string | null; fieldErrors: Record<string, string> } {
-	const body = err instanceof ApiError ? err.body : undefined;
-	const parsed = parseApiError(body);
-	const hasFields = Object.keys(parsed.fieldErrors).length > 0;
-	return {
-		error: parsed.detail ?? (hasFields ? null : "Произошла ошибка. Попробуйте ещё раз."),
-		fieldErrors: parsed.fieldErrors,
-	};
+export function extractFormErrors(_err: unknown): { error: string | null; fieldErrors: Record<string, string> } {
+	return { error: "Произошла ошибка. Попробуйте ещё раз.", fieldErrors: {} };
 }

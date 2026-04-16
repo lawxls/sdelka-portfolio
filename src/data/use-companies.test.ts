@@ -44,7 +44,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	setTokens("test-jwt", "test-refresh");
+	setTokens("test-jwt");
 	companiesMock._resetCompaniesStore();
 });
 

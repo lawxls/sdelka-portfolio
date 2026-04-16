@@ -34,7 +34,7 @@ function renderPage() {
 beforeEach(() => {
 	localStorage.clear();
 	mockHostname("acme.localhost");
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

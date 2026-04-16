@@ -14,7 +14,7 @@ const MOCK_SETTINGS = makeSettings();
 beforeEach(() => {
 	localStorage.clear();
 	mockHostname("acme.localhost");
-	setTokens("test-access", "test-refresh");
+	setTokens("test-access");
 	_setUserSettings(MOCK_SETTINGS);
 });
 

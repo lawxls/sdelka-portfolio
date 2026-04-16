@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { CompanyCreationSheet } from "@/components/company-creation-sheet";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
 import { useSettingsOutletContext } from "@/components/settings-layout";
-import type { CreateCompanyPayload } from "@/data/api-client";
+import type { CreateCompanyPayload } from "@/data/companies-mock-data";
 import type { CompanySummary } from "@/data/types";
 import { useCompanies } from "@/data/use-companies";
 import { useCreateCompany } from "@/data/use-company-detail";
