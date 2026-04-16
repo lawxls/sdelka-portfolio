@@ -317,10 +317,10 @@ export async function changePasswordMock(
 
 export async function fetchWorkspaceEmployeesMock(): Promise<WorkspaceEmployee[]> {
 	await delay();
-	return workspaceEmployeesStore.map((e) => {
-		const { permissions: _permissions, ...rest } = cloneEmployee(e);
-		return rest;
-	});
+	return workspaceEmployeesStore.map(({ permissions: _permissions, ...rest }) => ({
+		...rest,
+		companies: rest.companies.map((c) => ({ ...c, addresses: c.addresses.map((a) => ({ ...a })) })),
+	}));
 }
 
 export async function fetchWorkspaceEmployeeMock(id: number): Promise<WorkspaceEmployeeDetail> {

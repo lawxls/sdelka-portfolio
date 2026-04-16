@@ -664,7 +664,7 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText(/Текущий поставщик/)).toBeInTheDocument();
 		});
 		// МеталлТрейд appears in the current-supplier card AND in the supplier list
-		// (coherence per #204 — one of item-1's получено_кп suppliers matches).
+		// (one of item-1's получено_кп suppliers matches its currentSupplier).
 		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
@@ -742,7 +742,7 @@ describe("ProcurementItemDrawer", () => {
 
 		// Dialog should be gone
 		expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
-		// Original current supplier still shown (also appears in the supplier row per #204 coherence)
+		// Original current supplier still shown (also appears in the supplier row due to coherence)
 		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 	});
 
@@ -753,7 +753,7 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(11);
 		});
 
-		// Verify current supplier before selection (also appears in the supplier row per #204 coherence)
+		// Verify current supplier before selection (also appears in the supplier row due to coherence)
 		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 
 		const rows = screen.getAllByRole("row");

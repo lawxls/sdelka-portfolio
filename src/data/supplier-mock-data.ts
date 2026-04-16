@@ -10,7 +10,7 @@ import type {
 } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
 
-// First 5 names match supplier companies seeded in companies-mock-data (#201)
+// First 5 names match supplier companies seeded in companies-mock-data
 // so that the currentSupplier displayed on an item maps to a real CRM entry.
 const COMPANY_NAMES = [
 	"МеталлТрейд",
