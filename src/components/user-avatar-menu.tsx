@@ -24,7 +24,7 @@ function formatTriggerName(firstName: string, lastName: string): string {
 	return initial ? `${firstName} ${initial}.` : firstName;
 }
 
-export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-7" }: UserAvatarMenuProps) {
+export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-5" }: UserAvatarMenuProps) {
 	const navigate = useNavigate();
 	const { data: settings } = useSettings();
 
@@ -38,12 +38,12 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 				<button
 					type="button"
 					aria-label="Меню пользователя"
-					className="flex items-center gap-1.5 rounded-md p-1 pr-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+					className="group flex items-center gap-2 rounded-md border border-border bg-background py-1 pr-1.5 pl-1 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 				>
 					{initials ? (
 						<span
 							className={cn(
-								"flex items-center justify-center rounded-full text-xs font-semibold text-white",
+								"flex items-center justify-center rounded-sm text-[0.5625rem] font-semibold leading-none tracking-[0.04em] text-white",
 								avatarColor,
 								iconClassName,
 							)}
@@ -53,8 +53,13 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 					) : (
 						<CircleUser className={iconClassName} />
 					)}
-					{displayName && <span className="text-sm text-foreground">{displayName}</span>}
-					<ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+					{displayName && (
+						<span className="text-xs font-medium tracking-tight leading-none text-muted-foreground">{displayName}</span>
+					)}
+					<ChevronDown
+						className="size-3 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-data-[state=open]:rotate-180"
+						aria-hidden="true"
+					/>
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side={side} align={align} className="w-56">
