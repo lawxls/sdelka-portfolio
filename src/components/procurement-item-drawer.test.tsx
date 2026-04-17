@@ -5,6 +5,7 @@ import { MemoryRouter, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
+import { _resetSearchSupplierStore, _setSearchSupplierMockDelay } from "@/data/search-supplier-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 
@@ -97,6 +98,8 @@ beforeEach(() => {
 	localStorage.setItem("auth-access-token", "test-token");
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
+	_resetSearchSupplierStore();
+	_setSearchSupplierMockDelay(0, 0);
 	_resetItemDetailStore();
 	_setItemDetailMockDelay(0, 0);
 	_setTasks(ALL_TASKS);
@@ -105,6 +108,7 @@ beforeEach(() => {
 afterEach(() => {
 	localStorage.clear();
 	_resetSupplierStore();
+	_resetSearchSupplierStore();
 	_resetItemDetailStore();
 	_resetTasksStore();
 });
@@ -121,15 +125,16 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 
-	test("renders three tabs with Поставщики as default", () => {
+	test("renders four tabs with Поиск as default", () => {
 		renderDrawer();
 		const tablist = screen.getByRole("tablist");
 		const tabs = screen.getAllByRole("tab");
 		expect(tablist).toBeInTheDocument();
-		expect(tabs).toHaveLength(3);
-		expect(tabs[0]).toHaveTextContent("Поставщики");
-		expect(tabs[1]).toHaveTextContent("Задачи");
-		expect(tabs[2]).toHaveTextContent("Информация");
+		expect(tabs).toHaveLength(4);
+		expect(tabs[0]).toHaveTextContent("Поиск");
+		expect(tabs[1]).toHaveTextContent("Поставщики");
+		expect(tabs[2]).toHaveTextContent("Задачи");
+		expect(tabs[3]).toHaveTextContent("Информация");
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 
@@ -151,13 +156,21 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("tab", { name: "Поставщики" })).toHaveAttribute("aria-selected", "false");
 	});
 
-	test("suppliers tab omits &tab= from URL", async () => {
+	test("Поиск tab omits &tab= from URL", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
-		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
+		await user.click(screen.getByRole("tab", { name: "Поиск" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1");
 		expect(screen.getByTestId("url-spy").textContent).not.toContain("tab=");
+	});
+
+	test("Поставщики tab sets &tab=suppliers", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+
+		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
+		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=suppliers");
 	});
 
 	test("details tab sets &tab=details", async () => {
@@ -182,7 +195,10 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer();
 
-		// Default tab — suppliers placeholder
+		// Default tab — search placeholder
+		expect(screen.getByTestId("tab-panel-search")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
 		expect(screen.getByTestId("tab-panel-suppliers")).toBeInTheDocument();
 
 		await user.click(screen.getByRole("tab", { name: "Информация" }));
@@ -197,13 +213,13 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
 	});
 
-	test("invalid tab param defaults to suppliers", () => {
+	test("invalid tab param defaults to Поиск", () => {
 		renderDrawer(["/procurement?item=item-1&tab=bogus"]);
-		expect(screen.getByRole("tab", { name: "Поставщики" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByRole("tab", { name: "Поиск" })).toHaveAttribute("aria-selected", "true");
 	});
 
 	test("suppliers tab loads and renders supplier table with data", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		// Should show loading skeletons first, then data
 		await waitFor(() => {
 			expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
@@ -219,7 +235,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab shows status badges", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -228,7 +244,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab has search input", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -237,7 +253,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("suppliers tab search filters rows", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -259,7 +275,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab has sort buttons", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -271,7 +287,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab has status filter button", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -279,7 +295,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab has checkboxes for multi-select", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -289,7 +305,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab has archive filter toggle", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -299,7 +315,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("clicking supplier row opens supplier detail drawer with &supplier= in URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -320,7 +336,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("supplier detail drawer shows TCO breakdown, agent comment", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -336,7 +352,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("supplier detail drawer shows documents and email history", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -351,7 +367,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("closing supplier drawer removes &supplier= from URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -382,7 +398,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("selecting suppliers shows selection toolbar with archive", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -770,7 +786,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab best offer card shows ТСО/ед., Стоимость, Экономия", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Экономия")).toBeInTheDocument();
@@ -785,7 +801,7 @@ describe("ProcurementItemDrawer", () => {
 		render(
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
-					<MemoryRouter initialEntries={["/procurement?item=item-no-supplier"]}>
+					<MemoryRouter initialEntries={["/procurement?item=item-no-supplier&tab=suppliers"]}>
 						<ProcurementItemDrawer />
 						<UrlSpy />
 					</MemoryRouter>
@@ -801,7 +817,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("context menu shows Выбрать текущего поставщика for получено_кп supplier", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -813,7 +829,7 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("context menu hides Выбрать текущего поставщика for non-получено_кп supplier", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -826,7 +842,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("clicking Выбрать текущего поставщика opens confirmation dialog", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -842,7 +858,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("cancelling select supplier dialog does not change current supplier", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -860,7 +876,7 @@ describe("ProcurementItemDrawer", () => {
 
 	test("confirming select supplier dialog fires mutation and closes dialog", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
@@ -881,5 +897,117 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
 		});
+	});
+
+	test("search tab is default and renders SearchSuppliersTable", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		expect(screen.getByRole("tab", { name: "Поиск" })).toHaveAttribute("aria-selected", "true");
+		expect(screen.getByTestId("tab-panel-search")).toBeInTheDocument();
+
+		await waitFor(() => {
+			const headers = screen.getAllByRole("columnheader").map((h) => h.textContent ?? "");
+			expect(headers).toContain("КОМПАНИЯ");
+			expect(headers).toContain("САЙТ");
+			expect(headers).toContain("ТИП");
+			expect(headers).toContain("РЕГИОН");
+			expect(headers).toContain("ГОД ОСНОВАНИЯ");
+			expect(headers).toContain("ВЫРУЧКА");
+		});
+	});
+
+	test("search tab deep link via ?tab=search works", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=search"]);
+		expect(screen.getByTestId("tab-panel-search")).toBeInTheDocument();
+		expect(screen.getByRole("tab", { name: "Поиск" })).toHaveAttribute("aria-selected", "true");
+	});
+
+	test("search tab renders ~20 rows with company + ИНН", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		// Default shows non-archived → 19 (20 minus 1 pre-archived seed)
+		await waitFor(() => {
+			const rows = screen.getAllByRole("row");
+			// 1 header + 19 data rows
+			expect(rows.length).toBe(20);
+		});
+		// ИНН labels present
+		expect(screen.getAllByText(/^ИНН\s+\d{10}$/).length).toBeGreaterThan(0);
+	});
+
+	test("search tab rows show Сайт link with external attrs", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		const links = screen.getAllByRole("link");
+		expect(links.length).toBeGreaterThan(0);
+		for (const link of links) {
+			expect(link).toHaveAttribute("target", "_blank");
+			expect(link).toHaveAttribute("rel", "noopener noreferrer");
+		}
+	});
+
+	test("search tab «Отправить запрос» button rendered for new rows, «Запрошен» badge for requested", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		// Pre-seeded: 2 rows as requested. Pre-archived is hidden → 1 requested visible
+		// (i=9 is visible; i=3 is visible; i=7 archived hidden)
+		const requestedBadges = screen.getAllByText("Запрошен");
+		expect(requestedBadges.length).toBe(2);
+		// Rest of new-status rows show the button
+		const sendButtons = screen.getAllByRole("button", { name: /Отправить запрос/ });
+		expect(sendButtons.length).toBeGreaterThan(0);
+	});
+
+	test("search tab archive toggle swaps to archived-only view", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		const archiveToggle = screen.getByRole("button", { name: "Архив" });
+		await user.click(archiveToggle);
+		expect(archiveToggle).toHaveAttribute("aria-pressed", "true");
+		await waitFor(() => {
+			// 1 header + 1 archived row
+			expect(screen.getAllByRole("row").length).toBe(2);
+		});
+	});
+
+	test("search tab selection toolbar shows count + Архивировать + Отправить запрос", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		const checkboxes = screen.getAllByRole("checkbox");
+		await user.click(checkboxes[1]);
+		const selectedLabel = screen.getByText("Выбрано: 1");
+		const toolbar = selectedLabel.parentElement as HTMLElement;
+		expect(within(toolbar).getByRole("button", { name: "Архивировать" })).toBeInTheDocument();
+		expect(within(toolbar).getByRole("button", { name: /Отправить запрос/ })).toBeInTheDocument();
+	});
+
+	test("search tab filter popover shows Тип toggles", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		await user.click(screen.getByRole("button", { name: "Фильтр по типу" }));
+		expect(screen.getByRole("button", { name: "Производитель" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Дилер" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
+	});
+
+	test("search tab has sortable columns: Компания, Год основания, Выручка", async () => {
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Год основания/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Выручка/i })).toBeInTheDocument();
 	});
 });

@@ -5,6 +5,7 @@ import { BestOfferCard } from "@/components/best-offer-card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
+import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
 import { SuppliersTable } from "@/components/suppliers-table";
@@ -23,10 +24,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type {
+	SearchSupplierCompanyType,
+	SearchSupplierSortField,
+	SearchSupplierSortState,
+} from "@/data/search-supplier-types";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
+import {
+	useArchiveSearchSuppliers,
+	useSearchSuppliers,
+	useUnarchiveSearchSuppliers,
+} from "@/data/use-search-suppliers";
 import {
 	useArchiveSuppliers,
 	useInfiniteSuppliers,
@@ -39,19 +50,21 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatDayMonth, formatRussianPlural, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type ItemDrawerTab = "suppliers" | "details" | "tasks";
+type ItemDrawerTab = "search" | "suppliers" | "details" | "tasks";
 
 const TABS: { key: ItemDrawerTab; label: string }[] = [
+	{ key: "search", label: "Поиск" },
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "tasks", label: "Задачи" },
 	{ key: "details", label: "Информация" },
 ];
 
+const DEFAULT_TAB: ItemDrawerTab = "search";
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
 
 function parseItemDrawerTab(param: string | null): ItemDrawerTab {
 	if (param && VALID_TABS.has(param)) return param as ItemDrawerTab;
-	return "suppliers";
+	return DEFAULT_TAB;
 }
 
 interface ProcurementItemDrawerProps {
@@ -76,7 +89,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
-				if (tab === "suppliers") {
+				if (tab === DEFAULT_TAB) {
 					next.delete("tab");
 				} else {
 					next.set("tab", tab);
@@ -212,6 +225,106 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				</AlertDialogContent>
 			</AlertDialog>
 		</>
+	);
+}
+
+function SearchTabPanel({ itemId }: { itemId: string }) {
+	const [search, setSearch] = useState("");
+	const [sort, setSort] = useState<SearchSupplierSortState>(null);
+	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SearchSupplierCompanyType[]>([]);
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+	const [showArchived, setShowArchived] = useState(false);
+
+	const filterParams = useMemo(
+		() => ({
+			search: search || undefined,
+			companyTypes: activeCompanyTypes.length > 0 ? activeCompanyTypes : undefined,
+			showArchived,
+			sort: sort?.field,
+			dir: sort?.direction,
+		}),
+		[search, activeCompanyTypes, showArchived, sort],
+	);
+
+	const query = useSearchSuppliers(itemId, filterParams);
+	const archiveMutation = useArchiveSearchSuppliers();
+	const unarchiveMutation = useUnarchiveSearchSuppliers();
+	const entries = query.data ?? [];
+
+	function handleSort(field: SearchSupplierSortField) {
+		setSort((prev) => {
+			if (prev?.field !== field) return { field, direction: "asc" };
+			if (prev.direction === "asc") return { field, direction: "desc" };
+			return null;
+		});
+	}
+
+	function handleCompanyTypeFilter(type: SearchSupplierCompanyType) {
+		setActiveCompanyTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
+	}
+
+	function handleSelectionChange(idOrAll: string) {
+		if (idOrAll === "all") {
+			setSelectedIds((prev) => (prev.size === entries.length ? new Set() : new Set(entries.map((e) => e.id))));
+		} else {
+			setSelectedIds((prev) => {
+				const next = new Set(prev);
+				if (next.has(idOrAll)) next.delete(idOrAll);
+				else next.add(idOrAll);
+				return next;
+			});
+		}
+	}
+
+	function handleArchiveBatch() {
+		archiveMutation.mutate({ itemId, ids: [...selectedIds] }, { onSuccess: () => setSelectedIds(new Set()) });
+	}
+
+	function handleArchiveEntry(id: string) {
+		archiveMutation.mutate({ itemId, ids: [id] });
+	}
+
+	function handleUnarchiveEntry(id: string) {
+		unarchiveMutation.mutate({ itemId, ids: [id] });
+	}
+
+	function handleSendRequest(_id: string) {
+		// Stub — RFQ promotion flow lands in #231.
+	}
+
+	function handleSendRequestBatch() {
+		// Stub — batch RFQ promotion flow lands in #231.
+		setSelectedIds(new Set());
+	}
+
+	function handleToggleArchived() {
+		setShowArchived((v) => !v);
+		setSelectedIds(new Set());
+	}
+
+	return (
+		<div data-testid="tab-panel-search">
+			<SearchSuppliersTable
+				entries={entries}
+				isLoading={query.isLoading}
+				search={search}
+				onSearchChange={setSearch}
+				sort={sort}
+				onSort={handleSort}
+				activeCompanyTypes={activeCompanyTypes}
+				onCompanyTypeFilter={handleCompanyTypeFilter}
+				selectedIds={selectedIds}
+				onSelectionChange={handleSelectionChange}
+				onArchive={handleArchiveBatch}
+				isArchiving={archiveMutation.isPending}
+				onArchiveEntry={handleArchiveEntry}
+				onUnarchiveEntry={handleUnarchiveEntry}
+				onSendRequest={handleSendRequest}
+				onSendRequestBatch={handleSendRequestBatch}
+				showArchived={showArchived}
+				onToggleArchived={handleToggleArchived}
+			/>
+		</div>
 	);
 }
 
@@ -637,7 +750,10 @@ function ProcurementItemDrawerContent({
 				))}
 			</div>
 
-			<div className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" ? "pt-3" : "p-4"}`}>
+			<div
+				className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" || activeTab === "search" ? "pt-3" : "p-4"}`}
+			>
+				{activeTab === "search" && <SearchTabPanel itemId={itemId} />}
 				{activeTab === "suppliers" && (
 					<SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
 				)}
