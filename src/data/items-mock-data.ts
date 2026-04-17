@@ -32,6 +32,11 @@ const SEED_ITEMS: ProcurementItem[] = [
 			deferralDays: 30,
 			pricePerUnit: 4500,
 		},
+		generatedAnswers: [
+			{ questionId: "material-grade", selectedOption: "По ГОСТ" },
+			{ questionId: "certificates", selectedOption: "Сертификат соответствия", freeText: "Плюс паспорт качества" },
+		],
+		attachedFiles: [{ name: "specification.pdf", size: 204800 }],
 	},
 	{
 		id: "item-2",
@@ -480,6 +485,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 			additionalInfo: input.additionalInfo,
 			currentSupplier: input.currentSupplier,
 			generatedAnswers: input.generatedAnswers,
+			attachedFiles: input.attachedFiles,
 		};
 		return item;
 	});

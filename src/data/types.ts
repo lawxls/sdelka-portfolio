@@ -58,6 +58,11 @@ export interface GeneratedAnswer {
 	freeText?: string;
 }
 
+export interface AttachedFile {
+	name: string;
+	size: number;
+}
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -84,6 +89,7 @@ export interface ProcurementItem {
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
+	attachedFiles?: AttachedFile[];
 }
 
 export interface Folder {
@@ -140,6 +146,7 @@ export interface NewItemInput {
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
+	attachedFiles?: AttachedFile[];
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

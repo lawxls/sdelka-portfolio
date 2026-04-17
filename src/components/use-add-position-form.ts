@@ -193,6 +193,10 @@ function buildNewItemInput(
 	const answers = buildGeneratedAnswers(step3);
 	if (answers) payload.generatedAnswers = answers;
 
+	if (step1.files.length > 0) {
+		payload.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
+	}
+
 	return payload;
 }
 

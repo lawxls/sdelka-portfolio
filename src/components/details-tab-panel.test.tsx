@@ -207,36 +207,90 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
-	test("complex fields render as display-only placeholder cards", async () => {
+	test("Основное edit exposes FolderSelect for Категория with current folder pre-selected", async () => {
+		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		// Категория placeholder — folder-metal → "Металлопрокат"
-		expect(screen.getByText("Категория")).toBeInTheDocument();
-		// Адреса доставки placeholder inside Логистика и финансы section
-		expect(screen.getByText("Адреса доставки")).toBeInTheDocument();
-		expect(screen.getByText("г. Москва, ул. Складская, д. 15")).toBeInTheDocument();
-		// Файлы placeholder (no file-editing in this slice)
-		expect(screen.getByText("Файлы")).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+
+		// FolderSelect trigger exposes the Категория aria-label
+		const folderTrigger = screen.getByRole("button", { name: "Категория" });
+		// item-1.folderId = folder-metal → "Металлопрокат"
+		expect(folderTrigger).toHaveTextContent("Металлопрокат");
 	});
 
-	test("Ответы на уточнения section renders as an empty placeholder for now", async () => {
+	test("Логистика edit exposes AddressMultiSelect driven by company addresses", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Логистика и финансы")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
+
+		// AddressMultiSelect trigger present; item-1's stored address ("Складская 15") is not in company-1,
+		// so nothing is pre-selected — placeholder text surfaces
+		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выберите адреса");
+
+		await user.click(screen.getByRole("button", { name: "Адреса доставки" }));
+		// Company-1 addresses show up
+		expect(screen.getByText(/Главный офис — г\. Москва, ул\. Тверская/)).toBeInTheDocument();
+	});
+
+	test("Дополнительно edit exposes file drop-zone and can remove an attached file", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать дополнительно" }));
+
+		// Drop-zone + existing seeded file
+		expect(screen.getByRole("button", { name: "Прикрепить файлы" })).toBeInTheDocument();
+		expect(screen.getByText("specification.pdf")).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: "Удалить specification.pdf" }));
+
+		expect(screen.queryByText("specification.pdf")).not.toBeInTheDocument();
+	});
+
+	test("Ответы на уточнения renders one read-only card per generatedAnswer", async () => {
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Ответы на уточнения")).toBeInTheDocument();
 		});
 
-		const headings = screen.getAllByRole("heading", { level: 3 });
-		const answersHeader = headings.find((h) => h.textContent === "Ответы на уточнения");
-		expect(answersHeader).toBeDefined();
-		// No edit button on the answers section (display-only stub for #232)
-		const section = answersHeader?.closest("section");
-		expect(section).not.toBeNull();
-		expect(within(section as HTMLElement).queryByRole("button", { name: /редактировать/i })).toBeNull();
+		// item-1 seed has two answers: material-grade + certificates
+		expect(screen.getByText("Уточните марку / сорт материала")).toBeInTheDocument();
+		expect(screen.getByText("По ГОСТ")).toBeInTheDocument();
+		expect(screen.getByText("Нужны ли сертификаты и паспорта качества")).toBeInTheDocument();
+		expect(screen.getByText(/Сертификат соответствия — Плюс паспорт качества/)).toBeInTheDocument();
+
+		// Still no edit button — this section is display-only
+		const answersHeader = screen
+			.getAllByRole("heading", { level: 3 })
+			.find((h) => h.textContent === "Ответы на уточнения");
+		const section = answersHeader?.closest("section") as HTMLElement;
+		expect(within(section).queryByRole("button", { name: /редактировать/i })).toBeNull();
+	});
+
+	test("Ответы на уточнения section hidden when item has no generatedAnswers", async () => {
+		// item-3 has no generatedAnswers in the seed
+		renderPanel("item-3");
+
+		await waitFor(() => {
+			expect(screen.getByText("Основное")).toBeInTheDocument();
+		});
+
+		expect(screen.queryByText("Ответы на уточнения")).not.toBeInTheDocument();
 	});
 
 	test("Текущий поставщик: toggling Оплата to Предоплата hides Дней отсрочки", async () => {

@@ -1,15 +1,20 @@
-import { LoaderCircle, Pencil } from "lucide-react";
-import { useState } from "react";
+import { LoaderCircle, Pencil, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import type {
+	AttachedFile,
 	CurrentSupplier,
 	DeliveryCostType,
+	GeneratedAnswer,
 	PaymentType,
 	ProcurementItem,
 	Unit,
@@ -23,9 +28,10 @@ import {
 	UNLOADING_LABELS,
 	UNLOADING_TYPES,
 } from "@/data/types";
-import { useFolders } from "@/data/use-folders";
+import { useCompanyDetail } from "@/data/use-company-detail";
+import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatFileSize } from "@/lib/format";
 
 interface DetailsTabPanelProps {
 	itemId: string;
@@ -33,17 +39,22 @@ interface DetailsTabPanelProps {
 
 type SectionKey = "info" | "logistics" | "additional" | "currentSupplier" | null;
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
+
 interface InfoFormState {
 	name: string;
 	description: string;
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
+	folderId: string | null;
 }
 
 interface LogisticsFormState {
 	unloading: UnloadingType | "";
 	paymentType: PaymentType;
+	addressIds: string[];
 }
 
 interface AdditionalFormState {
@@ -51,6 +62,7 @@ interface AdditionalFormState {
 	sampleRequired: boolean;
 	analoguesAllowed: boolean;
 	additionalInfo: string;
+	attachedFiles: AttachedFile[];
 }
 
 interface SupplierFormState {
@@ -77,13 +89,15 @@ function initInfoForm(item: ProcurementItem): InfoFormState {
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
+		folderId: item.folderId,
 	};
 }
 
-function initLogisticsForm(item: ProcurementItem): LogisticsFormState {
+function initLogisticsForm(item: ProcurementItem, addressIds: string[]): LogisticsFormState {
 	return {
 		unloading: item.unloading ?? "",
 		paymentType: item.paymentType ?? "prepayment",
+		addressIds,
 	};
 }
 
@@ -93,6 +107,7 @@ function initAdditionalForm(item: ProcurementItem): AdditionalFormState {
 		sampleRequired: item.sampleRequired ?? false,
 		analoguesAllowed: item.analoguesAllowed ?? false,
 		additionalInfo: item.additionalInfo ?? "",
+		attachedFiles: item.attachedFiles ?? [],
 	};
 }
 
@@ -181,16 +196,46 @@ function ValueText({ value }: { value: string }) {
 	return <span className={`text-sm ${hasValue ? "" : "text-muted-foreground/50"}`}>{hasValue ? value : "\u2014"}</span>;
 }
 
+function answerValueText(answer: GeneratedAnswer): string {
+	const parts: string[] = [];
+	if (answer.selectedOption) parts.push(answer.selectedOption);
+	if (answer.freeText) parts.push(answer.freeText);
+	return parts.join(" — ");
+}
+
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: item, isLoading, isError } = useItemDetail(itemId);
-	const { data: folders } = useFolders();
+	const { data: folders = [] } = useFolders();
+	const { data: company } = useCompanyDetail(item?.companyId ?? null);
 	const updateMutation = useUpdateItemDetail();
+	const createFolderMutation = useCreateFolder();
 
 	const [editingSection, setEditingSection] = useState<SectionKey>(null);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
 	const [logisticsForm, setLogisticsForm] = useState<LogisticsFormState | null>(null);
 	const [additionalForm, setAdditionalForm] = useState<AdditionalFormState | null>(null);
 	const [supplierForm, setSupplierForm] = useState<SupplierFormState | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
+
+	const companyAddresses = company?.addresses ?? [];
+	const addressSummaries = useMemo(
+		() =>
+			companyAddresses.map((a) => ({
+				id: a.id,
+				name: a.name,
+				type: a.type,
+				address: a.address,
+				isMain: a.isMain,
+			})),
+		[companyAddresses],
+	);
+	const currentAddressIds = useMemo(() => {
+		if (!item?.deliveryAddresses) return [];
+		const stored = new Set(item.deliveryAddresses);
+		return companyAddresses.filter((a) => stored.has(a.address)).map((a) => a.id);
+	}, [item?.deliveryAddresses, companyAddresses]);
 
 	if (isLoading) {
 		return (
@@ -235,6 +280,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		setInfoForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 	}
 
+	function handleCreateFolder(name: string, color: string) {
+		createFolderMutation.mutate(
+			{ name, color },
+			{
+				onSuccess: (created) => updateInfo("folderId", created.id),
+			},
+		);
+	}
+
 	function handleSaveInfo() {
 		if (!infoForm) return;
 		const data: Record<string, unknown> = {};
@@ -245,6 +299,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (qpd !== currentItem.quantityPerDelivery) data.quantityPerDelivery = qpd;
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		if (aq !== undefined && aq !== currentItem.annualQuantity) data.annualQuantity = aq;
+		if (infoForm.folderId !== currentItem.folderId) data.folderId = infoForm.folderId;
 		mutate(data);
 	}
 
@@ -255,13 +310,14 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			infoForm.description !== (currentItem.description ?? "") ||
 			infoForm.unit !== (currentItem.unit ?? "") ||
 			toNumberOrUndefined(infoForm.quantityPerDelivery) !== currentItem.quantityPerDelivery ||
-			toNumberOrUndefined(infoForm.annualQuantity) !== currentItem.annualQuantity
+			toNumberOrUndefined(infoForm.annualQuantity) !== currentItem.annualQuantity ||
+			infoForm.folderId !== currentItem.folderId
 		);
 	}
 
 	// --- Logistics ---
 	function handleEditLogistics() {
-		setLogisticsForm(initLogisticsForm(currentItem));
+		setLogisticsForm(initLogisticsForm(currentItem, currentAddressIds));
 		setEditingSection("logistics");
 	}
 
@@ -276,14 +332,29 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			data.unloading = logisticsForm.unloading || undefined;
 		if (logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment"))
 			data.paymentType = logisticsForm.paymentType;
+
+		const selectedSet = new Set(logisticsForm.addressIds);
+		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
+		const prevAddresses = currentItem.deliveryAddresses ?? [];
+		const addressesChanged =
+			nextAddresses.length !== prevAddresses.length || nextAddresses.some((addr, idx) => addr !== prevAddresses[idx]);
+		if (addressesChanged) {
+			data.deliveryAddresses = nextAddresses.length > 0 ? nextAddresses : undefined;
+		}
+
 		mutate(data);
 	}
 
 	function isLogisticsDirty() {
 		if (!logisticsForm) return false;
+		const selectedSet = new Set(logisticsForm.addressIds);
+		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
+		const prevAddresses = currentItem.deliveryAddresses ?? [];
 		return (
 			logisticsForm.unloading !== (currentItem.unloading ?? "") ||
-			logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment")
+			logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment") ||
+			nextAddresses.length !== prevAddresses.length ||
+			nextAddresses.some((addr, idx) => addr !== prevAddresses[idx])
 		);
 	}
 
@@ -297,6 +368,31 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		setAdditionalForm((prev) => (prev ? { ...prev, [key]: value } : prev));
 	}
 
+	function handleFilesAdd(newFiles: FileList | null) {
+		if (!newFiles || !additionalForm) return;
+		const current = additionalForm.attachedFiles;
+		const currentTotal = current.reduce((sum, f) => sum + f.size, 0);
+		const toAdd: AttachedFile[] = [];
+		let runningTotal = currentTotal;
+		for (const file of newFiles) {
+			if (file.size > MAX_FILE_SIZE) continue;
+			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
+			toAdd.push({ name: file.name, size: file.size });
+			runningTotal += file.size;
+		}
+		if (toAdd.length > 0) {
+			updateAdditional("attachedFiles", [...current, ...toAdd]);
+		}
+	}
+
+	function handleFileRemove(index: number) {
+		if (!additionalForm) return;
+		updateAdditional(
+			"attachedFiles",
+			additionalForm.attachedFiles.filter((_, i) => i !== index),
+		);
+	}
+
 	function handleSaveAdditional() {
 		if (!additionalForm) return;
 		const data: Record<string, unknown> = {};
@@ -308,16 +404,32 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			data.analoguesAllowed = additionalForm.analoguesAllowed;
 		if (additionalForm.additionalInfo !== (currentItem.additionalInfo ?? ""))
 			data.additionalInfo = additionalForm.additionalInfo || undefined;
+
+		const prevFiles = currentItem.attachedFiles ?? [];
+		const nextFiles = additionalForm.attachedFiles;
+		const filesChanged =
+			prevFiles.length !== nextFiles.length ||
+			nextFiles.some((f, i) => f.name !== prevFiles[i]?.name || f.size !== prevFiles[i]?.size);
+		if (filesChanged) {
+			data.attachedFiles = nextFiles.length > 0 ? nextFiles : undefined;
+		}
+
 		mutate(data);
 	}
 
 	function isAdditionalDirty() {
 		if (!additionalForm) return false;
+		const prevFiles = currentItem.attachedFiles ?? [];
+		const nextFiles = additionalForm.attachedFiles;
+		const filesChanged =
+			prevFiles.length !== nextFiles.length ||
+			nextFiles.some((f, i) => f.name !== prevFiles[i]?.name || f.size !== prevFiles[i]?.size);
 		return (
 			additionalForm.deferralRequired !== (currentItem.deferralRequired ?? false) ||
 			additionalForm.sampleRequired !== (currentItem.sampleRequired ?? false) ||
 			additionalForm.analoguesAllowed !== (currentItem.analoguesAllowed ?? false) ||
-			additionalForm.additionalInfo !== (currentItem.additionalInfo ?? "")
+			additionalForm.additionalInfo !== (currentItem.additionalInfo ?? "") ||
+			filesChanged
 		);
 	}
 
@@ -413,6 +525,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 
+	const answersById = new Map(CREATION_QUESTIONS.map((q) => [q.id, q]));
+	const answers = item.generatedAnswers ?? [];
+
 	return (
 		<div data-testid="tab-panel-details" className="flex flex-col gap-4">
 			{/* --- Основное --- */}
@@ -506,7 +621,17 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 
 					<FieldCard label="Категория">
-						<ValueText value={folder?.name ?? ""} />
+						{isEditingInfo ? (
+							<FolderSelect
+								folders={folders}
+								value={infoForm.folderId}
+								onChange={(id) => updateInfo("folderId", id)}
+								onCreateFolder={handleCreateFolder}
+								nextFolderColor={nextFolderColor}
+							/>
+						) : (
+							<ValueText value={folder?.name ?? ""} />
+						)}
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -550,7 +675,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 
 					<FieldCard label="Адреса доставки" span="full">
-						<ValueText value={addressesText} />
+						{isEditingLogistics ? (
+							<AddressMultiSelect
+								addresses={addressSummaries}
+								selectedIds={logisticsForm.addressIds}
+								onChange={(ids) => updateLogistics("addressIds", ids)}
+							/>
+						) : (
+							<ValueText value={addressesText} />
+						)}
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -634,8 +767,69 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 						)}
 					</FieldCard>
 
-					<FieldCard label="Файлы">
-						<ValueText value="" />
+					<FieldCard label="Файлы" span="full">
+						{isEditingAdditional ? (
+							<>
+								<button
+									type="button"
+									aria-label="Прикрепить файлы"
+									className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
+									onClick={() => fileInputRef.current?.click()}
+									onDragOver={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+									}}
+									onDrop={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										handleFilesAdd(e.dataTransfer.files);
+									}}
+								>
+									<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
+									<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
+								</button>
+								<input
+									ref={fileInputRef}
+									type="file"
+									multiple
+									className="hidden"
+									onChange={(e) => {
+										handleFilesAdd(e.target.files);
+										e.target.value = "";
+									}}
+								/>
+								{additionalForm.attachedFiles.length > 0 && (
+									<ul className="mt-1 flex flex-col gap-1">
+										{additionalForm.attachedFiles.map((file, i) => (
+											<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
+												<span className="min-w-0 flex-1 truncate">{file.name}</span>
+												<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+												<Button
+													type="button"
+													variant="ghost"
+													size="icon-xs"
+													onClick={() => handleFileRemove(i)}
+													aria-label={`Удалить ${file.name}`}
+												>
+													<X aria-hidden="true" />
+												</Button>
+											</li>
+										))}
+									</ul>
+								)}
+							</>
+						) : item.attachedFiles && item.attachedFiles.length > 0 ? (
+							<ul className="flex flex-col gap-1">
+								{item.attachedFiles.map((file) => (
+									<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
+										<span className="min-w-0 flex-1 truncate">{file.name}</span>
+										<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+									</li>
+								))}
+							</ul>
+						) : (
+							<ValueText value="" />
+						)}
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -766,9 +960,21 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			</Section>
 
 			{/* --- Ответы на уточнения --- */}
-			<Section title="Ответы на уточнения">
-				<p className="text-sm text-muted-foreground/50">—</p>
-			</Section>
+			{answers.length > 0 && (
+				<Section title="Ответы на уточнения">
+					<CardGrid>
+						{answers.map((answer) => {
+							const question = answersById.get(answer.questionId);
+							const label = question?.label ?? answer.questionId;
+							return (
+								<FieldCard key={answer.questionId} label={label} span="full">
+									<ValueText value={answerValueText(answer)} />
+								</FieldCard>
+							);
+						})}
+					</CardGrid>
+				</Section>
+			)}
 		</div>
 	);
 }
