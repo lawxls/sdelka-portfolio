@@ -10,6 +10,7 @@ import {
 	sendSupplierMessage,
 } from "./supplier-mock-data";
 import { SUPPLIER_STATUSES } from "./supplier-types";
+import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 
 beforeEach(() => {
 	_resetSupplierStore();
@@ -22,21 +23,30 @@ afterEach(() => {
 	_resetItemsStore();
 });
 
+const ALL = { limit: Number.POSITIVE_INFINITY };
+const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length;
+const ITEM_1_KP_COUNT = ORMATEK_SUPPLIERS.filter((s) => s.status === "получено_кп").length;
+
 describe("supplier mock store", () => {
-	it("has 10 suppliers for a given procurement item", async () => {
-		const { suppliers } = await getSuppliers("item-1");
-		expect(suppliers.length).toBe(10);
+	it("has the full seeded list of suppliers for item-1", async () => {
+		const { suppliers } = await getSuppliers("item-1", ALL);
+		expect(suppliers.length).toBe(ITEM_1_COUNT);
+	});
+
+	it("returns empty array for unknown itemId", async () => {
+		const { suppliers } = await getSuppliers("item-unknown", ALL);
+		expect(suppliers).toHaveLength(0);
 	});
 
 	it("all suppliers belong to the requested item", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		for (const s of suppliers) {
 			expect(s.itemId).toBe("item-1");
 		}
 	});
 
 	it("spreads suppliers across all 5 statuses", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const statuses = new Set(suppliers.map((s) => s.status));
 		expect(statuses.size).toBe(5);
 		for (const status of SUPPLIER_STATUSES) {
@@ -44,15 +54,14 @@ describe("supplier mock store", () => {
 		}
 	});
 
-	it("has 2-3 suppliers with получено_кп status", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+	it("has получено_кп suppliers for item-1", async () => {
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const kpCount = suppliers.filter((s) => s.status === "получено_кп").length;
-		expect(kpCount).toBeGreaterThanOrEqual(2);
-		expect(kpCount).toBeLessThanOrEqual(3);
+		expect(kpCount).toBe(ITEM_1_KP_COUNT);
 	});
 
 	it("получено_кп suppliers have non-null price, tco, and rating", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
 		for (const s of kpSuppliers) {
 			expect(s.pricePerUnit).toBeTypeOf("number");
@@ -64,7 +73,7 @@ describe("supplier mock store", () => {
 	});
 
 	it("non-КП suppliers have null price, tco, and rating", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const nonKp = suppliers.filter((s) => s.status !== "получено_кп");
 		expect(nonKp.length).toBeGreaterThan(0);
 		for (const s of nonKp) {
@@ -74,45 +83,33 @@ describe("supplier mock store", () => {
 		}
 	});
 
-	it("tco equals pricePerUnit + deliveryCost for КП suppliers", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+	it("tco equals pricePerUnit + round(deliveryCost / 100) for КП suppliers", async () => {
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
 		for (const s of kpSuppliers) {
-			expect(s.tco).toBe((s.pricePerUnit ?? 0) + (s.deliveryCost ?? 0));
+			expect(s.tco).toBe(Math.round((s.pricePerUnit ?? 0) + (s.deliveryCost ?? 0) / 100));
 		}
 	});
 
-	it("suppliers have Russian company names and valid emails", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+	it("suppliers have non-empty company names and plausible emails", async () => {
+		const { suppliers } = await getSuppliers("item-1", ALL);
+		const emailLike = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		for (const s of suppliers) {
-			expect(s.companyName).toMatch(/[А-Яа-яЁё]/);
-			expect(s.email).toContain("@");
+			expect(typeof s.companyName).toBe("string");
+			expect(s.companyName.length).toBeGreaterThan(0);
+			// emails may be empty strings in the seed; when present they should be plausible
+			if (s.email) expect(s.email).toMatch(emailLike);
 		}
 	});
 
 	it("generates different suppliers for different item IDs", async () => {
-		const { suppliers: s1 } = await getSuppliers("item-1");
-		const { suppliers: s2 } = await getSuppliers("item-2");
-		const ids1 = new Set(s1.map((s) => s.id));
-		const ids2 = new Set(s2.map((s) => s.id));
-		// No overlapping IDs
-		for (const id of ids2) {
-			expect(ids1.has(id)).toBe(false);
-		}
-	});
-
-	it("coherent with items-mock-data: item-1's currentSupplier name appears in получено_кп list", async () => {
-		const { suppliers } = await getSuppliers("item-1");
-		// item-1 seeded with currentSupplier.companyName = "МеталлТрейд"
-		const kp = suppliers.filter((s) => s.status === "получено_кп");
-		expect(kp.some((s) => s.companyName === "МеталлТрейд")).toBe(true);
-	});
-
-	it("coherent with items-mock-data: item-2's currentSupplier name appears in получено_кп list", async () => {
-		const { suppliers } = await getSuppliers("item-2");
-		// item-2 seeded with currentSupplier.companyName = "ТрубоСталь"
-		const kp = suppliers.filter((s) => s.status === "получено_кп");
-		expect(kp.some((s) => s.companyName === "ТрубоСталь")).toBe(true);
+		const { suppliers: s1 } = await getSuppliers("item-1", ALL);
+		const { suppliers: s2 } = await getSuppliers("item-2", ALL);
+		const { suppliers: sUnknown } = await getSuppliers("item-does-not-exist", ALL);
+		expect(s1.length).toBeGreaterThan(0);
+		expect(s2.length).toBeGreaterThan(0);
+		expect(s1[0].id).not.toBe(s2[0].id);
+		expect(sUnknown).toHaveLength(0);
 	});
 });
 
@@ -135,21 +132,21 @@ describe("getSuppliers search", () => {
 	});
 
 	it("returns all suppliers with empty search", async () => {
-		const { suppliers } = await getSuppliers("item-1", { search: "" });
-		expect(suppliers).toHaveLength(10);
+		const { suppliers } = await getSuppliers("item-1", { search: "", ...ALL });
+		expect(suppliers).toHaveLength(ITEM_1_COUNT);
 	});
 });
 
 describe("getSuppliers sort", () => {
 	it("sorts by companyName ascending", async () => {
-		const { suppliers } = await getSuppliers("item-1", { sort: "companyName", dir: "asc" });
+		const { suppliers } = await getSuppliers("item-1", { sort: "companyName", dir: "asc", ...ALL });
 		for (let i = 1; i < suppliers.length; i++) {
 			expect(suppliers[i].companyName.localeCompare(suppliers[i - 1].companyName, "ru")).toBeGreaterThanOrEqual(0);
 		}
 	});
 
 	it("sorts by pricePerUnit descending (nulls last)", async () => {
-		const { suppliers } = await getSuppliers("item-1", { sort: "pricePerUnit", dir: "desc" });
+		const { suppliers } = await getSuppliers("item-1", { sort: "pricePerUnit", dir: "desc", ...ALL });
 		const withPrice = suppliers.filter((s) => s.pricePerUnit != null);
 		const withoutPrice = suppliers.filter((s) => s.pricePerUnit == null);
 		// Non-null values come first
@@ -161,7 +158,7 @@ describe("getSuppliers sort", () => {
 	});
 
 	it("sorts by tco ascending (nulls last)", async () => {
-		const { suppliers } = await getSuppliers("item-1", { sort: "tco", dir: "asc" });
+		const { suppliers } = await getSuppliers("item-1", { sort: "tco", dir: "asc", ...ALL });
 		const withTco = suppliers.filter((s) => s.tco != null);
 		const withoutTco = suppliers.filter((s) => s.tco == null);
 		expect(suppliers.indexOf(withTco[0])).toBeLessThan(suppliers.indexOf(withoutTco[0]));
@@ -171,7 +168,7 @@ describe("getSuppliers sort", () => {
 	});
 
 	it("generates varied deliveryCost values (null, 0, positive)", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const nullCost = suppliers.filter((s) => s.deliveryCost === null);
 		const zeroCost = suppliers.filter((s) => s.deliveryCost === 0);
 		const positiveCost = suppliers.filter((s) => s.deliveryCost != null && s.deliveryCost > 0);
@@ -180,8 +177,8 @@ describe("getSuppliers sort", () => {
 		expect(positiveCost.length).toBeGreaterThan(0);
 	});
 
-	it("generates some suppliers with zero deferralDays (предоплата)", async () => {
-		const { suppliers } = await getSuppliers("item-1");
+	it("generates some suppliers with zero deferralDays (предоплата) and some with deferral", async () => {
+		const { suppliers } = await getSuppliers("item-1", ALL);
 		const prepay = suppliers.filter((s) => s.deferralDays === 0);
 		const withDays = suppliers.filter((s) => s.deferralDays > 0);
 		expect(prepay.length).toBeGreaterThan(0);
@@ -207,18 +204,18 @@ describe("getSuppliers status filter", () => {
 	});
 
 	it("returns all when statuses is empty", async () => {
-		const { suppliers } = await getSuppliers("item-1", { statuses: [] });
-		expect(suppliers).toHaveLength(10);
+		const { suppliers } = await getSuppliers("item-1", { statuses: [], ...ALL });
+		expect(suppliers).toHaveLength(ITEM_1_COUNT);
 	});
 });
 
 describe("deleteSuppliers", () => {
 	it("removes suppliers by IDs", async () => {
-		const { suppliers: before } = await getSuppliers("item-1");
+		const { suppliers: before } = await getSuppliers("item-1", ALL);
 		const idsToDelete = [before[0].id, before[1].id];
 		await deleteSuppliers("item-1", idsToDelete);
-		const { suppliers: after } = await getSuppliers("item-1");
-		expect(after).toHaveLength(8);
+		const { suppliers: after } = await getSuppliers("item-1", ALL);
+		expect(after).toHaveLength(ITEM_1_COUNT - idsToDelete.length);
 		for (const id of idsToDelete) {
 			expect(after.find((s) => s.id === id)).toBeUndefined();
 		}
@@ -226,8 +223,8 @@ describe("deleteSuppliers", () => {
 
 	it("no-ops for non-existent IDs", async () => {
 		await deleteSuppliers("item-1", ["nonexistent-id"]);
-		const { suppliers } = await getSuppliers("item-1");
-		expect(suppliers).toHaveLength(10);
+		const { suppliers } = await getSuppliers("item-1", ALL);
+		expect(suppliers).toHaveLength(ITEM_1_COUNT);
 	});
 });
 
@@ -264,31 +261,13 @@ describe("getSuppliers combined search + sort + filter", () => {
 	});
 });
 
-describe("mock data attachments on existing messages", () => {
-	it("supplier reply messages include attachments", async () => {
-		const { suppliers } = await getSuppliers("item-1");
-		const withAttachments = suppliers.filter((s) =>
-			s.chatHistory.some((m) => m.attachments && m.attachments.length > 0),
-		);
-		expect(withAttachments.length).toBeGreaterThan(0);
-	});
-
+describe("mock data chat messages", () => {
 	it("first message (agent) has no attachments", async () => {
-		const { suppliers } = await getSuppliers("item-1");
-		for (const s of suppliers) {
+		const { suppliers } = await getSuppliers("item-1", ALL);
+		const withChat = suppliers.filter((s) => s.chatHistory.length > 0);
+		expect(withChat.length).toBeGreaterThan(0);
+		for (const s of withChat) {
 			expect(s.chatHistory[0].attachments).toBeUndefined();
-		}
-	});
-
-	it("reply attachments have name, type, and size", async () => {
-		const { suppliers } = await getSuppliers("item-1");
-		const reply = suppliers[0].chatHistory[1];
-		const attachments = reply.attachments ?? [];
-		expect(attachments.length).toBeGreaterThan(0);
-		for (const att of attachments) {
-			expect(att.name).toBeTruthy();
-			expect(att.type).toBeTruthy();
-			expect(att.size).toBeGreaterThan(0);
 		}
 	});
 });

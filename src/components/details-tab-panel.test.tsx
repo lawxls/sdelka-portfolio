@@ -37,8 +37,8 @@ describe("DetailsTabPanel", () => {
 		});
 
 		// Values displayed as text
-		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
-		expect(screen.getByText("1200")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
+		expect(screen.getByText("180000")).toBeInTheDocument();
 
 		// Edit buttons for all editable sections
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
@@ -89,10 +89,10 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
-		expect(screen.getByLabelText("Количество")).toHaveValue(1200);
-		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
-		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
+		expect(screen.getByLabelText("Название")).toHaveValue("Полотно ПВД 2600 мм");
+		expect(screen.getByLabelText("Количество")).toHaveValue(180000);
+		expect(screen.getByLabelText("Текущая цена")).toHaveValue(1776);
+		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("м");
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 	});
@@ -107,8 +107,8 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать условия" }));
 
-		// item-1 has paymentType: "deferred", unloading: "supplier"
-		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
+		// item-1 has paymentType: "prepayment", unloading: "supplier"
+		expect(screen.getByRole("button", { name: "Предоплата" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
 	});
 
@@ -149,7 +149,7 @@ describe("DetailsTabPanel", () => {
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
 	test("save button shows loading state during request", async () => {
@@ -203,6 +203,6 @@ describe("DetailsTabPanel", () => {
 			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
 		});
 
-		expect(screen.getByText("Требуется сертификат соответствия ГОСТ")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД первичка (без вторсырья), ширина 2600 мм, прозрачное.")).toBeInTheDocument();
 	});
 });

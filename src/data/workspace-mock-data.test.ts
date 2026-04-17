@@ -34,22 +34,22 @@ describe("me", () => {
 
 describe("companyInfo", () => {
 	it("returns seeded company name", async () => {
-		expect(await fetchCompanyInfoMock()).toEqual({ name: "Сделка" });
+		expect(await fetchCompanyInfoMock()).toEqual({ name: "ОРМАТЕК" });
 	});
 });
 
 describe("settings", () => {
 	it("returns seeded user settings", async () => {
 		const s = await fetchSettingsMock();
-		expect(s.first_name).toBe("Алексей");
-		expect(s.email).toBe("morozov@sdelka.example");
+		expect(s.first_name).toBe("Иван");
+		expect(s.email).toBe("ivan.zhuravlyov.58@mostholding.ru");
 		expect(s.mailing_allowed).toBe(true);
 	});
 
 	it("patchSettings merges changed fields and returns updated settings", async () => {
 		const updated = await patchSettingsMock({ first_name: "Пётр", mailing_allowed: false });
 		expect(updated.first_name).toBe("Пётр");
-		expect(updated.last_name).toBe("Морозов");
+		expect(updated.last_name).toBe("Журавлёв");
 		expect(updated.mailing_allowed).toBe(false);
 	});
 
@@ -85,12 +85,12 @@ describe("workspace employees list", () => {
 		const list = await fetchWorkspaceEmployeesMock();
 		expect(list.length).toBeGreaterThanOrEqual(5);
 		expect(list[0]).not.toHaveProperty("permissions");
-		expect(list[0].email).toBe("morozov@sdelka.example");
+		expect(list[0].email).toBe("ivan.zhuravlyov.58@mostholding.ru");
 	});
 
 	it("includes companies array on each employee", async () => {
 		const list = await fetchWorkspaceEmployeesMock();
-		expect(list[0].companies[0].name).toBe("Сделка");
+		expect(list[0].companies[0].name).toBe("ОРМАТЕК");
 	});
 
 	it("exposes a pending employee (registeredAt=null)", async () => {
