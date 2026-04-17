@@ -4,6 +4,8 @@ import type {
 	SearchSupplierFilterParams,
 	SearchSupplierSortField,
 } from "./search-supplier-types";
+import { _appendSupplierForItem } from "./supplier-mock-data";
+import type { Supplier } from "./supplier-types";
 
 const COMPANY_POOL: { name: string; type: SearchSupplierCompanyType; domain: string }[] = [
 	{ name: "ООО «СтальПром»", type: "производитель", domain: "stalprom.ru" },
@@ -191,4 +193,53 @@ export async function unarchiveSearchSuppliers(itemId: string, ids: string[]): P
 		itemId,
 		entries.map((e) => (set.has(e.id) ? { ...e, archived: false } : e)),
 	);
+}
+
+function websiteToEmail(website: string): string {
+	const host = website.replace(/^https?:\/\//, "").replace(/\/$/, "");
+	return `info@${host}`;
+}
+
+function promotedSupplierFrom(source: SearchSupplier): Supplier {
+	return {
+		id: `supplier-from-${source.id}`,
+		itemId: source.itemId,
+		companyName: source.companyName,
+		status: "ждем_ответа",
+		archived: false,
+		email: websiteToEmail(source.website),
+		website: source.website,
+		address: "",
+		pricePerUnit: null,
+		tco: null,
+		rating: null,
+		deliveryCost: null,
+		paymentType: "prepayment",
+		deferralDays: 0,
+		leadTimeDays: null,
+		aiDescription: "",
+		aiRecommendations: "",
+		documents: [],
+		chatHistory: [],
+		positionOffers: [],
+	};
+}
+
+/** Promotes eligible (status=new) entries to Suppliers and flips their
+ * requestStatus to "requested". Returns the list of ids that were actually
+ * promoted (entries already "requested" are skipped). */
+export async function promoteSearchSuppliers(itemId: string, ids: string[]): Promise<string[]> {
+	await simulateDelay();
+	const entries = getSearchSuppliersForItem(itemId);
+	const set = new Set(ids);
+	const promoted: string[] = [];
+
+	const next = entries.map((e) => {
+		if (!set.has(e.id) || e.requestStatus === "requested") return e;
+		_appendSupplierForItem(itemId, promotedSupplierFrom(e));
+		promoted.push(e.id);
+		return { ...e, requestStatus: "requested" as const };
+	});
+	store.set(itemId, next);
+	return promoted;
 }

@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type {
 	SearchSupplier,
 	SearchSupplierCompanyType,
+	SearchSupplierRequestStatus,
 	SearchSupplierSortField,
 	SearchSupplierSortState,
 } from "@/data/search-supplier-types";
@@ -27,6 +28,8 @@ interface SearchSuppliersTableProps {
 	onSort: (field: SearchSupplierSortField) => void;
 	activeCompanyTypes: SearchSupplierCompanyType[];
 	onCompanyTypeFilter: (type: SearchSupplierCompanyType) => void;
+	activeRequestStatuses: SearchSupplierRequestStatus[];
+	onRequestStatusFilter: (status: SearchSupplierRequestStatus) => void;
 	selectedIds: Set<string>;
 	onSelectionChange: (idOrAll: string) => void;
 	onArchive: () => void;
@@ -43,6 +46,11 @@ const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
+const REQUEST_STATUS_PRESETS: { value: SearchSupplierRequestStatus; label: string }[] = [
+	{ value: "new", label: "Новый" },
+	{ value: "requested", label: "Запрошен" },
+];
+
 export function SearchSuppliersTable({
 	entries,
 	isLoading,
@@ -52,6 +60,8 @@ export function SearchSuppliersTable({
 	onSort,
 	activeCompanyTypes,
 	onCompanyTypeFilter,
+	activeRequestStatuses,
+	onRequestStatusFilter,
 	selectedIds,
 	onSelectionChange,
 	onArchive,
@@ -110,9 +120,9 @@ export function SearchSuppliersTable({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<PopoverTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтр по типу" className="relative">
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
 								<ListFilter aria-hidden="true" />
-								{activeCompanyTypes.length > 0 && (
+								{(activeCompanyTypes.length > 0 || activeRequestStatuses.length > 0) && (
 									<span
 										className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
 										data-testid="filter-indicator"
@@ -121,10 +131,11 @@ export function SearchSuppliersTable({
 							</Button>
 						</PopoverTrigger>
 					</TooltipTrigger>
-					<TooltipContent>Фильтр по типу</TooltipContent>
+					<TooltipContent>Фильтры</TooltipContent>
 				</Tooltip>
 				<PopoverContent align="end" className="w-56">
 					<div className="flex flex-col gap-1">
+						<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип</div>
 						{SEARCH_SUPPLIER_COMPANY_TYPES.map((type) => (
 							<button
 								key={type}
@@ -135,6 +146,20 @@ export function SearchSuppliersTable({
 								onClick={() => onCompanyTypeFilter(type)}
 							>
 								{SEARCH_SUPPLIER_COMPANY_TYPE_LABELS[type]}
+							</button>
+						))}
+						<div className="my-1 border-t border-border" />
+						<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус запроса</div>
+						{REQUEST_STATUS_PRESETS.map(({ value, label }) => (
+							<button
+								key={value}
+								type="button"
+								aria-label={label}
+								aria-pressed={activeRequestStatuses.includes(value)}
+								className={cn(FILTER_BTN, activeRequestStatuses.includes(value) && FILTER_BTN_ACTIVE)}
+								onClick={() => onRequestStatusFilter(value)}
+							>
+								{label}
 							</button>
 						))}
 					</div>

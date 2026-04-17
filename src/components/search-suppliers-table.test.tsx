@@ -42,6 +42,8 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof SearchSuppli
 		onSort: vi.fn(),
 		activeCompanyTypes: [],
 		onCompanyTypeFilter: vi.fn(),
+		activeRequestStatuses: [],
+		onRequestStatusFilter: vi.fn(),
 		selectedIds: new Set(),
 		onSelectionChange: vi.fn(),
 		onArchive: vi.fn(),
@@ -158,7 +160,7 @@ describe("SearchSuppliersTable", () => {
 	test("toolbar shows search input + filter + download + archive toggle", () => {
 		renderTable();
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Фильтр по типу" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Скачать таблицу" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
 	});
@@ -180,7 +182,7 @@ describe("SearchSuppliersTable", () => {
 		const onCompanyTypeFilter = vi.fn();
 		const user = userEvent.setup();
 		renderTable({ onCompanyTypeFilter });
-		await user.click(screen.getByRole("button", { name: "Фильтр по типу" }));
+		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByRole("button", { name: "Производитель" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Дилер" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
@@ -188,8 +190,24 @@ describe("SearchSuppliersTable", () => {
 		expect(onCompanyTypeFilter).toHaveBeenCalledWith("дилер");
 	});
 
+	test("filter popover lists Статус запроса toggles and fires onRequestStatusFilter", async () => {
+		const onRequestStatusFilter = vi.fn();
+		const user = userEvent.setup();
+		renderTable({ onRequestStatusFilter });
+		await user.click(screen.getByRole("button", { name: "Фильтры" }));
+		expect(screen.getByRole("button", { name: "Новый" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Запрошен" })).toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Запрошен" }));
+		expect(onRequestStatusFilter).toHaveBeenCalledWith("requested");
+	});
+
 	test("active type filter shows dot indicator on trigger", () => {
 		renderTable({ activeCompanyTypes: ["дилер"] });
+		expect(screen.getByTestId("filter-indicator")).toBeInTheDocument();
+	});
+
+	test("active request-status filter shows dot indicator on trigger", () => {
+		renderTable({ activeRequestStatuses: ["requested"] });
 		expect(screen.getByTestId("filter-indicator")).toBeInTheDocument();
 	});
 

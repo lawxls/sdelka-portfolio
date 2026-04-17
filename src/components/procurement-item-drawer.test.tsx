@@ -2,7 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSearchSupplierStore, _setSearchSupplierMockDelay } from "@/data/search-supplier-mock-data";
@@ -103,6 +108,7 @@ beforeEach(() => {
 	_resetItemDetailStore();
 	_setItemDetailMockDelay(0, 0);
 	_setTasks(ALL_TASKS);
+	vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -989,16 +995,18 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(toolbar).getByRole("button", { name: /Отправить запрос/ })).toBeInTheDocument();
 	});
 
-	test("search tab filter popover shows Тип toggles", async () => {
+	test("search tab filter popover shows Тип and Статус запроса toggles", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
-		await user.click(screen.getByRole("button", { name: "Фильтр по типу" }));
+		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByRole("button", { name: "Производитель" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Дилер" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Новый" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Запрошен" })).toBeInTheDocument();
 	});
 
 	test("search tab has sortable columns: Компания, Год основания, Выручка", async () => {
@@ -1009,5 +1017,70 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Год основания/i })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Выручка/i })).toBeInTheDocument();
+	});
+
+	test("send-request on a new-status row promotes to Поставщики, flips to Запрошен, toasts", async () => {
+		const { toast } = await import("sonner");
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		const requestedBefore = screen.getAllByText("Запрошен").length;
+		const firstSendBtn = screen.getAllByRole("button", { name: /Отправить запрос/ })[0];
+		await user.click(firstSendBtn);
+		await waitFor(() => {
+			expect(screen.getAllByText("Запрошен").length).toBe(requestedBefore + 1);
+		});
+		expect(toast.success).toHaveBeenCalledWith("Запрос отправлен");
+
+		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
+		await waitFor(() => {
+			// Header + pinned current + 10 seeded + 1 newly promoted = 13
+			expect(screen.getAllByRole("row").length).toBe(13);
+		});
+	});
+
+	test("batch send-request promotes selected new rows, skips already-requested, toasts with count", async () => {
+		const { toast } = await import("sonner");
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		const checkboxes = screen.getAllByRole("checkbox");
+		await user.click(checkboxes[1]);
+		await user.click(checkboxes[2]);
+		await user.click(checkboxes[3]);
+		const selectedLabel = screen.getByText("Выбрано: 3");
+		const toolbar = selectedLabel.parentElement as HTMLElement;
+		await user.click(within(toolbar).getByRole("button", { name: /Отправить запрос/ }));
+		await waitFor(() => {
+			expect(toast.success).toHaveBeenCalled();
+		});
+		// Selection cleared on completion
+		await waitFor(() => {
+			expect(screen.queryByText(/^Выбрано:/)).not.toBeInTheDocument();
+		});
+	});
+
+	test("batch send-request skips already-requested rows (no duplicate promotion)", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		await waitFor(() => {
+			expect(screen.getAllByRole("row").length).toBe(20);
+		});
+		// Select all rows (19 visible).
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать все" }));
+		const selectedLabel = screen.getByText(/^Выбрано:/);
+		const toolbar = selectedLabel.parentElement as HTMLElement;
+		await user.click(within(toolbar).getByRole("button", { name: /Отправить запрос/ }));
+
+		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
+		await waitFor(() => {
+			// 19 visible rows - 1 pre-requested (i=3) - 1 pre-requested (i=9) = 17 newly promoted.
+			// + header + pinned + 10 seeded = 29 total rows.
+			expect(screen.getAllByRole("row").length).toBe(29);
+		});
 	});
 });

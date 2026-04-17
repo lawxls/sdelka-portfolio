@@ -230,6 +230,11 @@ export function _resetSupplierStore() {
 	sendShouldFail = false;
 }
 
+export function _appendSupplierForItem(itemId: string, supplier: Supplier) {
+	const existing = getSuppliersForItem(itemId);
+	store.set(itemId, [...existing, supplier]);
+}
+
 export function _setSendShouldFail(fail: boolean) {
 	sendShouldFail = fail;
 }

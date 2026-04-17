@@ -1,6 +1,7 @@
 import { Archive, Check, Clock, LoaderCircle, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { BestOfferCard } from "@/components/best-offer-card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type {
 	SearchSupplierCompanyType,
+	SearchSupplierRequestStatus,
 	SearchSupplierSortField,
 	SearchSupplierSortState,
 } from "@/data/search-supplier-types";
@@ -35,6 +37,7 @@ import type { ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSearchSuppliers,
+	usePromoteSearchSuppliers,
 	useSearchSuppliers,
 	useUnarchiveSearchSuppliers,
 } from "@/data/use-search-suppliers";
@@ -232,6 +235,7 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SearchSupplierSortState>(null);
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SearchSupplierCompanyType[]>([]);
+	const [activeRequestStatuses, setActiveRequestStatuses] = useState<SearchSupplierRequestStatus[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
 
@@ -239,16 +243,18 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 		() => ({
 			search: search || undefined,
 			companyTypes: activeCompanyTypes.length > 0 ? activeCompanyTypes : undefined,
+			requestStatuses: activeRequestStatuses.length > 0 ? activeRequestStatuses : undefined,
 			showArchived,
 			sort: sort?.field,
 			dir: sort?.direction,
 		}),
-		[search, activeCompanyTypes, showArchived, sort],
+		[search, activeCompanyTypes, activeRequestStatuses, showArchived, sort],
 	);
 
 	const query = useSearchSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSearchSuppliers();
 	const unarchiveMutation = useUnarchiveSearchSuppliers();
+	const promoteMutation = usePromoteSearchSuppliers();
 	const entries = query.data ?? [];
 
 	function handleSort(field: SearchSupplierSortField) {
@@ -261,6 +267,10 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 
 	function handleCompanyTypeFilter(type: SearchSupplierCompanyType) {
 		setActiveCompanyTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
+	}
+
+	function handleRequestStatusFilter(status: SearchSupplierRequestStatus) {
+		setActiveRequestStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
 	}
 
 	function handleSelectionChange(idOrAll: string) {
@@ -288,13 +298,29 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 		unarchiveMutation.mutate({ itemId, ids: [id] });
 	}
 
-	function handleSendRequest(_id: string) {
-		// Stub — RFQ promotion flow lands in #231.
+	function handleSendRequest(id: string) {
+		promoteMutation.mutate(
+			{ itemId, ids: [id] },
+			{
+				onSuccess: (promoted) => {
+					if (promoted.length > 0) toast.success("Запрос отправлен");
+				},
+			},
+		);
 	}
 
 	function handleSendRequestBatch() {
-		// Stub — batch RFQ promotion flow lands in #231.
-		setSelectedIds(new Set());
+		const ids = [...selectedIds];
+		promoteMutation.mutate(
+			{ itemId, ids },
+			{
+				onSuccess: (promoted) => {
+					setSelectedIds(new Set());
+					if (promoted.length === 0) return;
+					toast.success(promoted.length === 1 ? "Запрос отправлен" : `Запрос отправлен ${promoted.length} поставщикам`);
+				},
+			},
+		);
 	}
 
 	function handleToggleArchived() {
@@ -313,6 +339,8 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 				onSort={handleSort}
 				activeCompanyTypes={activeCompanyTypes}
 				onCompanyTypeFilter={handleCompanyTypeFilter}
+				activeRequestStatuses={activeRequestStatuses}
+				onRequestStatusFilter={handleRequestStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
 				onArchive={handleArchiveBatch}
