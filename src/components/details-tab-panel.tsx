@@ -298,12 +298,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	function isInfoDirty() {
 		if (!infoForm) return false;
+		// annualQuantity is required; clearing the input (→ undefined) is treated as no change,
+		// matching handleSaveInfo which skips writes when the parsed value is undefined.
+		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		return (
 			infoForm.name !== currentItem.name ||
 			infoForm.description !== (currentItem.description ?? "") ||
 			infoForm.unit !== (currentItem.unit ?? "") ||
 			toNumberOrUndefined(infoForm.quantityPerDelivery) !== currentItem.quantityPerDelivery ||
-			toNumberOrUndefined(infoForm.annualQuantity) !== currentItem.annualQuantity ||
+			(aq !== undefined && aq !== currentItem.annualQuantity) ||
 			infoForm.folderId !== currentItem.folderId
 		);
 	}

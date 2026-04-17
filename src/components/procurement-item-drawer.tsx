@@ -286,8 +286,15 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 		}
 	}
 
+	// Filter selection against the currently visible rows so changes to search/type/status
+	// filters can't leak batch actions onto hidden entries.
+	function visibleSelectedIds() {
+		const visible = new Set(entries.map((e) => e.id));
+		return [...selectedIds].filter((id) => visible.has(id));
+	}
+
 	function handleArchiveBatch() {
-		archiveMutation.mutate({ itemId, ids: [...selectedIds] }, { onSuccess: () => setSelectedIds(new Set()) });
+		archiveMutation.mutate({ itemId, ids: visibleSelectedIds() }, { onSuccess: () => setSelectedIds(new Set()) });
 	}
 
 	function handleArchiveEntry(id: string) {
@@ -310,9 +317,8 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 	}
 
 	function handleSendRequestBatch() {
-		const ids = [...selectedIds];
 		promoteMutation.mutate(
-			{ itemId, ids },
+			{ itemId, ids: visibleSelectedIds() },
 			{
 				onSuccess: (promoted) => {
 					setSelectedIds(new Set());
@@ -411,7 +417,13 @@ function SuppliersTabPanel({
 	}
 
 	function handleArchive(supplierIds?: string[]) {
-		const ids = supplierIds ?? [...selectedIds];
+		if (supplierIds) {
+			archiveMutation.mutate({ itemId, supplierIds });
+			return;
+		}
+		// Batch archive: clip selection to visible rows so filter changes can't leak onto hidden suppliers.
+		const visible = new Set(suppliers.map((s) => s.id));
+		const ids = [...selectedIds].filter((id) => visible.has(id));
 		archiveMutation.mutate({ itemId, supplierIds: ids }, { onSuccess: () => setSelectedIds(new Set()) });
 	}
 
