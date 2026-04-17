@@ -210,19 +210,18 @@ describe("ProcurementItemDrawer", () => {
 		});
 		// Table headers present (uppercase)
 		expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
-		expect(screen.getByText("TCO")).toBeInTheDocument();
-		// Supplier data loaded (10 suppliers for item-1)
+		expect(screen.getByText("ТСО/ЕД.")).toBeInTheDocument();
+		// Supplier data loaded (1 header + 1 pinned current supplier + 10 data rows)
 		await waitFor(() => {
 			const rows = screen.getAllByRole("row");
-			// 1 header row + 10 data rows
-			expect(rows.length).toBe(11);
+			expect(rows.length).toBe(12);
 		});
 	});
 
 	test("suppliers tab shows status badges", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		// Should have at least one Получено КП badge
 		expect(screen.getAllByText("Получено КП").length).toBeGreaterThan(0);
@@ -231,7 +230,7 @@ describe("ProcurementItemDrawer", () => {
 	test("suppliers tab has search input", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 	});
@@ -240,7 +239,7 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		// Get the name of the first supplier to search for
@@ -262,16 +261,19 @@ describe("ProcurementItemDrawer", () => {
 	test("suppliers tab has sort buttons", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Цена\/ед/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /ТСО\/ЕД/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Стоимость/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Экономия/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Срок поставки/i })).toBeInTheDocument();
 	});
 
 	test("suppliers tab has status filter button", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		expect(screen.getByRole("button", { name: "Фильтр по статусу" })).toBeInTheDocument();
 	});
@@ -279,7 +281,7 @@ describe("ProcurementItemDrawer", () => {
 	test("suppliers tab has checkboxes for multi-select", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		// 1 header checkbox + 10 row checkboxes
 		const checkboxes = screen.getAllByRole("checkbox");
@@ -289,7 +291,7 @@ describe("ProcurementItemDrawer", () => {
 	test("suppliers tab has archive filter toggle", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 		const btn = screen.getByRole("button", { name: "Архив" });
 		expect(btn).toHaveAttribute("aria-pressed", "false");
@@ -299,12 +301,12 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// Click first data row
+		// Row 1 is pinned current supplier; row 2 is first real data row
 		const rows = screen.getAllByRole("row");
-		await user.click(rows[1]);
+		await user.click(rows[2]);
 
 		// Should open supplier detail drawer and update URL
 		await waitFor(() => {
@@ -320,11 +322,11 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// Click a supplier row
-		await user.click(screen.getAllByRole("row")[1]);
+		// Click first real data row (row 2; row 1 is pinned current supplier)
+		await user.click(screen.getAllByRole("row")[2]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
@@ -336,10 +338,10 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		await user.click(screen.getAllByRole("row")[1]);
+		await user.click(screen.getAllByRole("row")[2]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Документы из диалога")).toBeInTheDocument();
@@ -351,11 +353,11 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		// Open supplier drawer
-		await user.click(screen.getAllByRole("row")[1]);
+		await user.click(screen.getAllByRole("row")[2]);
 		await waitFor(() => {
 			expect(screen.getByTestId("url-spy").textContent).toContain("supplier=");
 		});
@@ -382,7 +384,7 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		// Click first row checkbox
@@ -687,40 +689,40 @@ describe("ProcurementItemDrawer", () => {
 		expect(savingsValue?.textContent).toBe("\u2014");
 	});
 
-	test("context menu shows Выбрать поставщика for получено_кп supplier", async () => {
+	test("context menu shows Выбрать текущего поставщика for получено_кп supplier", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// First data row is получено_кп (STATUS_PATTERN[0])
+		// Row 1 is the pinned current supplier (no menu); first data row is row 2
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[1]);
-		expect(screen.getByText("Выбрать поставщика")).toBeInTheDocument();
+		fireEvent.contextMenu(rows[2]);
+		expect(screen.getByText("Выбрать текущего поставщика")).toBeInTheDocument();
 	});
 
-	test("context menu hides Выбрать поставщика for non-получено_кп supplier", async () => {
+	test("context menu hides Выбрать текущего поставщика for non-получено_кп supplier", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// Default sort puts получено_кП first (3 rows), so row 4 is non-получено_кп
+		// Pinned (1) + 3 получено_кп (rows 2-4); row 5 is non-получено_кп
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[4]);
-		expect(screen.queryByText("Выбрать поставщика")).not.toBeInTheDocument();
+		fireEvent.contextMenu(rows[5]);
+		expect(screen.queryByText("Выбрать текущего поставщика")).not.toBeInTheDocument();
 	});
 
-	test("clicking Выбрать поставщика opens confirmation dialog", async () => {
+	test("clicking Выбрать текущего поставщика opens confirmation dialog", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[1]);
-		await user.click(screen.getByText("Выбрать поставщика"));
+		fireEvent.contextMenu(rows[2]);
+		await user.click(screen.getByText("Выбрать текущего поставщика"));
 
 		expect(screen.getByText(/текущим поставщиком/)).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Подтвердить" })).toBeInTheDocument();
@@ -731,12 +733,12 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[1]);
-		await user.click(screen.getByText("Выбрать поставщика"));
+		fireEvent.contextMenu(rows[2]);
+		await user.click(screen.getByText("Выбрать текущего поставщика"));
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		// Dialog should be gone
@@ -749,15 +751,15 @@ describe("ProcurementItemDrawer", () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
-			expect(screen.getAllByRole("row").length).toBe(11);
+			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
 		// Verify current supplier before selection (also appears in the supplier row due to coherence)
 		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
 
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[1]);
-		await user.click(screen.getByText("Выбрать поставщика"));
+		fireEvent.contextMenu(rows[2]);
+		await user.click(screen.getByText("Выбрать текущего поставщика"));
 
 		// Confirmation dialog is open
 		expect(screen.getByText(/текущим поставщиком/)).toBeInTheDocument();

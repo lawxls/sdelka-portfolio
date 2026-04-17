@@ -290,6 +290,8 @@ function SuppliersTabPanel({
 			</div>
 			<SuppliersTable
 				suppliers={suppliers}
+				item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
+				currentSupplier={currentSupplier}
 				isLoading={query.isLoading}
 				search={search}
 				onSearchChange={setSearch}
