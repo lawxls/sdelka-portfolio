@@ -76,7 +76,6 @@ describe("Toolbar", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByText("С переплатой")).toBeInTheDocument();
 		expect(screen.getByText("С экономией")).toBeInTheDocument();
-		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(screen.getByText("Переговоры завершены")).toBeInTheDocument();

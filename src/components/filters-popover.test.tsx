@@ -461,7 +461,6 @@ describe("FiltersPopover — Статус section", () => {
 		openPopover();
 
 		const section = screen.getByTestId("filters-section-status");
-		expect(within(section).getByText("Ожидание аналитики")).toBeInTheDocument();
 		expect(within(section).getByText("Ищем поставщиков")).toBeInTheDocument();
 		expect(within(section).getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(within(section).getByText("Переговоры завершены")).toBeInTheDocument();

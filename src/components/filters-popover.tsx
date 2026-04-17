@@ -34,7 +34,6 @@ const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
 ];
 
 const STATUS_PRESETS: { label: string; value: StatusFilter }[] = [
-	{ label: STATUS_LABELS.awaiting_analytics, value: "awaiting_analytics" },
 	{ label: STATUS_LABELS.searching, value: "searching" },
 	{ label: STATUS_LABELS.negotiating, value: "negotiating" },
 	{ label: STATUS_LABELS.completed, value: "completed" },

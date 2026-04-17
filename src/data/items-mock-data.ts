@@ -113,7 +113,8 @@ const SEED_ITEMS: ProcurementItem[] = [
 	{
 		id: "item-6",
 		name: "Кирпич М150 рядовой",
-		status: "awaiting_analytics",
+		status: "searching",
+		searchCompleted: true,
 		annualQuantity: 120000,
 		currentPrice: 18,
 		bestPrice: null,
@@ -191,7 +192,7 @@ const SEED_ITEMS: ProcurementItem[] = [
 	{
 		id: "item-12",
 		name: "Радиатор биметаллический 500",
-		status: "awaiting_analytics",
+		status: "searching",
 		annualQuantity: 180,
 		currentPrice: 3800,
 		bestPrice: null,
@@ -459,7 +460,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 		const item: ProcurementItem = {
 			id: nextId("item"),
 			name: input.name,
-			status: "awaiting_analytics" as ProcurementStatus,
+			status: "searching" as ProcurementStatus,
 			annualQuantity: input.annualQuantity ?? 0,
 			currentPrice: input.currentPrice ?? input.currentSupplier?.pricePerUnit ?? 0,
 			bestPrice: null,

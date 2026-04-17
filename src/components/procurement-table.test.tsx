@@ -59,7 +59,7 @@ const mockItems: ProcurementItem[] = [
 	{
 		id: "4",
 		name: "Пружинный блок TFK",
-		status: "awaiting_analytics",
+		status: "searching",
 		annualQuantity: 10000,
 		currentPrice: 1850,
 		bestPrice: null,
@@ -105,16 +105,14 @@ describe("ProcurementTable", () => {
 
 	test("renders status badges with correct labels", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
+		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(3);
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
-		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
 		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
-		expect(screen.getByText("Ожидание аналитики").className).toContain("text-violet-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {

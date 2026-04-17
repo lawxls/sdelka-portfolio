@@ -6,8 +6,6 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	Building2,
-	Check,
-	Clock,
 	FolderInput,
 	Inbox,
 	LoaderCircle,
@@ -46,7 +44,7 @@ import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
-import { ProcurementCard, STATUS_CONFIG } from "./procurement-card";
+import { ProcurementCard, ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import { TruncatedName } from "./truncated-name";
 
 interface SortableColumn {
@@ -368,14 +366,7 @@ export function ProcurementTable({
 												<span
 													className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
 												>
-													{item.status === "awaiting_analytics" && <Clock className="size-3" aria-hidden="true" />}
-													{item.status === "searching" && (
-														<LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
-													)}
-													{item.status === "negotiating" && (
-														<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-													)}
-													{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
+													<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
 													{status.label}
 													{item.status === "negotiating" && item.taskCount && item.taskCount > 0 && (
 														<TaskCountBadge count={item.taskCount} />

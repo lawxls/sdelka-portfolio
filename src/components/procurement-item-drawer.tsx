@@ -1,9 +1,9 @@
-import { Check, Clock, LoaderCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BestOfferCard } from "@/components/best-offer-card";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
-import { STATUS_CONFIG } from "@/components/procurement-card";
+import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
 import { SuppliersTable } from "@/components/suppliers-table";
@@ -455,12 +455,11 @@ function ProcurementItemDrawerContent({
 						<span
 							className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
 						>
-							{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
-							{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
-							{itemStatus === "negotiating" && (
-								<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-							)}
-							{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
+							<ProcurementStatusIcon
+								status={itemStatus}
+								searchCompleted={item?.searchCompleted}
+								iconClassName="size-3.5"
+							/>
 							{STATUS_CONFIG[itemStatus].label}
 						</span>
 					)}

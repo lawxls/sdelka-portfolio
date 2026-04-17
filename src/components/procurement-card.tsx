@@ -3,7 +3,6 @@ import {
 	ArchiveRestore,
 	Building2,
 	Check,
-	Clock,
 	Ellipsis,
 	FolderInput,
 	Inbox,
@@ -52,11 +51,35 @@ import { InlineRenameInput } from "./inline-rename-input";
 import { TruncatedName } from "./truncated-name";
 
 export const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
-	awaiting_analytics: { label: STATUS_LABELS.awaiting_analytics, className: "text-violet-600 dark:text-violet-400" },
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
 	completed: { label: STATUS_LABELS.completed, className: "text-green-600 dark:text-green-400" },
 };
+
+export function ProcurementStatusIcon({
+	status,
+	searchCompleted,
+	iconClassName = "size-3",
+}: {
+	status: ProcurementStatus;
+	searchCompleted?: boolean;
+	iconClassName?: string;
+}) {
+	if (status === "searching") {
+		return searchCompleted ? (
+			<Check className={iconClassName} aria-hidden="true" />
+		) : (
+			<LoaderCircle className={cn(iconClassName, "animate-spin")} aria-hidden="true" />
+		);
+	}
+	if (status === "negotiating") {
+		return <span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />;
+	}
+	if (status === "completed") {
+		return <Check className={iconClassName} aria-hidden="true" />;
+	}
+	return null;
+}
 
 interface ProcurementCardProps {
 	item: ProcurementItem;
@@ -260,12 +283,7 @@ export function ProcurementCard({
 			</div>
 			<div className="mt-1">{nameContent}</div>
 			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
-				{item.status === "awaiting_analytics" && <Clock className="size-3" aria-hidden="true" />}
-				{item.status === "searching" && <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />}
-				{item.status === "negotiating" && (
-					<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-				)}
-				{item.status === "completed" && <Check className="size-3" aria-hidden="true" />}
+				<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
 				{STATUS_CONFIG[item.status].label}
 				{item.status === "negotiating" && item.taskCount && item.taskCount > 0 && (
 					<TaskCountBadge count={item.taskCount} />

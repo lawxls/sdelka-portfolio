@@ -1,7 +1,6 @@
-export type ProcurementStatus = "awaiting_analytics" | "searching" | "negotiating" | "completed";
+export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<ProcurementStatus, string> = {
-	awaiting_analytics: "Ожидание аналитики",
 	searching: "Ищем поставщиков",
 	negotiating: "Ведём переговоры",
 	completed: "Переговоры завершены",
@@ -82,6 +81,7 @@ export interface ProcurementItem {
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
+	searchCompleted?: boolean;
 }
 
 export interface Folder {

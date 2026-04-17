@@ -211,7 +211,7 @@ describe("createItemsBatchMock", () => {
 		expect(result.isAsync).toBe(false);
 		expect(result.items).toHaveLength(2);
 		expect(result.items?.[0].name).toBe("W1");
-		expect(result.items?.[0].status).toBe("awaiting_analytics");
+		expect(result.items?.[0].status).toBe("searching");
 		expect(
 			_getAllItems()
 				.map((i) => i.id)
