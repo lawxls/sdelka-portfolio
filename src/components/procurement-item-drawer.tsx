@@ -280,7 +280,12 @@ function SuppliersTabPanel({
 	return (
 		<div data-testid="tab-panel-suppliers">
 			<div className="mb-3 grid grid-cols-1 gap-3 px-4 xl:grid-cols-2">
-				<BestOfferCard suppliers={allSuppliers} currentSupplier={currentSupplier} onSupplierClick={onSupplierClick} />
+				<BestOfferCard
+					suppliers={allSuppliers}
+					item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
+					currentSupplier={currentSupplier}
+					onSupplierClick={onSupplierClick}
+				/>
 				<SupplierResponseStatusCard suppliers={allSuppliers} />
 			</div>
 			<SuppliersTable

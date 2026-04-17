@@ -1,10 +1,12 @@
 import { ChevronRight } from "lucide-react";
 import type { Supplier } from "@/data/supplier-types";
-import type { CurrentSupplier } from "@/data/types";
-import { formatCurrency, formatSignedCurrency, signClassName } from "@/lib/format";
+import type { CurrentSupplier, ProcurementItem } from "@/data/types";
+import { formatCurrency, formatPercent, savingsClassName } from "@/lib/format";
+import { batchCost, savingsPercent } from "@/lib/math";
 
 interface BestOfferCardProps {
 	suppliers: Supplier[];
+	item: Pick<ProcurementItem, "quantityPerDelivery">;
 	currentSupplier?: CurrentSupplier;
 	onSupplierClick?: (id: string) => void;
 }
@@ -17,7 +19,7 @@ function pickBestOffer(suppliers: Supplier[]): Supplier | null {
 	);
 }
 
-export function BestOfferCard({ suppliers, currentSupplier, onSupplierClick }: BestOfferCardProps) {
+export function BestOfferCard({ suppliers, item, currentSupplier, onSupplierClick }: BestOfferCardProps) {
 	const best = pickBestOffer(suppliers);
 
 	if (!best) {
@@ -29,8 +31,8 @@ export function BestOfferCard({ suppliers, currentSupplier, onSupplierClick }: B
 		);
 	}
 
-	const currentPrice = currentSupplier?.pricePerUnit ?? null;
-	const savings = currentPrice != null && best.pricePerUnit != null ? best.pricePerUnit - currentPrice : null;
+	const cost = batchCost(best, item);
+	const savings = savingsPercent(best, currentSupplier ?? null, item);
 
 	return (
 		<div className="rounded-lg border bg-muted px-4 py-3">
@@ -53,18 +55,16 @@ export function BestOfferCard({ suppliers, currentSupplier, onSupplierClick }: B
 			)}
 			<div className="grid grid-cols-3 gap-3">
 				<div className="flex flex-col gap-1">
-					<p className="flex h-5 items-center text-xs text-muted-foreground">Цена/ед.</p>
-					<p className="text-sm font-medium tabular-nums">{formatCurrency(best.pricePerUnit)}</p>
-				</div>
-				<div className="flex flex-col gap-1">
-					<p className="flex h-5 items-center text-xs text-muted-foreground">TCO</p>
+					<p className="flex h-5 items-center text-xs text-muted-foreground">ТСО/ед.</p>
 					<p className="text-sm font-medium tabular-nums">{formatCurrency(best.tco)}</p>
 				</div>
 				<div className="flex flex-col gap-1">
+					<p className="flex h-5 items-center text-xs text-muted-foreground">Стоимость</p>
+					<p className="text-sm font-medium tabular-nums">{formatCurrency(cost)}</p>
+				</div>
+				<div className="flex flex-col gap-1">
 					<p className="flex h-5 items-center text-xs text-muted-foreground">Экономия</p>
-					<p className={`text-sm font-medium tabular-nums ${signClassName(savings)}`}>
-						{formatSignedCurrency(savings)}
-					</p>
+					<p className={`text-sm font-medium tabular-nums ${savingsClassName(savings)}`}>{formatPercent(savings)}</p>
 				</div>
 			</div>
 		</div>

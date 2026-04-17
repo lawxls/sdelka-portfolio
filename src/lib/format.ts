@@ -14,13 +14,6 @@ export function formatCurrency(value: number | null | undefined): string {
 	return currencyFormatter.format(value);
 }
 
-export function formatSignedCurrency(value: number | null | undefined): string {
-	if (value == null) return "\u2014";
-	if (value === 0) return formatCurrency(0);
-	const sign = value < 0 ? "\u2212" : "+";
-	return `${sign}${currencyFormatter.format(Math.abs(value))}`;
-}
-
 export function formatPercent(value: number | null | undefined): string {
 	if (value == null) return "\u2014";
 	const sign = value > 0 ? "+" : "";
@@ -30,6 +23,12 @@ export function formatPercent(value: number | null | undefined): string {
 export function signClassName(value: number | null | undefined): string {
 	if (value == null || value === 0) return "";
 	return value > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400";
+}
+
+/** Class for savings metric: positive (cheaper) = green, negative (overrun) = red. */
+export function savingsClassName(value: number | null | undefined): string {
+	if (value == null || value === 0) return "";
+	return value > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 }
 
 export function formatDeviation(value: number | null | undefined): { text: string; className: string } {

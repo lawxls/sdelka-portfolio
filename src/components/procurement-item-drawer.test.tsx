@@ -656,14 +656,16 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("suppliers tab shows best offer card with savings vs current supplier", async () => {
+	test("suppliers tab best offer card shows ТСО/ед., Стоимость, Экономия", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Экономия")).toBeInTheDocument();
 		});
-		const savingsValue = screen.getByText("Экономия").nextElementSibling;
-		expect(savingsValue?.textContent).not.toBe("\u2014");
+		expect(screen.getByText("ТСО/ед.")).toBeInTheDocument();
+		expect(screen.getByText("Стоимость")).toBeInTheDocument();
+		const costValue = screen.getByText("Стоимость").nextElementSibling;
+		expect(costValue?.textContent).toContain("₽");
 	});
 
 	test("suppliers tab best offer card shows em-dash savings when item has no currentSupplier", async () => {
