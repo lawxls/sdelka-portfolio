@@ -51,6 +51,10 @@ export function _appendSupplierForItem(itemId: string, supplier: Supplier) {
 	store.set(itemId, [...existing, supplier]);
 }
 
+export function _setSuppliersForItem(itemId: string, suppliers: readonly Supplier[]) {
+	store.set(itemId, suppliers.map(cloneSupplier));
+}
+
 export function _setSendShouldFail(fail: boolean) {
 	sendShouldFail = fail;
 }

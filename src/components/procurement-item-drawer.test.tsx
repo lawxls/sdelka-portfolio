@@ -11,11 +11,28 @@ vi.mock("sonner", () => ({
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSearchSupplierStore, _setSearchSupplierMockDelay } from "@/data/search-supplier-mock-data";
-import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import { _resetSupplierStore, _setSupplierMockDelay, _setSuppliersForItem } from "@/data/supplier-mock-data";
+import type { Supplier } from "@/data/supplier-types";
+import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 
 import type { ProcurementItem } from "@/data/types";
 import { makeTask, mockHostname } from "@/test-utils";
+
+// Keep tests decoupled from the full ORMATEK fixture (258 suppliers).
+// Cherry-pick 3 получено_кп (rename one to ТД СОМ) + 7 others = 10 seeded rows.
+const TEST_SUPPLIERS: Supplier[] = [
+	{ ...ORMATEK_SUPPLIERS[9], companyName: "ТД СОМ" },
+	ORMATEK_SUPPLIERS[10],
+	ORMATEK_SUPPLIERS[25],
+	ORMATEK_SUPPLIERS[0],
+	ORMATEK_SUPPLIERS[1],
+	ORMATEK_SUPPLIERS[2],
+	ORMATEK_SUPPLIERS[3],
+	ORMATEK_SUPPLIERS[4],
+	ORMATEK_SUPPLIERS[5],
+	ORMATEK_SUPPLIERS[6],
+];
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
@@ -103,6 +120,7 @@ beforeEach(() => {
 	localStorage.setItem("auth-access-token", "test-token");
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
+	_setSuppliersForItem("item-1", TEST_SUPPLIERS);
 	_resetSearchSupplierStore();
 	_setSearchSupplierMockDelay(0, 0);
 	_resetItemDetailStore();
@@ -300,9 +318,9 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
-		// 1 header checkbox + 30 row checkboxes (first page)
+		// 1 header checkbox + 10 row checkboxes (seeded)
 		const checkboxes = screen.getAllByRole("checkbox");
-		expect(checkboxes).toHaveLength(31);
+		expect(checkboxes).toHaveLength(11);
 	});
 
 	test("suppliers tab has archive filter toggle", async () => {
@@ -801,6 +819,11 @@ describe("ProcurementItemDrawer", () => {
 	});
 
 	test("suppliers tab best offer card shows em-dash savings when item has no currentSupplier", async () => {
+		// "item-no-supplier" is not in the items fixture → useItemDetail returns null,
+		// so currentSupplier is undefined. Seed one получено_кп offer so the best-offer
+		// card renders with Экономия (which shows an em-dash when currentSupplier is absent).
+		_setSuppliersForItem("item-no-supplier", [{ ...ORMATEK_SUPPLIERS[9], itemId: "item-no-supplier" }]);
+
 		render(
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
