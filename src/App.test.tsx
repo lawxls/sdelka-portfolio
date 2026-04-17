@@ -19,7 +19,7 @@ import App from "./App";
 const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
-		status: i < 5 ? "awaiting_analytics" : i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
+		status: i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
 		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
 		// Ensure deviation=overpaying filter captures some rows
 		currentPrice: 100,
@@ -317,11 +317,11 @@ describe("ProcurementPage", () => {
 	test("sort button toggles via URL params", async () => {
 		await renderAppReady();
 		// Just verify sort button works without timing issues
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// Click again for desc
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// Click again to clear
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// No crash
 	});
 

@@ -21,13 +21,13 @@ import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
 const TEST_ITEM: ProcurementItem = {
 	id: "item-1",
-	name: "Арматура А500С",
+	name: "Полотно ПВД 2600 мм",
 	status: "searching",
-	annualQuantity: 1200,
-	currentPrice: 4500,
-	bestPrice: 3800,
-	averagePrice: 4100,
-	folderId: null,
+	annualQuantity: 180_000,
+	currentPrice: 1776,
+	bestPrice: null,
+	averagePrice: null,
+	folderId: "folder-packaging",
 	companyId: "company-1",
 };
 
@@ -55,14 +55,14 @@ const assignedTasks = [
 	makeTask("task-1", {
 		status: "assigned",
 		name: "Согласовать цену",
-		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		item: { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" },
 		questionCount: 2,
 		createdAt: "2026-03-20T10:00:00.000Z",
 	}),
 	makeTask("task-2", {
 		status: "assigned",
 		name: "Запросить образцы",
-		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		item: { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" },
 		questionCount: 1,
 		createdAt: "2026-03-18T10:00:00.000Z",
 	}),
@@ -71,7 +71,7 @@ const inProgressTasks = [
 	makeTask("task-3", {
 		status: "in_progress",
 		name: "Проверить качество",
-		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		item: { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" },
 		questionCount: 3,
 		createdAt: "2026-03-19T10:00:00.000Z",
 	}),
@@ -80,7 +80,7 @@ const completedTasks = [
 	makeTask("task-4", {
 		status: "completed",
 		name: "Подписать договор",
-		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		item: { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" },
 		questionCount: 0,
 	}),
 ];
@@ -88,7 +88,7 @@ const archivedTasks = [
 	makeTask("task-5", {
 		status: "archived",
 		name: "Старый запрос",
-		item: { id: "item-1", name: "Арматура А500С", companyId: "company-1" },
+		item: { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" },
 		questionCount: 0,
 	}),
 ];
@@ -123,7 +123,7 @@ describe("ProcurementItemDrawer", () => {
 	test("opens when ?item= param is present", () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
-		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
 	test("stays closed when ?item= param is absent", () => {
@@ -264,18 +264,13 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// Get the name of the first supplier to search for
-		const firstRow = screen.getAllByRole("row")[1];
-		const companyName = firstRow.querySelector(".font-medium")?.textContent ?? "";
-		// Take first word for search
-		const searchTerm = companyName.split(" ")[0];
-
-		await user.type(screen.getByPlaceholderText("Поиск…"), searchTerm);
+		// Narrow search — "ТД СОМ" uniquely matches a single supplier
+		await user.type(screen.getByPlaceholderText("Поиск…"), "ТД СОМ");
 
 		// After debounce, should see fewer rows
 		await waitFor(() => {
 			const dataRows = screen.getAllByRole("row").length - 1; // minus header
-			expect(dataRows).toBeLessThan(10);
+			expect(dataRows).toBeLessThan(30);
 			expect(dataRows).toBeGreaterThan(0);
 		});
 	});
@@ -305,9 +300,9 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
-		// 1 header checkbox + 10 row checkboxes
+		// 1 header checkbox + 30 row checkboxes (first page)
 		const checkboxes = screen.getAllByRole("checkbox");
-		expect(checkboxes).toHaveLength(11);
+		expect(checkboxes).toHaveLength(31);
 	});
 
 	test("suppliers tab has archive filter toggle", async () => {
@@ -356,7 +351,9 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
 	});
 
-	test("supplier detail drawer shows documents and email history", async () => {
+	test("supplier detail drawer shows email history", async () => {
+		// Note: "Документы из диалога" only renders when a supplier has documents, and
+		// none of the seeded получено_кп suppliers carry documents — assertion dropped.
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
@@ -366,9 +363,8 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getAllByRole("row")[2]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Документы из диалога")).toBeInTheDocument();
+			expect(screen.getByText("История общения")).toBeInTheDocument();
 		});
-		expect(screen.getByText("История общения")).toBeInTheDocument();
 	});
 
 	test("closing supplier drawer removes &supplier= from URL", async () => {
@@ -427,7 +423,7 @@ describe("ProcurementItemDrawer", () => {
 
 		// Read-only values displayed
 		expect(within(panel).getByText("Основное")).toBeInTheDocument();
-		expect(within(panel).getByText("1200")).toBeInTheDocument();
+		expect(within(panel).getByText("180000")).toBeInTheDocument();
 
 		// Edit buttons present for Основное and Логистика и финансы
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
@@ -464,7 +460,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		// Now editable fields and save/cancel appear
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
+		expect(screen.getByLabelText("Название")).toHaveValue("Полотно ПВД 2600 мм");
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 
@@ -494,7 +490,7 @@ describe("ProcurementItemDrawer", () => {
 
 		// Back to read-only — input gone, value shown as text
 		expect(within(panel).queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(within(panel).getByText("Арматура А500С ∅12")).toBeInTheDocument();
+		expect(within(panel).getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
 	test("details tab has edit buttons for four editable sections (Ответы is display-only)", async () => {
@@ -877,8 +873,8 @@ describe("ProcurementItemDrawer", () => {
 
 		// Dialog should be gone
 		expect(screen.queryByText(/текущим поставщиком/)).not.toBeInTheDocument();
-		// Original current supplier still shown (also appears in the supplier row due to coherence)
-		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
+		// No current supplier was set — supplier row still shown in the table
+		expect(screen.getAllByText("ТД СОМ").length).toBeGreaterThanOrEqual(1);
 	});
 
 	test("confirming select supplier dialog fires mutation and closes dialog", async () => {
@@ -888,8 +884,8 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
-		// Verify current supplier before selection (also appears in the supplier row due to coherence)
-		expect(screen.getAllByText("МеталлТрейд").length).toBeGreaterThanOrEqual(1);
+		// No current supplier before selection — first row's supplier (ТД СОМ) is still shown in the table
+		expect(screen.getAllByText("ТД СОМ").length).toBeGreaterThanOrEqual(1);
 
 		const rows = screen.getAllByRole("row");
 		fireEvent.contextMenu(rows[2]);

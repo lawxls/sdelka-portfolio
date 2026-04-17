@@ -5,10 +5,12 @@ import type { Folder } from "./types";
 // --- Seed data ---
 
 const SEED_FOLDERS: Folder[] = [
-	{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
-	{ id: "folder-build", name: "Стройматериалы", color: "green" },
-	{ id: "folder-fasteners", name: "Крепёж", color: "orange" },
-	{ id: "folder-plumbing", name: "Сантехника", color: "teal" },
+	{ id: "folder-packaging", name: "Упаковка", color: "blue" },
+	{ id: "folder-fillings", name: "Наполнители", color: "green" },
+	{ id: "folder-fabrics", name: "Ткани и обивка", color: "pink" },
+	{ id: "folder-panels", name: "Плиты и каркас", color: "teal" },
+	{ id: "folder-springs", name: "Пружинные блоки", color: "orange" },
+	{ id: "folder-chemistry", name: "Химия и клеи", color: "purple" },
 ];
 
 // --- Mutable store ---

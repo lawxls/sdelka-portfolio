@@ -61,23 +61,25 @@ describe("ProcurementCard", () => {
 	});
 
 	it("renders status icon and color for each status variant", () => {
-		const awaitingAnalytics = makeItem("s0", { status: "awaiting_analytics" });
 		const searching = makeItem("s1", { status: "searching" });
+		const searchingDone = makeItem("s1b", { status: "searching", searchCompleted: true });
 		const negotiating = makeItem("s2", { status: "negotiating" });
 		const completed = makeItem("s3", { status: "completed" });
-
-		const { unmount: u0 } = render(<ProcurementCard item={awaitingAnalytics} index={0} />);
-		const awaitStatus = screen.getByText("Ожидание аналитики");
-		expect(awaitStatus.className).toContain("text-violet-600");
-		expect(awaitStatus.querySelector("svg")).toBeTruthy();
-		u0();
 
 		const { unmount: u1 } = render(<ProcurementCard item={searching} index={0} />);
 		const searchStatus = screen.getByText("Ищем поставщиков");
 		expect(searchStatus.className).toContain("text-orange-600");
 		// spinner icon present (LoaderCircle renders as svg)
-		expect(searchStatus.querySelector("svg")).toBeTruthy();
+		expect(searchStatus.querySelector("svg.animate-spin")).toBeTruthy();
 		u1();
+
+		const { unmount: u1b } = render(<ProcurementCard item={searchingDone} index={0} />);
+		const searchDoneStatus = screen.getByText("Ищем поставщиков");
+		expect(searchDoneStatus.className).toContain("text-orange-600");
+		// checkmark icon (no spinner) when search is completed
+		expect(searchDoneStatus.querySelector("svg.animate-spin")).toBeFalsy();
+		expect(searchDoneStatus.querySelector("svg")).toBeTruthy();
+		u1b();
 
 		const { unmount: u2 } = render(<ProcurementCard item={negotiating} index={0} />);
 		const negStatus = screen.getByText("Ведём переговоры");

@@ -54,10 +54,10 @@ describe("DetailsTabPanel", () => {
 		});
 
 		// item-1 values render as card values
-		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
-		expect(screen.getByText("1200")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
+		expect(screen.getByText("180000")).toBeInTheDocument();
 		// Current supplier name in Текущий поставщик section
-		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
+		expect(screen.getByText("ПолимерПром")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
@@ -103,11 +103,11 @@ describe("DetailsTabPanel", () => {
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
 		// Every editable field in the section is now an input
-		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
+		expect(screen.getByLabelText("Название")).toHaveValue("Полотно ПВД 2600 мм");
 		expect(screen.getByLabelText("Описание")).toBeInTheDocument();
-		expect(screen.getByLabelText("Кол-во в поставке")).toHaveValue(100);
-		expect(screen.getByLabelText("Объём в год")).toHaveValue(1200);
-		expect(screen.getByLabelText("Ед. изм.")).toHaveTextContent("т");
+		expect(screen.getByLabelText("Кол-во в поставке")).toHaveValue(15000);
+		expect(screen.getByLabelText("Объём в год")).toHaveValue(180000);
+		expect(screen.getByLabelText("Ед. изм.")).toHaveTextContent("м");
 
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
@@ -123,8 +123,8 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
 
-		// item-1 has paymentType: "deferred", unloading: "supplier"
-		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
+		// item-1 has paymentType: "prepayment", unloading: "supplier"
+		expect(screen.getByRole("button", { name: "Предоплата" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
 		// Payment control exposes all three variants
 		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
@@ -141,7 +141,9 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать дополнительно" }));
 
-		expect(screen.getByLabelText("Комментарий")).toHaveValue("Требуется сертификат соответствия ГОСТ");
+		expect(screen.getByLabelText("Комментарий")).toHaveValue(
+			"Полотно ПВД первичка (без вторсырья), ширина 2600 мм, прозрачное.",
+		);
 		// Three checkboxes present
 		expect(screen.getByRole("checkbox", { name: /отсрочка нужна/i })).toBeInTheDocument();
 		expect(screen.getByRole("checkbox", { name: /нужен образец/i })).toBeInTheDocument();
@@ -160,12 +162,12 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
 
-		expect(screen.getByLabelText("Название поставщика")).toHaveValue("МеталлТрейд");
-		expect(screen.getByLabelText("ИНН поставщика")).toHaveValue("7701234567");
-		expect(screen.getByLabelText("Цена поставщика")).toHaveValue(4500);
-		// item-1: paymentType: "deferred" → Дней отсрочки input visible
-		expect(screen.getByLabelText("Дней отсрочки")).toHaveValue(30);
-		expect(screen.getByLabelText("Тип доставки")).toHaveTextContent("Бесплатная");
+		expect(screen.getByLabelText("Название поставщика")).toHaveValue("ПолимерПром");
+		expect(screen.getByLabelText("ИНН поставщика")).toHaveValue("6164012345");
+		expect(screen.getByLabelText("Цена поставщика")).toHaveValue(1776);
+		// item-1: paymentType: "prepayment" → Дней отсрочки input hidden
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Тип доставки")).toHaveTextContent("Платная");
 	});
 
 	test("saving Основное section persists new name and returns to read-only", async () => {
@@ -204,7 +206,7 @@ describe("DetailsTabPanel", () => {
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
+		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
 	test("Основное edit exposes FolderSelect for Категория with current folder pre-selected", async () => {
@@ -219,8 +221,8 @@ describe("DetailsTabPanel", () => {
 
 		// FolderSelect trigger exposes the Категория aria-label
 		const folderTrigger = screen.getByRole("button", { name: "Категория" });
-		// item-1.folderId = folder-metal → "Металлопрокат"
-		expect(folderTrigger).toHaveTextContent("Металлопрокат");
+		// item-1.folderId = folder-packaging → "Упаковка"
+		expect(folderTrigger).toHaveTextContent("Упаковка");
 	});
 
 	test("Логистика edit exposes AddressMultiSelect driven by company addresses", async () => {
@@ -233,13 +235,13 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
 
-		// AddressMultiSelect trigger present; item-1's stored address ("Складская 15") is not in company-1,
-		// so nothing is pre-selected — placeholder text surfaces
+		// AddressMultiSelect trigger present; item-1's stored address does not exactly match any
+		// company-1 address, so nothing is pre-selected — placeholder text surfaces
 		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выберите адреса");
 
 		await user.click(screen.getByRole("button", { name: "Адреса доставки" }));
 		// Company-1 addresses show up
-		expect(screen.getByText(/Главный офис — г\. Москва, ул\. Тверская/)).toBeInTheDocument();
+		expect(screen.getByText(/Головной офис — г\. Москва, Ленинградское шоссе/)).toBeInTheDocument();
 	});
 
 	test("Дополнительно edit exposes file drop-zone and can remove an attached file", async () => {
@@ -254,11 +256,11 @@ describe("DetailsTabPanel", () => {
 
 		// Drop-zone + existing seeded file
 		expect(screen.getByRole("button", { name: "Прикрепить файлы" })).toBeInTheDocument();
-		expect(screen.getByText("specification.pdf")).toBeInTheDocument();
+		expect(screen.getByText("specification-pvd-2600.pdf")).toBeInTheDocument();
 
-		await user.click(screen.getByRole("button", { name: "Удалить specification.pdf" }));
+		await user.click(screen.getByRole("button", { name: "Удалить specification-pvd-2600.pdf" }));
 
-		expect(screen.queryByText("specification.pdf")).not.toBeInTheDocument();
+		expect(screen.queryByText("specification-pvd-2600.pdf")).not.toBeInTheDocument();
 	});
 
 	test("Ответы на уточнения renders one read-only card per generatedAnswer", async () => {
@@ -270,9 +272,9 @@ describe("DetailsTabPanel", () => {
 
 		// item-1 seed has two answers: material-grade + certificates
 		expect(screen.getByText("Уточните марку / сорт материала")).toBeInTheDocument();
-		expect(screen.getByText("По ГОСТ")).toBeInTheDocument();
+		expect(screen.getByText("Первичка без вторсырья")).toBeInTheDocument();
 		expect(screen.getByText("Нужны ли сертификаты и паспорта качества")).toBeInTheDocument();
-		expect(screen.getByText(/Сертификат соответствия — Плюс паспорт качества/)).toBeInTheDocument();
+		expect(screen.getByText(/Паспорт качества — На каждую партию/)).toBeInTheDocument();
 
 		// Still no edit button — this section is display-only
 		const answersHeader = screen
@@ -293,7 +295,7 @@ describe("DetailsTabPanel", () => {
 		expect(screen.queryByText("Ответы на уточнения")).not.toBeInTheDocument();
 	});
 
-	test("Текущий поставщик: toggling Оплата to Предоплата hides Дней отсрочки", async () => {
+	test("Текущий поставщик: toggling Оплата to Отсрочка reveals Дней отсрочки", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
@@ -303,10 +305,13 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
 
-		const supplierSection = screen.getByText("Текущий поставщик").closest("section") as HTMLElement;
-		const prepayBtn = within(supplierSection).getByRole("button", { name: "Предоплата" });
-		await user.click(prepayBtn);
-
+		// item-1 starts in "prepayment" → Дней отсрочки hidden
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
+
+		const supplierSection = screen.getByText("Текущий поставщик").closest("section") as HTMLElement;
+		const deferredBtn = within(supplierSection).getByRole("button", { name: "Отсрочка" });
+		await user.click(deferredBtn);
+
+		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
 	});
 });

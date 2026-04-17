@@ -20,8 +20,8 @@ describe("getItemDetail", () => {
 		const item = await getItemDetail("item-1");
 		expect(item).not.toBeNull();
 		expect(item?.id).toBe("item-1");
-		expect(item?.name).toBe("Арматура А500С ∅12");
-		expect(item?.status).toBe("searching");
+		expect(item?.name).toBe("Полотно ПВД 2600 мм");
+		expect(item?.status).toBe("completed");
 	});
 
 	it("returns null for nonexistent ID", async () => {
@@ -31,29 +31,29 @@ describe("getItemDetail", () => {
 
 	it("includes all editable fields", async () => {
 		const item = await getItemDetail("item-1");
-		expect(item?.annualQuantity).toBe(1200);
-		expect(item?.currentPrice).toBe(4500);
-		expect(item?.unit).toBe("т");
-		expect(item?.quantityPerDelivery).toBe(100);
-		expect(item?.paymentType).toBe("deferred");
-		expect(item?.deliveryCostType).toBe("free");
-		expect(item?.folderId).toBe("folder-metal");
+		expect(item?.annualQuantity).toBe(180_000);
+		expect(item?.currentPrice).toBe(1776);
+		expect(item?.unit).toBe("м");
+		expect(item?.quantityPerDelivery).toBe(15_000);
+		expect(item?.paymentType).toBe("prepayment");
+		expect(item?.deliveryCostType).toBe("paid");
+		expect(item?.folderId).toBe("folder-packaging");
 	});
 
 	it("includes read-only fields", async () => {
 		const item = await getItemDetail("item-1");
-		expect(item?.bestPrice).toBe(3800);
-		expect(item?.averagePrice).toBe(4100);
+		expect(item?.bestPrice).toBe(1485);
+		expect(item?.averagePrice).toBe(2256);
 	});
 });
 
 describe("updateItemDetail", () => {
 	it("updates editable fields and returns updated item", async () => {
-		const updated = await updateItemDetail("item-1", { name: "Арматура А400", annualQuantity: 2000 });
-		expect(updated.name).toBe("Арматура А400");
+		const updated = await updateItemDetail("item-1", { name: "Полотно ПВД 1800 мм", annualQuantity: 2000 });
+		expect(updated.name).toBe("Полотно ПВД 1800 мм");
 		expect(updated.annualQuantity).toBe(2000);
-		expect(updated.currentPrice).toBe(4500);
-		expect(updated.status).toBe("searching");
+		expect(updated.currentPrice).toBe(1776);
+		expect(updated.status).toBe("completed");
 	});
 
 	it("persists changes to the store", async () => {

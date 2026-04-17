@@ -27,8 +27,8 @@ describe("useItemDetail", () => {
 		await waitFor(() => expect(result.current.data).toBeTruthy());
 
 		expect(result.current.data?.id).toBe("item-1");
-		expect(result.current.data?.name).toBe("Арматура А500С ∅12");
-		expect(result.current.data?.annualQuantity).toBe(1200);
+		expect(result.current.data?.name).toBe("Полотно ПВД 2600 мм");
+		expect(result.current.data?.annualQuantity).toBe(180_000);
 	});
 
 	it("does not fetch when itemId is null", () => {

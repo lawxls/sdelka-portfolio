@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
 import { _resetSupplierStore, _setSendShouldFail, _setSupplierMockDelay } from "./supplier-mock-data";
 import type { Supplier } from "./supplier-types";
+import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 import {
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
@@ -11,6 +12,8 @@ import {
 	useSupplier,
 	useSuppliers,
 } from "./use-suppliers";
+
+const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length;
 
 let queryClient: QueryClient;
 
@@ -35,7 +38,7 @@ describe("useSuppliers", () => {
 			expect(result.current.data).toBeTruthy();
 		});
 
-		expect(result.current.data?.suppliers).toHaveLength(10);
+		expect(result.current.data?.suppliers).toHaveLength(ITEM_1_COUNT);
 		for (const s of result.current.data?.suppliers ?? []) {
 			expect(s.itemId).toBe("item-1");
 		}
@@ -117,7 +120,7 @@ describe("useDeleteSuppliers", () => {
 
 		const { result: suppliersResult } = renderHook(() => useSuppliers("item-1"), { wrapper });
 		await waitFor(() => {
-			expect(suppliersResult.current.data?.suppliers).toHaveLength(10);
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(ITEM_1_COUNT);
 		});
 
 		const idToDelete = suppliersResult.current.data?.suppliers[0].id as string;
@@ -126,7 +129,7 @@ describe("useDeleteSuppliers", () => {
 		await deleteResult.current.mutateAsync({ itemId: "item-1", supplierIds: [idToDelete] });
 
 		await waitFor(() => {
-			expect(suppliersResult.current.data?.suppliers).toHaveLength(9);
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(ITEM_1_COUNT - 1);
 		});
 	});
 });

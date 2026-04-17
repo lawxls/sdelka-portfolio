@@ -63,7 +63,7 @@ function parseDeviation(params: URLSearchParams): DeviationFilter {
 
 function parseStatus(params: URLSearchParams): StatusFilter {
 	const v = params.get("status");
-	return v === "awaiting_analytics" || v === "searching" || v === "negotiating" || v === "completed" ? v : "all";
+	return v === "searching" || v === "negotiating" || v === "completed" ? v : "all";
 }
 
 export function ProcurementPage() {

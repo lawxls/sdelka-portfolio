@@ -1,11 +1,11 @@
-import { Archive, Check, Clock, LoaderCircle, Search } from "lucide-react";
+import { Archive, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { BestOfferCard } from "@/components/best-offer-card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
-import { STATUS_CONFIG } from "@/components/procurement-card";
+import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
@@ -185,7 +185,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				<SheetContent
 					side={isMobile ? "bottom" : "right"}
 					size={isMobile ? "full" : undefined}
-					className={isMobile ? undefined : "!w-2/3 !max-w-none"}
+					className={isMobile ? undefined : "!w-4/5 !max-w-none"}
 				>
 					{itemId && (
 						<ProcurementItemDrawerContent
@@ -743,12 +743,11 @@ function ProcurementItemDrawerContent({
 						<span
 							className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
 						>
-							{itemStatus === "awaiting_analytics" && <Clock className="size-3.5" aria-hidden="true" />}
-							{itemStatus === "searching" && <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />}
-							{itemStatus === "negotiating" && (
-								<span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
-							)}
-							{itemStatus === "completed" && <Check className="size-3.5" aria-hidden="true" />}
+							<ProcurementStatusIcon
+								status={itemStatus}
+								searchCompleted={item?.searchCompleted}
+								iconClassName="size-3.5"
+							/>
 							{STATUS_CONFIG[itemStatus].label}
 						</span>
 					)}

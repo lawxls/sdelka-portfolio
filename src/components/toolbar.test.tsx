@@ -76,7 +76,6 @@ describe("Toolbar", () => {
 		fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByText("С переплатой")).toBeInTheDocument();
 		expect(screen.getByText("С экономией")).toBeInTheDocument();
-		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 		expect(screen.getByText("Ищем поставщиков")).toBeInTheDocument();
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
 		expect(screen.getByText("Переговоры завершены")).toBeInTheDocument();
@@ -141,26 +140,26 @@ describe("SortPopover", () => {
 	test("sort popover shows all sort fields on click", () => {
 		renderToolbar();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
-		expect(screen.getByText("Бюджет в год")).toBeInTheDocument();
-		expect(screen.getByText("Текущая цена")).toBeInTheDocument();
-		expect(screen.getByText("Лучшая цена")).toBeInTheDocument();
-		expect(screen.getByText("Средняя цена")).toBeInTheDocument();
-		expect(screen.getByText("Отклонение (%)")).toBeInTheDocument();
-		expect(screen.getByText("Переплата (₽)")).toBeInTheDocument();
+		expect(screen.getByText("Объем в ₽")).toBeInTheDocument();
+		expect(screen.getByText("Текущее ТСО")).toBeInTheDocument();
+		expect(screen.getByText("Лучшее ТСО")).toBeInTheDocument();
+		expect(screen.getByText("Среднее ТСО")).toBeInTheDocument();
+		expect(screen.getByText("Переплата")).toBeInTheDocument();
+		expect(screen.getByText("Отклонение")).toBeInTheDocument();
 	});
 
 	test("clicking sort field calls onSort with correct field", () => {
 		const onSort = vi.fn();
 		renderToolbar({ onSort });
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
-		fireEvent.click(screen.getByText("Текущая цена"));
+		fireEvent.click(screen.getByText("Текущее ТСО"));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
 	test("active sort field is visually indicated", () => {
-		renderToolbar({ sort: { field: "deviation", direction: "asc" } });
+		renderToolbar({ sort: { field: "overpayment", direction: "asc" } });
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
-		const activeBtn = screen.getByText("Отклонение (%)").closest("button");
+		const activeBtn = screen.getByText("Переплата").closest("button");
 		expect(activeBtn?.className).toContain("font-medium");
 	});
 

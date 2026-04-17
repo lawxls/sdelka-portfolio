@@ -59,7 +59,7 @@ const mockItems: ProcurementItem[] = [
 	{
 		id: "4",
 		name: "Пружинный блок TFK",
-		status: "awaiting_analytics",
+		status: "searching",
 		annualQuantity: 10000,
 		currentPrice: 1850,
 		bestPrice: null,
@@ -105,16 +105,14 @@ describe("ProcurementTable", () => {
 
 	test("renders status badges with correct labels", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(2);
+		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(3);
 		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
-		expect(screen.getByText("Ожидание аналитики")).toBeInTheDocument();
 	});
 
 	test("renders status labels with correct color classes", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
 		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
-		expect(screen.getByText("Ожидание аналитики").className).toContain("text-violet-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {
@@ -129,7 +127,6 @@ describe("ProcurementTable", () => {
 		// Арматура: deviation = (55000-50000)/50000*100 = +10%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const redCells = [...cells].filter((cell) => cell.className.includes("text-red-600"));
-		// deviation cell + overpayment cell
 		expect(redCells).toHaveLength(2);
 	});
 
@@ -138,7 +135,6 @@ describe("ProcurementTable", () => {
 		// Труба: deviation = (30000-35000)/35000*100 = -14.3%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const greenCells = [...cells].filter((cell) => cell.className.includes("text-green-600"));
-		// deviation cell + overpayment cell
 		expect(greenCells).toHaveLength(2);
 	});
 
@@ -169,9 +165,10 @@ describe("ProcurementTable", () => {
 
 	test("sortable column headers have sort buttons", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШАЯ ЦЕНА/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШЕЕ\u00A0ТСО/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ПЕРЕПЛАТА/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛОНЕНИЕ/ })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with correct field", async () => {
@@ -179,7 +176,7 @@ describe("ProcurementTable", () => {
 		const onSort = vi.fn();
 		renderWithTooltip(<ProcurementTable {...defaultProps} onSort={onSort} />);
 
-		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
@@ -187,7 +184,7 @@ describe("ProcurementTable", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
 		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
 		// Instead it should have ArrowUp (asc)
-		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ });
+		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ });
 		const svgs = sortBtn.querySelectorAll("svg");
 		expect(svgs).toHaveLength(1);
 		// lucide ArrowUp has a specific path — just check the icon renders
