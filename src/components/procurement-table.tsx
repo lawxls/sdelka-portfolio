@@ -385,7 +385,7 @@ export function ProcurementTable({
 												>
 													<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
 													{status.label}
-													{item.status === "negotiating" && item.taskCount && item.taskCount > 0 && (
+													{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
 														<TaskCountBadge count={item.taskCount} />
 													)}
 												</span>

@@ -285,7 +285,7 @@ export function ProcurementCard({
 			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
 				<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
 				{STATUS_CONFIG[item.status].label}
-				{item.status === "negotiating" && item.taskCount && item.taskCount > 0 && (
+				{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
 					<TaskCountBadge count={item.taskCount} />
 				)}
 			</span>
