@@ -36,12 +36,12 @@ interface ToolbarProps {
 }
 
 const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
-	{ label: "Бюджет в год", field: "annualCost" },
-	{ label: "Текущая цена", field: "currentPrice" },
-	{ label: "Лучшая цена", field: "bestPrice" },
-	{ label: "Средняя цена", field: "averagePrice" },
-	{ label: "Отклонение (%)", field: "deviation" },
-	{ label: "Переплата (₽)", field: "overpayment" },
+	{ label: "Объем в\u00A0₽", field: "annualCost" },
+	{ label: "Текущее ТСО", field: "currentPrice" },
+	{ label: "Лучшее ТСО", field: "bestPrice" },
+	{ label: "Среднее ТСО", field: "averagePrice" },
+	{ label: "Переплата", field: "overpayment" },
+	{ label: "Отклонение", field: "deviation" },
 ];
 
 const FILTER_BTN =
@@ -98,7 +98,7 @@ export function Toolbar({
 	}
 
 	return (
-		<div className="flex flex-1 items-center justify-end gap-2">
+		<div className="flex flex-1 items-center gap-2">
 			{searchExpanded ? (
 				<Button
 					type="button"
@@ -140,7 +140,7 @@ export function Toolbar({
 				/>
 			</div>
 
-			<div className={cn("contents", searchExpanded && "max-md:hidden")}>
+			<div className={cn("flex items-center gap-2 md:flex-1 md:justify-end", searchExpanded && "max-md:hidden")}>
 				<Popover>
 					<Tooltip>
 						<TooltipTrigger asChild>

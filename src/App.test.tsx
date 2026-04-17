@@ -317,11 +317,11 @@ describe("ProcurementPage", () => {
 	test("sort button toggles via URL params", async () => {
 		await renderAppReady();
 		// Just verify sort button works without timing issues
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// Click again for desc
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// Click again to clear
-		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		fireEvent.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		// No crash
 	});
 

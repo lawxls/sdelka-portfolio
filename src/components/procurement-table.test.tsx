@@ -127,7 +127,6 @@ describe("ProcurementTable", () => {
 		// Арматура: deviation = (55000-50000)/50000*100 = +10%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const redCells = [...cells].filter((cell) => cell.className.includes("text-red-600"));
-		// deviation cell + overpayment cell
 		expect(redCells).toHaveLength(2);
 	});
 
@@ -136,7 +135,6 @@ describe("ProcurementTable", () => {
 		// Труба: deviation = (30000-35000)/35000*100 = -14.3%
 		const cells = document.querySelectorAll("[data-slot='table-cell']");
 		const greenCells = [...cells].filter((cell) => cell.className.includes("text-green-600"));
-		// deviation cell + overpayment cell
 		expect(greenCells).toHaveLength(2);
 	});
 
@@ -167,9 +165,10 @@ describe("ProcurementTable", () => {
 
 	test("sortable column headers have sort buttons", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШАЯ ЦЕНА/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШЕЕ\u00A0ТСО/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ПЕРЕПЛАТА/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛОНЕНИЕ/ })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with correct field", async () => {
@@ -177,7 +176,7 @@ describe("ProcurementTable", () => {
 		const onSort = vi.fn();
 		renderWithTooltip(<ProcurementTable {...defaultProps} onSort={onSort} />);
 
-		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ }));
+		await user.click(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ }));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
@@ -185,7 +184,7 @@ describe("ProcurementTable", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} sort={{ field: "currentPrice", direction: "asc" }} />);
 		// The active sort column should not have the ArrowUpDown icon (unsorted indicator)
 		// Instead it should have ArrowUp (asc)
-		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩАЯ ЦЕНА \(ед\.\)/ });
+		const sortBtn = screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ });
 		const svgs = sortBtn.querySelectorAll("svg");
 		expect(svgs).toHaveLength(1);
 		// lucide ArrowUp has a specific path — just check the icon renders

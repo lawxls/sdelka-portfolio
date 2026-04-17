@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Folder, ProcurementItem, SortField, SortState } from "@/data/types";
 import { getAnnualCost, getDeviation, getOverpayment } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -50,18 +51,21 @@ import { TruncatedName } from "./truncated-name";
 interface SortableColumn {
 	label: string;
 	field: SortField;
+	tooltip?: string;
 }
 
+const TCO_TOOLTIP = "ТСО (Total Cost of Ownership)\u00A0— совокупная стоимость владения: цена и стоимость доставки";
+
 const INPUT_COLUMNS: SortableColumn[] = [
-	{ label: "БЮДЖЕТ В\u00A0ГОД", field: "annualCost" },
-	{ label: "ТЕКУЩАЯ ЦЕНА (ед.)", field: "currentPrice" },
+	{ label: "ОБЪЕМ В\u00A0₽", field: "annualCost" },
+	{ label: "ТЕКУЩЕЕ\u00A0ТСО", field: "currentPrice", tooltip: TCO_TOOLTIP },
 ];
 
 const ANALYSIS_COLUMNS: SortableColumn[] = [
-	{ label: "ЛУЧШАЯ ЦЕНА", field: "bestPrice" },
-	{ label: "СРЕДНЯЯ ЦЕНА", field: "averagePrice" },
-	{ label: "ОТКЛ.\u00A0(%)", field: "deviation" },
-	{ label: "ПЕРЕПЛАТА\u00A0(₽)", field: "overpayment" },
+	{ label: "ЛУЧШЕЕ\u00A0ТСО", field: "bestPrice", tooltip: TCO_TOOLTIP },
+	{ label: "СРЕДНЕЕ\u00A0ТСО", field: "averagePrice", tooltip: TCO_TOOLTIP },
+	{ label: "ПЕРЕПЛАТА", field: "overpayment" },
+	{ label: "ОТКЛОНЕНИЕ", field: "deviation" },
 ];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
@@ -73,6 +77,35 @@ function SortIcon({ field, sort }: { field: SortField; sort: SortState | null })
 		<ArrowUp className="size-3.5" aria-hidden="true" />
 	) : (
 		<ArrowDown className="size-3.5" aria-hidden="true" />
+	);
+}
+
+function SortableHeaderButton({
+	col,
+	sort,
+	onSort,
+}: {
+	col: SortableColumn;
+	sort: SortState | null;
+	onSort: (field: SortField) => void;
+}) {
+	const button = (
+		<button
+			type="button"
+			className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+			onClick={() => onSort(col.field)}
+			aria-label={`Сортировать по ${col.label}`}
+		>
+			{col.label}
+			<SortIcon field={col.field} sort={sort} />
+		</button>
+	);
+	if (!col.tooltip) return button;
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{button}</TooltipTrigger>
+			<TooltipContent>{col.tooltip}</TooltipContent>
+		</Tooltip>
 	);
 }
 
@@ -239,32 +272,16 @@ export function ProcurementTable({
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead className={`w-12 text-right ${stickyHead}`}>№</TableHead>
+							<TableHead className={`w-12 text-center ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
 							{INPUT_COLUMNS.map((col) => (
 								<TableHead key={col.field} className={`text-right ${stickyHead}`}>
-									<button
-										type="button"
-										className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-										onClick={() => onSort(col.field)}
-										aria-label={`Сортировать по ${col.label}`}
-									>
-										{col.label}
-										<SortIcon field={col.field} sort={sort} />
-									</button>
+									<SortableHeaderButton col={col} sort={sort} onSort={onSort} />
 								</TableHead>
 							))}
 							{ANALYSIS_COLUMNS.map((col) => (
 								<TableHead key={col.field} className={`text-right ${analysisHead}`}>
-									<button
-										type="button"
-										className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-										onClick={() => onSort(col.field)}
-										aria-label={`Сортировать по ${col.label}`}
-									>
-										{col.label}
-										<SortIcon field={col.field} sort={sort} />
-									</button>
+									<SortableHeaderButton col={col} sort={sort} onSort={onSort} />
 								</TableHead>
 							))}
 						</TableRow>
@@ -273,8 +290,8 @@ export function ProcurementTable({
 						{isLoading &&
 							SKELETON_KEYS.map((key) => (
 								<TableRow key={key} data-testid="skeleton-row">
-									<TableCell className="text-right">
-										<Skeleton className="ml-auto h-4 w-6" />
+									<TableCell className="text-center">
+										<Skeleton className="mx-auto h-4 w-6" />
 									</TableCell>
 									<TableCell className={stickyNameCell}>
 										<Skeleton className="h-4 w-48" />
@@ -385,16 +402,16 @@ export function ProcurementTable({
 								};
 								const rowChildren = (
 									<>
-										<TableCell className="text-right tabular-nums text-muted-foreground">{index + 1}</TableCell>
+										<TableCell className="text-center tabular-nums text-muted-foreground">{index + 1}</TableCell>
 										{nameCell}
 										<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 										<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
 										<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>
 										<TableCell className="text-right tabular-nums">{formatCurrency(item.averagePrice)}</TableCell>
-										<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
 										<TableCell className={`text-right tabular-nums ${signClassName(overpayment)}`}>
 											{formatCurrency(overpayment)}
 										</TableCell>
+										<TableCell className={`text-right tabular-nums ${dev.className}`}>{dev.text}</TableCell>
 									</>
 								);
 
