@@ -1,3 +1,4 @@
+import { stripProtocol } from "@/lib/format";
 import type {
 	SearchSupplier,
 	SearchSupplierCompanyType,
@@ -196,8 +197,7 @@ export async function unarchiveSearchSuppliers(itemId: string, ids: string[]): P
 }
 
 function websiteToEmail(website: string): string {
-	const host = website.replace(/^https?:\/\//, "").replace(/\/$/, "");
-	return `info@${host}`;
+	return `info@${stripProtocol(website).replace(/\/$/, "")}`;
 }
 
 function promotedSupplierFrom(source: SearchSupplier): Supplier {

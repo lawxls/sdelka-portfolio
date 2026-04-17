@@ -42,6 +42,10 @@ type SectionKey = "info" | "logistics" | "additional" | "currentSupplier" | null
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
+const QUESTION_BY_ID = new Map(CREATION_QUESTIONS.map((q) => [q.id, q]));
+
+const EMPTY_ADDRESSES: never[] = [];
+
 interface InfoFormState {
 	name: string;
 	description: string;
@@ -219,18 +223,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
 
-	const companyAddresses = company?.addresses ?? [];
-	const addressSummaries = useMemo(
-		() =>
-			companyAddresses.map((a) => ({
-				id: a.id,
-				name: a.name,
-				type: a.type,
-				address: a.address,
-				isMain: a.isMain,
-			})),
-		[companyAddresses],
-	);
+	const companyAddresses = company?.addresses ?? EMPTY_ADDRESSES;
 	const currentAddressIds = useMemo(() => {
 		if (!item?.deliveryAddresses) return [];
 		const stored = new Set(item.deliveryAddresses);
@@ -525,7 +518,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 
-	const answersById = new Map(CREATION_QUESTIONS.map((q) => [q.id, q]));
 	const answers = item.generatedAnswers ?? [];
 
 	return (
@@ -677,7 +669,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					<FieldCard label="Адреса доставки" span="full">
 						{isEditingLogistics ? (
 							<AddressMultiSelect
-								addresses={addressSummaries}
+								addresses={companyAddresses}
 								selectedIds={logisticsForm.addressIds}
 								onChange={(ids) => updateLogistics("addressIds", ids)}
 							/>
@@ -964,7 +956,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<Section title="Ответы на уточнения">
 					<CardGrid>
 						{answers.map((answer) => {
-							const question = answersById.get(answer.questionId);
+							const question = QUESTION_BY_ID.get(answer.questionId);
 							const label = question?.label ?? answer.questionId;
 							return (
 								<FieldCard key={answer.questionId} label={label} span="full">

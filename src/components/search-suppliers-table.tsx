@@ -1,5 +1,5 @@
 import { Archive, ArchiveRestore, Download, ListFilter, Search, Send } from "lucide-react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,11 @@ export function SearchSuppliersTable({
 	}
 
 	const hasSelection = selectedIds.size > 0;
+	const entryNamesById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const e of entries) map.set(e.id, e.companyName);
+		return map;
+	}, [entries]);
 
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex flex-wrap items-center gap-3 rounded-md bg-muted px-3 py-2">
@@ -306,7 +311,7 @@ export function SearchSuppliersTable({
 			selection={{
 				selectedIds,
 				onChange: onSelectionChange,
-				getRowLabel: (id) => `Выбрать ${entries.find((e) => e.id === id)?.companyName ?? id}`,
+				getRowLabel: (id) => `Выбрать ${entryNamesById.get(id) ?? id}`,
 			}}
 			sort={sort}
 			onSort={(field) => onSort(field as SearchSupplierSortField)}

@@ -1,5 +1,5 @@
 import { Archive, Download, ListFilter, LoaderCircle, Search, UserCheck } from "lucide-react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { DeliveryValue } from "@/components/supplier-value-displays";
@@ -123,6 +123,11 @@ export function SuppliersTable({
 	}
 
 	const hasSelection = selectedIds.size > 0;
+	const supplierNamesById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const s of suppliers) map.set(s.id, s.companyName);
+		return map;
+	}, [suppliers]);
 
 	if (
 		!isLoading &&
@@ -388,7 +393,7 @@ export function SuppliersTable({
 			selection={{
 				selectedIds,
 				onChange: onSelectionChange,
-				getRowLabel: (id) => `Выбрать ${suppliers.find((s) => s.id === id)?.companyName ?? id}`,
+				getRowLabel: (id) => `Выбрать ${supplierNamesById.get(id) ?? id}`,
 			}}
 			sort={sort}
 			onSort={(field) => onSort(field as SupplierSortField)}
