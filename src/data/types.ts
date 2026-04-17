@@ -80,6 +80,7 @@ export interface ProcurementItem {
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	sampleRequired?: boolean;
+	deferralRequired?: boolean;
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
@@ -135,6 +136,7 @@ export interface NewItemInput {
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	sampleRequired?: boolean;
+	deferralRequired?: boolean;
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];

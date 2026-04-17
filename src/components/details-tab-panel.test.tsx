@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
@@ -29,37 +29,50 @@ afterEach(() => {
 });
 
 describe("DetailsTabPanel", () => {
-	test("renders read-only sections with item values", async () => {
+	test("renders five sections in the required order", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		// Values displayed as text
+		const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+		expect(headings).toEqual([
+			"Основное",
+			"Логистика и финансы",
+			"Дополнительно",
+			"Текущий поставщик",
+			"Ответы на уточнения",
+		]);
+	});
+
+	test("renders read-only cards with item values", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Основное")).toBeInTheDocument();
+		});
+
+		// item-1 values render as card values
 		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 		expect(screen.getByText("1200")).toBeInTheDocument();
-
-		// Edit buttons for all editable sections
-		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Редактировать условия" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Редактировать параметры запроса" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Редактировать дополнительно" })).toBeInTheDocument();
-
+		// Current supplier name in Текущий поставщик section
+		expect(screen.getByText("МеталлТрейд")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("shows all four sections", async () => {
+	test("shows section-level edit buttons for the four editable sections", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		expect(screen.getByText("Условия")).toBeInTheDocument();
-		expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
-		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать логистику и финансы" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать дополнительно" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать текущего поставщика" })).toBeInTheDocument();
 
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
 		expect(editButtons).toHaveLength(4);
@@ -79,45 +92,88 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Не удалось загрузить данные")).toBeInTheDocument();
 	});
 
-	test("clicking edit info shows form fields", async () => {
+	test("editing Основное toggles every card in the section into edit mode", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
+		// Every editable field in the section is now an input
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура А500С ∅12");
-		expect(screen.getByLabelText("Количество")).toHaveValue(1200);
-		expect(screen.getByLabelText("Текущая цена")).toHaveValue(4500);
-		expect(screen.getByLabelText("Единица измерения")).toHaveTextContent("т");
+		expect(screen.getByLabelText("Описание")).toBeInTheDocument();
+		expect(screen.getByLabelText("Кол-во в поставке")).toHaveValue(100);
+		expect(screen.getByLabelText("Объём в год")).toHaveValue(1200);
+		expect(screen.getByLabelText("Ед. изм.")).toHaveTextContent("т");
+
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
 	});
 
-	test("clicking edit conditions shows segmented controls", async () => {
+	test("editing Логистика и финансы exposes Разгрузка and Оплата controls", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Условия")).toBeInTheDocument();
+			expect(screen.getByText("Логистика и финансы")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Редактировать условия" }));
+		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
 
 		// item-1 has paymentType: "deferred", unloading: "supplier"
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toHaveAttribute("aria-pressed", "true");
 		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
+		// Payment control exposes all three variants
+		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Предоплата 30/70" })).toBeInTheDocument();
 	});
 
-	test("save info section triggers mutation with changed values", async () => {
+	test("editing Дополнительно exposes the three flag checkboxes + Комментарий", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать дополнительно" }));
+
+		expect(screen.getByLabelText("Комментарий")).toHaveValue("Требуется сертификат соответствия ГОСТ");
+		// Three checkboxes present
+		expect(screen.getByRole("checkbox", { name: /отсрочка нужна/i })).toBeInTheDocument();
+		expect(screen.getByRole("checkbox", { name: /нужен образец/i })).toBeInTheDocument();
+		// item-1 has analoguesAllowed: true
+		const analogues = screen.getByRole("checkbox", { name: /допускаются аналоги/i });
+		expect(analogues).toBeChecked();
+	});
+
+	test("editing Текущий поставщик exposes name, INN, price, payment and delivery", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
+
+		expect(screen.getByLabelText("Название поставщика")).toHaveValue("МеталлТрейд");
+		expect(screen.getByLabelText("ИНН поставщика")).toHaveValue("7701234567");
+		expect(screen.getByLabelText("Цена поставщика")).toHaveValue(4500);
+		// item-1: paymentType: "deferred" → Дней отсрочки input visible
+		expect(screen.getByLabelText("Дней отсрочки")).toHaveValue(30);
+		expect(screen.getByLabelText("Тип доставки")).toHaveTextContent("Бесплатная");
+	});
+
+	test("saving Основное section persists new name and returns to read-only", async () => {
+		const user = userEvent.setup();
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
@@ -128,19 +184,18 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-		// After save, returns to read-only with updated value
 		await waitFor(() => {
 			expect(screen.getByText("Новое название")).toBeInTheDocument();
 		});
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("cancel reverts to read-only view", async () => {
+	test("cancel reverts section to read-only without saving", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
@@ -152,57 +207,52 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
-	test("save button shows loading state during request", async () => {
+	test("complex fields render as display-only placeholder cards", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Основное")).toBeInTheDocument();
+		});
+
+		// Категория placeholder — folder-metal → "Металлопрокат"
+		expect(screen.getByText("Категория")).toBeInTheDocument();
+		// Адреса доставки placeholder inside Логистика и финансы section
+		expect(screen.getByText("Адреса доставки")).toBeInTheDocument();
+		expect(screen.getByText("г. Москва, ул. Складская, д. 15")).toBeInTheDocument();
+		// Файлы placeholder (no file-editing in this slice)
+		expect(screen.getByText("Файлы")).toBeInTheDocument();
+	});
+
+	test("Ответы на уточнения section renders as an empty placeholder for now", async () => {
+		renderPanel();
+
+		await waitFor(() => {
+			expect(screen.getByText("Ответы на уточнения")).toBeInTheDocument();
+		});
+
+		const headings = screen.getAllByRole("heading", { level: 3 });
+		const answersHeader = headings.find((h) => h.textContent === "Ответы на уточнения");
+		expect(answersHeader).toBeDefined();
+		// No edit button on the answers section (display-only stub for #232)
+		const section = answersHeader?.closest("section");
+		expect(section).not.toBeNull();
+		expect(within(section as HTMLElement).queryByRole("button", { name: /редактировать/i })).toBeNull();
+	});
+
+	test("Текущий поставщик: toggling Оплата to Предоплата hides Дней отсрочки", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
 
-		_setItemDetailMockDelay(5000, 5000);
+		const supplierSection = screen.getByText("Текущий поставщик").closest("section") as HTMLElement;
+		const prepayBtn = within(supplierSection).getByRole("button", { name: "Предоплата" });
+		await user.click(prepayBtn);
 
-		const nameInput = screen.getByLabelText("Название");
-		await user.clear(nameInput);
-		await user.type(nameInput, "X");
-
-		const saveButton = screen.getByRole("button", { name: "Сохранить" });
-		await user.click(saveButton);
-
-		expect(saveButton).toBeDisabled();
-	});
-
-	test("conditions section shows unloading responsibility", async () => {
-		renderPanel();
-
-		await waitFor(() => {
-			expect(screen.getByText("Условия")).toBeInTheDocument();
-		});
-
-		expect(screen.getByText("Силами поставщика")).toBeInTheDocument();
-	});
-
-	test("request params section shows analogues and sample toggles", async () => {
-		renderPanel();
-
-		await waitFor(() => {
-			expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
-		});
-
-		// item-1 has analoguesAllowed: true, sampleRequired: undefined
-		expect(screen.getByText("Допускаются аналоги")).toBeInTheDocument();
-		expect(screen.getByText("Нужен образец")).toBeInTheDocument();
-	});
-
-	test("additional section shows comment", async () => {
-		renderPanel();
-
-		await waitFor(() => {
-			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
-		});
-
-		expect(screen.getByText("Требуется сертификат соответствия ГОСТ")).toBeInTheDocument();
+		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 	});
 });

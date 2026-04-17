@@ -426,12 +426,12 @@ describe("ProcurementItemDrawer", () => {
 		const panel = await waitFor(() => screen.getByTestId("tab-panel-details"));
 
 		// Read-only values displayed
-		expect(within(panel).getByText("Основная информация")).toBeInTheDocument();
+		expect(within(panel).getByText("Основное")).toBeInTheDocument();
 		expect(within(panel).getByText("1200")).toBeInTheDocument();
 
-		// Edit buttons present for info and conditions
+		// Edit buttons present for Основное and Логистика и финансы
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Редактировать условия" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать логистику и финансы" })).toBeInTheDocument();
 
 		// No save button visible in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
@@ -441,12 +441,13 @@ describe("ProcurementItemDrawer", () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		expect(screen.getByText("Условия")).toBeInTheDocument();
-		expect(screen.getByText("Параметры запроса")).toBeInTheDocument();
+		expect(screen.getByText("Логистика и финансы")).toBeInTheDocument();
 		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
+		expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+		expect(screen.getByText("Ответы на уточнения")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
@@ -456,7 +457,7 @@ describe("ProcurementItemDrawer", () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
 		// Click edit pen
@@ -487,20 +488,20 @@ describe("ProcurementItemDrawer", () => {
 		const panel = await waitFor(() => screen.getByTestId("tab-panel-details"));
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
-		expect(screen.getByLabelText("Название")).toBeInTheDocument();
+		expect(within(panel).getByLabelText("Название")).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		// Back to read-only — input gone, value shown as text
-		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		expect(within(panel).queryByLabelText("Название")).not.toBeInTheDocument();
 		expect(within(panel).getByText("Арматура А500С ∅12")).toBeInTheDocument();
 	});
 
-	test("details tab has edit buttons for all four sections", async () => {
+	test("details tab has edit buttons for four editable sections (Ответы is display-only)", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Основная информация")).toBeInTheDocument();
+			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });

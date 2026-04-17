@@ -182,6 +182,7 @@ function buildNewItemInput(
 	if (step1.unloading !== null) payload.unloading = step1.unloading;
 	if (step1.sampleRequired) payload.sampleRequired = true;
 	if (step1.analoguesAllowed) payload.analoguesAllowed = true;
+	if (step1.deferralRequired) payload.deferralRequired = true;
 
 	const info = step1.additionalInfo.trim();
 	if (info) payload.additionalInfo = info;
