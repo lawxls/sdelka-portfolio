@@ -502,8 +502,8 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(panel).getByText("Запросить образцы")).toBeInTheDocument();
 		expect(within(panel).getByText("Проверить качество")).toBeInTheDocument();
 
-		// Rendered as rows, not cards
-		expect(within(panel).getByTestId("task-row-task-1")).toBeInTheDocument();
+		// Rendered in DataTable
+		expect(within(panel).getByTestId("data-table")).toBeInTheDocument();
 		expect(within(panel).queryByTestId("task-card-task-1")).not.toBeInTheDocument();
 
 		// Completed/archived not shown in default view
@@ -519,11 +519,11 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		const panel = screen.getByTestId("tab-panel-tasks");
-		const rows = within(panel).getAllByTestId(/^task-row-/);
+		const rows = within(panel).getAllByRole("row").slice(1); // skip header row
 		// task-1 (Mar 20) > task-3 (Mar 19) > task-2 (Mar 18)
-		expect(rows[0]).toHaveAttribute("data-testid", "task-row-task-1");
-		expect(rows[1]).toHaveAttribute("data-testid", "task-row-task-3");
-		expect(rows[2]).toHaveAttribute("data-testid", "task-row-task-2");
+		expect(rows[0]).toHaveTextContent("Согласовать цену");
+		expect(rows[1]).toHaveTextContent("Проверить качество");
+		expect(rows[2]).toHaveTextContent("Запросить образцы");
 	});
 
 	test("tasks tab has search input and only Завершённые/Архив filter buttons", async () => {
@@ -643,7 +643,12 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByTestId("task-row-task-1"));
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const taskRow = within(panel)
+			.getAllByRole("row")
+			.find((r) => r.textContent?.includes("Согласовать цену"));
+		expect(taskRow).toBeDefined();
+		await user.click(taskRow as HTMLElement);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("url-spy").textContent).toContain("task=task-1");
@@ -656,6 +661,112 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
+	});
+
+	test("tasks tab renders DataTable with header columns Задача / Вопросы / Дедлайн / Создано", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const headers = within(panel).getAllByRole("columnheader");
+		const headerLabels = headers.map((h) => h.textContent ?? "");
+		expect(headerLabels).toContain("ЗАДАЧА");
+		expect(headerLabels).toContain("ВОПРОСЫ");
+		expect(headerLabels).toContain("ДЕДЛАЙН");
+		expect(headerLabels).toContain("СОЗДАНО");
+	});
+
+	test("tasks tab rows have no status icon", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const dataRows = within(panel).getAllByRole("row").slice(1);
+		// No data-testid task-row-* (icons live there in the legacy TaskRow)
+		for (const row of dataRows) {
+			expect(row.querySelector('[data-testid^="task-row-"]')).toBeNull();
+		}
+	});
+
+	test("tasks tab supports multi-select via row + header checkboxes", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const checkboxes = within(panel).getAllByRole("checkbox");
+		// First is the header "Выбрать все"
+		const headerCheckbox = checkboxes[0];
+		expect(headerCheckbox).toHaveAttribute("aria-label", "Выбрать все");
+
+		// Toggle a single row
+		await user.click(checkboxes[1]);
+		expect(within(panel).getByText("Выбрано: 1")).toBeInTheDocument();
+
+		// Header select-all picks the rest
+		await user.click(headerCheckbox);
+		expect(within(panel).getByText(/Выбрано: 3/)).toBeInTheDocument();
+	});
+
+	test("tasks tab batch Архивировать removes selected rows", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const checkboxes = within(panel).getAllByRole("checkbox");
+		await user.click(checkboxes[0]); // header select-all
+
+		const archiveBtn = within(panel).getByRole("button", { name: "Архивировать" });
+		await user.click(archiveBtn);
+
+		await waitFor(() => {
+			expect(screen.queryByText("Согласовать цену")).not.toBeInTheDocument();
+		});
+	});
+
+	test("tasks tab context menu has Архивировать action", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		const taskRow = within(panel)
+			.getAllByRole("row")
+			.find((r) => r.textContent?.includes("Согласовать цену")) as HTMLElement;
+		fireEvent.contextMenu(taskRow);
+
+		await waitFor(() => {
+			expect(screen.getByRole("menuitem", { name: /Архивировать/ })).toBeInTheDocument();
+		});
+	});
+
+	test("tasks tab Кол-во вопросов uses Russian plurals", async () => {
+		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+
+		await waitFor(() => {
+			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
+		});
+
+		const panel = screen.getByTestId("tab-panel-tasks");
+		// 1 → «1 вопрос», 2 → «2 вопроса», 3 → «3 вопроса»
+		expect(within(panel).getByText(/^1\s+вопрос$/)).toBeInTheDocument();
+		expect(within(panel).getByText(/^2\s+вопроса$/)).toBeInTheDocument();
+		expect(within(panel).getByText(/^3\s+вопроса$/)).toBeInTheDocument();
 	});
 
 	test("suppliers tab best offer card shows ТСО/ед., Стоимость, Экономия", async () => {

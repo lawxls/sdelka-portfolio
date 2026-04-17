@@ -1,14 +1,15 @@
-import { Check, Clock, LoaderCircle, Search } from "lucide-react";
+import { Archive, Check, Clock, LoaderCircle, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BestOfferCard } from "@/components/best-offer-card";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { STATUS_CONFIG } from "@/components/procurement-card";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
-import { LoadMoreSentinel, TaskRow } from "@/components/task-table";
+import { LoadMoreSentinel } from "@/components/task-table";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -19,10 +20,11 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
-import { STATUS_ICONS } from "@/data/task-types";
+import { STATUS_ICONS, type Task } from "@/data/task-types";
 import type { ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
@@ -32,8 +34,9 @@ import {
 	useSupplier,
 	useSuppliers,
 } from "@/data/use-suppliers";
-import { useTaskColumns } from "@/data/use-tasks";
+import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatDayMonth, formatRussianPlural, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type ItemDrawerTab = "suppliers" | "details" | "tasks";
@@ -323,16 +326,57 @@ const FILTER_BUTTONS: { key: TasksFilter; label: string }[] = [
 	{ key: "archived", label: "Архив" },
 ];
 
+const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
+	{
+		id: "name",
+		header: "ЗАДАЧА",
+		cell: (t) => <span className="font-medium">{t.name}</span>,
+	},
+	{
+		id: "questionCount",
+		header: "ВОПРОСЫ",
+		align: "right",
+		cell: (t) =>
+			t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "\u2014",
+	},
+	{
+		id: "deadlineAt",
+		header: "ДЕДЛАЙН",
+		align: "right",
+		cell: (t) => (
+			<time
+				dateTime={t.deadlineAt}
+				className={cn("tabular-nums", isOverdue(t.deadlineAt) && "font-medium text-destructive")}
+			>
+				{formatDayMonth(t.deadlineAt)}
+			</time>
+		),
+	},
+	{
+		id: "createdAt",
+		header: "СОЗДАНО",
+		align: "right",
+		cell: (t) => (
+			<time dateTime={t.createdAt} className="tabular-nums">
+				{formatDayMonth(t.createdAt)}
+			</time>
+		),
+	},
+];
+
 function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [search, setSearch] = useState("");
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+	const isMobile = useIsMobile();
+	const updateStatus = useUpdateTaskStatus();
 
 	const statusParam = searchParams.get("task_status") as TasksFilter | null;
 	const activeFilter: TasksFilter | null =
 		statusParam === "completed" || statusParam === "archived" ? statusParam : null;
 
-	const columns = useTaskColumns({ item: itemId, q: search || undefined });
+	const taskColumns = useTaskColumns({ item: itemId, q: search || undefined });
 
 	function handleFilterToggle(filter: TasksFilter) {
 		setSearchParams(
@@ -347,6 +391,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			},
 			{ replace: true },
 		);
+		setSelectedIds(new Set());
 	}
 
 	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -355,20 +400,62 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 		debounceRef.current = setTimeout(() => setSearch(value), 250);
 	}
 
-	const activeFilterTasks = activeFilter ? columns[activeFilter].tasks : null;
+	const activeFilterTasks = activeFilter ? taskColumns[activeFilter].tasks : null;
 
 	const tasks = useMemo(() => {
 		if (activeFilterTasks) return activeFilterTasks;
-		return [...columns.assigned.tasks, ...columns.in_progress.tasks].sort(
+		return [...taskColumns.assigned.tasks, ...taskColumns.in_progress.tasks].sort(
 			(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
 		);
-	}, [activeFilterTasks, columns.assigned.tasks, columns.in_progress.tasks]);
+	}, [activeFilterTasks, taskColumns.assigned.tasks, taskColumns.in_progress.tasks]);
 
-	const isLoading = columns.assigned.isLoading;
+	const isLoading = taskColumns.assigned.isLoading;
 
-	return (
-		<div data-testid="tab-panel-tasks">
-			<div className="mb-4 flex flex-wrap items-center gap-2">
+	function handleSelectionChange(idOrAll: string) {
+		if (idOrAll === "all") {
+			setSelectedIds((prev) => {
+				const allSelected = tasks.length > 0 && tasks.every((t) => prev.has(t.id));
+				if (allSelected) {
+					const next = new Set(prev);
+					for (const t of tasks) next.delete(t.id);
+					return next;
+				}
+				const next = new Set(prev);
+				for (const t of tasks) next.add(t.id);
+				return next;
+			});
+		} else {
+			setSelectedIds((prev) => {
+				const next = new Set(prev);
+				if (next.has(idOrAll)) next.delete(idOrAll);
+				else next.add(idOrAll);
+				return next;
+			});
+		}
+	}
+
+	function handleArchiveTask(id: string) {
+		updateStatus.mutate({ id, status: "archived" });
+	}
+
+	function handleArchiveSelected() {
+		for (const id of selectedIds) {
+			updateStatus.mutate({ id, status: "archived" });
+		}
+		setSelectedIds(new Set());
+	}
+
+	const toolbar =
+		selectedIds.size > 0 ? (
+			<div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2">
+				<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+				<Button type="button" variant="outline" size="sm" onClick={handleArchiveSelected} aria-label="Архивировать">
+					<Archive className="mr-1 size-4" aria-hidden="true" />
+					Архивировать
+				</Button>
+			</div>
+		) : (
+			<div className="flex flex-wrap items-center gap-2">
 				<div className="relative flex-1 max-w-56">
 					<Search
 						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -385,7 +472,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 				</div>
 				{FILTER_BUTTONS.map(({ key, label }) => {
 					const Icon = STATUS_ICONS[key];
-					const count = columns[key].count;
+					const count = taskColumns[key].count;
 					return (
 						<button
 							key={key}
@@ -404,29 +491,82 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 					);
 				})}
 			</div>
+		);
 
-			{isLoading ? (
-				<div className="space-y-px">
-					<div className="h-10 animate-pulse bg-muted" />
-					<div className="h-10 animate-pulse bg-muted" />
-					<div className="h-10 animate-pulse bg-muted" />
+	function renderMobileCard(t: Task) {
+		const overdue = isOverdue(t.deadlineAt);
+		return (
+			<button
+				type="button"
+				data-testid={`task-row-${t.id}`}
+				className="rounded-lg border bg-background p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
+				onClick={() => onTaskClick(t.id)}
+			>
+				<div className="font-medium text-sm">{t.name}</div>
+				<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+					<div>
+						<div className="text-xs text-muted-foreground">Вопросы</div>
+						<div className="tabular-nums">
+							{t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "\u2014"}
+						</div>
+					</div>
+					<div>
+						<div className="text-xs text-muted-foreground">Дедлайн</div>
+						<time dateTime={t.deadlineAt} className={cn("tabular-nums", overdue && "font-medium text-destructive")}>
+							{formatDayMonth(t.deadlineAt)}
+						</time>
+					</div>
+					<div>
+						<div className="text-xs text-muted-foreground">Создано</div>
+						<time dateTime={t.createdAt} className="tabular-nums">
+							{formatDayMonth(t.createdAt)}
+						</time>
+					</div>
 				</div>
-			) : tasks.length === 0 ? (
-				<p className="py-8 text-center text-sm text-muted-foreground">Нет задач</p>
-			) : (
-				<div>
-					{tasks.map((task) => (
-						<TaskRow key={task.id} task={task} onTaskClick={onTaskClick} showQuestionCount showCreatedDate />
-					))}
-					{!activeFilter && columns.assigned.hasNextPage && <LoadMoreSentinel loadMore={columns.assigned.loadMore} />}
-					{!activeFilter && columns.in_progress.hasNextPage && (
-						<LoadMoreSentinel loadMore={columns.in_progress.loadMore} />
-					)}
-					{activeFilter && columns[activeFilter].hasNextPage && (
-						<LoadMoreSentinel loadMore={columns[activeFilter].loadMore} />
-					)}
-				</div>
+			</button>
+		);
+	}
+
+	const sentinel = (
+		<>
+			{!activeFilter && taskColumns.assigned.hasNextPage && (
+				<LoadMoreSentinel loadMore={taskColumns.assigned.loadMore} />
 			)}
+			{!activeFilter && taskColumns.in_progress.hasNextPage && (
+				<LoadMoreSentinel loadMore={taskColumns.in_progress.loadMore} />
+			)}
+			{activeFilter && taskColumns[activeFilter].hasNextPage && (
+				<LoadMoreSentinel loadMore={taskColumns[activeFilter].loadMore} />
+			)}
+		</>
+	);
+
+	return (
+		<div data-testid="tab-panel-tasks">
+			<DataTable<Task>
+				columns={TASK_TABLE_COLUMNS}
+				rows={tasks}
+				getRowId={(t) => t.id}
+				isLoading={isLoading}
+				emptyMessage="Нет задач"
+				selection={{
+					selectedIds,
+					onChange: handleSelectionChange,
+					getRowLabel: (id) => `Выбрать ${tasks.find((t) => t.id === id)?.name ?? id}`,
+				}}
+				rowActions={(t) => [
+					{
+						label: "Архивировать",
+						icon: <Archive className="size-3.5" />,
+						onSelect: () => handleArchiveTask(t.id),
+					},
+				]}
+				toolbar={toolbar}
+				mobileCardRender={renderMobileCard}
+				onRowClick={onTaskClick}
+				isMobile={isMobile}
+				sentinel={sentinel}
+			/>
 		</div>
 	);
 }

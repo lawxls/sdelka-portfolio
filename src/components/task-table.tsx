@@ -105,7 +105,7 @@ export function LoadMoreSentinel({ loadMore }: { loadMore: () => void }) {
 
 // ── Desktop grouped row ───────────────────────────────────────────────────────
 
-export function TaskRow({
+function TaskRow({
 	task,
 	onTaskClick,
 	showQuestionCount,
