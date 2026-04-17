@@ -120,3 +120,23 @@ export function pluralizeRu(count: number, one: string, few: string, many: strin
 	if (mod10 >= 2 && mod10 <= 4) return `${count}\u00A0${few}`;
 	return `${count}\u00A0${many}`;
 }
+
+/** Tuple-signature alias for {@link pluralizeRu}. Produces «1 день» / «2 дня» / «5 дней». */
+export function formatRussianPlural(count: number, forms: [one: string, few: string, many: string]): string {
+	return pluralizeRu(count, forms[0], forms[1], forms[2]);
+}
+
+const compactRubleFormatter = new Intl.NumberFormat("ru-RU", {
+	notation: "compact",
+	maximumFractionDigits: 1,
+});
+
+/**
+ * Compact ruble format with Russian abbreviations: «1,2 млрд ₽», «450 млн ₽», «12,3 тыс ₽».
+ * Below 1 000 — plain integer («999 ₽»). Currency symbol always trailing.
+ */
+export function formatCompactRuble(amount: number | null | undefined): string {
+	if (amount == null) return "\u2014";
+	if (Math.abs(amount) < 1000) return `${integerFormatter.format(Math.round(amount))}\u00A0₽`;
+	return `${compactRubleFormatter.format(amount)}\u00A0₽`;
+}

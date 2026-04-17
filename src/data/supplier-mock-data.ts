@@ -9,6 +9,7 @@ import type {
 	SupplierStatus,
 } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
+import type { PaymentType } from "./types";
 
 // First 5 names match supplier companies seeded in companies-mock-data
 // so that the currentSupplier displayed on an item maps to a real CRM entry.
@@ -168,6 +169,11 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 		const deliveryCost = deliveryVariant === 0 ? null : deliveryVariant === 1 ? 0 : 1000 + ((idx * 53) % 3000);
 		const tco = isKp && pricePerUnit != null ? pricePerUnit + (deliveryCost ?? 0) : null;
 		const rating = isKp ? 30 + ((idx * 17) % 71) : null;
+		const paymentBucket = idx % 20;
+		const paymentType: PaymentType =
+			paymentBucket < 6 ? "prepayment" : paymentBucket < 9 ? "prepayment_30_70" : "deferred";
+		const deferralDays = paymentType === "deferred" ? 10 + ((idx * 7) % 50) : 0;
+		const leadTimeDays = 3 + ((idx * 11) % 58);
 
 		return {
 			id: `supplier-${itemId}-${i + 1}`,
@@ -182,7 +188,9 @@ function createSuppliersForItem(itemId: string): Supplier[] {
 			tco,
 			rating,
 			deliveryCost,
-			deferralDays: i % 4 === 0 ? 0 : 10 + ((idx * 7) % 50),
+			paymentType,
+			deferralDays,
+			leadTimeDays,
 			aiDescription: AI_DESCRIPTIONS[idx % AI_DESCRIPTIONS.length],
 			aiRecommendations: AI_RECOMMENDATIONS[idx % AI_RECOMMENDATIONS.length],
 			documents: makeDocuments(idx),
@@ -367,7 +375,7 @@ export async function selectSupplier(itemId: string, supplierId: string): Promis
 	_patchItem(itemId, {
 		currentSupplier: {
 			companyName: supplier.companyName,
-			paymentType: supplier.deferralDays > 0 ? "deferred" : "prepayment",
+			paymentType: supplier.paymentType,
 			deferralDays: supplier.deferralDays,
 			pricePerUnit: supplier.pricePerUnit,
 		},

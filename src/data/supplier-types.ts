@@ -1,3 +1,5 @@
+import type { PaymentType } from "./types";
+
 export type SupplierStatus = "письмо_не_отправлено" | "ждем_ответа" | "переговоры" | "получено_кп" | "отказ";
 
 export const SUPPLIER_STATUSES: SupplierStatus[] = [
@@ -87,7 +89,9 @@ export interface Supplier {
 	tco: number | null;
 	rating: number | null;
 	deliveryCost: number | null;
+	paymentType: PaymentType;
 	deferralDays: number;
+	leadTimeDays: number | null;
 	aiDescription: string;
 	aiRecommendations: string;
 	documents: SupplierDocument[];
