@@ -162,7 +162,8 @@ export function ProcurementCard({
 		<article
 			className={cn(
 				"rounded-lg border bg-background p-4",
-				onRowClick && "cursor-pointer active:bg-muted/50 transition-colors",
+				onRowClick &&
+					"cursor-pointer transition-[background-color,border-color,scale] duration-150 ease-out touch-manipulation hover:border-border/80 active:bg-muted/50 active:scale-[0.99] motion-reduce:active:scale-100",
 			)}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
@@ -201,7 +202,7 @@ export function ProcurementCard({
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
-								className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+								className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 								aria-label="Действия"
 								onClick={(e) => e.stopPropagation()}
 							>

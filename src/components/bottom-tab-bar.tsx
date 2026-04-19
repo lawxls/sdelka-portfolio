@@ -19,8 +19,8 @@ export function BottomTabBar() {
 						aria-label={label}
 						aria-current={active ? "page" : undefined}
 						className={cn(
-							"flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[0.6875rem] transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-							active ? "text-sidebar-accent-foreground" : "text-sidebar-foreground",
+							"relative flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[0.6875rem] transition-[color,scale] duration-150 ease-out touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.96] motion-reduce:active:scale-100",
+							active ? "font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground",
 						)}
 					>
 						<Icon className="size-5" aria-hidden="true" />

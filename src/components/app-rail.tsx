@@ -9,7 +9,7 @@ const TOP_NAV = NAV_ITEMS.filter((item) => item.placement === "top");
 const BOTTOM_NAV = NAV_ITEMS.filter((item) => item.placement === "bottom");
 
 const NAV_ITEM_CLASSES =
-	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-[background-color,color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
 export function AppRail() {
 	const { pathname } = useLocation();

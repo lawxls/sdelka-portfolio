@@ -253,10 +253,30 @@ tbody tr.negotiating-stripe:hover {
 	}
 	body {
 		@apply bg-background text-foreground;
+		text-wrap: pretty;
 	}
 	html {
 		@apply font-sans;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+		-webkit-tap-highlight-color: transparent;
+	}
+	h1,
+	h2,
+	h3,
+	h4 {
+		text-wrap: balance;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			/* biome-ignore-start lint/complexity/noImportantStyles: required to override library animations for reduced-motion users */
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+			/* biome-ignore-end lint/complexity/noImportantStyles: required to override library animations for reduced-motion users */
+		}
 	}
 }
