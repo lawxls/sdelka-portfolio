@@ -156,7 +156,7 @@ function Section({
 				{!editing && editLabel && onEdit && (
 					<button
 						type="button"
-						className="inline-flex items-center justify-center size-6 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
+						className="relative inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-[-8px] after:content-['']"
 						onClick={onEdit}
 						aria-label={editLabel}
 					>
