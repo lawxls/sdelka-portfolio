@@ -31,6 +31,7 @@ export function AppLayout() {
 										size="icon"
 										aria-label="Сменить тему"
 										onClick={handleToggleTheme}
+										className="text-muted-foreground hover:text-foreground"
 									>
 										<Sun className="size-5 scale-100 dark:scale-0 dark:hidden" aria-hidden="true" />
 										<Moon className="hidden size-5 scale-0 dark:block dark:scale-100" aria-hidden="true" />
@@ -40,7 +41,13 @@ export function AppLayout() {
 							</Tooltip>
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<Button type="button" variant="ghost" size="icon" aria-label="Уведомления">
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										aria-label="Уведомления"
+										className="text-muted-foreground hover:text-foreground"
+									>
 										<Bell className="size-5" aria-hidden="true" />
 									</Button>
 								</TooltipTrigger>

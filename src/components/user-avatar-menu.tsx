@@ -18,8 +18,8 @@ interface UserAvatarMenuProps {
 }
 
 function formatTriggerName(firstName: string, lastName: string): string {
-	const initial = lastName.trim().charAt(0);
-	return initial ? `${firstName} ${initial}.` : firstName;
+	const trimmedLast = lastName.trim();
+	return trimmedLast ? `${firstName} ${trimmedLast}` : firstName;
 }
 
 export function UserAvatarMenu({ side = "bottom", align = "end", className }: UserAvatarMenuProps) {
@@ -35,7 +35,7 @@ export function UserAvatarMenu({ side = "bottom", align = "end", className }: Us
 					type="button"
 					aria-label="Меню пользователя"
 					className={cn(
-						"flex shrink-0 items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+						"inline-flex shrink-0 items-center gap-2.5 rounded-md bg-muted px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-muted/80 hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 						className,
 					)}
 				>

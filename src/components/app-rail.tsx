@@ -21,7 +21,7 @@ export function AppRail() {
 		>
 			<div className="flex h-12 shrink-0 items-center px-3">
 				<Link to="/procurement" aria-label="На главную" className="flex shrink-0 items-center">
-					<LogoWordmark className="h-4 w-auto" />
+					<LogoWordmark className="h-5 w-auto" />
 				</Link>
 			</div>
 			<nav aria-label="Основная навигация" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
@@ -71,12 +71,8 @@ export function AppRail() {
 						<span className="flex-1 text-left">Помощь</span>
 					</button>
 				</div>
-				<div className="mt-3 border-t border-sidebar-border pt-3">
-					<UserAvatarMenu
-						side="right"
-						align="end"
-						className="w-full text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-					/>
+				<div className="mt-2 px-0.5">
+					<UserAvatarMenu side="right" align="end" />
 				</div>
 			</div>
 		</aside>

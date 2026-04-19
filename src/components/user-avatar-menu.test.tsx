@@ -45,11 +45,11 @@ function renderMenu(initialEntries = ["/"]) {
 }
 
 describe("UserAvatarMenu trigger", () => {
-	test("shows profile icon and formatted name without a chevron", async () => {
+	test("shows profile icon and full name without a chevron", async () => {
 		renderMenu();
 
 		await waitFor(() => {
-			expect(screen.getByText("Станислав Ч.")).toBeInTheDocument();
+			expect(screen.getByText("Станислав Чмелев")).toBeInTheDocument();
 		});
 		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
 		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();
@@ -57,16 +57,16 @@ describe("UserAvatarMenu trigger", () => {
 		expect(screen.queryByText("СЧ")).not.toBeInTheDocument();
 	});
 
-	test("name renders as '<First> <L>.' when last name is present", async () => {
+	test("name renders as '<First> <Last>' when last name is present", async () => {
 		_setUserSettings(makeSettings({ first_name: "Станислав", last_name: "Чмелев" }));
 		renderMenu();
 
 		await waitFor(() => {
-			expect(screen.getByText("Станислав Ч.")).toBeInTheDocument();
+			expect(screen.getByText("Станислав Чмелев")).toBeInTheDocument();
 		});
 	});
 
-	test("name renders as '<First>' (no dot) when last name is missing", async () => {
+	test("name renders as '<First>' when last name is missing", async () => {
 		_setUserSettings(makeSettings({ first_name: "Станислав", last_name: "" }));
 		renderMenu();
 
