@@ -25,6 +25,7 @@ function renderLayout(initialEntry = "/procurement") {
 						<Route element={<AppLayout />}>
 							<Route path="/procurement" element={<div>procurement-content</div>} />
 							<Route path="/tasks" element={<div>tasks-content</div>} />
+							<Route path="/settings" element={<div>settings-content</div>} />
 						</Route>
 					</Routes>
 				</MemoryRouter>
@@ -33,11 +34,11 @@ function renderLayout(initialEntry = "/procurement") {
 	);
 }
 
-describe("AppLayout — global header", () => {
-	test("renders logo wordmark in header", () => {
+describe("AppLayout — sidebar", () => {
+	test("renders logo wordmark inside the sidebar", () => {
 		renderLayout();
-		const header = screen.getByTestId("global-header");
-		const svg = header.querySelector('svg[viewBox="0 0 1121 203"]');
+		const rail = screen.getByTestId("app-rail");
+		const svg = rail.querySelector('svg[viewBox="0 0 1121 203"]');
 		expect(svg).toBeInTheDocument();
 	});
 
@@ -46,6 +47,13 @@ describe("AppLayout — global header", () => {
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("link", { name: "На главную" }));
 		expect(screen.getByText("procurement-content")).toBeInTheDocument();
+	});
+});
+
+describe("AppLayout — global header", () => {
+	test("does not render a page title", () => {
+		renderLayout("/procurement");
+		expect(screen.queryByTestId("page-title")).not.toBeInTheDocument();
 	});
 
 	test("renders user avatar menu", () => {

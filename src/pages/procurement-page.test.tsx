@@ -205,7 +205,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 		renderPage();
 
 		await waitFor(() => {
-			expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 3");
+			expect(screen.getByTestId("total-count")).toHaveTextContent(/^3\s+позиции$/);
 		});
 	});
 
@@ -215,7 +215,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 		await waitFor(() => {
 			// Only item i1 is in folder f1
-			expect(screen.getByTestId("total-count")).toHaveTextContent(/Всего:\s*1$/);
+			expect(screen.getByTestId("total-count")).toHaveTextContent(/^1\s+позиция$/);
 		});
 	});
 
@@ -225,7 +225,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 		await waitFor(
 			() => {
-				expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 2");
+				expect(screen.getByTestId("total-count")).toHaveTextContent(/^2\s+позиции$/);
 			},
 			{ timeout: 3000 },
 		);
@@ -235,7 +235,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 		await waitFor(
 			() => {
-				expect(screen.getByTestId("total-count")).toHaveTextContent("Всего: 3");
+				expect(screen.getByTestId("total-count")).toHaveTextContent(/^3\s+позиции$/);
 			},
 			{ timeout: 3000 },
 		);

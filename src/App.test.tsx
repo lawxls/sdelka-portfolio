@@ -137,7 +137,7 @@ describe("Routing", () => {
 	test("/ redirects to /procurement", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 		});
 	});
 
@@ -150,7 +150,7 @@ describe("Routing", () => {
 
 	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
@@ -196,17 +196,17 @@ describe("Routing", () => {
 		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("global header renders avatar button", () => {
+	test("global header renders notifications and theme toggle buttons", () => {
 		renderApp();
 		const header = screen.getByTestId("global-header");
-		expect(within(header).getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
+		expect(within(header).getByRole("button", { name: "Уведомления" })).toBeInTheDocument();
+		expect(within(header).getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 	});
 
-	test("global header avatar opens dropdown with 3 items", async () => {
+	test("sidebar avatar opens dropdown with 3 items", async () => {
 		renderApp();
 		const user = userEvent.setup();
-		const header = screen.getByTestId("global-header");
-		await user.click(within(header).getByRole("button", { name: "Меню пользователя" }));
+		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
 
 		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
 		expect(screen.getByRole("menuitem", { name: /Сменить тему/ })).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe("ProcurementPage", () => {
 
 	test("renders toolbar with search, filters, and create button", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Добавить позицию/ })).toBeInTheDocument();
 	});
@@ -288,7 +288,7 @@ describe("ProcurementPage", () => {
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
 
-		const input = screen.getByPlaceholderText("Поиск по названию…");
+		const input = screen.getByPlaceholderText("Поиск…");
 		await user.clear(input);
 		await user.type(input, "Арматура");
 

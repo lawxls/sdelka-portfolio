@@ -122,18 +122,6 @@ export function ProcurementPage() {
 		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
 	}
 
-	function handleSearchChange(query: string) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (query) next.set("q", query);
-				else next.delete("q");
-				return next;
-			},
-			{ replace: true },
-		);
-	}
-
 	function handleFiltersChange(newFilters: FilterState) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -256,8 +244,6 @@ export function ProcurementPage() {
 
 	const toolbar = (
 		<Toolbar
-			defaultSearch={search}
-			onSearchChange={handleSearchChange}
 			filters={filters}
 			onFiltersChange={handleFiltersChange}
 			sort={sort}
@@ -287,7 +273,16 @@ export function ProcurementPage() {
 			<PageToolbar
 				left={
 					<>
-						<TotalCount value={totals?.itemCount} isLoading={totalsLoading} />
+						<h1 className="text-sm font-semibold text-foreground leading-none">Закупки</h1>
+						<span aria-hidden="true" className="text-sm text-border leading-none">
+							/
+						</span>
+						<TotalCount
+							value={totals?.itemCount}
+							isLoading={totalsLoading}
+							forms={["позиция", "позиции", "позиций"]}
+							className="text-sm font-normal text-muted-foreground leading-none"
+						/>
 						{companyChipLabel && (
 							<FilterChip
 								testId="chip-company"

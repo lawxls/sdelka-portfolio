@@ -45,15 +45,16 @@ function renderMenu(initialEntries = ["/"]) {
 }
 
 describe("UserAvatarMenu trigger", () => {
-	test("shows avatar, formatted name, and chevron", async () => {
+	test("shows profile icon and formatted name without a chevron", async () => {
 		renderMenu();
 
 		await waitFor(() => {
-			expect(screen.getByText("СЧ")).toBeInTheDocument();
+			expect(screen.getByText("Станислав Ч.")).toBeInTheDocument();
 		});
-		expect(screen.getByText("Станислав Ч.")).toBeInTheDocument();
 		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
-		expect(trigger.querySelector("svg.lucide-chevron-down")).toBeInTheDocument();
+		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();
+		expect(trigger.querySelector("svg.lucide-chevron-down")).not.toBeInTheDocument();
+		expect(screen.queryByText("СЧ")).not.toBeInTheDocument();
 	});
 
 	test("name renders as '<First> <L>.' when last name is present", async () => {
@@ -75,24 +76,13 @@ describe("UserAvatarMenu trigger", () => {
 		expect(screen.queryByText(/Станислав\s+\./)).not.toBeInTheDocument();
 	});
 
-	test("chevron has aria-hidden", async () => {
-		renderMenu();
-
-		await waitFor(() => {
-			expect(screen.getByText("Станислав Ч.")).toBeInTheDocument();
-		});
-		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
-		const chevron = trigger.querySelector("svg.lucide-chevron-down");
-		expect(chevron).toHaveAttribute("aria-hidden", "true");
-	});
-
-	test("shows fallback avatar (no name) before settings load", () => {
+	test("shows profile icon (no name) before settings load", () => {
 		vi.spyOn(settingsApi, "fetchSettings").mockReturnValueOnce(new Promise(() => {}));
 
 		renderMenu();
 
-		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
-		expect(screen.queryByText("СЧ")).not.toBeInTheDocument();
+		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
+		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();
 		expect(screen.queryByText(/Станислав/)).not.toBeInTheDocument();
 	});
 });

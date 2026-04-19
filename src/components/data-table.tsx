@@ -125,7 +125,7 @@ export function DataTable<T>({
 			{toolbar}
 			<Table>
 				<TableHeader>
-					<TableRow>
+					<TableRow className="border-b-0 bg-transparent hover:bg-transparent">
 						{selection && (
 							<TableHead className="w-10">
 								<Checkbox
@@ -189,7 +189,7 @@ export function DataTable<T>({
 									columns={columns}
 									isPinned
 									selection={selection}
-									className="bg-muted/50 hover:bg-muted"
+									className="bg-accent/60 hover:bg-accent/80"
 								/>
 							))}
 							{rows.map((row) => (
