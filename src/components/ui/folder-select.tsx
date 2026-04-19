@@ -115,7 +115,7 @@ export function FolderSelect({
 	);
 }
 
-function CreateFolderRow({
+export function CreateFolderRow({
 	defaultColor,
 	onSave,
 	onCancel,

@@ -19,14 +19,7 @@ import type {
 	StatusFilter,
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import {
-	nextUnusedColor,
-	useCreateFolder,
-	useDeleteFolder,
-	useFolderStats,
-	useFolders,
-	useUpdateFolder,
-} from "@/data/use-folders";
+import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
 import {
 	buildFilterParams,
 	useArchiveItem,
@@ -257,7 +250,7 @@ export function ProcurementPage() {
 			foldersLoading={foldersLoading || statsLoading}
 			activeFolder={folder}
 			onFolderSelect={handleFolderSelect}
-			onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
+			onCreateFolder={(name, color) => createFolderMutation.mutate({ name, color })}
 			onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
 			onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
 			onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}

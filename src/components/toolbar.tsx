@@ -1,9 +1,13 @@
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Plus } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Plus, Search, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { CategoriesPopover } from "@/components/categories-popover";
 import { FiltersPopover } from "@/components/filters-popover";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
+import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { cn } from "@/lib/utils";
 
 interface ToolbarProps {
@@ -20,7 +24,7 @@ interface ToolbarProps {
 	foldersLoading?: boolean;
 	activeFolder: string | undefined;
 	onFolderSelect: (folder: string | undefined) => void;
-	onCreateFolder: (name: string) => void;
+	onCreateFolder: (name: string, color: string) => void;
 	onRenameFolder: (id: string, name: string) => void;
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
@@ -113,9 +117,9 @@ export function Toolbar({
 				</PopoverContent>
 			</Popover>
 
-			<FiltersPopover
-				filters={filters}
-				onFiltersChange={onFiltersChange}
+			<ToolbarSearch />
+
+			<CategoriesPopover
 				folders={folders}
 				folderCounts={folderCounts}
 				foldersLoading={foldersLoading}
@@ -125,6 +129,11 @@ export function Toolbar({
 				onRenameFolder={onRenameFolder}
 				onRecolorFolder={onRecolorFolder}
 				onDeleteFolder={onDeleteFolder}
+			/>
+
+			<FiltersPopover
+				filters={filters}
+				onFiltersChange={onFiltersChange}
 				companies={companies}
 				selectedCompany={selectedCompany}
 				onCompanySelect={onCompanySelect}
@@ -169,6 +178,71 @@ export function Toolbar({
 				<span className="hidden sm:inline">Добавить позицию</span>
 				<span className="sm:hidden">Добавить</span>
 			</Button>
+		</div>
+	);
+}
+
+function ToolbarSearch() {
+	const { current, setDebounced, clear } = useDebouncedSearchParam("q", 300);
+	const [userExpanded, setUserExpanded] = useState(false);
+	const wrapperRef = useRef<HTMLDivElement>(null);
+	const expanded = current.length > 0 || userExpanded;
+
+	function collapseAndClear() {
+		clear();
+		setUserExpanded(false);
+	}
+
+	function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (e.key === "Escape") collapseAndClear();
+	}
+
+	function handleInputBlur(e: React.FocusEvent<HTMLInputElement>) {
+		const nextFocus = e.relatedTarget as Node | null;
+		if (nextFocus && wrapperRef.current?.contains(nextFocus)) return;
+		if (!e.currentTarget.value) setUserExpanded(false);
+	}
+
+	if (!expanded) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Button type="button" variant="ghost" size="icon-sm" aria-label="Поиск" onClick={() => setUserExpanded(true)}>
+						<Search aria-hidden="true" />
+					</Button>
+				</TooltipTrigger>
+				<TooltipContent>Поиск</TooltipContent>
+			</Tooltip>
+		);
+	}
+
+	return (
+		<div ref={wrapperRef} className="relative">
+			<Search
+				className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+				aria-hidden="true"
+			/>
+			<Input
+				type="search"
+				placeholder="Поиск…"
+				defaultValue={current}
+				onChange={(e) => setDebounced(e.target.value)}
+				onKeyDown={handleKeyDown}
+				onBlur={handleInputBlur}
+				autoFocus
+				spellCheck={false}
+				autoComplete="off"
+				aria-label="Поиск позиций"
+				className="h-7 w-48 rounded-[min(var(--radius-md),12px)] pl-8 pr-7 text-[0.8rem] md:w-64"
+			/>
+			<button
+				type="button"
+				aria-label="Закрыть поиск"
+				onClick={collapseAndClear}
+				className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			>
+				<X className="size-3.5" aria-hidden="true" />
+			</button>
 		</div>
 	);
 }
