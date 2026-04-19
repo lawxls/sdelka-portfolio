@@ -137,7 +137,7 @@ describe("Routing", () => {
 	test("/ redirects to /procurement", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		});
 	});
 
@@ -150,7 +150,7 @@ describe("Routing", () => {
 
 	test("/procurement renders procurement content", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
@@ -271,7 +271,7 @@ describe("ProcurementPage", () => {
 
 	test("renders toolbar with search, filters, and create button", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Добавить позицию/ })).toBeInTheDocument();
 	});
@@ -288,7 +288,7 @@ describe("ProcurementPage", () => {
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
 
-		const input = screen.getByPlaceholderText("Поиск…");
+		const input = screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…");
 		await user.clear(input);
 		await user.type(input, "Арматура");
 
