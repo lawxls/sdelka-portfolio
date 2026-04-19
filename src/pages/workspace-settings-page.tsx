@@ -46,7 +46,7 @@ export function WorkspaceSettingsPage() {
 	}
 
 	return (
-		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-lg py-md">
+		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-xl py-lg">
 			<h1 className="text-lg font-semibold">Общие настройки</h1>
 
 			<form onSubmit={handleSave} className="mt-6 w-full max-w-[28rem] space-y-6">

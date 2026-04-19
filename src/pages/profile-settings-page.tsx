@@ -163,7 +163,7 @@ export function ProfileSettingsPage() {
 
 	if (isError) {
 		return (
-			<div className="p-6">
+			<div className="px-xl py-lg">
 				<p className="mb-3 text-sm text-muted-foreground">Не удалось загрузить профиль</p>
 				<Button variant="outline" onClick={() => refetch()}>
 					Повторить
@@ -174,7 +174,7 @@ export function ProfileSettingsPage() {
 
 	if (!data) {
 		return (
-			<div data-testid="profile-skeleton" className="p-6">
+			<div data-testid="profile-skeleton" className="px-xl py-lg">
 				<div className="animate-pulse space-y-4">
 					<div className="size-14 rounded-full bg-muted" />
 					<div className="h-4 w-40 rounded bg-muted" />
@@ -185,7 +185,7 @@ export function ProfileSettingsPage() {
 	}
 
 	return (
-		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-lg py-md">
+		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-xl py-lg">
 			<ProfileForm key={data.email} data={data} />
 		</main>
 	);
