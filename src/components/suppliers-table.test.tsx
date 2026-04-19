@@ -204,12 +204,14 @@ describe("SuppliersTable pinned current supplier", () => {
 		pricePerUnit: 800,
 	};
 
-	test("renders current supplier pinned with «Текущий» badge", () => {
+	test("renders current supplier pinned with «Ваш поставщик» status", () => {
 		renderTable({ currentSupplier });
 		expect(screen.getByTestId("data-table-pinned-row")).toBeInTheDocument();
 		const pinned = screen.getByTestId("data-table-pinned-row");
 		expect(within(pinned).getByText("ООО Текущий")).toBeInTheDocument();
-		expect(within(pinned).getByText("Текущий")).toBeInTheDocument();
+		const status = within(pinned).getByText("Ваш поставщик");
+		expect(status).toBeInTheDocument();
+		expect(status.className).toMatch(/text-folder-orange/);
 	});
 
 	test("pinned supplier's Экономия is em-dash", () => {
@@ -435,6 +437,21 @@ describe("SuppliersTable toolbar", () => {
 		renderTable({ selectedIds: new Set(["s1", "s2"]) });
 		expect(screen.getByText(/выбрано: 2/i)).toBeInTheDocument();
 	});
+
+	test("shows total rows count reflecting loaded suppliers", () => {
+		renderTable();
+		expect(screen.getByText("Всего: 3")).toBeInTheDocument();
+	});
+
+	test("total count includes pinned current supplier", () => {
+		const currentSupplier: CurrentSupplier = {
+			companyName: "ООО Текущий",
+			deferralDays: 0,
+			pricePerUnit: 800,
+		};
+		renderTable({ currentSupplier });
+		expect(screen.getByText("Всего: 4")).toBeInTheDocument();
+	});
 });
 
 describe("SuppliersTable mobile cards", () => {
@@ -502,7 +519,7 @@ describe("SuppliersTable mobile cards", () => {
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 	});
 
-	test("renders pinned current supplier card on mobile with «Текущий» badge", () => {
+	test("renders pinned current supplier card on mobile with «Ваш поставщик» status", () => {
 		const currentSupplier: CurrentSupplier = {
 			companyName: "ООО Текущий",
 			deferralDays: 0,
@@ -511,7 +528,7 @@ describe("SuppliersTable mobile cards", () => {
 		renderTable({ currentSupplier });
 		const pinnedCard = screen.getByTestId("data-table-pinned-card");
 		expect(within(pinnedCard).getByText("ООО Текущий")).toBeInTheDocument();
-		expect(within(pinnedCard).getByText("Текущий")).toBeInTheDocument();
+		expect(within(pinnedCard).getByText("Ваш поставщик")).toBeInTheDocument();
 	});
 });
 

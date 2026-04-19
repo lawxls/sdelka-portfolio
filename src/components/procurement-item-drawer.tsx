@@ -1,14 +1,12 @@
-import { Archive, Search } from "lucide-react";
+import { Archive, Ban, Check, Search, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { BestOfferCard } from "@/components/best-offer-card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
-import { SupplierResponseStatusCard } from "@/components/supplier-response-status-card";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
 import { LoadMoreSentinel } from "@/components/task-table";
@@ -25,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
 	SearchSupplierCompanyType,
 	SearchSupplierRequestStatus,
@@ -430,20 +429,8 @@ function SuppliersTabPanel({
 	const { data: itemDetail } = useItemDetail(itemId);
 	const currentSupplier = itemDetail?.currentSupplier;
 
-	const { data: allSuppliersData } = useSuppliers(itemId);
-	const allSuppliers = allSuppliersData?.suppliers ?? [];
-
 	return (
 		<div data-testid="tab-panel-suppliers">
-			<div className="mb-3 grid grid-cols-1 gap-3 px-4 xl:grid-cols-2">
-				<BestOfferCard
-					suppliers={allSuppliers}
-					item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
-					currentSupplier={currentSupplier}
-					onSupplierClick={onSupplierClick}
-				/>
-				<SupplierResponseStatusCard suppliers={allSuppliers} />
-			</div>
 			<SuppliersTable
 				suppliers={suppliers}
 				item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
@@ -609,7 +596,10 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			</div>
 		) : (
 			<div className="flex flex-wrap items-center gap-2">
-				<div className="relative flex-1 max-w-56">
+				<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+					Всего: {tasks.length}
+				</span>
+				<div className="relative max-w-56">
 					<Search
 						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
 						aria-hidden="true"
@@ -623,26 +613,28 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 						autoComplete="off"
 					/>
 				</div>
-				{FILTER_BUTTONS.map(({ key, label }) => {
-					const Icon = STATUS_ICONS[key];
-					const count = taskColumns[key].count;
-					return (
-						<button
-							key={key}
-							type="button"
-							className={cn(
-								"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-								"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-								activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
-							)}
-							onClick={() => handleFilterToggle(key)}
-						>
-							<Icon className="size-3.5" aria-hidden="true" />
-							{label}
-							{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
-						</button>
-					);
-				})}
+				<div className="ml-auto flex flex-wrap items-center gap-2">
+					{FILTER_BUTTONS.map(({ key, label }) => {
+						const Icon = STATUS_ICONS[key];
+						const count = taskColumns[key].count;
+						return (
+							<button
+								key={key}
+								type="button"
+								className={cn(
+									"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+									"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+									activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
+								)}
+								onClick={() => handleFilterToggle(key)}
+							>
+								<Icon className="size-3.5" aria-hidden="true" />
+								{label}
+								{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
+							</button>
+						);
+					})}
+				</div>
 			</div>
 		);
 
@@ -724,6 +716,32 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 	);
 }
 
+function HeaderMetric({
+	icon: Icon,
+	count,
+	label,
+	colorClass,
+	testId,
+}: {
+	icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+	count: number;
+	label: string;
+	colorClass: string;
+	testId: string;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span className={cn("inline-flex items-center gap-1 text-sm font-normal", colorClass)} data-testid={testId}>
+					<Icon className="size-4" aria-hidden={true} />
+					<span className="tabular-nums">{count}</span>
+				</span>
+			</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function ProcurementItemDrawerContent({
 	itemId,
 	item,
@@ -746,10 +764,23 @@ function ProcurementItemDrawerContent({
 	const taskColumns = useTaskColumns({ item: itemId });
 	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
 
+	const { data: allSuppliersData } = useSuppliers(itemId);
+	const headerMetrics = useMemo(() => {
+		const list = allSuppliersData?.suppliers;
+		if (!list) return { total: 0, quotesReceived: 0, refusals: 0 };
+		let quotesReceived = 0;
+		let refusals = 0;
+		for (const s of list) {
+			if (s.status === "получено_кп") quotesReceived++;
+			else if (s.status === "отказ") refusals++;
+		}
+		return { total: list.length, quotesReceived, refusals };
+	}, [allSuppliersData?.suppliers]);
+
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
-				<SheetTitle className="flex flex-wrap items-center gap-x-2 gap-y-1">
+				<SheetTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
 					<span>{itemName ?? "Позиция"}</span>
 					{itemStatus && (
 						<span
@@ -763,6 +794,27 @@ function ProcurementItemDrawerContent({
 							{STATUS_CONFIG[itemStatus].label}
 						</span>
 					)}
+					<HeaderMetric
+						icon={Users}
+						count={headerMetrics.total}
+						label="Всего поставщиков"
+						colorClass="text-muted-foreground"
+						testId="header-metric-total"
+					/>
+					<HeaderMetric
+						icon={Check}
+						count={headerMetrics.quotesReceived}
+						label="Получено КП"
+						colorClass="text-green-600 dark:text-green-400"
+						testId="header-metric-quotes"
+					/>
+					<HeaderMetric
+						icon={Ban}
+						count={headerMetrics.refusals}
+						label="Отказ"
+						colorClass="text-destructive"
+						testId="header-metric-refusals"
+					/>
 				</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
 			</SheetHeader>

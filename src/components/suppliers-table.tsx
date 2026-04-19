@@ -3,7 +3,6 @@ import { useMemo, useRef } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { DeliveryValue } from "@/components/supplier-value-displays";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -140,6 +139,8 @@ export function SuppliersTable({
 		return <p className="py-8 text-center text-sm text-muted-foreground">Нет поставщиков</p>;
 	}
 
+	const rowsCount = suppliers.length + (currentSupplier ? 1 : 0);
+
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
 			<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
@@ -157,6 +158,9 @@ export function SuppliersTable({
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
+			<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+				Всего: {rowsCount}
+			</span>
 			<div className="relative max-w-56">
 				<Search
 					className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -176,7 +180,13 @@ export function SuppliersTable({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<PopoverTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтр по статусу" className="relative">
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Фильтр по статусу"
+								className="relative ml-auto"
+							>
 								<ListFilter aria-hidden="true" />
 								{activeStatuses.length > 0 && (
 									<span
@@ -241,9 +251,10 @@ export function SuppliersTable({
 				<div className="flex flex-col gap-1">
 					<span className="font-medium">{s.companyName}</span>
 					{isPinned ? (
-						<Badge variant="secondary" className="w-fit text-xs">
-							Текущий
-						</Badge>
+						<span className="inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+							<UserCheck className="size-3" aria-hidden="true" />
+							Ваш поставщик
+						</span>
 					) : (
 						<SupplierStatusIndicator status={s.status} className="text-xs" />
 					)}
@@ -251,11 +262,23 @@ export function SuppliersTable({
 			),
 		},
 		{
-			id: "tco",
-			header: "ТСО/ЕД.",
+			id: "paymentType",
+			header: "ТИП ОПЛАТЫ",
+			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays),
+		},
+		{
+			id: "deliveryCost",
+			header: "ДОСТАВКА",
+			cell: (s, { isPinned }) =>
+				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : <DeliveryValue cost={s.deliveryCost} />,
+		},
+		{
+			id: "leadTimeDays",
+			header: "СРОК ПОСТАВКИ",
 			sortable: true,
 			align: "right",
-			cell: (s) => formatCurrency(s.tco),
+			cell: (s, { isPinned }) =>
+				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : formatLeadTime(s.leadTimeDays),
 		},
 		{
 			id: "batchCost",
@@ -263,6 +286,13 @@ export function SuppliersTable({
 			sortable: true,
 			align: "right",
 			cell: (s) => formatCurrency(batchCost(s, item)),
+		},
+		{
+			id: "tco",
+			header: "ТСО/ЕД.",
+			sortable: true,
+			align: "right",
+			cell: (s) => formatCurrency(s.tco),
 		},
 		{
 			id: "savings",
@@ -274,25 +304,6 @@ export function SuppliersTable({
 				const value = savingsPercent(s, currentSupplier ?? null, item);
 				return <span className={savingsClassName(value)}>{formatPercent(value)}</span>;
 			},
-		},
-		{
-			id: "deliveryCost",
-			header: "ДОСТАВКА",
-			cell: (s, { isPinned }) =>
-				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : <DeliveryValue cost={s.deliveryCost} />,
-		},
-		{
-			id: "paymentType",
-			header: "ТИП ОПЛАТЫ",
-			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays),
-		},
-		{
-			id: "leadTimeDays",
-			header: "СРОК ПОСТАВКИ",
-			sortable: true,
-			align: "right",
-			cell: (s, { isPinned }) =>
-				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : formatLeadTime(s.leadTimeDays),
 		},
 	];
 
@@ -316,44 +327,49 @@ export function SuppliersTable({
 			<button
 				type="button"
 				data-testid="supplier-card"
-				className="rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
+				className={cn(
+					"rounded-lg border p-4 text-left transition-colors",
+					ctx.isPinned ? "bg-accent/60" : "bg-card hover:bg-muted/50 active:bg-muted",
+				)}
 				onClick={ctx.isPinned ? undefined : () => onRowClick?.(s.id)}
 			>
 				<div className="mb-1 flex items-center justify-between gap-2">
 					<span className="font-medium">{s.companyName}</span>
-					{ctx.isPinned && (
-						<Badge variant="secondary" className="text-xs">
-							Текущий
-						</Badge>
-					)}
 				</div>
-				{!ctx.isPinned && <SupplierStatusIndicator status={s.status} className="mb-3 text-xs" />}
+				{ctx.isPinned ? (
+					<span className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+						<UserCheck className="size-3" aria-hidden="true" />
+						Ваш поставщик
+					</span>
+				) : (
+					<SupplierStatusIndicator status={s.status} className="mb-3 text-xs" />
+				)}
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
-						<div className="text-muted-foreground">ТСО/ед.</div>
-						<div className="tabular-nums">{formatCurrency(s.tco)}</div>
-					</div>
-					<div>
-						<div className="text-muted-foreground">Стоимость</div>
-						<div className="tabular-nums">{formatCurrency(cost)}</div>
-					</div>
-					<div>
-						<div className="text-muted-foreground">Экономия</div>
-						<div className={cn("tabular-nums", !ctx.isPinned && savingsClassName(savings))}>
-							{ctx.isPinned ? "\u2014" : formatPercent(savings)}
-						</div>
+						<div className="text-muted-foreground">Тип оплаты</div>
+						<div>{formatPaymentType(s.paymentType, s.deferralDays)}</div>
 					</div>
 					<div>
 						<div className="text-muted-foreground">Доставка</div>
 						{ctx.isPinned ? <div>{"\u2014"}</div> : <DeliveryValue cost={s.deliveryCost} />}
 					</div>
 					<div>
-						<div className="text-muted-foreground">Тип оплаты</div>
-						<div>{formatPaymentType(s.paymentType, s.deferralDays)}</div>
-					</div>
-					<div>
 						<div className="text-muted-foreground">Срок поставки</div>
 						<div className="tabular-nums">{ctx.isPinned ? "\u2014" : formatLeadTime(s.leadTimeDays)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">Стоимость</div>
+						<div className="tabular-nums">{formatCurrency(cost)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">ТСО/ед.</div>
+						<div className="tabular-nums">{formatCurrency(s.tco)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">Экономия</div>
+						<div className={cn("tabular-nums", !ctx.isPinned && savingsClassName(savings))}>
+							{ctx.isPinned ? "\u2014" : formatPercent(savings)}
+						</div>
 					</div>
 				</div>
 			</button>

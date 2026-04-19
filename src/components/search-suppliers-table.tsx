@@ -106,6 +106,9 @@ export function SearchSuppliersTable({
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
+			<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+				Всего: {entries.length}
+			</span>
 			<div className="relative max-w-56">
 				<Search
 					className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -125,7 +128,7 @@ export function SearchSuppliersTable({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<PopoverTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative ml-auto">
 								<ListFilter aria-hidden="true" />
 								{(activeCompanyTypes.length > 0 || activeRequestStatuses.length > 0) && (
 									<span

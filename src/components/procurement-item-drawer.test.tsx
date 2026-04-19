@@ -460,7 +460,7 @@ describe("ProcurementItemDrawer", () => {
 
 		expect(screen.getByText("Логистика и финансы")).toBeInTheDocument();
 		expect(screen.getByText("Дополнительно")).toBeInTheDocument();
-		expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+		expect(screen.getByText("Ваш поставщик")).toBeInTheDocument();
 		expect(screen.getByText("Ответы на уточнения")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
@@ -806,40 +806,16 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(panel).getByText(/^3\s+вопроса$/)).toBeInTheDocument();
 	});
 
-	test("suppliers tab best offer card shows ТСО/ед., Стоимость, Экономия", async () => {
+	test("drawer header shows supplier metrics as icon + count", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 
 		await waitFor(() => {
-			expect(screen.getByText("Экономия")).toBeInTheDocument();
+			expect(screen.getByTestId("header-metric-total")).toBeInTheDocument();
 		});
-		expect(screen.getByText("ТСО/ед.")).toBeInTheDocument();
-		expect(screen.getByText("Стоимость")).toBeInTheDocument();
-		const costValue = screen.getByText("Стоимость").nextElementSibling;
-		expect(costValue?.textContent).toContain("₽");
-	});
-
-	test("suppliers tab best offer card shows em-dash savings when item has no currentSupplier", async () => {
-		// "item-no-supplier" is not in the items fixture → useItemDetail returns null,
-		// so currentSupplier is undefined. Seed one получено_кп offer so the best-offer
-		// card renders with Экономия (which shows an em-dash when currentSupplier is absent).
-		_setSuppliersForItem("item-no-supplier", [{ ...ORMATEK_SUPPLIERS[9], itemId: "item-no-supplier" }]);
-
-		render(
-			<QueryClientProvider client={queryClient}>
-				<TooltipProvider>
-					<MemoryRouter initialEntries={["/procurement?item=item-no-supplier&tab=suppliers"]}>
-						<ProcurementItemDrawer />
-						<UrlSpy />
-					</MemoryRouter>
-				</TooltipProvider>
-			</QueryClientProvider>,
-		);
-
-		await waitFor(() => {
-			expect(screen.getByText("Экономия")).toBeInTheDocument();
-		});
-		const savingsValue = screen.getByText("Экономия").nextElementSibling;
-		expect(savingsValue?.textContent).toBe("\u2014");
+		// Numeric content only — labels live in tooltips
+		expect(screen.getByTestId("header-metric-total")).toHaveTextContent(/^\d+$/);
+		expect(screen.getByTestId("header-metric-quotes")).toHaveTextContent(/^\d+$/);
+		expect(screen.getByTestId("header-metric-refusals")).toHaveTextContent(/^\d+$/);
 	});
 
 	test("context menu shows Выбрать текущего поставщика for получено_кп supplier", async () => {

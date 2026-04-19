@@ -829,9 +829,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Текущий поставщик --- */}
+			{/* --- Ваш поставщик --- */}
 			<Section
-				title="Текущий поставщик"
+				title="Ваш поставщик"
 				editLabel="Редактировать текущего поставщика"
 				editing={isEditingSupplier}
 				onEdit={handleEditSupplier}

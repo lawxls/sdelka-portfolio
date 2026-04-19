@@ -41,7 +41,7 @@ describe("DetailsTabPanel", () => {
 			"Основное",
 			"Логистика и финансы",
 			"Дополнительно",
-			"Текущий поставщик",
+			"Ваш поставщик",
 			"Ответы на уточнения",
 		]);
 	});
@@ -56,7 +56,7 @@ describe("DetailsTabPanel", () => {
 		// item-1 values render as card values
 		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 		expect(screen.getByText("180000")).toBeInTheDocument();
-		// Current supplier name in Текущий поставщик section
+		// Current supplier name in Ваш поставщик section
 		expect(screen.getByText("ПолимерПром")).toBeInTheDocument();
 		// No save button in read-only mode
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
@@ -152,12 +152,12 @@ describe("DetailsTabPanel", () => {
 		expect(analogues).toBeChecked();
 	});
 
-	test("editing Текущий поставщик exposes name, INN, price, payment and delivery", async () => {
+	test("editing Ваш поставщик exposes name, INN, price, payment and delivery", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+			expect(screen.getByText("Ваш поставщик")).toBeInTheDocument();
 		});
 
 		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
@@ -295,12 +295,12 @@ describe("DetailsTabPanel", () => {
 		expect(screen.queryByText("Ответы на уточнения")).not.toBeInTheDocument();
 	});
 
-	test("Текущий поставщик: toggling Оплата to Отсрочка reveals Дней отсрочки", async () => {
+	test("Ваш поставщик: toggling Оплата to Отсрочка reveals Дней отсрочки", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
 		await waitFor(() => {
-			expect(screen.getByText("Текущий поставщик")).toBeInTheDocument();
+			expect(screen.getByText("Ваш поставщик")).toBeInTheDocument();
 		});
 
 		await user.click(screen.getByRole("button", { name: "Редактировать текущего поставщика" }));
@@ -308,7 +308,7 @@ describe("DetailsTabPanel", () => {
 		// item-1 starts in "prepayment" → Дней отсрочки hidden
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 
-		const supplierSection = screen.getByText("Текущий поставщик").closest("section") as HTMLElement;
+		const supplierSection = screen.getByText("Ваш поставщик").closest("section") as HTMLElement;
 		const deferredBtn = within(supplierSection).getByRole("button", { name: "Отсрочка" });
 		await user.click(deferredBtn);
 
