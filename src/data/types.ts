@@ -9,10 +9,11 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
-export type PaymentType = "prepayment" | "deferred";
+export type PaymentType = "prepayment" | "prepayment_30_70" | "deferred";
 
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
 	prepayment: "Предоплата",
+	prepayment_30_70: "Предоплата 30/70",
 	deferred: "Отсрочка",
 };
 
@@ -56,6 +57,11 @@ export interface GeneratedAnswer {
 	freeText?: string;
 }
 
+export interface AttachedFile {
+	name: string;
+	size: number;
+}
+
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -78,9 +84,11 @@ export interface ProcurementItem {
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	sampleRequired?: boolean;
+	deferralRequired?: boolean;
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
+	attachedFiles?: AttachedFile[];
 	searchCompleted?: boolean;
 }
 
@@ -134,9 +142,11 @@ export interface NewItemInput {
 	unloading?: UnloadingType;
 	analoguesAllowed?: boolean;
 	sampleRequired?: boolean;
+	deferralRequired?: boolean;
 	additionalInfo?: string;
 	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
+	attachedFiles?: AttachedFile[];
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

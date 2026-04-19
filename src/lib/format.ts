@@ -14,13 +14,6 @@ export function formatCurrency(value: number | null | undefined): string {
 	return currencyFormatter.format(value);
 }
 
-export function formatSignedCurrency(value: number | null | undefined): string {
-	if (value == null) return "\u2014";
-	if (value === 0) return formatCurrency(0);
-	const sign = value < 0 ? "\u2212" : "+";
-	return `${sign}${currencyFormatter.format(Math.abs(value))}`;
-}
-
 export function formatPercent(value: number | null | undefined): string {
 	if (value == null) return "\u2014";
 	const sign = value > 0 ? "+" : "";
@@ -30,6 +23,12 @@ export function formatPercent(value: number | null | undefined): string {
 export function signClassName(value: number | null | undefined): string {
 	if (value == null || value === 0) return "";
 	return value > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400";
+}
+
+/** Class for savings metric: positive (cheaper) = green, negative (overrun) = red. */
+export function savingsClassName(value: number | null | undefined): string {
+	if (value == null || value === 0) return "";
+	return value > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 }
 
 export function formatDeviation(value: number | null | undefined): { text: string; className: string } {
@@ -119,4 +118,24 @@ export function pluralizeRu(count: number, one: string, few: string, many: strin
 	if (mod10 === 1) return `${count}\u00A0${one}`;
 	if (mod10 >= 2 && mod10 <= 4) return `${count}\u00A0${few}`;
 	return `${count}\u00A0${many}`;
+}
+
+/** Tuple-signature alias for {@link pluralizeRu}. Produces «1 день» / «2 дня» / «5 дней». */
+export function formatRussianPlural(count: number, forms: [one: string, few: string, many: string]): string {
+	return pluralizeRu(count, forms[0], forms[1], forms[2]);
+}
+
+const compactRubleFormatter = new Intl.NumberFormat("ru-RU", {
+	notation: "compact",
+	maximumFractionDigits: 1,
+});
+
+/**
+ * Compact ruble format with Russian abbreviations: «1,2 млрд ₽», «450 млн ₽», «12,3 тыс ₽».
+ * Below 1 000 — plain integer («999 ₽»). Currency symbol always trailing.
+ */
+export function formatCompactRuble(amount: number | null | undefined): string {
+	if (amount == null) return "\u2014";
+	if (Math.abs(amount) < 1000) return `${integerFormatter.format(Math.round(amount))}\u00A0₽`;
+	return `${compactRubleFormatter.format(amount)}\u00A0₽`;
 }

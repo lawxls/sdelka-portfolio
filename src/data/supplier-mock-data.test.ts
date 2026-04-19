@@ -145,15 +145,31 @@ describe("getSuppliers sort", () => {
 		}
 	});
 
-	it("sorts by pricePerUnit descending (nulls last)", async () => {
-		const { suppliers } = await getSuppliers("item-1", { sort: "pricePerUnit", dir: "desc", ...ALL });
+	it("sorts by batchCost descending (mapped to pricePerUnit, nulls last)", async () => {
+		const { suppliers } = await getSuppliers("item-1", { sort: "batchCost", dir: "desc", ...ALL });
 		const withPrice = suppliers.filter((s) => s.pricePerUnit != null);
 		const withoutPrice = suppliers.filter((s) => s.pricePerUnit == null);
-		// Non-null values come first
 		expect(suppliers.indexOf(withPrice[0])).toBeLessThan(suppliers.indexOf(withoutPrice[0]));
-		// Among non-null, descending
 		for (let i = 1; i < withPrice.length; i++) {
 			expect(withPrice[i].pricePerUnit).toBeLessThanOrEqual(withPrice[i - 1].pricePerUnit as number);
+		}
+	});
+
+	it("sorts by savings (inverse of price; cheaper supplier ranks higher in asc)", async () => {
+		const { suppliers } = await getSuppliers("item-1", { sort: "savings", dir: "asc" });
+		const withPrice = suppliers.filter((s) => s.pricePerUnit != null);
+		// Lower price = larger savings, so asc savings = desc price.
+		for (let i = 1; i < withPrice.length; i++) {
+			expect(withPrice[i].pricePerUnit).toBeLessThanOrEqual(withPrice[i - 1].pricePerUnit as number);
+		}
+	});
+
+	it("sorts by leadTimeDays ascending", async () => {
+		const { suppliers } = await getSuppliers("item-1", { sort: "leadTimeDays", dir: "asc" });
+		for (let i = 1; i < suppliers.length; i++) {
+			const prev = suppliers[i - 1].leadTimeDays;
+			const curr = suppliers[i].leadTimeDays;
+			if (prev != null && curr != null) expect(curr).toBeGreaterThanOrEqual(prev);
 		}
 	});
 
@@ -251,7 +267,7 @@ describe("getSuppliers combined search + sort + filter", () => {
 		const { suppliers } = await getSuppliers("item-1", {
 			search: searchTerm,
 			statuses: ["получено_кп"],
-			sort: "pricePerUnit",
+			sort: "batchCost",
 			dir: "asc",
 		});
 		for (const s of suppliers) {

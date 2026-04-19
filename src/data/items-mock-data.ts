@@ -33,6 +33,18 @@ const SEED_ITEMS: ProcurementItem[] = [
 		unloading: "supplier",
 		analoguesAllowed: true,
 		additionalInfo: "Полотно ПВД первичка (без вторсырья), ширина 2600 мм, прозрачное.",
+		currentSupplier: {
+			companyName: "ПолимерПром",
+			inn: "6164012345",
+			paymentType: "prepayment",
+			deferralDays: 0,
+			pricePerUnit: 1776,
+		},
+		generatedAnswers: [
+			{ questionId: "material-grade", selectedOption: "Первичка без вторсырья" },
+			{ questionId: "certificates", selectedOption: "Паспорт качества", freeText: "На каждую партию" },
+		],
+		attachedFiles: [{ name: "specification-pvd-2600.pdf", size: 204_800 }],
 	},
 	ITEM_2,
 	ITEM_3,
@@ -256,6 +268,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 			additionalInfo: input.additionalInfo,
 			currentSupplier: input.currentSupplier,
 			generatedAnswers: input.generatedAnswers,
+			attachedFiles: input.attachedFiles,
 		};
 		return item;
 	});

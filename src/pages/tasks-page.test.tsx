@@ -203,19 +203,12 @@ describe("TasksPage", () => {
 		});
 	});
 
-	it("search input filters displayed tasks in board view", async () => {
-		renderPage();
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-		});
-
-		const searchInput = screen.getByPlaceholderText("Поиск…");
-		await user.type(searchInput, "Assigned 1");
+	it("filters displayed tasks when ?q= is present in the URL", async () => {
+		renderPage(["/tasks?q=Assigned 1"]);
 
 		await waitFor(() => {
 			const cards = screen.getAllByTestId(/^task-card-/);
+			expect(cards.length).toBeGreaterThan(0);
 			expect(cards.length).toBeLessThan(12);
 		});
 	});
@@ -531,11 +524,11 @@ describe("TasksPage", () => {
 	});
 
 	describe("toolbar left zone", () => {
-		it("shows total tasks count with задач suffix", async () => {
+		it("shows total tasks count with the correct Russian plural form", async () => {
 			renderPage();
 
 			await waitFor(() => {
-				expect(screen.getByTestId("total-count")).toHaveTextContent(/Всего:\s*12\s*задач$/);
+				expect(screen.getByTestId("total-count")).toHaveTextContent(/^12\s+задач$/);
 			});
 		});
 

@@ -21,6 +21,11 @@
 			"sourceType": "github",
 			"computedHash": "a93226f53ffa6a2599c89fb983f3aed00c843c04071a7aa59ee3365141619d25"
 		},
+		"make-interfaces-feel-better": {
+			"source": "jakubkrehel/make-interfaces-feel-better",
+			"sourceType": "github",
+			"computedHash": "54b6e221bbe4e2d1a8461c3f9ecabe69daf891f964e9ee5e699c323daa018f2e"
+		},
 		"prd-to-issues": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",

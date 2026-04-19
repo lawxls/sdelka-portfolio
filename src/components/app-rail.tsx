@@ -1,39 +1,80 @@
+import { CircleHelp } from "lucide-react";
 import { Link, useLocation } from "react-router";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LogoWordmark } from "@/components/logo-wordmark";
+import { UserAvatarMenu } from "@/components/user-avatar-menu";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
+
+const TOP_NAV = NAV_ITEMS.filter((item) => item.placement === "top");
+const BOTTOM_NAV = NAV_ITEMS.filter((item) => item.placement === "bottom");
+
+const NAV_ITEM_CLASSES =
+	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
 export function AppRail() {
 	const { pathname } = useLocation();
 	return (
-		<nav
-			aria-label="Основная навигация"
-			className="hidden w-12 shrink-0 flex-col items-center gap-1 border-r border-sidebar-border bg-sidebar py-2 md:flex"
+		<aside
+			aria-label="Боковая панель"
+			className="hidden w-52 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex"
 			data-testid="app-rail"
 		>
-			{NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-				const active = pathname.startsWith(path);
-				return (
-					<Tooltip key={path}>
-						<TooltipTrigger asChild>
+			<div className="flex h-12 shrink-0 items-center px-3">
+				<Link to="/procurement" aria-label="На главную" className="flex shrink-0 items-center">
+					<LogoWordmark className="h-5 w-auto" />
+				</Link>
+			</div>
+			<nav aria-label="Основная навигация" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
+				{TOP_NAV.map(({ path, label, icon: Icon }) => {
+					const active = pathname.startsWith(path);
+					return (
+						<Link
+							key={path}
+							to={path}
+							aria-current={active ? "page" : undefined}
+							className={cn(
+								NAV_ITEM_CLASSES,
+								active
+									? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+									: "text-sidebar-foreground hover:bg-sidebar-accent/50",
+							)}
+						>
+							<Icon className="size-4 shrink-0" aria-hidden="true" />
+							<span className="flex-1 text-left">{label}</span>
+						</Link>
+					);
+				})}
+			</nav>
+			<div className="flex flex-col px-2 py-2" data-testid="app-rail-bottom">
+				<div className="flex flex-col gap-0.5">
+					{BOTTOM_NAV.map(({ path, label, icon: Icon }) => {
+						const active = pathname.startsWith(path);
+						return (
 							<Link
+								key={path}
 								to={path}
-								aria-label={label}
 								aria-current={active ? "page" : undefined}
 								className={cn(
-									"flex size-9 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+									NAV_ITEM_CLASSES,
 									active
-										? "bg-sidebar-accent text-sidebar-accent-foreground"
+										? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
 										: "text-sidebar-foreground hover:bg-sidebar-accent/50",
 								)}
 							>
-								<Icon className="size-5" aria-hidden="true" />
+								<Icon className="size-4 shrink-0" aria-hidden="true" />
+								<span className="flex-1 text-left">{label}</span>
 							</Link>
-						</TooltipTrigger>
-						<TooltipContent side="right">{label}</TooltipContent>
-					</Tooltip>
-				);
-			})}
-		</nav>
+						);
+					})}
+					<button type="button" className={cn(NAV_ITEM_CLASSES, "text-sidebar-foreground hover:bg-sidebar-accent/50")}>
+						<CircleHelp className="size-4 shrink-0" aria-hidden="true" />
+						<span className="flex-1 text-left">Помощь</span>
+					</button>
+				</div>
+				<div className="mt-2 px-0.5">
+					<UserAvatarMenu side="right" align="end" />
+				</div>
+			</div>
+		</aside>
 	);
 }

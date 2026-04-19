@@ -271,7 +271,7 @@ export function ProcurementTable({
 			>
 				<Table>
 					<TableHeader>
-						<TableRow>
+						<TableRow className="border-b-0">
 							<TableHead className={`w-12 text-center ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
 							{INPUT_COLUMNS.map((col) => (

@@ -19,14 +19,7 @@ import type {
 	StatusFilter,
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import {
-	nextUnusedColor,
-	useCreateFolder,
-	useDeleteFolder,
-	useFolderStats,
-	useFolders,
-	useUpdateFolder,
-} from "@/data/use-folders";
+import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
 import {
 	buildFilterParams,
 	useArchiveItem,
@@ -120,18 +113,6 @@ export function ProcurementPage() {
 
 	function handleExport() {
 		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
-	}
-
-	function handleSearchChange(query: string) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (query) next.set("q", query);
-				else next.delete("q");
-				return next;
-			},
-			{ replace: true },
-		);
 	}
 
 	function handleFiltersChange(newFilters: FilterState) {
@@ -256,8 +237,6 @@ export function ProcurementPage() {
 
 	const toolbar = (
 		<Toolbar
-			defaultSearch={search}
-			onSearchChange={handleSearchChange}
 			filters={filters}
 			onFiltersChange={handleFiltersChange}
 			sort={sort}
@@ -271,7 +250,7 @@ export function ProcurementPage() {
 			foldersLoading={foldersLoading || statsLoading}
 			activeFolder={folder}
 			onFolderSelect={handleFolderSelect}
-			onCreateFolder={(name) => createFolderMutation.mutate({ name, color: nextUnusedColor(folders) })}
+			onCreateFolder={(name, color) => createFolderMutation.mutate({ name, color })}
 			onRenameFolder={(id, name) => updateFolderMutation.mutate({ id, name })}
 			onRecolorFolder={(id, color) => updateFolderMutation.mutate({ id, color })}
 			onDeleteFolder={(id) => deleteFolderMutation.mutate(id)}
@@ -287,7 +266,16 @@ export function ProcurementPage() {
 			<PageToolbar
 				left={
 					<>
-						<TotalCount value={totals?.itemCount} isLoading={totalsLoading} />
+						<h1 className="text-sm font-semibold text-foreground leading-none">Закупки</h1>
+						<span aria-hidden="true" className="text-sm text-border leading-none">
+							/
+						</span>
+						<TotalCount
+							value={totals?.itemCount}
+							isLoading={totalsLoading}
+							forms={["позиция", "позиции", "позиций"]}
+							className="text-sm font-normal text-muted-foreground leading-none"
+						/>
 						{companyChipLabel && (
 							<FilterChip
 								testId="chip-company"

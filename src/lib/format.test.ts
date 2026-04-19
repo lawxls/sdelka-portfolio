@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatDeviation, formatPercent, signClassName } from "./format";
+import {
+	formatCompactRuble,
+	formatCurrency,
+	formatDeviation,
+	formatPercent,
+	formatRussianPlural,
+	signClassName,
+} from "./format";
 
 describe("formatCurrency", () => {
 	it("includes ₽ symbol", () => {
@@ -106,5 +113,114 @@ describe("formatDeviation", () => {
 		const result = formatDeviation(null);
 		expect(result.text).toBe("\u2014");
 		expect(result.className).toBe("");
+	});
+});
+
+describe("formatCompactRuble", () => {
+	it("returns dash for null", () => {
+		expect(formatCompactRuble(null)).toBe("\u2014");
+	});
+
+	it("returns dash for undefined", () => {
+		expect(formatCompactRuble(undefined)).toBe("\u2014");
+	});
+
+	it("formats 0 as plain integer with ₽", () => {
+		const result = formatCompactRuble(0);
+		expect(result).toContain("0");
+		expect(result).toContain("₽");
+	});
+
+	it("formats 999 as plain integer (below threshold)", () => {
+		const result = formatCompactRuble(999);
+		expect(result).toContain("999");
+		expect(result).toContain("₽");
+		expect(result).not.toMatch(/тыс|млн|млрд/);
+	});
+
+	it("formats 1 000 with тыс", () => {
+		const result = formatCompactRuble(1_000);
+		expect(result).toContain("тыс");
+		expect(result).toContain("₽");
+	});
+
+	it("formats 999 999 with млн (rounds up)", () => {
+		const result = formatCompactRuble(999_999);
+		expect(result).toMatch(/тыс|млн/);
+		expect(result).toContain("₽");
+	});
+
+	it("formats 1 000 000 with млн", () => {
+		const result = formatCompactRuble(1_000_000);
+		expect(result).toContain("млн");
+		expect(result).toContain("₽");
+	});
+
+	it("formats 999 999 999 with млрд (rounds up)", () => {
+		const result = formatCompactRuble(999_999_999);
+		expect(result).toMatch(/млн|млрд/);
+		expect(result).toContain("₽");
+	});
+
+	it("formats 1 000 000 000 with млрд", () => {
+		const result = formatCompactRuble(1_000_000_000);
+		expect(result).toContain("млрд");
+		expect(result).toContain("₽");
+	});
+
+	it("formats 1 234 567 890 as 1,2 млрд ₽", () => {
+		const result = formatCompactRuble(1_234_567_890);
+		expect(result).toMatch(/1[,.]2/);
+		expect(result).toContain("млрд");
+	});
+
+	it("formats 450 000 000 as 450 млн ₽", () => {
+		const result = formatCompactRuble(450_000_000);
+		expect(result).toContain("450");
+		expect(result).toContain("млн");
+	});
+});
+
+describe("formatRussianPlural", () => {
+	const forms: [string, string, string] = ["день", "дня", "дней"];
+
+	it("0 uses many form", () => {
+		expect(formatRussianPlural(0, forms)).toMatch(/0\s+дней/);
+	});
+
+	it("1 uses one form", () => {
+		expect(formatRussianPlural(1, forms)).toMatch(/1\s+день/);
+	});
+
+	it("2 uses few form", () => {
+		expect(formatRussianPlural(2, forms)).toMatch(/2\s+дня/);
+	});
+
+	it("4 uses few form", () => {
+		expect(formatRussianPlural(4, forms)).toMatch(/4\s+дня/);
+	});
+
+	it("5 uses many form", () => {
+		expect(formatRussianPlural(5, forms)).toMatch(/5\s+дней/);
+	});
+
+	it("11 uses many form (teens exception)", () => {
+		expect(formatRussianPlural(11, forms)).toMatch(/11\s+дней/);
+	});
+
+	it("21 uses one form", () => {
+		expect(formatRussianPlural(21, forms)).toMatch(/21\s+день/);
+	});
+
+	it("22 uses few form", () => {
+		expect(formatRussianPlural(22, forms)).toMatch(/22\s+дня/);
+	});
+
+	it("25 uses many form", () => {
+		expect(formatRussianPlural(25, forms)).toMatch(/25\s+дней/);
+	});
+
+	it("101 uses one form", () => {
+		expect(formatRussianPlural(101, forms)).toMatch(/101\s+день/);
 	});
 });

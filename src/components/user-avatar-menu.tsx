@@ -1,4 +1,4 @@
-import { ChevronDown, CircleUser, LogOut, Moon, Sun, User } from "lucide-react";
+import { LogOut, Moon, Sun, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
@@ -9,27 +9,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { clearTokens } from "@/data/auth";
 import { useSettings } from "@/data/use-settings";
-import { getAvatarColor } from "@/lib/avatar-colors";
-import { getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface UserAvatarMenuProps {
 	side?: "top" | "right" | "bottom" | "left";
 	align?: "start" | "center" | "end";
-	iconClassName?: string;
+	className?: string;
 }
 
 function formatTriggerName(firstName: string, lastName: string): string {
-	const initial = lastName.trim().charAt(0);
-	return initial ? `${firstName} ${initial}.` : firstName;
+	const trimmedLast = lastName.trim();
+	return trimmedLast ? `${firstName} ${trimmedLast}` : firstName;
 }
 
-export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName = "size-5" }: UserAvatarMenuProps) {
+export function UserAvatarMenu({ side = "bottom", align = "end", className }: UserAvatarMenuProps) {
 	const navigate = useNavigate();
 	const { data: settings } = useSettings();
 
-	const initials = settings ? getInitials(settings.first_name, settings.last_name) : null;
-	const avatarColor = settings ? getAvatarColor(settings.avatar_icon) : "";
 	const displayName = settings ? formatTriggerName(settings.first_name, settings.last_name) : null;
 
 	return (
@@ -38,28 +34,13 @@ export function UserAvatarMenu({ side = "bottom", align = "end", iconClassName =
 				<button
 					type="button"
 					aria-label="Меню пользователя"
-					className="group flex items-center gap-2 rounded-md border border-border bg-background py-1 pr-1.5 pl-1 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+					className={cn(
+						"inline-flex shrink-0 items-center gap-2.5 rounded-md bg-muted px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-muted/80 hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+						className,
+					)}
 				>
-					{initials ? (
-						<span
-							className={cn(
-								"flex items-center justify-center rounded-sm text-[0.5625rem] font-semibold leading-none tracking-[0.04em] text-white",
-								avatarColor,
-								iconClassName,
-							)}
-						>
-							{initials}
-						</span>
-					) : (
-						<CircleUser className={iconClassName} />
-					)}
-					{displayName && (
-						<span className="text-xs font-medium tracking-tight leading-none text-muted-foreground">{displayName}</span>
-					)}
-					<ChevronDown
-						className="size-3 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-data-[state=open]:rotate-180"
-						aria-hidden="true"
-					/>
+					<User className="size-4 shrink-0" aria-hidden="true" />
+					{displayName && <span className="leading-none">{displayName}</span>}
 				</button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side={side} align={align} className="w-56">

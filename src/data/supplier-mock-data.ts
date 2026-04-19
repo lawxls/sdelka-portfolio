@@ -46,6 +46,15 @@ export function _resetSupplierStore() {
 	sendShouldFail = false;
 }
 
+export function _appendSupplierForItem(itemId: string, supplier: Supplier) {
+	const existing = getSuppliersForItem(itemId);
+	store.set(itemId, [...existing, supplier]);
+}
+
+export function _setSuppliersForItem(itemId: string, suppliers: readonly Supplier[]) {
+	store.set(itemId, suppliers.map(cloneSupplier));
+}
+
 export function _setSendShouldFail(fail: boolean) {
 	sendShouldFail = fail;
 }
@@ -116,17 +125,29 @@ function sortSuppliers(suppliers: Supplier[], field: SupplierSortField, dir: "as
 	const sorted = [...suppliers];
 	const mul = dir === "asc" ? 1 : -1;
 
+	// `batchCost` and `savings` are ranked by `pricePerUnit` since `quantityPerDelivery`
+	// (and the current-supplier price for savings) are constants for a single item.
+	// Lower price → larger savings, so savings flips the direction.
+	const dataField: keyof Supplier =
+		field === "batchCost" || field === "savings"
+			? "pricePerUnit"
+			: field === "leadTimeDays"
+				? "leadTimeDays"
+				: field === "tco"
+					? "tco"
+					: "companyName";
+	const effectiveMul = field === "savings" ? -mul : mul;
+
 	sorted.sort((a, b) => {
-		if (field === "companyName") {
-			return mul * a.companyName.localeCompare(b.companyName, "ru");
+		if (dataField === "companyName") {
+			return effectiveMul * a.companyName.localeCompare(b.companyName, "ru");
 		}
-		const va = a[field];
-		const vb = b[field];
-		// nulls always last regardless of direction
+		const va = a[dataField] as number | null;
+		const vb = b[dataField] as number | null;
 		if (va == null && vb == null) return 0;
 		if (va == null) return 1;
 		if (vb == null) return -1;
-		return mul * (va - vb);
+		return effectiveMul * (va - vb);
 	});
 
 	return sorted;
@@ -191,7 +212,7 @@ export async function selectSupplier(itemId: string, supplierId: string): Promis
 	_patchItem(itemId, {
 		currentSupplier: {
 			companyName: supplier.companyName,
-			paymentType: supplier.deferralDays > 0 ? "deferred" : "prepayment",
+			paymentType: supplier.paymentType,
 			deferralDays: supplier.deferralDays,
 			pricePerUnit: supplier.pricePerUnit,
 		},

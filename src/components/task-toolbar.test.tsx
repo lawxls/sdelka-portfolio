@@ -8,7 +8,6 @@ import { TaskToolbar } from "./task-toolbar";
 
 describe("TaskToolbar", () => {
 	const defaultProps = {
-		onSearchChange: vi.fn(),
 		onItemFilter: vi.fn(),
 		onItemSearch: vi.fn(),
 		onSort: vi.fn(),
@@ -34,20 +33,10 @@ describe("TaskToolbar", () => {
 		);
 	}
 
-	it("renders search input", () => {
+	it("does not render a top-level search input (search lives in the global header)", () => {
 		renderToolbar();
-		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
-	});
-
-	it("calls onSearchChange after debounced input", async () => {
-		const user = userEvent.setup();
-		renderToolbar();
-
-		await user.type(screen.getByPlaceholderText("Поиск…"), "арматур");
-
-		await waitFor(() => {
-			expect(defaultProps.onSearchChange).toHaveBeenCalledWith("арматур");
-		});
+		expect(screen.queryByRole("button", { name: "Поиск" })).not.toBeInTheDocument();
+		expect(screen.queryByPlaceholderText("Поиск…")).not.toBeInTheDocument();
 	});
 
 	it("renders sort button", () => {

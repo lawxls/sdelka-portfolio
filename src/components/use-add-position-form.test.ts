@@ -399,6 +399,7 @@ describe("useAddPositionForm", () => {
 			paymentType: "deferred",
 			sampleRequired: true,
 			analoguesAllowed: true,
+			deferralRequired: true,
 			additionalInfo: "Срочно",
 		});
 	});

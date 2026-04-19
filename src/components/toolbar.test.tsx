@@ -1,4 +1,6 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { FilterState, Folder, SortState } from "@/data/types";
@@ -12,13 +14,12 @@ function renderToolbar(
 	overrides: Partial<{
 		filters: FilterState;
 		sort: SortState | null;
-		onSearchChange: () => void;
 		onFiltersChange: () => void;
 		onSort: () => void;
+		initialEntries: string[];
 	}> = {},
 ) {
 	const props = {
-		onSearchChange: overrides.onSearchChange ?? vi.fn(),
 		filters: overrides.filters ?? defaultFilters,
 		onFiltersChange: overrides.onFiltersChange ?? vi.fn(),
 		sort: overrides.sort ?? null,
@@ -34,35 +35,35 @@ function renderToolbar(
 	};
 	return {
 		...render(
-			<TooltipProvider>
-				<Toolbar {...props} />
-			</TooltipProvider>,
+			<MemoryRouter initialEntries={overrides.initialEntries ?? ["/"]}>
+				<TooltipProvider>
+					<Toolbar {...props} />
+				</TooltipProvider>
+			</MemoryRouter>,
 		),
 		...props,
 	};
 }
 
 describe("Toolbar", () => {
-	test("renders search input", () => {
+	test("renders collapsed search button; input is not in the DOM", () => {
 		renderToolbar();
-		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
+		expect(screen.queryByPlaceholderText(/Поиск/)).not.toBeInTheDocument();
 	});
 
-	test("search input calls onSearchChange after debounce", () => {
-		vi.useFakeTimers();
-		const onSearchChange = vi.fn();
-		renderToolbar({ onSearchChange });
+	test("clicking search button expands it into an input", async () => {
+		const user = userEvent.setup();
+		renderToolbar();
+		await user.click(screen.getByRole("button", { name: "Поиск" }));
+		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+	});
 
-		const input = screen.getByPlaceholderText("Поиск по названию…");
-		fireEvent.change(input, { target: { value: "арматура" } });
-		expect(onSearchChange).not.toHaveBeenCalled();
-
-		act(() => {
-			vi.advanceTimersByTime(300);
-		});
-		expect(onSearchChange).toHaveBeenCalledWith("арматура");
-
-		vi.useRealTimers();
+	test("auto-expands when URL already has ?q= query", () => {
+		renderToolbar({ initialEntries: ["/?q=арматура"] });
+		const input = screen.getByPlaceholderText("Поиск…") as HTMLInputElement;
+		expect(input).toBeInTheDocument();
+		expect(input.value).toBe("арматура");
 	});
 
 	test("renders filter button", () => {
@@ -175,41 +176,5 @@ describe("SortPopover", () => {
 		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
 		const dot = sortBtn.querySelector(".bg-primary");
 		expect(dot).not.toBeInTheDocument();
-	});
-});
-
-describe("Toolbar responsive", () => {
-	test("search icon button renders for mobile collapse", () => {
-		renderToolbar();
-		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
-	});
-
-	test("clicking search icon expands and shows close button", () => {
-		renderToolbar();
-		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
-		expect(screen.queryByRole("button", { name: "Поиск" })).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Закрыть поиск" })).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Поиск по названию…")).toBeInTheDocument();
-	});
-
-	test("close button collapses expanded search", () => {
-		renderToolbar();
-		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
-		fireEvent.click(screen.getByRole("button", { name: "Закрыть поиск" }));
-		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "Закрыть поиск" })).not.toBeInTheDocument();
-	});
-
-	test("close button flushes pending search", () => {
-		vi.useFakeTimers();
-		const onSearchChange = vi.fn();
-		renderToolbar({ onSearchChange });
-
-		fireEvent.click(screen.getByRole("button", { name: "Поиск" }));
-		fireEvent.change(screen.getByPlaceholderText("Поиск по названию…"), { target: { value: "бетон" } });
-		fireEvent.click(screen.getByRole("button", { name: "Закрыть поиск" }));
-
-		expect(onSearchChange).toHaveBeenCalledWith("бетон");
-		vi.useRealTimers();
 	});
 });

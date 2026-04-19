@@ -110,10 +110,6 @@ export function TasksPage() {
 		updateParams((p) => (mode === "board" ? p.delete("view") : p.set("view", mode)));
 	}
 
-	function handleSearchChange(query: string) {
-		updateParams((p) => (query ? p.set("q", query) : p.delete("q")));
-	}
-
 	function handleItemFilter(item: string | undefined) {
 		updateParams((p) => (item ? p.set("item", item) : p.delete("item")));
 	}
@@ -180,8 +176,6 @@ export function TasksPage() {
 
 	const taskToolbar = (
 		<TaskToolbar
-			defaultSearch={search}
-			onSearchChange={handleSearchChange}
 			sort={sort}
 			onSort={handleSort}
 			activeItem={activeItem}
@@ -205,7 +199,7 @@ export function TasksPage() {
 		>
 			<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 				<PageToolbar
-					left={<TotalCount value={taskTotal} isLoading={taskTotalLoading} suffix="задач" />}
+					left={<TotalCount value={taskTotal} isLoading={taskTotalLoading} forms={["задача", "задачи", "задач"]} />}
 					middle={taskToolbar}
 				/>
 				{view === "board" ? (

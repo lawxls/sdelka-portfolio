@@ -182,6 +182,7 @@ function buildNewItemInput(
 	if (step1.unloading !== null) payload.unloading = step1.unloading;
 	if (step1.sampleRequired) payload.sampleRequired = true;
 	if (step1.analoguesAllowed) payload.analoguesAllowed = true;
+	if (step1.deferralRequired) payload.deferralRequired = true;
 
 	const info = step1.additionalInfo.trim();
 	if (info) payload.additionalInfo = info;
@@ -191,6 +192,10 @@ function buildNewItemInput(
 
 	const answers = buildGeneratedAnswers(step3);
 	if (answers) payload.generatedAnswers = answers;
+
+	if (step1.files.length > 0) {
+		payload.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
+	}
 
 	return payload;
 }

@@ -1,35 +1,27 @@
-import {
-	Archive,
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
-	Download,
-	ListFilter,
-	LoaderCircle,
-	Search,
-	UserCheck,
-} from "lucide-react";
-import { useRef } from "react";
+import { Archive, Download, ListFilter, LoaderCircle, Search, UserCheck } from "lucide-react";
+import { useMemo, useRef } from "react";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
-import { DeferralValue, DeliveryValue } from "@/components/supplier-value-displays";
+import { DeliveryValue } from "@/components/supplier-value-displays";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types";
+import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency, stripProtocol } from "@/lib/format";
+import { formatCurrency, formatPercent, formatRussianPlural, savingsClassName } from "@/lib/format";
+import { batchCost, savingsPercent } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
 interface SuppliersTableProps {
 	suppliers: Supplier[];
+	item: Pick<ProcurementItem, "quantityPerDelivery">;
+	currentSupplier?: CurrentSupplier | null;
 	isLoading: boolean;
 	search: string;
 	onSearchChange: (query: string) => void;
@@ -51,24 +43,53 @@ interface SuppliersTableProps {
 	isFetchingNextPage?: boolean;
 }
 
-const SORTABLE_COLUMNS: { label: string; field: SupplierSortField }[] = [
-	{ label: "КОМПАНИЯ", field: "companyName" },
-	{ label: "ЦЕНА/ЕД.", field: "pricePerUnit" },
-	{ label: "TCO", field: "tco" },
-];
-
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
-function SortIcon({ sort, field }: { sort: SupplierSortState; field: SupplierSortField }) {
-	if (sort?.field !== field) return <ArrowUpDown className="ml-1 size-3.5" aria-hidden="true" />;
-	if (sort.direction === "asc") return <ArrowUp className="ml-1 size-3.5" aria-hidden="true" data-testid="sort-asc" />;
-	return <ArrowDown className="ml-1 size-3.5" aria-hidden="true" data-testid="sort-desc" />;
+const PINNED_ID = "__current__";
+
+function formatPaymentType(paymentType: PaymentType, deferralDays: number): string {
+	if (paymentType === "prepayment") return "Предоплата";
+	if (paymentType === "prepayment_30_70") return "Предоплата 30/70";
+	if (deferralDays > 0) return `Отсрочка ${formatRussianPlural(deferralDays, ["день", "дня", "дней"])}`;
+	return "Отсрочка";
+}
+
+function formatLeadTime(days: number | null): string {
+	if (days == null) return "\u2014";
+	return formatRussianPlural(days, ["день", "дня", "дней"]);
+}
+
+function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
+	return {
+		id: PINNED_ID,
+		itemId: "",
+		companyName: currentSupplier.companyName,
+		status: "получено_кп",
+		archived: false,
+		email: "",
+		website: "",
+		address: "",
+		pricePerUnit: currentSupplier.pricePerUnit,
+		tco: null,
+		rating: null,
+		deliveryCost: null,
+		paymentType: currentSupplier.paymentType ?? "prepayment",
+		deferralDays: currentSupplier.deferralDays,
+		leadTimeDays: null,
+		aiDescription: "",
+		aiRecommendations: "",
+		documents: [],
+		chatHistory: [],
+		positionOffers: [],
+	};
 }
 
 export function SuppliersTable({
 	suppliers,
+	item,
+	currentSupplier,
 	isLoading,
 	search,
 	onSearchChange,
@@ -101,11 +122,24 @@ export function SuppliersTable({
 	}
 
 	const hasSelection = selectedIds.size > 0;
-	const allSelected = suppliers.length > 0 && selectedIds.size === suppliers.length;
+	const supplierNamesById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const s of suppliers) map.set(s.id, s.companyName);
+		return map;
+	}, [suppliers]);
 
-	if (!isLoading && suppliers.length === 0 && !search && activeStatuses.length === 0) {
+	if (
+		!isLoading &&
+		suppliers.length === 0 &&
+		!currentSupplier &&
+		!search &&
+		activeStatuses.length === 0 &&
+		!showArchived
+	) {
 		return <p className="py-8 text-center text-sm text-muted-foreground">Нет поставщиков</p>;
 	}
+
+	const rowsCount = suppliers.length + (currentSupplier ? 1 : 0);
 
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
@@ -124,6 +158,9 @@ export function SuppliersTable({
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
+			<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+				Всего: {rowsCount}
+			</span>
 			<div className="relative max-w-56">
 				<Search
 					className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -143,7 +180,13 @@ export function SuppliersTable({
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<PopoverTrigger asChild>
-							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтр по статусу" className="relative">
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Фильтр по статусу"
+								className="relative ml-auto"
+							>
 								<ListFilter aria-hidden="true" />
 								{activeStatuses.length > 0 && (
 									<span
@@ -199,6 +242,73 @@ export function SuppliersTable({
 		</div>
 	);
 
+	const columns: DataTableColumn<Supplier>[] = [
+		{
+			id: "companyName",
+			header: "КОМПАНИЯ",
+			sortable: true,
+			cell: (s, { isPinned }) => (
+				<div className="flex flex-col gap-1">
+					<span className="font-medium">{s.companyName}</span>
+					{isPinned ? (
+						<span className="inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+							<UserCheck className="size-3" aria-hidden="true" />
+							Ваш поставщик
+						</span>
+					) : (
+						<SupplierStatusIndicator status={s.status} className="text-xs" />
+					)}
+				</div>
+			),
+		},
+		{
+			id: "paymentType",
+			header: "ТИП ОПЛАТЫ",
+			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays),
+		},
+		{
+			id: "deliveryCost",
+			header: "ДОСТАВКА",
+			cell: (s, { isPinned }) =>
+				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : <DeliveryValue cost={s.deliveryCost} />,
+		},
+		{
+			id: "leadTimeDays",
+			header: "СРОК ПОСТАВКИ",
+			sortable: true,
+			align: "right",
+			cell: (s, { isPinned }) =>
+				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : formatLeadTime(s.leadTimeDays),
+		},
+		{
+			id: "batchCost",
+			header: "СТОИМОСТЬ",
+			sortable: true,
+			align: "right",
+			cell: (s) => formatCurrency(batchCost(s, item)),
+		},
+		{
+			id: "tco",
+			header: "ТСО/ЕД.",
+			sortable: true,
+			align: "right",
+			cell: (s) => formatCurrency(s.tco),
+		},
+		{
+			id: "savings",
+			header: "ЭКОНОМИЯ",
+			sortable: true,
+			align: "right",
+			cell: (s, { isPinned }) => {
+				if (isPinned) return <span className="text-muted-foreground">{"\u2014"}</span>;
+				const value = savingsPercent(s, currentSupplier ?? null, item);
+				return <span className={savingsClassName(value)}>{formatPercent(value)}</span>;
+			},
+		},
+	];
+
+	const pinnedRows = currentSupplier ? [buildPinnedSupplier(currentSupplier)] : undefined;
+
 	const sentinel = (
 		<>
 			{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
@@ -210,185 +320,120 @@ export function SuppliersTable({
 		</>
 	);
 
-	if (isMobile) {
+	function renderMobileCard(s: Supplier, ctx: { isPinned: boolean }) {
+		const cost = batchCost(s, item);
+		const savings = ctx.isPinned ? null : savingsPercent(s, currentSupplier ?? null, item);
+		return (
+			<button
+				type="button"
+				data-testid="supplier-card"
+				className={cn(
+					"rounded-lg border p-4 text-left transition-colors",
+					ctx.isPinned ? "bg-accent/60" : "bg-card hover:bg-muted/50 active:bg-muted",
+				)}
+				onClick={ctx.isPinned ? undefined : () => onRowClick?.(s.id)}
+			>
+				<div className="mb-1 flex items-center justify-between gap-2">
+					<span className="font-medium">{s.companyName}</span>
+				</div>
+				{ctx.isPinned ? (
+					<span className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+						<UserCheck className="size-3" aria-hidden="true" />
+						Ваш поставщик
+					</span>
+				) : (
+					<SupplierStatusIndicator status={s.status} className="mb-3 text-xs" />
+				)}
+				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+					<div>
+						<div className="text-muted-foreground">Тип оплаты</div>
+						<div>{formatPaymentType(s.paymentType, s.deferralDays)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">Доставка</div>
+						{ctx.isPinned ? <div>{"\u2014"}</div> : <DeliveryValue cost={s.deliveryCost} />}
+					</div>
+					<div>
+						<div className="text-muted-foreground">Срок поставки</div>
+						<div className="tabular-nums">{ctx.isPinned ? "\u2014" : formatLeadTime(s.leadTimeDays)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">Стоимость</div>
+						<div className="tabular-nums">{formatCurrency(cost)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">ТСО/ед.</div>
+						<div className="tabular-nums">{formatCurrency(s.tco)}</div>
+					</div>
+					<div>
+						<div className="text-muted-foreground">Экономия</div>
+						<div className={cn("tabular-nums", !ctx.isPinned && savingsClassName(savings))}>
+							{ctx.isPinned ? "\u2014" : formatPercent(savings)}
+						</div>
+					</div>
+				</div>
+			</button>
+		);
+	}
+
+	if (isMobile && isLoading) {
 		return (
 			<div className="flex flex-col gap-3">
 				{toolbar}
-				{isLoading ? (
-					<div className="flex flex-col gap-3 px-3">
-						{Array.from({ length: 4 }, (_, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cards never reorder
-							<div key={i} data-testid="supplier-card-skeleton" className="rounded-lg border p-4">
-								<Skeleton className="mb-2 h-5 w-32" />
-								<Skeleton className="mb-3 h-4 w-20" />
-								<div className="grid grid-cols-3 gap-2">
-									<Skeleton className="h-4 w-full" />
-									<Skeleton className="h-4 w-full" />
-									<Skeleton className="h-4 w-full" />
-								</div>
+				<div className="flex flex-col gap-3 px-3">
+					{Array.from({ length: 4 }, (_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cards never reorder
+						<div key={i} data-testid="supplier-card-skeleton" className="rounded-lg border p-4">
+							<Skeleton className="mb-2 h-5 w-32" />
+							<Skeleton className="mb-3 h-4 w-20" />
+							<div className="grid grid-cols-3 gap-2">
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-4 w-full" />
+								<Skeleton className="h-4 w-full" />
 							</div>
-						))}
-					</div>
-				) : suppliers.length === 0 ? (
-					<p className="py-8 text-center text-sm text-muted-foreground">Ничего не найдено</p>
-				) : (
-					<div className="flex flex-col gap-3 px-3">
-						{suppliers.map((supplier) => (
-							<button
-								key={supplier.id}
-								type="button"
-								data-testid="supplier-card"
-								className="rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
-								onClick={() => onRowClick?.(supplier.id)}
-							>
-								<div className="mb-1 font-medium">{supplier.companyName}</div>
-								<SupplierStatusIndicator status={supplier.status} className="mb-3 text-xs" />
-								<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-									<div>
-										<div className="text-muted-foreground">Цена/ед.</div>
-										<div className="tabular-nums">{formatCurrency(supplier.pricePerUnit)}</div>
-									</div>
-									<div>
-										<div className="text-muted-foreground">TCO</div>
-										<div className="tabular-nums">{formatCurrency(supplier.tco)}</div>
-									</div>
-									<div>
-										<div className="text-muted-foreground">Доставка</div>
-										<DeliveryValue cost={supplier.deliveryCost} />
-									</div>
-									<div>
-										<div className="text-muted-foreground">Отсрочка</div>
-										<DeferralValue days={supplier.deferralDays} />
-									</div>
-								</div>
-							</button>
-						))}
-					</div>
-				)}
-				{sentinel}
+						</div>
+					))}
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex flex-col gap-3">
-			{toolbar}
-
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="w-10">
-							<Checkbox
-								checked={allSelected}
-								onCheckedChange={() => onSelectionChange("all")}
-								aria-label="Выбрать все"
-							/>
-						</TableHead>
-						<TableHead>
-							<button
-								type="button"
-								className="inline-flex items-center font-medium hover:text-foreground"
-								onClick={() => onSort("companyName")}
-							>
-								КОМПАНИЯ
-								<SortIcon sort={sort} field="companyName" />
-							</button>
-						</TableHead>
-						<TableHead>САЙТ</TableHead>
-						<TableHead>ДОСТАВКА</TableHead>
-						<TableHead>ОТСРОЧКА</TableHead>
-						{SORTABLE_COLUMNS.filter((col) => col.field !== "companyName").map((col) => (
-							<TableHead key={col.field} className="text-right">
-								<button
-									type="button"
-									className="inline-flex items-center font-medium hover:text-foreground"
-									onClick={() => onSort(col.field)}
-								>
-									{col.label}
-									<SortIcon sort={sort} field={col.field} />
-								</button>
-							</TableHead>
-						))}
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{isLoading ? (
-						Array.from({ length: 5 }, (_, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows never reorder
-							<TableRow key={i}>
-								{Array.from({ length: 7 }, (_, j) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton cells
-									<TableCell key={j}>
-										<Skeleton className="h-4 w-20" />
-									</TableCell>
-								))}
-							</TableRow>
-						))
-					) : suppliers.length === 0 ? (
-						<TableRow>
-							<TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-								Ничего не найдено
-							</TableCell>
-						</TableRow>
-					) : (
-						suppliers.map((supplier) => (
-							<ContextMenu key={supplier.id}>
-								<ContextMenuTrigger asChild>
-									<TableRow
-										className={onRowClick ? "cursor-pointer hover:bg-muted/50" : ""}
-										onClick={() => onRowClick?.(supplier.id)}
-									>
-										<TableCell onClick={(e) => e.stopPropagation()}>
-											<Checkbox
-												checked={selectedIds.has(supplier.id)}
-												onCheckedChange={() => onSelectionChange(supplier.id)}
-												aria-label={`Выбрать ${supplier.companyName}`}
-											/>
-										</TableCell>
-										<TableCell>
-											<div className="flex flex-col gap-1">
-												<span className="font-medium">{supplier.companyName}</span>
-												<SupplierStatusIndicator status={supplier.status} className="text-xs" />
-											</div>
-										</TableCell>
-										<TableCell onClick={(e) => e.stopPropagation()}>
-											<a
-												href={supplier.website.startsWith("http") ? supplier.website : `https://${supplier.website}`}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="text-foreground underline decoration-muted-foreground/40 underline-offset-2 hover:decoration-foreground"
-											>
-												{stripProtocol(supplier.website)}
-											</a>
-										</TableCell>
-										<TableCell>
-											<DeliveryValue cost={supplier.deliveryCost} />
-										</TableCell>
-										<TableCell>
-											<DeferralValue days={supplier.deferralDays} />
-										</TableCell>
-										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.pricePerUnit)}</TableCell>
-										<TableCell className="text-right tabular-nums">{formatCurrency(supplier.tco)}</TableCell>
-									</TableRow>
-								</ContextMenuTrigger>
-								<ContextMenuContent>
-									{supplier.status === "получено_кп" && onSelectSupplier && (
-										<ContextMenuItem onSelect={() => onSelectSupplier(supplier.id, supplier.companyName)}>
-											<UserCheck className="size-3.5" />
-											Выбрать поставщика
-										</ContextMenuItem>
-									)}
-									<ContextMenuItem onSelect={() => onArchiveSupplier(supplier.id)}>
-										<Archive className="size-3.5" />
-										Архивировать
-									</ContextMenuItem>
-								</ContextMenuContent>
-							</ContextMenu>
-						))
-					)}
-				</TableBody>
-			</Table>
-			{sentinel}
-		</div>
+		<DataTable<Supplier>
+			columns={columns}
+			rows={suppliers}
+			pinnedRows={pinnedRows}
+			getRowId={(s) => s.id}
+			isLoading={isLoading}
+			emptyMessage="Ничего не найдено"
+			selection={{
+				selectedIds,
+				onChange: onSelectionChange,
+				getRowLabel: (id) => `Выбрать ${supplierNamesById.get(id) ?? id}`,
+			}}
+			sort={sort}
+			onSort={(field) => onSort(field as SupplierSortField)}
+			rowActions={(s) => {
+				const actions = [];
+				if (s.status === "получено_кп" && onSelectSupplier) {
+					actions.push({
+						label: "Выбрать текущего поставщика",
+						icon: <UserCheck className="size-3.5" />,
+						onSelect: () => onSelectSupplier(s.id, s.companyName),
+					});
+				}
+				actions.push({
+					label: "Архивировать",
+					icon: <Archive className="size-3.5" />,
+					onSelect: () => onArchiveSupplier(s.id),
+				});
+				return actions;
+			}}
+			toolbar={toolbar}
+			mobileCardRender={renderMobileCard}
+			onRowClick={onRowClick}
+			isMobile={isMobile}
+			sentinel={sentinel}
+		/>
 	);
 }
