@@ -44,7 +44,8 @@ const defaultSuppliers = [
 		email: "beta@test.ru",
 		website: "https://beta.ru",
 		deliveryCost: null,
-		paymentType: "prepayment_30_70",
+		paymentType: "prepayment",
+		prepaymentPercent: 30,
 		deferralDays: 0,
 		leadTimeDays: 14,
 	}),
@@ -148,7 +149,7 @@ describe("SuppliersTable", () => {
 	test("Тип оплаты renders three variants correctly", () => {
 		renderTable();
 		expect(screen.getByText("Предоплата")).toBeInTheDocument();
-		expect(screen.getByText("Предоплата 30/70")).toBeInTheDocument();
+		expect(screen.getByText("Предоплата 30%")).toBeInTheDocument();
 		expect(screen.getByText(/Отсрочка\s+30\s\u00A0?дней/i)).toBeInTheDocument();
 	});
 
@@ -204,7 +205,8 @@ describe("SuppliersTable pinned current supplier", () => {
 	const currentSupplier: CurrentSupplier = {
 		companyName: "ООО Текущий",
 		deferralDays: 0,
-		paymentType: "prepayment_30_70",
+		paymentType: "prepayment",
+		prepaymentPercent: 30,
 		pricePerUnit: 800,
 	};
 
@@ -215,7 +217,7 @@ describe("SuppliersTable pinned current supplier", () => {
 		expect(within(pinned).getByText("ООО Текущий")).toBeInTheDocument();
 		const status = within(pinned).getByText("Ваш поставщик");
 		expect(status).toBeInTheDocument();
-		expect(status.className).toMatch(/text-folder-orange/);
+		expect(status.className).toMatch(/text-highlight-foreground/);
 	});
 
 	test("pinned supplier's Экономия is em-dash", () => {
@@ -236,7 +238,7 @@ describe("SuppliersTable pinned current supplier", () => {
 	test("pinned supplier renders payment type from currentSupplier", () => {
 		renderTable({ currentSupplier });
 		const pinned = screen.getByTestId("data-table-pinned-row");
-		expect(within(pinned).getByText("Предоплата 30/70")).toBeInTheDocument();
+		expect(within(pinned).getByText("Предоплата 30%")).toBeInTheDocument();
 	});
 
 	test("pinned supplier has no checkbox in its row", () => {

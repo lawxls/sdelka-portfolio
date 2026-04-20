@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Supplier, SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_LABELS, SUPPLIER_STATUSES } from "@/data/supplier-types";
 import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types";
-import { PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
+import { formatPaymentType as formatPaymentTypeLabel, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatCurrency, formatPercent, formatRussianPlural, savingsClassName } from "@/lib/format";
@@ -68,11 +68,12 @@ const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
 const PINNED_ID = "__current__";
 
-function formatPaymentType(paymentType: PaymentType, deferralDays: number): string {
-	if (paymentType === "prepayment") return "Предоплата";
-	if (paymentType === "prepayment_30_70") return "Предоплата 30/70";
-	if (deferralDays > 0) return `Отсрочка ${formatRussianPlural(deferralDays, ["день", "дня", "дней"])}`;
-	return "Отсрочка";
+function formatPaymentType(paymentType: PaymentType, deferralDays: number, prepaymentPercent?: number): string {
+	if (paymentType === "deferred") {
+		if (deferralDays > 0) return `Отсрочка ${formatRussianPlural(deferralDays, ["день", "дня", "дней"])}`;
+		return "Отсрочка";
+	}
+	return formatPaymentTypeLabel("prepayment", { prepaymentPercent });
 }
 
 function formatLeadTime(days: number | null): string {
@@ -96,6 +97,7 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 		deliveryCost: null,
 		paymentType: currentSupplier.paymentType ?? "prepayment",
 		deferralDays: currentSupplier.deferralDays,
+		prepaymentPercent: currentSupplier.prepaymentPercent,
 		leadTimeDays: null,
 		aiDescription: "",
 		aiRecommendations: "",
@@ -278,7 +280,7 @@ export function SuppliersTable({
 				<div className="flex flex-col gap-1">
 					<span className="font-medium">{s.companyName}</span>
 					{isPinned ? (
-						<span className="inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+						<span className="inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">
 							<UserCheck className="size-3" aria-hidden="true" />
 							Ваш поставщик
 						</span>
@@ -291,7 +293,7 @@ export function SuppliersTable({
 		{
 			id: "paymentType",
 			header: "ТИП ОПЛАТЫ",
-			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays),
+			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent),
 		},
 		{
 			id: "deliveryCost",
@@ -364,7 +366,7 @@ export function SuppliersTable({
 					<span className="font-medium">{s.companyName}</span>
 				</div>
 				{ctx.isPinned ? (
-					<span className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-folder-orange">
+					<span className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">
 						<UserCheck className="size-3" aria-hidden="true" />
 						Ваш поставщик
 					</span>
@@ -374,7 +376,7 @@ export function SuppliersTable({
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
 						<div className="text-muted-foreground">Тип оплаты</div>
-						<div>{formatPaymentType(s.paymentType, s.deferralDays)}</div>
+						<div>{formatPaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent)}</div>
 					</div>
 					<div>
 						<div className="text-muted-foreground">Доставка</div>
