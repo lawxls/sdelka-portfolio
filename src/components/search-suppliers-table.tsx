@@ -47,7 +47,7 @@ const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
 const REQUEST_STATUS_PRESETS: { value: SearchSupplierRequestStatus; label: string }[] = [
 	{ value: "new", label: "Связаться" },
-	{ value: "requested", label: "в работе" },
+	{ value: "requested", label: "Связались" },
 ];
 
 export function SearchSuppliersTable({
@@ -265,7 +265,8 @@ export function SearchSuppliersTable({
 					</div>
 					{e.requestStatus === "requested" && (
 						<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-							<Check className="size-3" aria-hidden="true" />в работе
+							<Check className="size-3" aria-hidden="true" />
+							Связались
 						</span>
 					)}
 				</div>
@@ -346,7 +347,8 @@ function renderSendRequestCell(e: SearchSupplier, onSendRequest: (id: string) =>
 				className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
 				data-testid={`send-request-requested-${e.id}`}
 			>
-				<Check className="size-3.5" aria-hidden="true" />в работе
+				<Check className="size-3.5" aria-hidden="true" />
+				Связались
 			</span>
 		);
 	}

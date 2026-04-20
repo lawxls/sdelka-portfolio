@@ -949,14 +949,14 @@ describe("ProcurementItemDrawer", () => {
 		}
 	});
 
-	test("search tab «Связаться» button rendered for new rows, «в работе» badge for requested", async () => {
+	test("search tab «Связаться» button rendered for new rows, «Связались» badge for requested", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
 		// Pre-seeded: 2 rows as requested. Pre-archived is hidden → 1 requested visible
 		// (i=9 is visible; i=3 is visible; i=7 archived hidden)
-		const requestedBadges = screen.getAllByText("в работе");
+		const requestedBadges = screen.getAllByText("Связались");
 		expect(requestedBadges.length).toBe(2);
 		// Rest of new-status rows show the button
 		const sendButtons = screen.getAllByRole("button", { name: /Связаться/ });
@@ -1005,7 +1005,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(popover).getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
 		expect(within(popover).queryByRole("button", { name: "Дилер" })).not.toBeInTheDocument();
 		expect(within(popover).getByRole("button", { name: "Связаться" })).toBeInTheDocument();
-		expect(within(popover).getByRole("button", { name: "в работе" })).toBeInTheDocument();
+		expect(within(popover).getByRole("button", { name: "Связались" })).toBeInTheDocument();
 	});
 
 	test("search tab has sortable columns: Компания, Год основания, Выручка", async () => {
@@ -1018,18 +1018,18 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("button", { name: /Выручка/i })).toBeInTheDocument();
 	});
 
-	test("send-request on a new-status row promotes to Поставщики, flips to в работе, toasts", async () => {
+	test("send-request on a new-status row promotes to Поставщики, flips to Связались, toasts", async () => {
 		const { toast } = await import("sonner");
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
-		const requestedBefore = screen.getAllByText("в работе").length;
+		const requestedBefore = screen.getAllByText("Связались").length;
 		const firstSendBtn = screen.getAllByRole("button", { name: /^Связаться$/ })[0];
 		await user.click(firstSendBtn);
 		await waitFor(() => {
-			expect(screen.getAllByText("в работе").length).toBe(requestedBefore + 1);
+			expect(screen.getAllByText("Связались").length).toBe(requestedBefore + 1);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Запрос отправлен");
 

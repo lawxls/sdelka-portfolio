@@ -114,13 +114,13 @@ describe("SearchSuppliersTable", () => {
 		expect(screen.getByText(/млрд/)).toBeInTheDocument();
 	});
 
-	test("new-status row shows «Связаться» button; requested row shows «в работе»", () => {
+	test("new-status row shows «Связаться» button; requested row shows «Связались»", () => {
 		renderTable({
 			entries: [makeEntry("new", { requestStatus: "new" }), makeEntry("req", { requestStatus: "requested" })],
 		});
 		expect(screen.getByTestId("send-request-new")).toBeInTheDocument();
 		expect(screen.getByTestId("send-request-requested-req")).toBeInTheDocument();
-		expect(screen.getByTestId("send-request-requested-req")).toHaveTextContent("в работе");
+		expect(screen.getByTestId("send-request-requested-req")).toHaveTextContent("Связались");
 	});
 
 	test("clicking «Связаться» fires onSendRequest with id", async () => {
@@ -197,8 +197,8 @@ describe("SearchSuppliersTable", () => {
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		const popover = screen.getByRole("dialog");
 		expect(within(popover).getByRole("button", { name: "Связаться" })).toBeInTheDocument();
-		expect(within(popover).getByRole("button", { name: "в работе" })).toBeInTheDocument();
-		await user.click(within(popover).getByRole("button", { name: "в работе" }));
+		expect(within(popover).getByRole("button", { name: "Связались" })).toBeInTheDocument();
+		await user.click(within(popover).getByRole("button", { name: "Связались" }));
 		expect(onRequestStatusFilter).toHaveBeenCalledWith("requested");
 	});
 
