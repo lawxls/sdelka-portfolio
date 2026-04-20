@@ -1,4 +1,3 @@
-import { Minus, Plus } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -46,74 +45,55 @@ export function WorkspaceSettingsPage() {
 	}
 
 	return (
-		<main className="flex min-h-0 flex-1 flex-col overflow-auto px-xl py-lg">
-			<h1 className="text-lg font-semibold">Общие настройки</h1>
+		<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
+			<div className="mx-auto w-full max-w-[48rem]">
+				<form onSubmit={handleSave}>
+					<section className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+						<h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+							Параметры работы
+						</h3>
+						<div className="w-full max-w-[28rem] space-y-5">
+							<div className="space-y-1.5">
+								<label htmlFor={deadlineId} className="text-sm font-medium text-foreground">
+									Дедлайн на ответ
+								</label>
+								<div className="flex items-center gap-2">
+									<input
+										id={deadlineId}
+										type="text"
+										inputMode="numeric"
+										value={deadlineText}
+										onChange={handleDeadlineInput}
+										onBlur={handleDeadlineBlur}
+										className="h-9 w-20 rounded-lg border border-input bg-background px-3 text-center text-sm tabular-nums outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+										autoComplete="off"
+									/>
+									<span className="text-sm text-muted-foreground">Дней</span>
+								</div>
+							</div>
 
-			<form onSubmit={handleSave} className="mt-6 w-full max-w-[28rem] space-y-6">
-				<div className="space-y-1.5">
-					<label htmlFor={deadlineId} className="text-sm font-medium text-foreground">
-						Дедлайн на ответ
-					</label>
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							variant="outline"
-							size="icon"
-							aria-label="Уменьшить"
-							disabled={deadline <= MIN_DEADLINE}
-							onClick={() => {
-								const next = Math.max(MIN_DEADLINE, deadline - 1);
-								setDeadline(next);
-								setDeadlineText(String(next));
-							}}
-						>
-							<Minus className="size-4" aria-hidden="true" />
-						</Button>
-						<input
-							id={deadlineId}
-							type="text"
-							inputMode="numeric"
-							value={deadlineText}
-							onChange={handleDeadlineInput}
-							onBlur={handleDeadlineBlur}
-							className="h-8 w-14 rounded-lg border border-input bg-transparent text-center text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-							autoComplete="off"
-						/>
-						<Button
-							type="button"
-							variant="outline"
-							size="icon"
-							aria-label="Увеличить"
-							disabled={deadline >= MAX_DEADLINE}
-							onClick={() => {
-								const next = Math.min(MAX_DEADLINE, deadline + 1);
-								setDeadline(next);
-								setDeadlineText(String(next));
-							}}
-						>
-							<Plus className="size-4" aria-hidden="true" />
-						</Button>
-						<span className="text-sm text-muted-foreground">Дней</span>
-					</div>
-				</div>
+							<div className="space-y-1.5">
+								<label htmlFor={instructionsId} className="text-sm font-medium text-foreground">
+									Инструкции для агента
+								</label>
+								<Textarea
+									id={instructionsId}
+									value={instructions}
+									onChange={(e) => setInstructions(e.target.value)}
+									placeholder="Например: Всегда уточняй сроки поставки…"
+									rows={4}
+								/>
+							</div>
 
-				<div className="space-y-1.5">
-					<label htmlFor={instructionsId} className="text-sm font-medium text-foreground">
-						Инструкции для агента
-					</label>
-					<Textarea
-						id={instructionsId}
-						value={instructions}
-						onChange={(e) => setInstructions(e.target.value)}
-						placeholder="Например: Всегда уточняй сроки поставки…"
-						rows={4}
-					/>
-				</div>
-
-				<Button type="submit" disabled={!isDirty}>
-					Сохранить
-				</Button>
-			</form>
+							<div className="pt-1">
+								<Button type="submit" disabled={!isDirty}>
+									Сохранить
+								</Button>
+							</div>
+						</div>
+					</section>
+				</form>
+			</div>
 		</main>
 	);
 }

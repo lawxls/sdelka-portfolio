@@ -17,45 +17,10 @@ beforeEach(() => {
 });
 
 describe("WorkspaceSettingsPage", () => {
-	describe("deadline stepper", () => {
+	describe("deadline input", () => {
 		test("renders with default value 3", () => {
 			renderPage();
 			expect(screen.getByLabelText("Дедлайн на ответ")).toHaveValue("3");
-		});
-
-		test("plus button increments by 1", async () => {
-			renderPage();
-			const user = userEvent.setup();
-			await user.click(screen.getByRole("button", { name: "Увеличить" }));
-			expect(screen.getByLabelText("Дедлайн на ответ")).toHaveValue("4");
-		});
-
-		test("minus button decrements by 1", async () => {
-			renderPage();
-			const user = userEvent.setup();
-			await user.click(screen.getByRole("button", { name: "Уменьшить" }));
-			expect(screen.getByLabelText("Дедлайн на ответ")).toHaveValue("2");
-		});
-
-		test("minus button disables at min (1)", async () => {
-			renderPage();
-			const user = userEvent.setup();
-			const minus = screen.getByRole("button", { name: "Уменьшить" });
-			// Click down to 1
-			for (let i = 0; i < 2; i++) await user.click(minus);
-			expect(screen.getByLabelText("Дедлайн на ответ")).toHaveValue("1");
-			expect(minus).toBeDisabled();
-		});
-
-		test("plus button disables at max (30)", async () => {
-			renderPage();
-			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
-			const plus = screen.getByRole("button", { name: "Увеличить" });
-			// Type 30 directly
-			await user.clear(input);
-			await user.type(input, "30");
-			expect(plus).toBeDisabled();
 		});
 
 		test("manual input clamps to bounds on blur", async () => {
@@ -64,7 +29,7 @@ describe("WorkspaceSettingsPage", () => {
 			const input = screen.getByLabelText("Дедлайн на ответ");
 			await user.clear(input);
 			await user.type(input, "50");
-			await user.tab(); // blur
+			await user.tab();
 			expect(input).toHaveValue("30");
 		});
 
@@ -76,6 +41,15 @@ describe("WorkspaceSettingsPage", () => {
 			await user.type(input, "0");
 			await user.tab();
 			expect(input).toHaveValue("1");
+		});
+
+		test("non-numeric characters are rejected", async () => {
+			renderPage();
+			const user = userEvent.setup();
+			const input = screen.getByLabelText("Дедлайн на ответ");
+			await user.clear(input);
+			await user.type(input, "abc");
+			expect(input).toHaveValue("");
 		});
 	});
 
@@ -95,7 +69,9 @@ describe("WorkspaceSettingsPage", () => {
 		test("save button enabled after deadline change", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			await user.click(screen.getByRole("button", { name: "Увеличить" }));
+			const input = screen.getByLabelText("Дедлайн на ответ");
+			await user.clear(input);
+			await user.type(input, "5");
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 		});
 
@@ -109,7 +85,9 @@ describe("WorkspaceSettingsPage", () => {
 		test("save triggers toast and resets dirty state", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			await user.click(screen.getByRole("button", { name: "Увеличить" }));
+			const input = screen.getByLabelText("Дедлайн на ответ");
+			await user.clear(input);
+			await user.type(input, "5");
 			await user.click(screen.getByRole("button", { name: "Сохранить" }));
 			expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
@@ -118,11 +96,13 @@ describe("WorkspaceSettingsPage", () => {
 		test("save resets dirty tracking to new values", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			// Change deadline to 4, save
-			await user.click(screen.getByRole("button", { name: "Увеличить" }));
+			const input = screen.getByLabelText("Дедлайн на ответ");
+			await user.clear(input);
+			await user.type(input, "4");
 			await user.click(screen.getByRole("button", { name: "Сохранить" }));
 			// Now 4 is the baseline — changing back to 3 should be dirty
-			await user.click(screen.getByRole("button", { name: "Уменьшить" }));
+			await user.clear(input);
+			await user.type(input, "3");
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 		});
 	});
