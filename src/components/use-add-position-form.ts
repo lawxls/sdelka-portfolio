@@ -38,6 +38,7 @@ interface Step2State {
 	pricePerUnit: string;
 	paymentType: PaymentType;
 	deferralDays: string;
+	prepaymentPercent: string;
 	deliveryCostType: DeliveryCostType | null;
 	deliveryCost: string;
 }
@@ -87,6 +88,7 @@ function defaultStep2(): Step2State {
 		pricePerUnit: "",
 		paymentType: "prepayment",
 		deferralDays: "",
+		prepaymentPercent: "100",
 		deliveryCostType: null,
 		deliveryCost: "",
 	};
@@ -112,11 +114,13 @@ function toNumber(value: string): number | undefined {
 }
 
 function buildCurrentSupplier(step2: Step2State): CurrentSupplier | undefined {
+	const prepaymentPercentNum = step2.paymentType === "prepayment" ? (toNumber(step2.prepaymentPercent) ?? 100) : 100;
 	const anyValue =
 		step2.companyName.trim() !== "" ||
 		step2.inn.trim() !== "" ||
 		step2.pricePerUnit !== "" ||
-		(step2.paymentType === "deferred" && step2.deferralDays !== "");
+		(step2.paymentType === "deferred" && step2.deferralDays !== "") ||
+		(step2.paymentType === "prepayment" && prepaymentPercentNum !== 100);
 	if (!anyValue) return undefined;
 
 	const supplier: CurrentSupplier = {
@@ -125,6 +129,9 @@ function buildCurrentSupplier(step2: Step2State): CurrentSupplier | undefined {
 		deferralDays: step2.paymentType === "deferred" ? (toNumber(step2.deferralDays) ?? 0) : 0,
 		pricePerUnit: step2.pricePerUnit !== "" ? Number(step2.pricePerUnit) : null,
 	};
+	if (step2.paymentType === "prepayment" && prepaymentPercentNum !== 100) {
+		supplier.prepaymentPercent = prepaymentPercentNum;
+	}
 	const inn = step2.inn.trim();
 	if (inn !== "") supplier.inn = inn;
 	return supplier;
@@ -303,6 +310,7 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 			step2.pricePerUnit !== "" ||
 			step2.paymentType !== "prepayment" ||
 			step2.deferralDays !== "" ||
+			step2.prepaymentPercent !== "100" ||
 			step2.deliveryCostType !== null ||
 			step2.deliveryCost !== "" ||
 			Object.values(step3.answers).some((a) => a.selectedOption || a.freeText),

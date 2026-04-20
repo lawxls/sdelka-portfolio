@@ -428,6 +428,22 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 							<span className="text-sm text-muted-foreground">дней</span>
 						</div>
 					)}
+					{step2.paymentType === "prepayment" && (
+						<div className="flex items-center gap-1.5">
+							<Input
+								type="number"
+								inputMode="numeric"
+								min={1}
+								max={100}
+								value={step2.prepaymentPercent}
+								onChange={(e) => update2("prepaymentPercent", e.target.value)}
+								aria-label="Размер предоплаты"
+								autoComplete="off"
+								className="w-20 tabular-nums"
+							/>
+							<span className="text-sm text-muted-foreground">%</span>
+						</div>
+					)}
 				</div>
 			</Field>
 

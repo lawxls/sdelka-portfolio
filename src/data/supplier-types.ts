@@ -90,6 +90,7 @@ export interface Supplier {
 	deliveryCost: number | null;
 	paymentType: PaymentType;
 	deferralDays: number;
+	prepaymentPercent?: number;
 	leadTimeDays: number | null;
 	aiDescription: string;
 	aiRecommendations: string;

@@ -9,13 +9,23 @@ export const STATUS_LABELS: Record<ProcurementStatus, string> = {
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
-export type PaymentType = "prepayment" | "prepayment_30_70" | "deferred";
+export type PaymentType = "prepayment" | "deferred";
 
 export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
 	prepayment: "Предоплата",
-	prepayment_30_70: "Предоплата 30/70",
 	deferred: "Отсрочка",
 };
+
+export function formatPaymentType(
+	type: PaymentType,
+	opts: { deferralDays?: number; prepaymentPercent?: number } = {},
+): string {
+	if (type === "deferred") {
+		return opts.deferralDays && opts.deferralDays > 0 ? `Отсрочка ${opts.deferralDays} дн.` : "Отсрочка";
+	}
+	const percent = opts.prepaymentPercent ?? 100;
+	return percent !== 100 ? `Предоплата ${percent}%` : "Предоплата";
+}
 
 export type PaymentMethod = "bank_transfer" | "cash";
 
@@ -48,6 +58,7 @@ export interface CurrentSupplier {
 	inn?: string;
 	paymentType?: PaymentType;
 	deferralDays: number;
+	prepaymentPercent?: number;
 	pricePerUnit: number | null;
 }
 
@@ -77,6 +88,7 @@ export interface ProcurementItem {
 	unit?: Unit;
 	quantityPerDelivery?: number;
 	paymentType?: PaymentType;
+	prepaymentPercent?: number;
 	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
@@ -135,6 +147,7 @@ export interface NewItemInput {
 	quantityPerDelivery?: number;
 	currentPrice?: number;
 	paymentType?: PaymentType;
+	prepaymentPercent?: number;
 	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
