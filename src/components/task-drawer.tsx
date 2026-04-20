@@ -1,14 +1,17 @@
-import { Paperclip, X } from "lucide-react";
-import { useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import { Archive, CalendarClock, CalendarPlus, MessageCircleQuestion, UserRound, X } from "lucide-react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { ChatComposer } from "@/components/chat-composer";
+import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { STATUS_ICONS, STATUS_LABELS, type TaskStatus } from "@/data/task-types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { SupplierQuestion, TaskAssignee } from "@/data/task-types";
+import { useSupplier } from "@/data/use-suppliers";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
-import { formatAssigneeName, formatDate, formatDateTime, isOverdue, pluralizeRu } from "@/lib/format";
+import { formatAssigneeName, formatDate, formatDateTime, formatDayMonthShortTime, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface TaskDrawerProps {
@@ -42,6 +45,102 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 	);
 }
 
+function InfoTile({
+	icon: Icon,
+	label,
+	children,
+	variant = "default",
+}: {
+	icon: LucideIcon;
+	label: string;
+	children: ReactNode;
+	variant?: "default" | "warning";
+}) {
+	return (
+		<div
+			className={cn(
+				"flex items-center gap-2 rounded-md bg-muted/40 px-2.5 py-2.5",
+				variant === "warning" && "bg-destructive/5",
+			)}
+		>
+			<Icon
+				className={cn("size-3.5 shrink-0 text-muted-foreground", variant === "warning" && "text-destructive")}
+				aria-hidden="true"
+			/>
+			<div className="flex min-w-0 flex-col gap-0.5 leading-tight">
+				<span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+				<span
+					className={cn(
+						"truncate text-[13px] font-medium text-foreground",
+						variant === "warning" && "text-destructive",
+					)}
+				>
+					{children}
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function AssigneeTile({ assignee }: { assignee: TaskAssignee | null }) {
+	return (
+		<InfoTile icon={UserRound} label="Назначена">
+			{formatAssigneeName(assignee)}
+		</InfoTile>
+	);
+}
+
+interface SupplierCardProps {
+	question: SupplierQuestion;
+	onClick: () => void;
+}
+
+function SupplierCard({ question, onClick }: SupplierCardProps) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			data-testid={`supplier-question-card-${question.id}`}
+			className={cn(
+				"group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left transition-colors",
+				"hover:border-ring/40 hover:bg-muted/30",
+				"focus-visible:outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+			)}
+		>
+			<span className="truncate text-sm font-medium text-foreground group-hover:text-foreground">
+				{question.supplierName}
+			</span>
+			<time dateTime={question.askedAt} className="shrink-0 tabular-nums text-xs text-muted-foreground">
+				{formatDayMonthShortTime(question.askedAt)}
+			</time>
+		</button>
+	);
+}
+
+function SuppliersSection({
+	questions,
+	onSelect,
+}: {
+	questions: SupplierQuestion[];
+	onSelect: (supplierId: string) => void;
+}) {
+	if (questions.length === 0) return null;
+	const many = questions.length > 10;
+	return (
+		<section>
+			<h3 className="mb-2 text-sm font-medium text-foreground">Поставщики, задавшие вопрос</h3>
+			<div
+				className={cn("flex flex-col gap-1.5 rounded-lg border bg-muted/20 p-1.5", many && "max-h-80 overflow-y-auto")}
+				data-testid="suppliers-list"
+			>
+				{questions.map((q) => (
+					<SupplierCard key={q.id} question={q} onClick={() => onSelect(q.supplierId)} />
+				))}
+			</div>
+		</section>
+	);
+}
+
 function TaskDrawerContent({
 	taskId,
 	onClose,
@@ -54,187 +153,130 @@ function TaskDrawerContent({
 	onAnswerFirstComplete?: () => void;
 }) {
 	const { data: task } = useTask(taskId);
-	const updateStatus = useUpdateTaskStatus();
 	const submitAnswerMutation = useSubmitAnswer();
+	const updateStatus = useUpdateTaskStatus();
 
-	const [answerText, setAnswerText] = useState("");
-	const [files, setFiles] = useState<File[]>([]);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
+	const itemId = task?.item.id ?? "";
+	const { data: activeSupplier } = useSupplier(itemId, activeSupplierId);
 
 	if (!task) {
 		return (
 			<SheetHeader>
 				<SheetTitle>Загрузка…</SheetTitle>
+				<SheetDescription className="sr-only">Загрузка данных задачи</SheetDescription>
 			</SheetHeader>
 		);
 	}
 
-	// local const so TS narrows `task` inside closures below the early-return guard
 	const currentTask = task;
 	const isAnswered = !!currentTask.completedResponse;
+	const overdue = isOverdue(currentTask.deadlineAt);
 
-	function handleStatusChange(value: string) {
-		const newStatus = value as TaskStatus;
-		if (newStatus === "completed" && !isAnswered) {
-			toast.info("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
-			setTimeout(() => textareaRef.current?.focus(), 0);
-			return;
-		}
-		updateStatus.mutate({ id: currentTask.id, status: newStatus });
+	async function handleSend(body: string, files: File[]) {
+		await submitAnswerMutation.mutateAsync({
+			id: currentTask.id,
+			answer: body,
+			files: files.length > 0 ? files : undefined,
+		});
+		toast.success("Ответ отправлен");
+		if (answerFirstMode) onAnswerFirstComplete?.();
+		onClose();
 	}
 
-	function handleSubmitAnswer() {
-		if (!answerText.trim()) return;
-		submitAnswerMutation.mutate(
-			{ id: currentTask.id, answer: answerText.trim(), files: files.length > 0 ? files : undefined },
+	function handleArchive() {
+		updateStatus.mutate(
+			{ id: currentTask.id, status: "archived" },
 			{
 				onSuccess: () => {
-					toast.success("Ответ отправлен");
-					if (answerFirstMode) onAnswerFirstComplete?.();
+					toast.success("Задача отправлена в архив");
 					onClose();
 				},
 			},
 		);
 	}
 
-	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-		const selected = e.target.files;
-		if (selected) {
-			setFiles((prev) => [...prev, ...Array.from(selected)]);
-		}
-		e.target.value = "";
-	}
-
-	function removeFile(name: string) {
-		setFiles((prev) => {
-			const idx = prev.findIndex((f) => f.name === name);
-			return idx === -1 ? prev : prev.filter((_, i) => i !== idx);
-		});
-	}
-
 	return (
 		<>
-			<SheetHeader className="flex-row items-start gap-2 px-4 pt-4">
-				<div className="min-w-0 flex-1">
-					<SheetTitle>{task.name}</SheetTitle>
-					<SheetDescription>{task.item.name}</SheetDescription>
+			<SheetHeader className="relative border-b pr-24 pb-4">
+				<SheetTitle className="pr-4">{currentTask.name}</SheetTitle>
+				<SheetDescription className="text-xs">{currentTask.item.name}</SheetDescription>
+				<div className="absolute top-3 right-3 flex items-center gap-1">
+					{!isAnswered && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									aria-label="В архив"
+									onClick={handleArchive}
+									disabled={updateStatus.isPending}
+								>
+									<Archive aria-hidden="true" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>В архив</TooltipContent>
+						</Tooltip>
+					)}
+					<SheetClose asChild>
+						<Button variant="ghost" size="icon-sm" aria-label="Закрыть">
+							<X aria-hidden="true" />
+						</Button>
+					</SheetClose>
 				</div>
-				{isAnswered ? (
-					<Badge variant="secondary" className="shrink-0 self-start mt-0.5">
-						{STATUS_LABELS[task.status]}
-					</Badge>
-				) : (
-					<Select value={task.status} onValueChange={handleStatusChange}>
-						<SelectTrigger size="sm" aria-label="Статус задачи" className="shrink-0">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{(Object.entries(STATUS_LABELS) as [TaskStatus, string][]).map(([value, label]) => {
-								const Icon = STATUS_ICONS[value];
-								return (
-									<SelectItem key={value} value={value}>
-										<Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-										{label}
-									</SelectItem>
-								);
-							})}
-						</SelectContent>
-					</Select>
-				)}
-				<SheetClose asChild>
-					<Button variant="ghost" size="icon-sm" aria-label="Закрыть" className="shrink-0">
-						<X aria-hidden="true" />
-					</Button>
-				</SheetClose>
 			</SheetHeader>
 
-			<div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
-				<div className="space-y-1">
-					<time className="block text-xs text-muted-foreground" dateTime={task.createdAt}>
-						{formatDateTime(task.createdAt)}
-					</time>
-					<p className="text-xs text-muted-foreground">Исполнитель: {formatAssigneeName(task.assignee)}</p>
-					<p
-						className={cn(
-							"text-xs text-muted-foreground",
-							isOverdue(task.deadlineAt) && "font-medium text-destructive",
-						)}
-					>
-						Дедлайн: {formatDate(task.deadlineAt)}
-					</p>
-					{task.questionCount > 0 && (
-						<p className="text-xs text-muted-foreground">
-							{pluralizeRu(task.questionCount, "вопрос", "вопроса", "вопросов")}
-						</p>
+			<div className="flex-1 overflow-y-auto px-4 py-4">
+				<div className="flex flex-col gap-5">
+					<div className="grid grid-cols-2 gap-1.5">
+						<InfoTile icon={CalendarPlus} label="Создана">
+							<time dateTime={currentTask.createdAt} className="tabular-nums">
+								{formatDateTime(currentTask.createdAt)}
+							</time>
+						</InfoTile>
+						<InfoTile icon={CalendarClock} label="Дедлайн" variant={overdue ? "warning" : "default"}>
+							<time dateTime={currentTask.deadlineAt} className="tabular-nums">
+								{formatDate(currentTask.deadlineAt)}
+							</time>
+						</InfoTile>
+						<AssigneeTile assignee={currentTask.assignee} />
+						<InfoTile icon={MessageCircleQuestion} label="Вопросы">
+							<span className="tabular-nums">{currentTask.questionCount}</span>
+						</InfoTile>
+					</div>
+
+					<section>
+						<h3 className="mb-1.5 text-sm font-medium text-foreground">Описание</h3>
+						<p className="text-sm text-foreground/90">{currentTask.description}</p>
+					</section>
+
+					<SuppliersSection questions={currentTask.supplierQuestions} onSelect={setActiveSupplierId} />
+
+					{isAnswered && (
+						<section className="rounded-lg border border-primary/20 bg-primary/5 p-3" data-testid="task-answer-panel">
+							<p className="text-xs font-medium uppercase tracking-wide text-primary/90">Ответ</p>
+							<p className="mt-1 text-sm text-foreground">{currentTask.completedResponse}</p>
+						</section>
 					)}
 				</div>
-
-				<p className="text-sm">{task.description}</p>
-
-				{isAnswered ? (
-					<div className="rounded-lg bg-muted p-3">
-						<p className="text-xs font-medium text-muted-foreground">Ответ</p>
-						<p className="mt-1 text-sm">{task.completedResponse}</p>
-					</div>
-				) : (
-					<div className="space-y-3">
-						<div className="rounded-lg border focus-within:ring-2 focus-within:ring-ring">
-							<Textarea
-								ref={textareaRef}
-								value={answerText}
-								onChange={(e) => setAnswerText(e.target.value)}
-								placeholder="Введите ответ…"
-								className="border-0 shadow-none focus-visible:ring-0"
-							/>
-							{files.length > 0 && (
-								<ul className="space-y-1 px-3 pb-2">
-									{files.map((file) => (
-										<li key={file.name} className="flex items-center gap-2 text-sm">
-											<span className="truncate">{file.name}</span>
-											<button
-												type="button"
-												onClick={() => removeFile(file.name)}
-												className="shrink-0 text-muted-foreground hover:text-foreground"
-												aria-label={`Удалить ${file.name}`}
-											>
-												<X className="size-3.5" aria-hidden="true" />
-											</button>
-										</li>
-									))}
-								</ul>
-							)}
-							<div className="flex items-center justify-between border-t px-2 py-1.5">
-								<div className="flex items-center">
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										onClick={() => fileInputRef.current?.click()}
-										aria-label="Прикрепить файл"
-									>
-										<Paperclip className="size-4" aria-hidden="true" />
-									</Button>
-									<input
-										ref={fileInputRef}
-										type="file"
-										className="hidden"
-										multiple
-										onChange={handleFileChange}
-										tabIndex={-1}
-									/>
-								</div>
-								<Button
-									size="sm"
-									onClick={handleSubmitAnswer}
-									disabled={!answerText.trim() || submitAnswerMutation.isPending}
-								>
-									{submitAnswerMutation.isPending ? "Отправка…" : "Отправить"}
-								</Button>
-							</div>
-						</div>
-					</div>
-				)}
 			</div>
+
+			{!isAnswered && (
+				<div className="shrink-0 bg-popover px-4 pt-1 pb-3" data-testid="task-chat-composer">
+					<ChatComposer
+						onSend={handleSend}
+						isPending={submitAnswerMutation.isPending}
+						error={submitAnswerMutation.error?.message ?? null}
+						placeholder="Написать ответ…"
+					/>
+				</div>
+			)}
+
+			<SupplierDetailDrawer
+				supplier={activeSupplier ?? null}
+				open={activeSupplierId !== null}
+				onClose={() => setActiveSupplierId(null)}
+			/>
 		</>
 	);
 }

@@ -56,15 +56,6 @@ export function formatFileSize(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
-const dayMonthFormatter = new Intl.DateTimeFormat("ru-RU", {
-	day: "2-digit",
-	month: "2-digit",
-});
-
-export function formatDayMonth(iso: string): string {
-	return dayMonthFormatter.format(new Date(iso));
-}
-
 const dayMonthShortFormatter = new Intl.DateTimeFormat("ru-RU", {
 	day: "numeric",
 	month: "short",
@@ -73,6 +64,18 @@ const dayMonthShortFormatter = new Intl.DateTimeFormat("ru-RU", {
 /** Day with abbreviated month name: «20 апр.». */
 export function formatDayMonthShort(iso: string): string {
 	return dayMonthShortFormatter.format(new Date(iso));
+}
+
+const dayMonthShortTimeFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "numeric",
+	month: "short",
+	hour: "2-digit",
+	minute: "2-digit",
+});
+
+/** Day with abbreviated month and 24h time: «20 апр., 18:42». */
+export function formatDayMonthShortTime(iso: string): string {
+	return dayMonthShortTimeFormatter.format(new Date(iso));
 }
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {

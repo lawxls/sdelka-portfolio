@@ -100,17 +100,22 @@ export function useTaskColumns(params?: TaskFilterParams) {
 	};
 }
 
-export function useAllTasks(params?: TaskFilterParams) {
+export interface TasksListParams extends TaskFilterParams {
+	statuses?: TaskStatus[];
+}
+
+export function useTasksList(params?: TasksListParams) {
 	const queryParams = params ?? {};
 	const query = useInfiniteQuery({
-		queryKey: ["tasks", "all", queryParams],
+		queryKey: ["tasks", "list", queryParams],
 		queryFn: ({ pageParam }) =>
 			fetchTasks({
 				page: pageParam,
-				page_size: 20,
+				page_size: 25,
 				q: queryParams.q,
 				item: queryParams.item,
 				company: queryParams.company,
+				statuses: queryParams.statuses,
 				sort: queryParams.sort,
 				dir: queryParams.dir,
 			}),
@@ -120,11 +125,29 @@ export function useAllTasks(params?: TaskFilterParams) {
 
 	return {
 		tasks: query.data?.pages.flatMap((p) => p.results) ?? [],
+		totalCount: query.data?.pages[0]?.count,
 		hasNextPage: query.hasNextPage,
 		loadMore: query.fetchNextPage,
 		isLoading: query.isLoading,
 		isFetchingNextPage: query.isFetchingNextPage,
 	};
+}
+
+export function useTasksCount(params?: TasksListParams) {
+	const queryParams = params ?? {};
+	const query = useQuery({
+		queryKey: ["tasks", "count", queryParams],
+		queryFn: () =>
+			fetchTasks({
+				page: 1,
+				page_size: 1,
+				q: queryParams.q,
+				item: queryParams.item,
+				company: queryParams.company,
+				statuses: queryParams.statuses,
+			}),
+	});
+	return query.data?.count ?? 0;
 }
 
 export function useTask(id: string | null) {

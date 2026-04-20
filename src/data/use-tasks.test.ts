@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import type { Task } from "./task-types";
 import * as tasksMock from "./tasks-mock-data";
-import { useAllTasks, useItemSearch, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
+import { useItemSearch, useSubmitAnswer, useTask, useTaskColumns, useUpdateTaskStatus } from "./use-tasks";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn(), success: vi.fn() },
@@ -130,47 +130,6 @@ describe("useTaskColumns", () => {
 		});
 
 		expect(result.current.assigned.hasNextPage).toBe(false);
-	});
-});
-
-describe("useAllTasks", () => {
-	it("fetches tasks from mock store with page-number pagination", async () => {
-		const many = Array.from({ length: 25 }, (_, i) => makeTask(`p${i}`, { status: "assigned" }));
-		tasksMock._setTasks(many);
-
-		const { result } = renderHook(() => useAllTasks(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(result.current.tasks).toHaveLength(20);
-		});
-
-		expect(result.current.hasNextPage).toBe(true);
-	});
-
-	it("returns loading state initially", () => {
-		vi.spyOn(tasksMock, "fetchTasksMock").mockImplementation(() => new Promise(() => {}));
-
-		const { result } = renderHook(() => useAllTasks(), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-		expect(result.current.isLoading).toBe(true);
-	});
-
-	it("passes filter params to mock layer", async () => {
-		const spy = vi.spyOn(tasksMock, "fetchTasksMock");
-		tasksMock._setTasks([]);
-
-		renderHook(() => useAllTasks({ q: "test", sort: "created_at", dir: "desc" }), {
-			wrapper: createQueryWrapper(queryClient),
-		});
-
-		await waitFor(() => {
-			expect(spy).toHaveBeenCalled();
-		});
-
-		expect(spy).toHaveBeenCalledWith(expect.objectContaining({ q: "test", sort: "created_at", dir: "desc" }));
 	});
 });
 

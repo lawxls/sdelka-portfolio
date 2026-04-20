@@ -701,7 +701,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("tasks tab renders DataTable with header columns Задача / Вопросы / Дедлайн / Дата создания", async () => {
+	test("tasks tab renders DataTable with header columns Задача / Вопросы / Дедлайн / Дата и время создания", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
@@ -714,7 +714,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(headerLabels.some((h) => /ЗАДАЧА/.test(h))).toBe(true);
 		expect(headerLabels.some((h) => /ВОПРОСЫ/.test(h))).toBe(true);
 		expect(headerLabels.some((h) => /ДЕДЛАЙН/.test(h))).toBe(true);
-		expect(headerLabels.some((h) => /ДАТА СОЗДАНИЯ/.test(h))).toBe(true);
+		expect(headerLabels.some((h) => /ДАТА И ВРЕМЯ СОЗДАНИЯ/.test(h))).toBe(true);
 	});
 
 	test("tasks tab rows have no status icon", async () => {

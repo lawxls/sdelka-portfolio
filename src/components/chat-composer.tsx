@@ -23,9 +23,10 @@ interface ChatComposerProps {
 	onSend: (body: string, files: File[]) => Promise<unknown>;
 	isPending?: boolean;
 	error?: string | null;
+	placeholder?: string;
 }
 
-export function ChatComposer({ onSend, isPending, error }: ChatComposerProps) {
+export function ChatComposer({ onSend, isPending, error, placeholder = "Написать сообщение…" }: ChatComposerProps) {
 	const [body, setBody] = useState("");
 	const [entries, setEntries] = useState<FileEntry[]>([]);
 	const [fileError, setFileError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export function ChatComposer({ onSend, isPending, error }: ChatComposerProps) {
 				<Textarea
 					value={body}
 					onChange={(e) => setBody(e.target.value)}
-					placeholder="Написать сообщение…"
+					placeholder={placeholder}
 					rows={3}
 					disabled={isPending}
 					className="resize-none border-0 bg-transparent px-5 pt-4 pr-14 shadow-none focus-visible:ring-0 dark:bg-transparent"

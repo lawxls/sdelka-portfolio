@@ -1,15 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
 import * as tasksMock from "@/data/tasks-mock-data";
-import type { Company } from "@/data/types";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { createTestQueryClient, makeCompanyDetail, makeTask, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
@@ -40,7 +38,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_resetCompaniesStore();
 	tasksMock._setTasks(allTasks);
 });
 
@@ -62,43 +59,38 @@ function renderPage(initialEntries?: string[]) {
 }
 
 describe("TasksPage", () => {
-	it("does not render a page heading", () => {
+	it("renders Задачи heading", async () => {
 		renderPage();
-		expect(screen.queryByRole("heading", { name: "Задачи" })).not.toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 	});
 
-	it("renders 4 column labels after loading", async () => {
+	it("shows total count with Russian plural form and header", async () => {
 		renderPage();
 		await waitFor(() => {
-			for (const label of ["Назначено", "В работе", "Завершено", "Архив"]) {
-				expect(screen.getByText(label)).toBeInTheDocument();
-			}
+			// Default view = active tasks (assigned + in_progress) = 8 tasks
+			expect(screen.getByTestId("total-count")).toHaveTextContent(/^8\s+задач$/);
 		});
 	});
 
-	it("displays task cards from API", async () => {
+	it("defaults to active tasks view (assigned + in_progress)", async () => {
 		renderPage();
 		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			expect(screen.getByText("Assigned 1")).toBeInTheDocument();
 		});
+		expect(screen.getByText("InProgress 1")).toBeInTheDocument();
+		expect(screen.queryByText("Completed 1")).not.toBeInTheDocument();
+		expect(screen.queryByText("Archived 1")).not.toBeInTheDocument();
 	});
 
-	it("shows correct card counts after loading", async () => {
-		renderPage();
-		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBe(12);
-		});
-	});
-
-	it("clicking a task card opens the detail drawer", async () => {
+	it("clicking a task row opens the detail drawer", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			expect(screen.getByText("Assigned 1")).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByTestId("task-card-task-a-1"));
+		await user.click(screen.getByText("Assigned 1"));
 
 		await waitFor(() => {
 			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
@@ -107,363 +99,105 @@ describe("TasksPage", () => {
 
 	it("opens drawer from task URL param", async () => {
 		renderPage(["/tasks?task=task-a-1"]);
-
 		await waitFor(() => {
 			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		});
 	});
 
-	it("closes drawer on close button click", async () => {
-		renderPage(["/tasks?task=task-a-1"]);
-		const user = userEvent.setup();
-
+	it("filters by ?status=completed via URL", async () => {
+		renderPage(["/tasks?status=completed"]);
 		await waitFor(() => {
-			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
+			expect(screen.getByText("Completed 1")).toBeInTheDocument();
 		});
-
-		await user.click(screen.getByRole("button", { name: "Закрыть" }));
-
-		await waitFor(() => {
-			expect(screen.queryByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).not.toBeInTheDocument();
-		});
+		expect(screen.queryByText("Assigned 1")).not.toBeInTheDocument();
 	});
 
-	it("cards in assigned/in_progress/archived are draggable", async () => {
-		renderPage();
-
+	it("filters by ?status=archived via URL", async () => {
+		renderPage(["/tasks?status=archived"]);
 		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
+			expect(screen.getByText("Archived 1")).toBeInTheDocument();
 		});
-
-		expect(screen.getByTestId("task-card-task-a-1").getAttribute("aria-roledescription")).toBe("draggable");
+		expect(screen.queryByText("Assigned 1")).not.toBeInTheDocument();
 	});
 
-	it("cards in completed column are not draggable", async () => {
-		renderPage();
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-		});
-
-		expect(screen.getByTestId("task-card-task-c-1").getAttribute("aria-roledescription")).not.toBe("draggable");
-	});
-
-	it("renders view toggle with board and table buttons", async () => {
-		renderPage();
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Kanban" })).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
-		});
-	});
-
-	it("defaults to board view", async () => {
-		renderPage();
-		await waitFor(() => {
-			expect(screen.getByTestId("task-board")).toBeInTheDocument();
-		});
-		expect(screen.queryByRole("table")).not.toBeInTheDocument();
-	});
-
-	it("switches to table view when table button is clicked", async () => {
+	it("clicking Завершённые toggle switches the view", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
-		});
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
 
-		await user.click(screen.getByRole("button", { name: "Таблица" }));
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("task-table")).toBeInTheDocument();
+			expect(screen.getByText("Completed 1")).toBeInTheDocument();
 		});
-		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
 	});
 
-	it("renders table view when ?view=table in URL", async () => {
-		renderPage(["/tasks?view=table"]);
-		await waitFor(() => {
-			expect(screen.getByTestId("task-table")).toBeInTheDocument();
-		});
-		expect(screen.queryByTestId("task-board")).not.toBeInTheDocument();
-	});
-
-	it("clicking table row opens drawer", async () => {
-		renderPage(["/tasks?view=table"]);
+	it("clicking Архив toggle switches the view", async () => {
+		renderPage();
 		const user = userEvent.setup();
 
-		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-row-/).length).toBeGreaterThan(0);
-		});
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
 
-		await user.click(screen.getAllByTestId(/^task-row-/)[0]);
+		await user.click(screen.getByRole("button", { name: "Архив" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Assigned 1", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
+			expect(screen.getByText("Archived 1")).toBeInTheDocument();
 		});
 	});
 
-	it("filters displayed tasks when ?q= is present in the URL", async () => {
-		renderPage(["/tasks?q=Assigned 1"]);
-
-		await waitFor(() => {
-			const cards = screen.getAllByTestId(/^task-card-/);
-			expect(cards.length).toBeGreaterThan(0);
-			expect(cards.length).toBeLessThan(12);
-		});
-	});
-
-	it("sort control renders and ?sort=&dir= params work", async () => {
-		renderPage(["/tasks?sort=deadline_at&dir=asc"]);
-
-		await waitFor(() => {
-			expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-		});
-
-		// Sort button should show active indicator
-		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
-		expect(sortBtn.querySelector("[data-indicator]")).toBeInTheDocument();
-	});
-
-	it("search works in table view", async () => {
-		renderPage(["/tasks?view=table"]);
-
-		await waitFor(() => {
-			expect(screen.getByTestId("task-table")).toBeInTheDocument();
-			expect(screen.getAllByTestId(/^task-row-/).length).toBeGreaterThan(1);
-		});
-	});
-
-	it("status dropdown change to completed in drawer shows answer-first toast", async () => {
-		const { toast } = await import("sonner");
-		renderPage(["/tasks?task=task-a-1"]);
+	it("shows selection bar after selecting rows", async () => {
+		renderPage();
 		const user = userEvent.setup();
 
-		await waitFor(() => {
-			expect(screen.getByRole("combobox", { name: "Статус задачи" })).toBeInTheDocument();
-		});
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
 
-		await user.click(screen.getByRole("combobox", { name: "Статус задачи" }));
-		await user.click(screen.getByRole("option", { name: "Завершено" }));
+		const rowCheckboxes = screen.getAllByRole("checkbox", { name: /Выбрать Assigned/ });
+		await user.click(rowCheckboxes[0]);
 
 		await waitFor(() => {
-			expect(toast.info).toHaveBeenCalledWith("Ответьте на вопрос, чтобы перевести задачу в «Завершено»");
+			expect(screen.getByTestId("selection-bar")).toBeInTheDocument();
+		});
+		expect(within(screen.getByTestId("selection-bar")).getByText("Выбрано: 1")).toBeInTheDocument();
+	});
+
+	it("Архивировать bulk action archives selected tasks", async () => {
+		renderPage();
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+
+		const rowCheckbox = screen.getAllByRole("checkbox", { name: /Выбрать Assigned 1/ })[0];
+		await user.click(rowCheckbox);
+		await user.click(screen.getByRole("button", { name: "Архивировать" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Assigned 1")).not.toBeInTheDocument();
 		});
 	});
 
-	describe("company filter", () => {
-		const companies: Company[] = [
-			makeCompanyDetail("c1", { name: "ООО Альфа" }),
-			makeCompanyDetail("c2", { name: "ООО Бета" }),
-		];
+	it("renders table columns in the required order", async () => {
+		renderPage();
 
-		beforeEach(() => {
-			_setCompanies(companies);
-		});
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
 
-		it("shows company button when multi-company", async () => {
-			renderPage();
-			await waitFor(() => {
-				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
-			});
-		});
-
-		it("hides company button for single company", async () => {
-			_setCompanies([companies[0]]);
-			renderPage();
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-			expect(screen.queryByRole("button", { name: "Компания" })).not.toBeInTheDocument();
-		});
-
-		it("selecting company passes company param to board mock", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage();
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
-			});
-
-			await user.click(screen.getByRole("button", { name: "Компания" }));
-			await user.click(screen.getByText("ООО Альфа"));
-
-			await waitFor(() => {
-				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ company: "c1" }));
-			});
-		});
-
-		it("clearing company selection removes company param", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage(["/tasks?company=c1"]);
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getByRole("button", { name: "Компания" })).toBeInTheDocument();
-			});
-
-			await user.click(screen.getByRole("button", { name: "Компания" }));
-			await user.click(screen.getByText("Все компании"));
-
-			await waitFor(() => {
-				const lastCall = spy.mock.calls.at(-1)?.[0];
-				expect(lastCall?.company).toBeUndefined();
-			});
-		});
-
-		it("company param persists from URL on initial load", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage(["/tasks?company=c2"]);
-
-			await waitFor(() => {
-				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ company: "c2" }));
-			});
-		});
+		const headers = ["Задача", "Назначена", "Вопросы", "Дедлайн", "дата.*создания"];
+		for (const pattern of headers) {
+			expect(screen.getByRole("button", { name: new RegExp(pattern, "i") })).toBeInTheDocument();
+		}
 	});
 
-	describe("item search filter", () => {
-		const items = [
-			{
-				id: "item-1",
-				name: "Арматура А500С",
-				status: "searching",
-				annualQuantity: 100,
-				currentPrice: 50,
-				bestPrice: null,
-				averagePrice: null,
-				folderId: null,
-				companyId: "c1",
-			},
-			{
-				id: "item-2",
-				name: "Кабель ВВГнг 3×2.5",
-				status: "searching",
-				annualQuantity: 200,
-				currentPrice: 60,
-				bestPrice: null,
-				averagePrice: null,
-				folderId: null,
-				companyId: "c1",
-			},
-		];
-
-		beforeEach(async () => {
-			const { _setItems } = await import("@/data/items-mock-data");
-			_setItems(items as Parameters<typeof _setItems>[0]);
-		});
-
-		it("typing in item search shows results from API", async () => {
-			renderPage();
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			await user.click(screen.getByRole("button", { name: "Фильтр" }));
-			await user.type(screen.getByPlaceholderText("Поиск позиции…"), "Кабель");
-
-			await waitFor(() => {
-				expect(screen.getByText("Кабель ВВГнг 3×2.5")).toBeInTheDocument();
-			});
-		});
-
-		it("selecting an item passes item UUID to board mock", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage();
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			await user.click(screen.getByRole("button", { name: "Фильтр" }));
-			await user.type(screen.getByPlaceholderText("Поиск позиции…"), "Кабель");
-
-			await waitFor(() => {
-				expect(screen.getByText("Кабель ВВГнг 3×2.5")).toBeInTheDocument();
-			});
-
-			await user.click(screen.getByText("Кабель ВВГнг 3×2.5"));
-
-			await waitFor(() => {
-				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ item: "item-2" }));
-			});
-		});
-
-		it("clearing item selection removes item param from mock", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage(["/tasks?item=item-1"]);
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			await user.click(screen.getByRole("button", { name: "Фильтр" }));
-			await user.click(screen.getByText("Все"));
-
-			await waitFor(() => {
-				const lastCall = spy.mock.calls.at(-1)?.[0];
-				expect(lastCall?.item).toBeUndefined();
-			});
-		});
-
-		it("item param persists from URL on initial load", async () => {
-			const spy = vi.spyOn(tasksMock, "fetchTaskBoardMock");
-
-			renderPage(["/tasks?item=item-1"]);
-
-			await waitFor(() => {
-				expect(spy).toHaveBeenCalledWith(expect.objectContaining({ item: "item-1" }));
-			});
-		});
-
-		it("no items shown until user types", async () => {
-			renderPage();
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			await user.click(screen.getByRole("button", { name: "Фильтр" }));
-
-			// "Кабель" only exists in the items search results, not in task cards
-			expect(screen.queryByText("Кабель ВВГнг 3×2.5")).not.toBeInTheDocument();
-		});
+	it("shows item (position) name under task name in the same cell", async () => {
+		renderPage();
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		// Position is rendered via makeTask as "Арматура А500С" — should appear inline
+		expect(screen.getAllByText("Арматура А500С").length).toBeGreaterThan(0);
 	});
 
-	describe("mobile table view", () => {
-		beforeEach(() => {
-			vi.mocked(useIsMobile).mockReturnValue(true);
-		});
-
-		afterEach(() => {
-			vi.mocked(useIsMobile).mockReturnValue(false);
-		});
-
-		it("shows cards instead of table in table view on mobile", async () => {
-			renderPage(["/tasks?view=table"]);
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getByRole("button", { name: "Таблица" })).toBeInTheDocument();
-			});
-
-			await user.click(screen.getByRole("button", { name: "Таблица" }));
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-table-card-/).length).toBeGreaterThan(0);
-			});
-			expect(screen.queryByRole("table")).not.toBeInTheDocument();
-		});
+	it("renders Скачать таблицу button", async () => {
+		renderPage();
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		expect(screen.getByRole("button", { name: "Скачать таблицу" })).toBeInTheDocument();
 	});
 
 	describe("mobile", () => {
@@ -475,23 +209,12 @@ describe("TasksPage", () => {
 			vi.mocked(useIsMobile).mockReturnValue(false);
 		});
 
-		it("renders tab bar instead of 4-column grid on mobile", async () => {
+		it("renders mobile cards instead of table on mobile", async () => {
 			renderPage();
 			await waitFor(() => {
-				expect(screen.getByRole("tablist")).toBeInTheDocument();
+				expect(screen.getAllByTestId(/^task-row-/).length).toBeGreaterThan(0);
 			});
-		});
-
-		it("cards are not draggable on mobile", async () => {
-			renderPage();
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			const cards = screen.getAllByTestId(/^task-card-/);
-			for (const card of cards) {
-				expect(card.getAttribute("aria-roledescription")).not.toBe("draggable");
-			}
+			expect(screen.queryByRole("table")).not.toBeInTheDocument();
 		});
 
 		it("drawer opens as full-screen bottom sheet on mobile", async () => {
@@ -501,47 +224,6 @@ describe("TasksPage", () => {
 				expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
 				expect(sheetContent?.getAttribute("data-size")).toBe("full");
 			});
-		});
-
-		it("tab switching shows different column cards on mobile", async () => {
-			renderPage();
-			const user = userEvent.setup();
-
-			await waitFor(() => {
-				expect(screen.getAllByTestId(/^task-card-/).length).toBeGreaterThan(0);
-			});
-
-			// Default shows assigned column
-			expect(screen.getByRole("tab", { name: /Назначено/ })).toHaveAttribute("aria-selected", "true");
-
-			// Switch to В работе
-			await user.click(screen.getByRole("tab", { name: /В работе/ }));
-
-			await waitFor(() => {
-				expect(screen.getByRole("tab", { name: /В работе/ })).toHaveAttribute("aria-selected", "true");
-			});
-		});
-	});
-
-	describe("toolbar left zone", () => {
-		it("shows total tasks count with the correct Russian plural form", async () => {
-			renderPage();
-
-			await waitFor(() => {
-				expect(screen.getByTestId("total-count")).toHaveTextContent(/^12\s+задач$/);
-			});
-		});
-
-		it("shows skeleton while loading then resolves to count", async () => {
-			renderPage();
-
-			// Skeleton present on first render (before query resolves)
-			expect(screen.getByTestId("total-count-skeleton")).toBeInTheDocument();
-
-			await waitFor(() => {
-				expect(screen.getByTestId("total-count")).toBeInTheDocument();
-			});
-			expect(screen.queryByTestId("total-count-skeleton")).not.toBeInTheDocument();
 		});
 	});
 });

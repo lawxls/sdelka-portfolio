@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import * as tasksMock from "@/data/tasks-mock-data";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
@@ -17,6 +18,25 @@ const unansweredTask = makeTask("task-1", {
 	createdAt: "2026-03-01T10:00:00.000Z",
 	description: "Поставщик прислал обновлённое КП. Необходимо проверить соответствие спецификации и подтвердить объёмы.",
 	status: "assigned",
+	questionCount: 2,
+	supplierQuestions: [
+		{
+			id: "sq-a",
+			question: "Q1?",
+			answer: null,
+			supplierId: "supplier-1",
+			supplierName: "ООО «Альфа»",
+			askedAt: "2026-02-26T10:00:00.000Z",
+		},
+		{
+			id: "sq-b",
+			question: "Q2?",
+			answer: null,
+			supplierId: "supplier-2",
+			supplierName: "ООО «Бета»",
+			askedAt: "2026-02-27T11:00:00.000Z",
+		},
+	],
 });
 
 const completedTask = makeTask("task-51", {
@@ -44,22 +64,16 @@ function renderDrawer(taskId: string | null, onClose = vi.fn()) {
 		onClose,
 		...render(
 			<QueryClientProvider client={queryClient}>
-				<TaskDrawer taskId={taskId} onClose={onClose} />
+				<TooltipProvider>
+					<TaskDrawer taskId={taskId} onClose={onClose} />
+				</TooltipProvider>
 			</QueryClientProvider>,
 		),
 	};
 }
 
-const datetimeFmt = new Intl.DateTimeFormat("ru-RU", {
-	day: "numeric",
-	month: "long",
-	year: "numeric",
-	hour: "2-digit",
-	minute: "2-digit",
-});
-
 describe("TaskDrawer", () => {
-	it("displays task name, item name, created date, and description", async () => {
+	it("displays task name, item name, description", async () => {
 		renderDrawer("task-1");
 
 		await waitFor(() => {
@@ -67,39 +81,36 @@ describe("TaskDrawer", () => {
 		});
 		expect(screen.getByText("Арматура А500С")).toBeInTheDocument();
 		expect(screen.getByText(/Поставщик прислал обновлённое КП/)).toBeInTheDocument();
-
-		const expectedDate = datetimeFmt.format(new Date("2026-03-01T10:00:00.000Z"));
-		expect(screen.getByText(expectedDate)).toBeInTheDocument();
 	});
 
-	it("shows answer form with textarea and submit button for unanswered tasks", async () => {
+	it("shows chat composer for unanswered tasks", async () => {
 		renderDrawer("task-1");
 
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
+			expect(screen.getByTestId("task-chat-composer")).toBeInTheDocument();
 		});
+		expect(screen.getByPlaceholderText("Написать ответ…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Прикрепить файл" })).toBeInTheDocument();
 	});
 
-	it("disables submit button when textarea is empty", async () => {
+	it("does not show status dropdown", async () => {
 		renderDrawer("task-1");
-
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Отправить" })).toBeDisabled();
+			expect(screen.getByText("Согласование цены на арматуру")).toBeInTheDocument();
 		});
+		expect(screen.queryByRole("combobox", { name: "Статус задачи" })).not.toBeInTheDocument();
 	});
 
-	it("submitting answer calls mutation and closes drawer", async () => {
+	it("submitting a message closes the drawer", async () => {
 		const onClose = vi.fn();
 		renderDrawer("task-1", onClose);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
+			expect(screen.getByPlaceholderText("Написать ответ…")).toBeInTheDocument();
 		});
 
-		await user.type(screen.getByPlaceholderText("Введите ответ…"), "Принято в работу");
+		await user.type(screen.getByPlaceholderText("Написать ответ…"), "Принято в работу");
 		await user.click(screen.getByRole("button", { name: "Отправить" }));
 
 		await waitFor(() => {
@@ -107,154 +118,49 @@ describe("TaskDrawer", () => {
 		});
 	});
 
-	it("shows read-only answer for completed tasks", async () => {
+	it("shows read-only answer panel for completed tasks", async () => {
 		renderDrawer("task-51");
 
 		await waitFor(() => {
-			expect(screen.getByText(/Согласовано\. Условия поставки подтверждены/)).toBeInTheDocument();
+			expect(screen.getByTestId("task-answer-panel")).toBeInTheDocument();
 		});
-		expect(screen.getByText("Ответ")).toBeInTheDocument();
-		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "Отправить" })).not.toBeInTheDocument();
+		expect(screen.getByText(/Согласовано\. Условия поставки подтверждены/)).toBeInTheDocument();
+		expect(screen.queryByTestId("task-chat-composer")).not.toBeInTheDocument();
 	});
 
-	it("shows status badge for completed tasks", async () => {
-		renderDrawer("task-51");
-
-		await waitFor(() => {
-			expect(screen.getByText("Завершено")).toBeInTheDocument();
-		});
-	});
-
-	it("shows status dropdown for unanswered tasks", async () => {
+	it("renders a suppliers-list section with company name and question date", async () => {
 		renderDrawer("task-1");
 
 		await waitFor(() => {
-			expect(screen.getByRole("combobox", { name: "Статус задачи" })).toBeInTheDocument();
+			expect(screen.getByTestId("suppliers-list")).toBeInTheDocument();
 		});
+		expect(screen.getByTestId("supplier-question-card-sq-a")).toHaveTextContent("ООО «Альфа»");
+		expect(screen.getByTestId("supplier-question-card-sq-b")).toHaveTextContent("ООО «Бета»");
 	});
 
-	it("shows selected files with remove buttons after upload", async () => {
-		renderDrawer("task-1");
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
-		});
-
-		const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-		const file = new File(["content"], "document.pdf", { type: "application/pdf" });
-		await user.upload(fileInput, file);
-
-		expect(screen.getByText("document.pdf")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Удалить document.pdf" })).toBeInTheDocument();
-	});
-
-	it("removes file when remove button is clicked", async () => {
-		renderDrawer("task-1");
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
-		});
-
-		const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-		await user.upload(fileInput, new File(["data"], "report.xlsx", { type: "application/vnd.ms-excel" }));
-		expect(screen.getByText("report.xlsx")).toBeInTheDocument();
-
-		await user.click(screen.getByRole("button", { name: "Удалить report.xlsx" }));
-		expect(screen.queryByText("report.xlsx")).not.toBeInTheDocument();
-	});
-
-	it("shows fallback toast when status change fails", async () => {
-		const { toast } = await import("sonner");
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockRejectedValue(new Error("boom"));
-		renderDrawer("task-1");
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getByRole("combobox", { name: "Статус задачи" })).toBeInTheDocument();
-		});
-
-		await user.click(screen.getByRole("combobox", { name: "Статус задачи" }));
-		await user.click(screen.getByRole("option", { name: "В работе" }));
-
-		await waitFor(() => {
-			expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
-		});
-	});
-
-	it("submitting answer with files uploads attachments then changes status", async () => {
-		const callOrder: string[] = [];
-		vi.spyOn(tasksMock, "uploadTaskAttachmentsMock").mockImplementation(async () => {
-			callOrder.push("upload");
-			return [
-				{
-					id: "att-1",
-					fileName: "report.pdf",
-					fileSize: 2048,
-					fileType: "pdf",
-					contentType: "application/pdf",
-					fileUrl: "blob:mock",
-					uploadedAt: "2026-03-15T10:00:00.000Z",
-				},
-			];
-		});
-		vi.spyOn(tasksMock, "changeTaskStatusMock").mockImplementation(async () => {
-			callOrder.push("status");
-			return { ...unansweredTask, status: "completed", completedResponse: "Принято" };
-		});
-
+	it("archives the task when В архив is clicked", async () => {
+		const spy = vi.spyOn(tasksMock, "changeTaskStatusMock");
 		const onClose = vi.fn();
 		renderDrawer("task-1", onClose);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
 		});
 
-		const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-		await user.upload(fileInput, new File(["data"], "report.pdf", { type: "application/pdf" }));
-		await user.type(screen.getByPlaceholderText("Введите ответ…"), "Принято");
-		await user.click(screen.getByRole("button", { name: "Отправить" }));
+		await user.click(screen.getByRole("button", { name: "В архив" }));
 
 		await waitFor(() => {
-			expect(onClose).toHaveBeenCalled();
+			expect(spy).toHaveBeenCalledWith("task-1", expect.objectContaining({ status: "archived" }));
 		});
-
-		expect(callOrder).toEqual(["upload", "status"]);
-	});
-
-	it("submitting answer without files only calls status endpoint", async () => {
-		const uploadSpy = vi.spyOn(tasksMock, "uploadTaskAttachmentsMock");
-
-		const onClose = vi.fn();
-		renderDrawer("task-1", onClose);
-		const user = userEvent.setup();
-
-		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Введите ответ…")).toBeInTheDocument();
-		});
-
-		await user.type(screen.getByPlaceholderText("Введите ответ…"), "Принято в работу");
-		await user.click(screen.getByRole("button", { name: "Отправить" }));
-
-		await waitFor(() => {
-			expect(onClose).toHaveBeenCalled();
-		});
-
-		expect(uploadSpy).not.toHaveBeenCalled();
-	});
-
-	it("does not render drawer content when taskId is null", () => {
-		renderDrawer(null);
-		expect(screen.queryByPlaceholderText("Введите ответ…")).not.toBeInTheDocument();
 	});
 
 	it("renders as full-screen bottom sheet when isMobile", async () => {
 		render(
 			<QueryClientProvider client={queryClient}>
-				<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
+				<TooltipProvider>
+					<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
+				</TooltipProvider>
 			</QueryClientProvider>,
 		);
 
@@ -263,5 +169,10 @@ describe("TaskDrawer", () => {
 			expect(sheetContent?.getAttribute("data-side")).toBe("bottom");
 			expect(sheetContent?.getAttribute("data-size")).toBe("full");
 		});
+	});
+
+	it("does not render drawer content when taskId is null", () => {
+		renderDrawer(null);
+		expect(screen.queryByPlaceholderText("Написать ответ…")).not.toBeInTheDocument();
 	});
 });

@@ -1,4 +1,5 @@
 import { createBlobUrl, delay, nextId, paginate } from "./mock-utils";
+import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 import type { Attachment, Task, TaskFilterParams, TaskStatus } from "./task-types";
 
 // --- Seed data ---
@@ -34,7 +35,10 @@ const assigneeEkaterina = {
 
 const ITEM_REF = { id: "item-1", name: "Полотно ПВД 2600 мм", companyId: "company-1" };
 
-const SEED_TASKS: Task[] = [
+type SeedQuestion = { id: string; question: string; answer: string | null };
+type SeedTask = Omit<Task, "supplierQuestions"> & { supplierQuestions: SeedQuestion[] };
+
+const SEED_TASKS: SeedTask[] = [
 	// --- Assigned (6) ---
 	{
 		id: "task-1",
@@ -352,8 +356,30 @@ function cloneTask(t: Task): Task {
 	};
 }
 
+function hydrateSeedTasks(seed: SeedTask[]): Task[] {
+	const pool = ORMATEK_SUPPLIERS;
+	let cursor = 0;
+	return seed.map((task) => {
+		const taskCreatedMs = new Date(task.createdAt).getTime();
+		return {
+			...task,
+			supplierQuestions: task.supplierQuestions.map((q, qIdx) => {
+				const supplier = pool[cursor % pool.length];
+				cursor += 1;
+				const askedMs = taskCreatedMs - (qIdx + 1) * 24 * 3600 * 1000;
+				return {
+					...q,
+					supplierId: supplier.id,
+					supplierName: supplier.companyName,
+					askedAt: new Date(askedMs).toISOString(),
+				};
+			}),
+		};
+	});
+}
+
 function seedStore() {
-	tasksStore = SEED_TASKS.map(cloneTask);
+	tasksStore = hydrateSeedTasks(SEED_TASKS).map(cloneTask);
 }
 
 seedStore();
@@ -485,6 +511,7 @@ export interface FetchTasksParams {
 	q?: string;
 	item?: string;
 	company?: string;
+	statuses?: TaskStatus[];
 	sort?: TaskSortField;
 	dir?: "asc" | "desc";
 }
@@ -505,7 +532,11 @@ export async function fetchTasksMock(params: FetchTasksParams = {}): Promise<Tas
 		sort: params.sort,
 		dir: params.dir,
 	};
-	const filtered = applyFilters(tasksStore, filterParams);
+	let filtered = applyFilters(tasksStore, filterParams);
+	if (params.statuses && params.statuses.length > 0) {
+		const allowed = new Set(params.statuses);
+		filtered = filtered.filter((t) => allowed.has(t.status));
+	}
 	const sorted = applySortIfAny(filtered, filterParams);
 	const pageSize = params.page_size ?? LIST_PAGE_SIZE;
 	const page = params.page ?? 1;

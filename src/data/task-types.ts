@@ -5,13 +5,6 @@ export type TaskStatus = "assigned" | "in_progress" | "completed" | "archived";
 
 export const TASK_STATUSES: TaskStatus[] = ["assigned", "in_progress", "completed", "archived"];
 
-export const STATUS_LABELS: Record<TaskStatus, string> = {
-	assigned: "Назначено",
-	in_progress: "В работе",
-	completed: "Завершено",
-	archived: "Архив",
-};
-
 export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
 	assigned: CircleDot,
 	in_progress: Loader,
@@ -47,6 +40,9 @@ export interface SupplierQuestion {
 	id: string;
 	question: string;
 	answer: string | null;
+	supplierId: string;
+	supplierName: string;
+	askedAt: string;
 }
 
 export type TaskSortField = "created_at" | "deadline_at" | "question_count";

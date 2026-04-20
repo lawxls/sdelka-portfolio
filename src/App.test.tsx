@@ -12,7 +12,6 @@ import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 import type { Folder } from "@/data/types";
-import { anchorDragOverlayToCursor } from "@/lib/drag-overlay";
 import { makeItem } from "@/test-utils";
 import App from "./App";
 
@@ -155,10 +154,10 @@ describe("Routing", () => {
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
 
-	test("/tasks renders tasks page with board", async () => {
+	test("/tasks renders tasks page", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
-			expect(screen.getByTestId("task-board")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
 		});
 	});
 
@@ -546,31 +545,5 @@ describe("ProcurementPage", () => {
 				screen.queryByText("Добавить позиции", { selector: "[data-slot='dialog-title']" }),
 			).not.toBeInTheDocument();
 		});
-	});
-
-	test("drag overlay anchors to the cursor position", () => {
-		const transform = anchorDragOverlayToCursor({
-			activatorEvent: new MouseEvent("pointerdown", { clientX: 520, clientY: 140 }),
-			activeNodeRect: {
-				top: 100,
-				left: 260,
-				right: 560,
-				bottom: 160,
-				width: 300,
-				height: 60,
-			},
-			overlayNodeRect: {
-				top: 0,
-				left: 0,
-				right: 180,
-				bottom: 36,
-				width: 180,
-				height: 36,
-			},
-			transform: { x: 40, y: 10, scaleX: 1, scaleY: 1 },
-		});
-
-		expect(transform.x).toBe(312);
-		expect(transform.y).toBe(32);
 	});
 });

@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { ExpandingSearch } from "@/components/expanding-search";
+import { LoadMoreSentinel } from "@/components/load-more-sentinel";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { type DeliveryFilter, matchesDeliveryFilter, SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
-import { LoadMoreSentinel } from "@/components/task-table";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -49,7 +49,7 @@ import {
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatDayMonthShort, formatRussianPlural, isOverdue } from "@/lib/format";
+import { formatDayMonthShort, formatDayMonthShortTime, formatRussianPlural, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type ItemDrawerTab = "search" | "suppliers" | "details" | "tasks";
@@ -533,12 +533,12 @@ const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
 	},
 	{
 		id: "createdAt",
-		header: "ДАТА СОЗДАНИЯ",
+		header: "ДАТА И ВРЕМЯ СОЗДАНИЯ",
 		sortable: true,
 		align: "right",
 		cell: (t) => (
 			<time dateTime={t.createdAt} className="tabular-nums">
-				{formatDayMonthShort(t.createdAt)}
+				{formatDayMonthShortTime(t.createdAt)}
 			</time>
 		),
 	},
@@ -711,7 +711,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 					<div>
 						<div className="text-xs text-muted-foreground">Создано</div>
 						<time dateTime={t.createdAt} className="tabular-nums">
-							{formatDayMonthShort(t.createdAt)}
+							{formatDayMonthShortTime(t.createdAt)}
 						</time>
 					</div>
 				</div>
