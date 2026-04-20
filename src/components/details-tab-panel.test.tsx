@@ -62,7 +62,7 @@ describe("DetailsTabPanel", () => {
 		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
-	test("shows section-level edit buttons for the four editable sections", async () => {
+	test("shows section-level edit buttons for all editable sections", async () => {
 		renderPanel();
 
 		await waitFor(() => {
@@ -73,9 +73,10 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByRole("button", { name: "Редактировать логистику и финансы" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Редактировать дополнительно" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Редактировать текущего поставщика" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать ответы на уточнения" })).toBeInTheDocument();
 
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
-		expect(editButtons).toHaveLength(4);
+		expect(editButtons).toHaveLength(5);
 	});
 
 	test("shows loading skeleton while fetching", () => {
@@ -260,7 +261,7 @@ describe("DetailsTabPanel", () => {
 		expect(screen.queryByText("specification-pvd-2600.pdf")).not.toBeInTheDocument();
 	});
 
-	test("Ответы на уточнения renders one read-only card per generatedAnswer", async () => {
+	test("Ответы на уточнения renders one card per generatedAnswer with an edit button", async () => {
 		renderPanel();
 
 		await waitFor(() => {
@@ -273,12 +274,11 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Нужны ли сертификаты и паспорта качества")).toBeInTheDocument();
 		expect(screen.getByText(/Паспорт качества — На каждую партию/)).toBeInTheDocument();
 
-		// Still no edit button — this section is display-only
 		const answersHeader = screen
 			.getAllByRole("heading", { level: 3 })
 			.find((h) => h.textContent === "Ответы на уточнения");
 		const section = answersHeader?.closest("section") as HTMLElement;
-		expect(within(section).queryByRole("button", { name: /редактировать/i })).toBeNull();
+		expect(within(section).getByRole("button", { name: /редактировать/i })).toBeInTheDocument();
 	});
 
 	test("Ответы на уточнения section hidden when item has no generatedAnswers", async () => {

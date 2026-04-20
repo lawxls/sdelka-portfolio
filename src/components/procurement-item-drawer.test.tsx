@@ -512,7 +512,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(within(panel).getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
-	test("details tab has edit buttons for four editable sections (Ответы is display-only)", async () => {
+	test("details tab has edit buttons for all editable sections", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=details"]);
 
 		await waitFor(() => {
@@ -520,7 +520,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		const editButtons = screen.getAllByRole("button", { name: /Редактировать/ });
-		expect(editButtons).toHaveLength(4);
+		expect(editButtons).toHaveLength(5);
 	});
 
 	test("tasks tab default view shows assigned + in_progress tasks as rows", async () => {

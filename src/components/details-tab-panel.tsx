@@ -20,6 +20,7 @@ import type {
 } from "@/data/types";
 import {
 	DELIVERY_COST_TYPE_LABELS,
+	formatPaymentType,
 	PAYMENT_TYPE_LABELS,
 	PAYMENT_TYPES,
 	UNITS,
@@ -35,7 +36,7 @@ interface DetailsTabPanelProps {
 	itemId: string;
 }
 
-type SectionKey = "info" | "logistics" | "additional" | "currentSupplier" | null;
+type SectionKey = "info" | "logistics" | "additional" | "currentSupplier" | "answers" | null;
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
@@ -56,6 +57,7 @@ interface InfoFormState {
 interface LogisticsFormState {
 	unloading: UnloadingType | "";
 	paymentType: PaymentType;
+	prepaymentPercent: string;
 	addressIds: string[];
 }
 
@@ -67,12 +69,17 @@ interface AdditionalFormState {
 	attachedFiles: AttachedFile[];
 }
 
+interface AnswersFormState {
+	texts: Record<string, string>;
+}
+
 interface SupplierFormState {
 	companyName: string;
 	inn: string;
 	pricePerUnit: string;
 	paymentType: PaymentType;
 	deferralDays: string;
+	prepaymentPercent: string;
 	deliveryCostType: DeliveryCostType | "";
 	deliveryCost: string;
 }
@@ -82,6 +89,15 @@ function toNumberOrUndefined(value: string): number | undefined {
 	if (trimmed === "") return undefined;
 	const n = Number(trimmed);
 	return Number.isFinite(n) ? n : undefined;
+}
+
+function effectivePrepaymentPercent(
+	paymentType: PaymentType,
+	percent: string | number | undefined,
+): number | undefined {
+	if (paymentType !== "prepayment") return undefined;
+	const parsed = typeof percent === "string" ? toNumberOrUndefined(percent) : percent;
+	return parsed ?? 100;
 }
 
 function initInfoForm(item: ProcurementItem): InfoFormState {
@@ -99,6 +115,7 @@ function initLogisticsForm(item: ProcurementItem, addressIds: string[]): Logisti
 	return {
 		unloading: item.unloading ?? "",
 		paymentType: item.paymentType ?? "prepayment",
+		prepaymentPercent: item.prepaymentPercent != null ? String(item.prepaymentPercent) : "100",
 		addressIds,
 	};
 }
@@ -113,6 +130,14 @@ function initAdditionalForm(item: ProcurementItem): AdditionalFormState {
 	};
 }
 
+function initAnswersForm(item: ProcurementItem): AnswersFormState {
+	const texts: Record<string, string> = {};
+	for (const a of item.generatedAnswers ?? []) {
+		texts[a.questionId] = answerValueText(a);
+	}
+	return { texts };
+}
+
 function initSupplierForm(item: ProcurementItem): SupplierFormState {
 	const s = item.currentSupplier;
 	return {
@@ -121,6 +146,7 @@ function initSupplierForm(item: ProcurementItem): SupplierFormState {
 		pricePerUnit: s?.pricePerUnit != null ? String(s.pricePerUnit) : "",
 		paymentType: s?.paymentType ?? "prepayment",
 		deferralDays: s?.deferralDays != null ? String(s.deferralDays) : "",
+		prepaymentPercent: s?.prepaymentPercent != null ? String(s.prepaymentPercent) : "100",
 		deliveryCostType: item.deliveryCostType ?? "",
 		deliveryCost: item.deliveryCost != null ? String(item.deliveryCost) : "",
 	};
@@ -148,13 +174,13 @@ function Section({
 	children: React.ReactNode;
 }) {
 	return (
-		<section className="rounded-lg border border-border p-3">
-			<div className="mb-2 flex items-center justify-between">
-				<h3 className="text-sm font-medium">{title}</h3>
+		<section>
+			<div className="mb-3 flex items-center gap-1.5 border-b border-border/50 pb-2">
+				<h3 className="text-sm font-semibold text-foreground">{title}</h3>
 				{!editing && editLabel && onEdit && (
 					<button
 						type="button"
-						className="relative inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-[-8px] after:content-['']"
+						className="relative inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-[color,scale] duration-150 ease-out hover:text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 after:absolute after:inset-[-8px] after:content-['']"
 						onClick={onEdit}
 						aria-label={editLabel}
 					>
@@ -204,11 +230,6 @@ function answerValueText(answer: GeneratedAnswer): string {
 	return parts.join(" — ");
 }
 
-function formatPaymentTypeWithDeferral(t: PaymentType, deferralDays: number): string {
-	if (t === "deferred" && deferralDays > 0) return `Отсрочка ${deferralDays} дн.`;
-	return PAYMENT_TYPE_LABELS[t];
-}
-
 function formatDeliveryTypeWithCost(t: DeliveryCostType | undefined, cost: number | undefined): string {
 	if (!t) return "";
 	if (t === "paid" && cost != null) return `${DELIVERY_COST_TYPE_LABELS.paid} · ${formatCurrency(cost)}`;
@@ -227,6 +248,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const [logisticsForm, setLogisticsForm] = useState<LogisticsFormState | null>(null);
 	const [additionalForm, setAdditionalForm] = useState<AdditionalFormState | null>(null);
 	const [supplierForm, setSupplierForm] = useState<SupplierFormState | null>(null);
+	const [answersForm, setAnswersForm] = useState<AnswersFormState | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
@@ -337,6 +359,14 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment"))
 			data.paymentType = logisticsForm.paymentType;
 
+		const nextPrepaymentPercent = effectivePrepaymentPercent(
+			logisticsForm.paymentType,
+			logisticsForm.prepaymentPercent,
+		);
+		if (nextPrepaymentPercent !== currentItem.prepaymentPercent) {
+			data.prepaymentPercent = nextPrepaymentPercent === 100 ? undefined : nextPrepaymentPercent;
+		}
+
 		const selectedSet = new Set(logisticsForm.addressIds);
 		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
 		const prevAddresses = currentItem.deliveryAddresses ?? [];
@@ -354,9 +384,18 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		const selectedSet = new Set(logisticsForm.addressIds);
 		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
 		const prevAddresses = currentItem.deliveryAddresses ?? [];
+		const nextPrepaymentPercent = effectivePrepaymentPercent(
+			logisticsForm.paymentType,
+			logisticsForm.prepaymentPercent,
+		);
+		const currentPrepaymentPercent = effectivePrepaymentPercent(
+			currentItem.paymentType ?? "prepayment",
+			currentItem.prepaymentPercent,
+		);
 		return (
 			logisticsForm.unloading !== (currentItem.unloading ?? "") ||
 			logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment") ||
+			nextPrepaymentPercent !== currentPrepaymentPercent ||
 			nextAddresses.length !== prevAddresses.length ||
 			nextAddresses.some((addr, idx) => addr !== prevAddresses[idx])
 		);
@@ -454,6 +493,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		const existing = currentItem.currentSupplier;
 		const nextPrice = toNumberOrUndefined(supplierForm.pricePerUnit);
 		const nextDeferral = toNumberOrUndefined(supplierForm.deferralDays) ?? 0;
+		const nextPrepaymentPercent = effectivePrepaymentPercent(supplierForm.paymentType, supplierForm.prepaymentPercent);
 
 		const companyName = supplierForm.companyName.trim();
 		const inn = supplierForm.inn.trim();
@@ -463,6 +503,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			...(inn ? { inn } : {}),
 			paymentType: supplierForm.paymentType,
 			deferralDays: nextDeferral,
+			...(nextPrepaymentPercent !== undefined && nextPrepaymentPercent !== 100
+				? { prepaymentPercent: nextPrepaymentPercent }
+				: {}),
 			pricePerUnit: nextPrice ?? null,
 		};
 
@@ -472,6 +515,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			(existing.inn ?? "") !== (nextSupplier.inn ?? "") ||
 			(existing.paymentType ?? "prepayment") !== nextSupplier.paymentType ||
 			(existing.deferralDays ?? 0) !== nextSupplier.deferralDays ||
+			(existing.prepaymentPercent ?? 100) !== (nextSupplier.prepaymentPercent ?? 100) ||
 			(existing.pricePerUnit ?? null) !== nextSupplier.pricePerUnit;
 
 		if (supplierChanged) {
@@ -504,12 +548,18 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		const existing = currentItem.currentSupplier;
 		const nextPrice = toNumberOrUndefined(supplierForm.pricePerUnit);
 		const nextDeferral = toNumberOrUndefined(supplierForm.deferralDays) ?? 0;
+		const nextPrepaymentPercent = effectivePrepaymentPercent(supplierForm.paymentType, supplierForm.prepaymentPercent);
+		const existingPrepaymentPercent = effectivePrepaymentPercent(
+			existing?.paymentType ?? "prepayment",
+			existing?.prepaymentPercent,
+		);
 
 		return (
 			(existing?.companyName ?? "") !== supplierForm.companyName.trim() ||
 			(existing?.inn ?? "") !== supplierForm.inn.trim() ||
 			(existing?.paymentType ?? "prepayment") !== supplierForm.paymentType ||
 			(existing?.deferralDays ?? 0) !== nextDeferral ||
+			existingPrepaymentPercent !== nextPrepaymentPercent ||
 			(existing?.pricePerUnit ?? null) !== (nextPrice ?? null) ||
 			(currentItem.deliveryCostType ?? "") !== supplierForm.deliveryCostType ||
 			(supplierForm.deliveryCostType === "paid"
@@ -518,10 +568,43 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		);
 	}
 
+	// --- Answers ---
+	function handleEditAnswers() {
+		setAnswersForm(initAnswersForm(currentItem));
+		setEditingSection("answers");
+	}
+
+	function updateAnswerText(questionId: string, text: string) {
+		setAnswersForm((prev) => (prev ? { texts: { ...prev.texts, [questionId]: text } } : prev));
+	}
+
+	function handleSaveAnswers() {
+		if (!answersForm) return;
+		const prev = currentItem.generatedAnswers ?? [];
+		const next: GeneratedAnswer[] = [];
+		for (const p of prev) {
+			const edited = (answersForm.texts[p.questionId] ?? "").trim();
+			if (!edited) continue;
+			if (edited === answerValueText(p)) {
+				next.push(p);
+			} else {
+				next.push({ questionId: p.questionId, freeText: edited });
+			}
+		}
+		mutate({ generatedAnswers: next.length > 0 ? next : undefined });
+	}
+
+	function isAnswersDirty() {
+		if (!answersForm) return false;
+		const prev = currentItem.generatedAnswers ?? [];
+		return prev.some((p) => (answersForm.texts[p.questionId] ?? "").trim() !== answerValueText(p));
+	}
+
 	const isEditingInfo = editingSection === "info" && infoForm !== null;
 	const isEditingLogistics = editingSection === "logistics" && logisticsForm !== null;
 	const isEditingAdditional = editingSection === "additional" && additionalForm !== null;
 	const isEditingSupplier = editingSection === "currentSupplier" && supplierForm !== null;
+	const isEditingAnswers = editingSection === "answers" && answersForm !== null;
 
 	const folder = folders?.find((f) => f.id === item.folderId);
 	const addressesText =
@@ -532,7 +615,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const answers = item.generatedAnswers ?? [];
 
 	return (
-		<div data-testid="tab-panel-details" className="flex flex-col gap-4">
+		<div data-testid="tab-panel-details" className="flex flex-col gap-6">
 			{/* --- Основное --- */}
 			<Section
 				title="Основное"
@@ -681,23 +764,45 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 					<FieldCard label="Оплата">
 						{isEditingLogistics ? (
-							<Select
-								value={logisticsForm.paymentType}
-								onValueChange={(v) => updateLogistics("paymentType", v as PaymentType)}
-							>
-								<SelectTrigger aria-label="Оплата" className="h-8">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PAYMENT_TYPES.map((t) => (
-										<SelectItem key={t} value={t}>
-											{PAYMENT_TYPE_LABELS[t]}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<div className="flex flex-col gap-2">
+								<Select
+									value={logisticsForm.paymentType}
+									onValueChange={(v) => updateLogistics("paymentType", v as PaymentType)}
+								>
+									<SelectTrigger aria-label="Оплата" className="h-8">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{PAYMENT_TYPES.map((t) => (
+											<SelectItem key={t} value={t}>
+												{PAYMENT_TYPE_LABELS[t]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								{logisticsForm.paymentType === "prepayment" && (
+									<div className="flex items-center gap-1.5">
+										<Input
+											aria-label="Размер предоплаты"
+											type="number"
+											inputMode="numeric"
+											min={1}
+											max={100}
+											value={logisticsForm.prepaymentPercent}
+											onChange={(e) => updateLogistics("prepaymentPercent", e.target.value)}
+											className="w-20 tabular-nums"
+											autoComplete="off"
+										/>
+										<span className="text-xs text-muted-foreground">%</span>
+									</div>
+								)}
+							</div>
 						) : (
-							<ValueText value={PAYMENT_TYPE_LABELS[item.paymentType ?? "prepayment"]} />
+							<ValueText
+								value={formatPaymentType(item.paymentType ?? "prepayment", {
+									prepaymentPercent: item.prepaymentPercent,
+								})}
+							/>
 						)}
 					</FieldCard>
 
@@ -975,13 +1080,29 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 										<span className="text-xs text-muted-foreground">дней</span>
 									</div>
 								)}
+								{supplierForm.paymentType === "prepayment" && (
+									<div className="flex items-center gap-1.5">
+										<Input
+											aria-label="Размер предоплаты"
+											type="number"
+											inputMode="numeric"
+											min={1}
+											max={100}
+											value={supplierForm.prepaymentPercent}
+											onChange={(e) => updateSupplier("prepaymentPercent", e.target.value)}
+											className="w-20 tabular-nums"
+											autoComplete="off"
+										/>
+										<span className="text-xs text-muted-foreground">%</span>
+									</div>
+								)}
 							</div>
 						) : (
 							<ValueText
-								value={formatPaymentTypeWithDeferral(
-									item.currentSupplier?.paymentType ?? "prepayment",
-									item.currentSupplier?.deferralDays ?? 0,
-								)}
+								value={formatPaymentType(item.currentSupplier?.paymentType ?? "prepayment", {
+									deferralDays: item.currentSupplier?.deferralDays ?? 0,
+									prepaymentPercent: item.currentSupplier?.prepaymentPercent,
+								})}
 							/>
 						)}
 					</FieldCard>
@@ -1023,14 +1144,32 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 			{/* --- Ответы на уточнения --- */}
 			{answers.length > 0 && (
-				<Section title="Ответы на уточнения">
+				<Section
+					title="Ответы на уточнения"
+					editLabel="Редактировать ответы на уточнения"
+					editing={isEditingAnswers}
+					onEdit={handleEditAnswers}
+					onCancel={handleCancel}
+					onSave={handleSaveAnswers}
+					saveDisabled={!isAnswersDirty() || updateMutation.isPending}
+					isPending={updateMutation.isPending}
+				>
 					<CardGrid>
 						{answers.map((answer) => {
 							const question = QUESTION_BY_ID.get(answer.questionId);
 							const label = question?.label ?? answer.questionId;
 							return (
 								<FieldCard key={answer.questionId} label={label} span="full">
-									<ValueText value={answerValueText(answer)} />
+									{isEditingAnswers ? (
+										<Textarea
+											aria-label={`${label}: ответ`}
+											value={answersForm.texts[answer.questionId] ?? ""}
+											onChange={(e) => updateAnswerText(answer.questionId, e.target.value)}
+											autoComplete="off"
+										/>
+									) : (
+										<ValueText value={answerValueText(answer)} />
+									)}
 								</FieldCard>
 							);
 						})}
