@@ -36,6 +36,11 @@
 			"sourceType": "github",
 			"computedHash": "507f011a70e8b3ae242bdc0bb5b39fd91a1d4049a0f3c281991ccf84973d591c"
 		},
+		"spacing-system": {
+			"source": "owl-listener/designer-skills",
+			"sourceType": "github",
+			"computedHash": "895b326ceec32780b99ec29373efdcd2d16474306864ec98de5d3ea41635836e"
+		},
 		"tdd": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",

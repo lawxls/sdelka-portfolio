@@ -273,12 +273,10 @@ tbody tr.negotiating-stripe:hover {
 		*,
 		*::before,
 		*::after {
-			/* biome-ignore-start lint/complexity/noImportantStyles: required to override library animations for reduced-motion users */
-			animation-duration: 0.01ms !important;
-			animation-iteration-count: 1 !important;
+			/* biome-ignore-start lint/complexity/noImportantStyles: required to override library transitions for reduced-motion users */
 			transition-duration: 0.01ms !important;
 			scroll-behavior: auto !important;
-			/* biome-ignore-end lint/complexity/noImportantStyles: required to override library animations for reduced-motion users */
+			/* biome-ignore-end lint/complexity/noImportantStyles: required to override library transitions for reduced-motion users */
 		}
 	}
 }
