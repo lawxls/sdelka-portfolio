@@ -26,7 +26,7 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof SearchSuppli
 	const defaults: React.ComponentProps<typeof SearchSuppliersTable> = {
 		entries: [
 			makeEntry("1", { companyName: "Альфа", foundedYear: 2001, revenue: 50_000_000 }),
-			makeEntry("2", { companyName: "Бета", foundedYear: 2010, revenue: 800_000_000, companyType: "дилер" }),
+			makeEntry("2", { companyName: "Бета", foundedYear: 2010, revenue: 800_000_000, companyType: "дистрибьютор" }),
 			makeEntry("3", {
 				companyName: "Гамма",
 				foundedYear: 2018,
@@ -52,6 +52,7 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof SearchSuppli
 		onUnarchiveEntry: vi.fn(),
 		onSendRequest: vi.fn(),
 		onSendRequestBatch: vi.fn(),
+		onSendRequestAll: vi.fn(),
 		showArchived: false,
 		onToggleArchived: vi.fn(),
 	};
@@ -67,11 +68,11 @@ describe("SearchSuppliersTable", () => {
 		renderTable();
 		const headers = screen.getAllByRole("columnheader").map((h) => h.textContent ?? "");
 		expect(headers[1]).toBe("КОМПАНИЯ");
-		expect(headers[2]).toBe("САЙТ");
-		expect(headers[3]).toBe("ТИП");
-		expect(headers[4]).toBe("РЕГИОН");
-		expect(headers[5]).toBe("ГОД ОСНОВАНИЯ");
-		expect(headers[6]).toBe("ВЫРУЧКА");
+		expect(headers[2]).toBe("ТИП");
+		expect(headers[3]).toBe("РЕГИОН");
+		expect(headers[4]).toBe("САЙТ");
+		expect(headers[5]).toBe("ВЫРУЧКА");
+		expect(headers[6]).toBe("ГОД ОСНОВАНИЯ");
 	});
 
 	test("sortable columns are Компания, Год основания, Выручка", () => {
@@ -97,7 +98,7 @@ describe("SearchSuppliersTable", () => {
 	test("shows ИНН below company name", () => {
 		renderTable({ entries: [makeEntry("x", { companyName: "ТестКомп", inn: "1234567890" })] });
 		expect(screen.getByText("ТестКомп")).toBeInTheDocument();
-		expect(screen.getByText("ИНН 1234567890")).toBeInTheDocument();
+		expect(screen.getByText(/ИНН:\s*1234567890/)).toBeInTheDocument();
 	});
 
 	test("Сайт cell is a link with target=_blank + rel=noopener noreferrer", () => {
@@ -113,16 +114,16 @@ describe("SearchSuppliersTable", () => {
 		expect(screen.getByText(/млрд/)).toBeInTheDocument();
 	});
 
-	test("new-status row shows «Отправить запрос» button; requested row shows «Запрошен» badge", () => {
+	test("new-status row shows «Связаться» button; requested row shows «в работе»", () => {
 		renderTable({
 			entries: [makeEntry("new", { requestStatus: "new" }), makeEntry("req", { requestStatus: "requested" })],
 		});
 		expect(screen.getByTestId("send-request-new")).toBeInTheDocument();
 		expect(screen.getByTestId("send-request-requested-req")).toBeInTheDocument();
-		expect(screen.getByTestId("send-request-requested-req")).toHaveTextContent("Запрошен");
+		expect(screen.getByTestId("send-request-requested-req")).toHaveTextContent("в работе");
 	});
 
-	test("clicking «Отправить запрос» fires onSendRequest with id", async () => {
+	test("clicking «Связаться» fires onSendRequest with id", async () => {
 		const onSendRequest = vi.fn();
 		const user = userEvent.setup();
 		renderTable({ onSendRequest });
@@ -157,9 +158,9 @@ describe("SearchSuppliersTable", () => {
 		expect(onSelectionChange).toHaveBeenCalledWith("all");
 	});
 
-	test("toolbar shows search input + filter + download + archive toggle", () => {
+	test("toolbar shows search icon + filter + download + archive toggle", () => {
 		renderTable();
-		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск поставщиков" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Скачать таблицу" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
@@ -178,31 +179,31 @@ describe("SearchSuppliersTable", () => {
 		expect(onToggleArchived).toHaveBeenCalled();
 	});
 
-	test("filter popover lists all three Тип toggles and fires onCompanyTypeFilter", async () => {
+	test("filter popover lists all Тип toggles and fires onCompanyTypeFilter", async () => {
 		const onCompanyTypeFilter = vi.fn();
 		const user = userEvent.setup();
 		renderTable({ onCompanyTypeFilter });
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByRole("button", { name: "Производитель" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Дилер" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
-		await user.click(screen.getByRole("button", { name: "Дилер" }));
-		expect(onCompanyTypeFilter).toHaveBeenCalledWith("дилер");
+		await user.click(screen.getByRole("button", { name: "Дистрибьютор" }));
+		expect(onCompanyTypeFilter).toHaveBeenCalledWith("дистрибьютор");
 	});
 
-	test("filter popover lists Статус запроса toggles and fires onRequestStatusFilter", async () => {
+	test("filter popover lists Статус поставщика toggles and fires onRequestStatusFilter", async () => {
 		const onRequestStatusFilter = vi.fn();
 		const user = userEvent.setup();
 		renderTable({ onRequestStatusFilter });
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
-		expect(screen.getByRole("button", { name: "Новый" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Запрошен" })).toBeInTheDocument();
-		await user.click(screen.getByRole("button", { name: "Запрошен" }));
+		const popover = screen.getByRole("dialog");
+		expect(within(popover).getByRole("button", { name: "Связаться" })).toBeInTheDocument();
+		expect(within(popover).getByRole("button", { name: "в работе" })).toBeInTheDocument();
+		await user.click(within(popover).getByRole("button", { name: "в работе" }));
 		expect(onRequestStatusFilter).toHaveBeenCalledWith("requested");
 	});
 
 	test("active type filter shows dot indicator on trigger", () => {
-		renderTable({ activeCompanyTypes: ["дилер"] });
+		renderTable({ activeCompanyTypes: ["производитель"] });
 		expect(screen.getByTestId("filter-indicator")).toBeInTheDocument();
 	});
 
@@ -211,20 +212,20 @@ describe("SearchSuppliersTable", () => {
 		expect(screen.getByTestId("filter-indicator")).toBeInTheDocument();
 	});
 
-	test("selection-active toolbar shows count + Архивировать + Отправить запрос", () => {
+	test("selection-active toolbar shows count + Архивировать + Связаться", () => {
 		renderTable({ selectedIds: new Set(["1", "2"]) });
 		const label = screen.getByText("Выбрано: 2");
 		const toolbar = label.parentElement as HTMLElement;
 		expect(within(toolbar).getByRole("button", { name: "Архивировать" })).toBeInTheDocument();
-		expect(within(toolbar).getByRole("button", { name: /Отправить запрос/ })).toBeInTheDocument();
+		expect(within(toolbar).getByRole("button", { name: /Связаться/ })).toBeInTheDocument();
 	});
 
-	test("selection-active toolbar hides «Отправить запрос» in archive view", () => {
+	test("selection-active toolbar hides «Связаться» in archive view", () => {
 		renderTable({ selectedIds: new Set(["1"]), showArchived: true });
 		const label = screen.getByText("Выбрано: 1");
 		const toolbar = label.parentElement as HTMLElement;
 		expect(within(toolbar).getByRole("button", { name: "Архивировать" })).toBeInTheDocument();
-		expect(within(toolbar).queryByRole("button", { name: /Отправить запрос/ })).not.toBeInTheDocument();
+		expect(within(toolbar).queryByRole("button", { name: /Связаться/ })).not.toBeInTheDocument();
 	});
 
 	test("context menu in archive view shows Убрать из архива", async () => {

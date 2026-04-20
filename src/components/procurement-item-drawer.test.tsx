@@ -166,7 +166,7 @@ describe("ProcurementItemDrawer", () => {
 		renderDrawer();
 		const tasksTab = screen.getByRole("tab", { name: /Задачи/ });
 		await waitFor(() => {
-			expect(tasksTab).toHaveTextContent(/Задачи\s*\(3\)/);
+			expect(tasksTab).toHaveTextContent(/Задачи\s*3/);
 		});
 	});
 
@@ -267,12 +267,12 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getAllByText("Получено КП").length).toBeGreaterThan(0);
 	});
 
-	test("suppliers tab has search input", async () => {
+	test("suppliers tab has search icon", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=suppliers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
-		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск поставщиков" })).toBeInTheDocument();
 	});
 
 	test("suppliers tab search filters rows", async () => {
@@ -282,6 +282,7 @@ describe("ProcurementItemDrawer", () => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
 
+		await user.click(screen.getByRole("button", { name: "Поиск поставщиков" }));
 		// Narrow search — "ТД СОМ" uniquely matches a single supplier
 		await user.type(screen.getByPlaceholderText("Поиск…"), "ТД СОМ");
 
@@ -310,7 +311,7 @@ describe("ProcurementItemDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(12);
 		});
-		expect(screen.getByRole("button", { name: "Фильтр по статусу" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 	});
 
 	test("suppliers tab has checkboxes for multi-select", async () => {
@@ -563,7 +564,7 @@ describe("ProcurementItemDrawer", () => {
 		expect(rows[2]).toHaveTextContent("Запросить образцы");
 	});
 
-	test("tasks tab has search input and only Завершённые/Архив filter buttons", async () => {
+	test("tasks tab has search icon and only Завершённые/Архив filter buttons", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
@@ -571,7 +572,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 
 		const panel = screen.getByTestId("tab-panel-tasks");
-		expect(within(panel).getByPlaceholderText("Поиск…")).toBeInTheDocument();
+		expect(within(panel).getByRole("button", { name: "Поиск задач" })).toBeInTheDocument();
 
 		// Only two filter buttons
 		expect(within(panel).getByRole("button", { name: /Завершённые/ })).toBeInTheDocument();
@@ -700,7 +701,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("tasks tab renders DataTable with header columns Задача / Вопросы / Дедлайн / Создано", async () => {
+	test("tasks tab renders DataTable with header columns Задача / Вопросы / Дедлайн / Дата создания", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
 
 		await waitFor(() => {
@@ -710,10 +711,10 @@ describe("ProcurementItemDrawer", () => {
 		const panel = screen.getByTestId("tab-panel-tasks");
 		const headers = within(panel).getAllByRole("columnheader");
 		const headerLabels = headers.map((h) => h.textContent ?? "");
-		expect(headerLabels).toContain("ЗАДАЧА");
-		expect(headerLabels).toContain("ВОПРОСЫ");
-		expect(headerLabels).toContain("ДЕДЛАЙН");
-		expect(headerLabels).toContain("СОЗДАНО");
+		expect(headerLabels.some((h) => /ЗАДАЧА/.test(h))).toBe(true);
+		expect(headerLabels.some((h) => /ВОПРОСЫ/.test(h))).toBe(true);
+		expect(headerLabels.some((h) => /ДЕДЛАЙН/.test(h))).toBe(true);
+		expect(headerLabels.some((h) => /ДАТА СОЗДАНИЯ/.test(h))).toBe(true);
 	});
 
 	test("tasks tab rows have no status icon", async () => {
@@ -931,8 +932,8 @@ describe("ProcurementItemDrawer", () => {
 			// 1 header + 19 data rows
 			expect(rows.length).toBe(20);
 		});
-		// ИНН labels present
-		expect(screen.getAllByText(/^ИНН\s+\d{10}$/).length).toBeGreaterThan(0);
+		// ИНН labels present (rendered as "ИНН: 1234567890" with non-breaking space)
+		expect(screen.getAllByText(/^ИНН:\s*\d{10}$/).length).toBeGreaterThan(0);
 	});
 
 	test("search tab rows show Сайт link with external attrs", async () => {
@@ -948,17 +949,17 @@ describe("ProcurementItemDrawer", () => {
 		}
 	});
 
-	test("search tab «Отправить запрос» button rendered for new rows, «Запрошен» badge for requested", async () => {
+	test("search tab «Связаться» button rendered for new rows, «в работе» badge for requested", async () => {
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
 		// Pre-seeded: 2 rows as requested. Pre-archived is hidden → 1 requested visible
 		// (i=9 is visible; i=3 is visible; i=7 archived hidden)
-		const requestedBadges = screen.getAllByText("Запрошен");
+		const requestedBadges = screen.getAllByText("в работе");
 		expect(requestedBadges.length).toBe(2);
 		// Rest of new-status rows show the button
-		const sendButtons = screen.getAllByRole("button", { name: /Отправить запрос/ });
+		const sendButtons = screen.getAllByRole("button", { name: /Связаться/ });
 		expect(sendButtons.length).toBeGreaterThan(0);
 	});
 
@@ -977,7 +978,7 @@ describe("ProcurementItemDrawer", () => {
 		});
 	});
 
-	test("search tab selection toolbar shows count + Архивировать + Отправить запрос", async () => {
+	test("search tab selection toolbar shows count + Архивировать + Связаться", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
@@ -988,21 +989,23 @@ describe("ProcurementItemDrawer", () => {
 		const selectedLabel = screen.getByText("Выбрано: 1");
 		const toolbar = selectedLabel.parentElement as HTMLElement;
 		expect(within(toolbar).getByRole("button", { name: "Архивировать" })).toBeInTheDocument();
-		expect(within(toolbar).getByRole("button", { name: /Отправить запрос/ })).toBeInTheDocument();
+		expect(within(toolbar).getByRole("button", { name: /Связаться/ })).toBeInTheDocument();
 	});
 
-	test("search tab filter popover shows Тип and Статус запроса toggles", async () => {
+	test("search tab filter popover shows Тип and Статус поставщика toggles", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
-		expect(screen.getByRole("button", { name: "Производитель" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Дилер" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Новый" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Запрошен" })).toBeInTheDocument();
+		const dialogs = screen.getAllByRole("dialog");
+		const popover = dialogs[dialogs.length - 1];
+		expect(within(popover).getByRole("button", { name: "Производитель" })).toBeInTheDocument();
+		expect(within(popover).getByRole("button", { name: "Дистрибьютор" })).toBeInTheDocument();
+		expect(within(popover).queryByRole("button", { name: "Дилер" })).not.toBeInTheDocument();
+		expect(within(popover).getByRole("button", { name: "Связаться" })).toBeInTheDocument();
+		expect(within(popover).getByRole("button", { name: "в работе" })).toBeInTheDocument();
 	});
 
 	test("search tab has sortable columns: Компания, Год основания, Выручка", async () => {
@@ -1015,18 +1018,18 @@ describe("ProcurementItemDrawer", () => {
 		expect(screen.getByRole("button", { name: /Выручка/i })).toBeInTheDocument();
 	});
 
-	test("send-request on a new-status row promotes to Поставщики, flips to Запрошен, toasts", async () => {
+	test("send-request on a new-status row promotes to Поставщики, flips to в работе, toasts", async () => {
 		const { toast } = await import("sonner");
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(20);
 		});
-		const requestedBefore = screen.getAllByText("Запрошен").length;
-		const firstSendBtn = screen.getAllByRole("button", { name: /Отправить запрос/ })[0];
+		const requestedBefore = screen.getAllByText("в работе").length;
+		const firstSendBtn = screen.getAllByRole("button", { name: /^Связаться$/ })[0];
 		await user.click(firstSendBtn);
 		await waitFor(() => {
-			expect(screen.getAllByText("Запрошен").length).toBe(requestedBefore + 1);
+			expect(screen.getAllByText("в работе").length).toBe(requestedBefore + 1);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Запрос отправлен");
 
@@ -1050,7 +1053,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(checkboxes[3]);
 		const selectedLabel = screen.getByText("Выбрано: 3");
 		const toolbar = selectedLabel.parentElement as HTMLElement;
-		await user.click(within(toolbar).getByRole("button", { name: /Отправить запрос/ }));
+		await user.click(within(toolbar).getByRole("button", { name: /Связаться/ }));
 		await waitFor(() => {
 			expect(toast.success).toHaveBeenCalled();
 		});
@@ -1070,7 +1073,7 @@ describe("ProcurementItemDrawer", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать все" }));
 		const selectedLabel = screen.getByText(/^Выбрано:/);
 		const toolbar = selectedLabel.parentElement as HTMLElement;
-		await user.click(within(toolbar).getByRole("button", { name: /Отправить запрос/ }));
+		await user.click(within(toolbar).getByRole("button", { name: /Связаться/ }));
 
 		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
 		await waitFor(() => {

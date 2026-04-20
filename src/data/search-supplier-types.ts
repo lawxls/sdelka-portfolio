@@ -1,10 +1,9 @@
-export type SearchSupplierCompanyType = "производитель" | "дилер" | "дистрибьютор";
+export type SearchSupplierCompanyType = "производитель" | "дистрибьютор";
 
-export const SEARCH_SUPPLIER_COMPANY_TYPES: SearchSupplierCompanyType[] = ["производитель", "дилер", "дистрибьютор"];
+export const SEARCH_SUPPLIER_COMPANY_TYPES: SearchSupplierCompanyType[] = ["производитель", "дистрибьютор"];
 
 export const SEARCH_SUPPLIER_COMPANY_TYPE_LABELS: Record<SearchSupplierCompanyType, string> = {
 	производитель: "Производитель",
-	дилер: "Дилер",
 	дистрибьютор: "Дистрибьютор",
 };
 

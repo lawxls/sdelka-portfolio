@@ -88,7 +88,7 @@ export function DataTable<T>({
 
 	if (isMobile) {
 		return (
-			<div className="flex flex-col gap-3" data-testid="data-table">
+			<div className="flex h-full flex-col gap-3" data-testid="data-table">
 				{toolbar}
 				{isLoading ? (
 					<div className="flex flex-col gap-3 px-3">
@@ -98,7 +98,9 @@ export function DataTable<T>({
 						))}
 					</div>
 				) : rows.length === 0 && (!pinnedRows || pinnedRows.length === 0) ? (
-					<p className="py-8 text-center text-sm text-muted-foreground">{emptyText}</p>
+					<div className="mx-3 flex flex-1 items-center justify-center rounded-md bg-muted/20 text-sm text-muted-foreground">
+						{emptyText}
+					</div>
 				) : (
 					<div className="flex flex-col gap-3 px-3">
 						{pinnedRows?.map((row) => {
@@ -120,94 +122,94 @@ export function DataTable<T>({
 		);
 	}
 
+	const isEmpty = !isLoading && rows.length === 0 && (!pinnedRows || pinnedRows.length === 0);
+
 	return (
-		<div className="flex flex-col gap-3" data-testid="data-table">
+		<div className="flex h-full flex-col gap-3" data-testid="data-table">
 			{toolbar}
-			<Table>
-				<TableHeader>
-					<TableRow className="border-b-0 bg-transparent hover:bg-transparent">
-						{selection && (
-							<TableHead className="w-10">
-								<Checkbox
-									checked={allSelected}
-									onCheckedChange={() => selection.onChange("all")}
-									aria-label="Выбрать все"
-								/>
-							</TableHead>
-						)}
-						{columns.map((col) => (
-							<TableHead key={col.id} className={cn(col.align === "right" && "text-right", col.headerClassName)}>
-								{col.sortable && onSort ? (
-									<button
-										type="button"
-										className="inline-flex items-center font-medium hover:text-foreground"
-										onClick={() => onSort(col.sortField ?? col.id)}
-									>
-										{col.header}
-										<SortIcon sort={sort ?? null} field={col.sortField ?? col.id} />
-									</button>
-								) : (
-									col.header
-								)}
-							</TableHead>
-						))}
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{isLoading ? (
-						Array.from({ length: loadingRows }, (_, i) => (
-							// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows
-							<TableRow key={i}>
-								{selection && (
-									<TableCell>
-										<Skeleton className="size-4" />
-									</TableCell>
-								)}
-								{columns.map((col) => (
-									<TableCell key={col.id}>
-										<Skeleton className="h-4 w-20" />
-									</TableCell>
-								))}
-							</TableRow>
-						))
-					) : rows.length === 0 && (!pinnedRows || pinnedRows.length === 0) ? (
-						<TableRow>
-							<TableCell
-								colSpan={columns.length + (selection ? 1 : 0)}
-								className="py-8 text-center text-sm text-muted-foreground"
-							>
-								{emptyText}
-							</TableCell>
+			<div className="flex flex-1 flex-col">
+				<Table>
+					<TableHeader>
+						<TableRow className="border-t bg-transparent hover:bg-transparent">
+							{selection && (
+								<TableHead className="w-10">
+									<Checkbox
+										checked={allSelected}
+										onCheckedChange={() => selection.onChange("all")}
+										aria-label="Выбрать все"
+									/>
+								</TableHead>
+							)}
+							{columns.map((col) => (
+								<TableHead key={col.id} className={cn(col.align === "right" && "text-right", col.headerClassName)}>
+									{col.sortable && onSort ? (
+										<button
+											type="button"
+											className="inline-flex items-center font-medium hover:text-foreground"
+											onClick={() => onSort(col.sortField ?? col.id)}
+										>
+											{col.header}
+											<SortIcon sort={sort ?? null} field={col.sortField ?? col.id} />
+										</button>
+									) : (
+										col.header
+									)}
+								</TableHead>
+							))}
 						</TableRow>
-					) : (
-						<>
-							{pinnedRows?.map((row) => (
-								<DataTableRow
-									key={`pinned-${getRowId(row)}`}
-									row={row}
-									rowId={getRowId(row)}
-									columns={columns}
-									isPinned
-									selection={selection}
-									className="bg-accent/60 hover:bg-accent/80"
-								/>
-							))}
-							{rows.map((row) => (
-								<DataTableRow
-									key={getRowId(row)}
-									row={row}
-									rowId={getRowId(row)}
-									columns={columns}
-									isPinned={false}
-									selection={selection}
-									rowActions={rowActions}
-									onRowClick={onRowClick}
-								/>
-							))}
-						</>
-					)}
-				</TableBody>
-			</Table>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							Array.from({ length: loadingRows }, (_, i) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows
+								<TableRow key={i}>
+									{selection && (
+										<TableCell>
+											<Skeleton className="size-4" />
+										</TableCell>
+									)}
+									{columns.map((col) => (
+										<TableCell key={col.id}>
+											<Skeleton className="h-4 w-20" />
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : isEmpty ? null : (
+							<>
+								{pinnedRows?.map((row) => (
+									<DataTableRow
+										key={`pinned-${getRowId(row)}`}
+										row={row}
+										rowId={getRowId(row)}
+										columns={columns}
+										isPinned
+										selection={selection}
+										className="bg-accent/60 hover:bg-accent/80"
+									/>
+								))}
+								{rows.map((row) => (
+									<DataTableRow
+										key={getRowId(row)}
+										row={row}
+										rowId={getRowId(row)}
+										columns={columns}
+										isPinned={false}
+										selection={selection}
+										rowActions={rowActions}
+										onRowClick={onRowClick}
+									/>
+								))}
+							</>
+						)}
+					</TableBody>
+				</Table>
+				{isEmpty && (
+					<div className="flex flex-1 items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+						{emptyText}
+					</div>
+				)}
+			</div>
 			{sentinel}
 		</div>
 	);

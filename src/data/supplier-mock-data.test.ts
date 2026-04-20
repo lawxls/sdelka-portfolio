@@ -45,10 +45,10 @@ describe("supplier mock store", () => {
 		}
 	});
 
-	it("spreads suppliers across all 5 statuses", async () => {
+	it("spreads suppliers across all statuses", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
 		const statuses = new Set(suppliers.map((s) => s.status));
-		expect(statuses.size).toBe(5);
+		expect(statuses.size).toBe(SUPPLIER_STATUSES.length);
 		for (const status of SUPPLIER_STATUSES) {
 			expect(statuses.has(status)).toBe(true);
 		}

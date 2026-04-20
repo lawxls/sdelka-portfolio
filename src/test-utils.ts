@@ -126,7 +126,7 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 		id,
 		itemId: "item-1",
 		companyName: `Поставщик ${id}`,
-		status: "ждем_ответа",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "info@example.ru",
 		website: "https://example.ru",

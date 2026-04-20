@@ -1,13 +1,14 @@
-import { Archive, Ban, Check, Search, Users } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Archive, Ban, Check, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
+import { ExpandingSearch } from "@/components/expanding-search";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
-import { SuppliersTable } from "@/components/suppliers-table";
+import { type DeliveryFilter, matchesDeliveryFilter, SuppliersTable } from "@/components/suppliers-table";
 import { TaskDrawer } from "@/components/task-drawer";
 import { LoadMoreSentinel } from "@/components/task-table";
 import {
@@ -21,7 +22,6 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
@@ -32,7 +32,7 @@ import type {
 } from "@/data/search-supplier-types";
 import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
-import type { ProcurementItem } from "@/data/types";
+import type { PaymentType, ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSearchSuppliers,
@@ -49,7 +49,7 @@ import {
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatDayMonth, formatRussianPlural, isOverdue } from "@/lib/format";
+import { formatDayMonthShort, formatRussianPlural, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type ItemDrawerTab = "search" | "suppliers" | "details" | "tasks";
@@ -328,6 +328,20 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 		);
 	}
 
+	function handleSendRequestAll() {
+		const ids = entries.filter((e) => e.requestStatus === "new").map((e) => e.id);
+		if (ids.length === 0) return;
+		promoteMutation.mutate(
+			{ itemId, ids },
+			{
+				onSuccess: (promoted) => {
+					if (promoted.length === 0) return;
+					toast.success(promoted.length === 1 ? "Запрос отправлен" : `Запрос отправлен ${promoted.length} поставщикам`);
+				},
+			},
+		);
+	}
+
 	function handleToggleArchived() {
 		setShowArchived((v) => !v);
 		setSelectedIds(new Set());
@@ -354,6 +368,7 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 				onUnarchiveEntry={handleUnarchiveEntry}
 				onSendRequest={handleSendRequest}
 				onSendRequestBatch={handleSendRequestBatch}
+				onSendRequestAll={handleSendRequestAll}
 				showArchived={showArchived}
 				onToggleArchived={handleToggleArchived}
 			/>
@@ -373,6 +388,8 @@ function SuppliersTabPanel({
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>(null);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
+	const [activePaymentTypes, setActivePaymentTypes] = useState<PaymentType[]>([]);
+	const [activeDeliveryFilters, setActiveDeliveryFilters] = useState<DeliveryFilter[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
 
@@ -388,7 +405,14 @@ function SuppliersTabPanel({
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
-	const suppliers = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
+	const suppliers = useMemo(() => {
+		const raw = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
+		return raw.filter((s) => {
+			if (activePaymentTypes.length > 0 && !activePaymentTypes.includes(s.paymentType)) return false;
+			if (!matchesDeliveryFilter(s.deliveryCost, activeDeliveryFilters)) return false;
+			return true;
+		});
+	}, [query.data, activePaymentTypes, activeDeliveryFilters]);
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -400,6 +424,14 @@ function SuppliersTabPanel({
 
 	function handleStatusFilter(status: SupplierStatus) {
 		setActiveStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
+	}
+
+	function handlePaymentTypeFilter(t: PaymentType) {
+		setActivePaymentTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+	}
+
+	function handleDeliveryFilter(t: DeliveryFilter) {
+		setActiveDeliveryFilters((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 	}
 
 	function handleSelectionChange(idOrAll: string) {
@@ -442,6 +474,10 @@ function SuppliersTabPanel({
 				onSort={handleSort}
 				activeStatuses={activeStatuses}
 				onStatusFilter={handleStatusFilter}
+				activePaymentTypes={activePaymentTypes}
+				onPaymentTypeFilter={handlePaymentTypeFilter}
+				activeDeliveryFilters={activeDeliveryFilters}
+				onDeliveryFilter={handleDeliveryFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
 				onArchive={() => handleArchive()}
@@ -470,11 +506,13 @@ const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
 	{
 		id: "name",
 		header: "ЗАДАЧА",
+		sortable: true,
 		cell: (t) => <span className="font-medium">{t.name}</span>,
 	},
 	{
 		id: "questionCount",
 		header: "ВОПРОСЫ",
+		sortable: true,
 		align: "right",
 		cell: (t) =>
 			t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "\u2014",
@@ -482,33 +520,46 @@ const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
 	{
 		id: "deadlineAt",
 		header: "ДЕДЛАЙН",
+		sortable: true,
 		align: "right",
 		cell: (t) => (
 			<time
 				dateTime={t.deadlineAt}
 				className={cn("tabular-nums", isOverdue(t.deadlineAt) && "font-medium text-destructive")}
 			>
-				{formatDayMonth(t.deadlineAt)}
+				{formatDayMonthShort(t.deadlineAt)}
 			</time>
 		),
 	},
 	{
 		id: "createdAt",
-		header: "СОЗДАНО",
+		header: "ДАТА СОЗДАНИЯ",
+		sortable: true,
 		align: "right",
 		cell: (t) => (
 			<time dateTime={t.createdAt} className="tabular-nums">
-				{formatDayMonth(t.createdAt)}
+				{formatDayMonthShort(t.createdAt)}
 			</time>
 		),
 	},
 ];
 
+type TaskSortField = "name" | "questionCount" | "deadlineAt" | "createdAt";
+
+function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc"): number {
+	const sign = dir === "asc" ? 1 : -1;
+	if (field === "name") return a.name.localeCompare(b.name, "ru") * sign;
+	if (field === "questionCount") return (a.questionCount - b.questionCount) * sign;
+	const av = new Date(field === "deadlineAt" ? a.deadlineAt : a.createdAt).getTime();
+	const bv = new Date(field === "deadlineAt" ? b.deadlineAt : b.createdAt).getTime();
+	return (av - bv) * sign;
+}
+
 function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [search, setSearch] = useState("");
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-	const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+	const [sort, setSort] = useState<DataTableSort | null>({ field: "createdAt", direction: "desc" });
 	const isMobile = useIsMobile();
 	const updateStatus = useUpdateTaskStatus();
 
@@ -534,20 +585,23 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 		setSelectedIds(new Set());
 	}
 
-	function handleSearchInput(e: React.ChangeEvent<HTMLInputElement>) {
-		const value = e.target.value;
-		if (debounceRef.current) clearTimeout(debounceRef.current);
-		debounceRef.current = setTimeout(() => setSearch(value), 250);
+	function handleSort(field: string) {
+		setSort((prev) => {
+			if (prev?.field !== field) return { field, direction: "asc" };
+			if (prev.direction === "asc") return { field, direction: "desc" };
+			return null;
+		});
 	}
 
 	const activeFilterTasks = activeFilter ? taskColumns[activeFilter].tasks : null;
 
 	const tasks = useMemo(() => {
-		if (activeFilterTasks) return activeFilterTasks;
-		return [...taskColumns.assigned.tasks, ...taskColumns.in_progress.tasks].sort(
-			(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-		);
-	}, [activeFilterTasks, taskColumns.assigned.tasks, taskColumns.in_progress.tasks]);
+		const base = activeFilterTasks ?? [...taskColumns.assigned.tasks, ...taskColumns.in_progress.tasks];
+		if (!sort) {
+			return [...base].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+		}
+		return [...base].sort((a, b) => compareTasks(a, b, sort.field as TaskSortField, sort.direction));
+	}, [activeFilterTasks, taskColumns.assigned.tasks, taskColumns.in_progress.tasks, sort]);
 
 	const isLoading = taskColumns.assigned.isLoading;
 
@@ -587,7 +641,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 
 	const toolbar =
 		selectedIds.size > 0 ? (
-			<div className="flex items-center gap-3 rounded-md bg-muted px-3 py-2">
+			<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
 				<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
 				<Button type="button" variant="outline" size="sm" onClick={handleArchiveSelected} aria-label="Архивировать">
 					<Archive className="mr-1 size-4" aria-hidden="true" />
@@ -595,43 +649,36 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 				</Button>
 			</div>
 		) : (
-			<div className="flex flex-wrap items-center gap-2">
+			<div className="flex items-center gap-2 px-3">
 				<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-					Всего: {tasks.length}
+					{formatRussianPlural(tasks.length, ["задача", "задачи", "задач"])}
 				</span>
-				<div className="relative max-w-56">
-					<Search
-						className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-						aria-hidden="true"
-					/>
-					<Input
-						type="search"
-						placeholder="Поиск…"
-						onChange={handleSearchInput}
-						className="h-8 pl-8 text-sm"
-						spellCheck={false}
-						autoComplete="off"
-					/>
-				</div>
-				<div className="ml-auto flex flex-wrap items-center gap-2">
+				<div className="ml-auto flex items-center gap-1">
+					<ExpandingSearch value={search} onChange={setSearch} ariaLabel="Поиск задач" debounceMs={250} />
 					{FILTER_BUTTONS.map(({ key, label }) => {
 						const Icon = STATUS_ICONS[key];
 						const count = taskColumns[key].count;
+						const active = activeFilter === key;
 						return (
-							<button
-								key={key}
-								type="button"
-								className={cn(
-									"inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-									"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-									activeFilter === key ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
-								)}
-								onClick={() => handleFilterToggle(key)}
-							>
-								<Icon className="size-3.5" aria-hidden="true" />
-								{label}
-								{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
-							</button>
+							<Tooltip key={key}>
+								<TooltipTrigger asChild>
+									<button
+										type="button"
+										aria-label={label}
+										aria-pressed={active}
+										className={cn(
+											"inline-flex items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2 py-1 text-sm transition-colors",
+											"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+											active && "bg-muted",
+										)}
+										onClick={() => handleFilterToggle(key)}
+									>
+										<Icon className="size-4" aria-hidden="true" />
+										{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
+									</button>
+								</TooltipTrigger>
+								<TooltipContent>{label}</TooltipContent>
+							</Tooltip>
 						);
 					})}
 				</div>
@@ -658,13 +705,13 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 					<div>
 						<div className="text-xs text-muted-foreground">Дедлайн</div>
 						<time dateTime={t.deadlineAt} className={cn("tabular-nums", overdue && "font-medium text-destructive")}>
-							{formatDayMonth(t.deadlineAt)}
+							{formatDayMonthShort(t.deadlineAt)}
 						</time>
 					</div>
 					<div>
 						<div className="text-xs text-muted-foreground">Создано</div>
 						<time dateTime={t.createdAt} className="tabular-nums">
-							{formatDayMonth(t.createdAt)}
+							{formatDayMonthShort(t.createdAt)}
 						</time>
 					</div>
 				</div>
@@ -687,7 +734,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 	);
 
 	return (
-		<div data-testid="tab-panel-tasks">
+		<div data-testid="tab-panel-tasks" className="h-full">
 			<DataTable<Task>
 				columns={TASK_TABLE_COLUMNS}
 				rows={tasks}
@@ -699,6 +746,8 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 					onChange: handleSelectionChange,
 					getRowLabel: (id) => `Выбрать ${tasks.find((t) => t.id === id)?.name ?? id}`,
 				}}
+				sort={sort}
+				onSort={handleSort}
 				rowActions={(t) => [
 					{
 						label: "Архивировать",
@@ -764,6 +813,8 @@ function ProcurementItemDrawerContent({
 	const taskColumns = useTaskColumns({ item: itemId });
 	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
 
+	const { data: searchSuppliersData } = useSearchSuppliers(itemId);
+	const searchTabCount = searchSuppliersData?.length ?? 0;
 	const { data: allSuppliersData } = useSuppliers(itemId);
 	const headerMetrics = useMemo(() => {
 		const list = allSuppliersData?.suppliers;
@@ -777,73 +828,93 @@ function ProcurementItemDrawerContent({
 		return { total: list.length, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
 
+	const tabCounts: Record<ItemDrawerTab, number> = {
+		tasks: activeTaskCount,
+		search: searchTabCount,
+		suppliers: headerMetrics.total,
+		details: 0,
+	};
+
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
-				<SheetTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
-					<span>{itemName ?? "Позиция"}</span>
-					{itemStatus && (
-						<span
-							className={`inline-flex items-center gap-1.5 text-sm font-normal ${STATUS_CONFIG[itemStatus].className}`}
-						>
-							<ProcurementStatusIcon
-								status={itemStatus}
-								searchCompleted={item?.searchCompleted}
-								iconClassName="size-3.5"
-							/>
-							{STATUS_CONFIG[itemStatus].label}
-						</span>
-					)}
-					<HeaderMetric
-						icon={Users}
-						count={headerMetrics.total}
-						label="Всего поставщиков"
-						colorClass="text-muted-foreground"
-						testId="header-metric-total"
-					/>
-					<HeaderMetric
-						icon={Check}
-						count={headerMetrics.quotesReceived}
-						label="Получено КП"
-						colorClass="text-green-600 dark:text-green-400"
-						testId="header-metric-quotes"
-					/>
-					<HeaderMetric
-						icon={Ban}
-						count={headerMetrics.refusals}
-						label="Отказ"
-						colorClass="text-destructive"
-						testId="header-metric-refusals"
-					/>
-				</SheetTitle>
+				<SheetTitle>{itemName ?? "Позиция"}</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
+				{(itemStatus || headerMetrics.total > 0) && (
+					<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+						{itemStatus && (
+							<span className={`inline-flex items-center gap-1.5 font-normal ${STATUS_CONFIG[itemStatus].className}`}>
+								<ProcurementStatusIcon
+									status={itemStatus}
+									searchCompleted={item?.searchCompleted}
+									iconClassName="size-3.5"
+								/>
+								{STATUS_CONFIG[itemStatus].label}
+							</span>
+						)}
+						{itemStatus && (
+							<span className="select-none text-muted-foreground/50" aria-hidden="true">
+								•
+							</span>
+						)}
+						<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+							<HeaderMetric
+								icon={Users}
+								count={headerMetrics.total}
+								label="Всего поставщиков"
+								colorClass="text-muted-foreground"
+								testId="header-metric-total"
+							/>
+							<HeaderMetric
+								icon={Check}
+								count={headerMetrics.quotesReceived}
+								label="Получено КП"
+								colorClass="text-green-600 dark:text-green-400"
+								testId="header-metric-quotes"
+							/>
+							<HeaderMetric
+								icon={Ban}
+								count={headerMetrics.refusals}
+								label="Отказ"
+								colorClass="text-destructive"
+								testId="header-metric-refusals"
+							/>
+						</div>
+					</div>
+				)}
 			</SheetHeader>
 
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
-				{TABS.map((tab) => (
-					<button
-						key={tab.key}
-						type="button"
-						role="tab"
-						aria-selected={activeTab === tab.key}
-						className={`shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors ${
-							activeTab === tab.key
-								? "border-b-2 border-primary text-foreground"
-								: "text-muted-foreground hover:text-foreground"
-						}`}
-						onClick={() => onTabChange(tab.key)}
-					>
-						{tab.label}
-						{tab.key === "tasks" && activeTaskCount > 0 && (
-							<span className="ml-1.5 tabular-nums text-xs text-muted-foreground">({activeTaskCount})</span>
-						)}
-					</button>
-				))}
+				{TABS.map((tab) => {
+					const count = tabCounts[tab.key];
+					return (
+						<button
+							key={tab.key}
+							type="button"
+							role="tab"
+							aria-selected={activeTab === tab.key}
+							aria-label={tab.label}
+							className={cn(
+								"shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
+								"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+								activeTab === tab.key
+									? "border-b-2 border-primary text-foreground"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+							onClick={() => onTabChange(tab.key)}
+						>
+							{tab.label}
+							{count > 0 && (
+								<span aria-hidden="true" className="ml-1.5 tabular-nums text-xs text-muted-foreground">
+									{count}
+								</span>
+							)}
+						</button>
+					);
+				})}
 			</div>
 
-			<div
-				className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "suppliers" || activeTab === "search" ? "pt-3" : "p-4"}`}
-			>
+			<div className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${activeTab === "details" ? "p-4" : "pt-3"}`}>
 				{activeTab === "search" && <SearchTabPanel itemId={itemId} />}
 				{activeTab === "suppliers" && (
 					<SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />

@@ -283,7 +283,7 @@ describe("SupplierDetailDrawer", () => {
 			const user = userEvent.setup();
 			renderDrawer({
 				supplier: makeSupplier("s1", {
-					status: "ждем_ответа",
+					status: "письмо_отправлено",
 					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
 				}),
 			});
@@ -368,8 +368,8 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByRole("button", { name: "Выбрать поставщика" })).toBeInTheDocument();
 		});
 
-		test("hides select supplier icon for ждем_ответа status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }), onSelectSupplier: vi.fn() });
+		test("hides select supplier icon for письмо_отправлено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_отправлено" }), onSelectSupplier: vi.fn() });
 			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
 		});
 
@@ -388,8 +388,8 @@ describe("SupplierDetailDrawer", () => {
 	});
 
 	describe("ChatComposer visibility", () => {
-		test("shows composer for ждем_ответа status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "ждем_ответа" }) });
+		test("shows composer for письмо_отправлено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_отправлено" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 			expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
 		});
@@ -402,11 +402,6 @@ describe("SupplierDetailDrawer", () => {
 		test("shows composer for получено_кп status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "получено_кп" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
-		});
-
-		test("hides composer for письмо_не_отправлено status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_не_отправлено" }) });
-			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 		});
 
 		test("hides composer for отказ status", () => {

@@ -1,10 +1,9 @@
-import { Ban, Check, Clock, Mail, MessageCircle } from "lucide-react";
+import { Ban, Check, Mail, MessageCircle } from "lucide-react";
 import type { SupplierStatus } from "@/data/supplier-types";
 import { SUPPLIER_STATUS_CONFIG } from "@/data/supplier-types";
 
 const STATUS_ICONS: Record<SupplierStatus, React.ComponentType<{ className?: string }>> = {
-	письмо_не_отправлено: Mail,
-	ждем_ответа: Clock,
+	письмо_отправлено: Mail,
 	переговоры: MessageCircle,
 	получено_кп: Check,
 	отказ: Ban,

@@ -280,12 +280,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 7. ждем_ответа
+	// 7. письмо_отправлено
 	{
 		id: "supplier-item-6-7",
 		itemId: "item-6",
 		companyName: "Coir-Eco",
-		status: "ждем_ответа",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "info@coir-eco.ru",
 		website: "https://coir-eco.ru",
@@ -310,12 +310,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 8. ждем_ответа
+	// 8. письмо_отправлено
 	{
 		id: "supplier-item-6-8",
 		itemId: "item-6",
 		companyName: "ООО «Балтика-Койра»",
-		status: "ждем_ответа",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "order@baltica-koira.ru",
 		website: "https://baltica-koira.ru",
@@ -340,12 +340,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 9. ждем_ответа
+	// 9. письмо_отправлено
 	{
 		id: "supplier-item-6-9",
 		itemId: "item-6",
 		companyName: "КокосПремиум",
-		status: "ждем_ответа",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "sales@kokospremium.ru",
 		website: "https://kokospremium.ru",
@@ -406,12 +406,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 11. письмо_не_отправлено
+	// 11. письмо_отправлено
 	{
 		id: "supplier-item-6-11",
 		itemId: "item-6",
 		companyName: "ООО «Тропик-Импорт»",
-		status: "письмо_не_отправлено",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "info@tropik-import.ru",
 		website: "https://tropik-import.ru",
@@ -429,12 +429,12 @@ export const SUPPLIERS: Supplier[] = [
 		chatHistory: [],
 		positionOffers: [],
 	},
-	// 12. письмо_не_отправлено
+	// 12. письмо_отправлено
 	{
 		id: "supplier-item-6-12",
 		itemId: "item-6",
 		companyName: "ИндСнаб-Койра",
-		status: "письмо_не_отправлено",
+		status: "письмо_отправлено",
 		archived: false,
 		email: "mail@indsnab-koira.ru",
 		website: "https://indsnab-koira.ru",
