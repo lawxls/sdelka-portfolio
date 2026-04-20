@@ -253,19 +253,19 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		expect(options.length).toBeGreaterThanOrEqual(10);
 	});
 
-	test("sole-company mode auto-selects the company and pre-fills addresses", async () => {
+	test("sole-company mode auto-selects the company and pre-fills main address", async () => {
 		renderDrawer();
-		await screen.findByText("Выбрано: 2 из 2");
+		await screen.findByText("г. Москва, ул. Ленина, д. 15");
 	});
 
-	test("multi-company mode requires manual pick and then pre-selects addresses", async () => {
+	test("multi-company mode requires manual pick and then pre-selects main address", async () => {
 		_setCompanies(MULTI_COMPANY);
 		renderDrawer();
 		const user = userEvent.setup();
 
 		expect(screen.getByText("Сначала выберите компанию")).toBeInTheDocument();
 		await pickCompany(user, "Тестовая компания");
-		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выбрано: 2 из 2");
+		await screen.findByText("г. Москва, ул. Ленина, д. 15");
 	});
 
 	test("comment textarea and file dropzone are rendered inside Позиция", () => {
@@ -646,7 +646,7 @@ describe("AddPositionsDrawer — submit", () => {
 			paymentType: "prepayment",
 			paymentMethod: "bank_transfer",
 		});
-		expect(payload.deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15", "г. Москва, ул. Складская, д. 1"]);
+		expect(payload.deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15"]);
 	});
 
 	test("submit invokes onSubmit and closes drawer without firing its own toast", async () => {

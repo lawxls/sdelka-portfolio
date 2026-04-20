@@ -273,7 +273,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Добавить позицию/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
 	test("shows skeleton rows during initial load", () => {
@@ -355,7 +355,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
@@ -366,7 +366,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		expect(screen.getByText("Добавить позицию", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
@@ -377,7 +377,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 		await user.type(screen.getByLabelText("Название"), "Should not appear");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
@@ -480,7 +480,7 @@ describe("ProcurementPage", () => {
 	});
 
 	async function completeWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
 		await user.type(screen.getByLabelText("Название"), name);
@@ -534,7 +534,7 @@ describe("ProcurementPage", () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Добавить позицию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
 		await waitFor(() => expect(screen.getByText("Import 1")).toBeInTheDocument());

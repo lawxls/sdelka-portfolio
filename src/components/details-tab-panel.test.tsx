@@ -123,12 +123,9 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
 
-		// item-1 has paymentType: "prepayment", unloading: "supplier"
-		expect(screen.getByRole("button", { name: "Предоплата" })).toHaveAttribute("aria-pressed", "true");
-		expect(screen.getByRole("button", { name: "Силами поставщика" })).toHaveAttribute("aria-pressed", "true");
-		// Payment control exposes all three variants
-		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Предоплата 30/70" })).toBeInTheDocument();
+		// item-1 has paymentType: "prepayment", unloading: "supplier" — both as Select triggers
+		expect(screen.getByRole("combobox", { name: "Разгрузка" })).toHaveTextContent("Силами поставщика");
+		expect(screen.getByRole("combobox", { name: "Оплата" })).toHaveTextContent("Предоплата");
 	});
 
 	test("editing Дополнительно exposes the three flag checkboxes + Комментарий", async () => {
@@ -225,7 +222,7 @@ describe("DetailsTabPanel", () => {
 		expect(folderTrigger).toHaveTextContent("Упаковка");
 	});
 
-	test("Логистика edit exposes AddressMultiSelect driven by company addresses", async () => {
+	test("Логистика edit exposes address Select driven by company addresses", async () => {
 		const user = userEvent.setup();
 		renderPanel();
 
@@ -235,13 +232,13 @@ describe("DetailsTabPanel", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать логистику и финансы" }));
 
-		// AddressMultiSelect trigger present; item-1's stored address does not exactly match any
+		// Address Select trigger present; item-1's stored address does not exactly match any
 		// company-1 address, so nothing is pre-selected — placeholder text surfaces
-		expect(screen.getByRole("button", { name: "Адреса доставки" })).toHaveTextContent("Выберите адреса");
+		expect(screen.getByRole("combobox", { name: "Адрес доставки" })).toHaveTextContent("Выберите адрес");
 
-		await user.click(screen.getByRole("button", { name: "Адреса доставки" }));
-		// Company-1 addresses show up
-		expect(screen.getByText(/Головной офис — г\. Москва, Ленинградское шоссе/)).toBeInTheDocument();
+		await user.click(screen.getByRole("combobox", { name: "Адрес доставки" }));
+		// Company-1 addresses show up in the listbox
+		expect(screen.getByText(/г\. Москва, Ленинградское шоссе/)).toBeInTheDocument();
 	});
 
 	test("Дополнительно edit exposes file drop-zone and can remove an attached file", async () => {
@@ -309,8 +306,9 @@ describe("DetailsTabPanel", () => {
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 
 		const supplierSection = screen.getByText("Ваш поставщик").closest("section") as HTMLElement;
-		const deferredBtn = within(supplierSection).getByRole("button", { name: "Отсрочка" });
-		await user.click(deferredBtn);
+		const paymentSelect = within(supplierSection).getByRole("combobox", { name: "Оплата" });
+		await user.click(paymentSelect);
+		await user.click(screen.getByRole("option", { name: "Отсрочка" }));
 
 		expect(screen.getByLabelText("Дней отсрочки")).toBeInTheDocument();
 	});

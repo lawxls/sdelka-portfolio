@@ -57,15 +57,15 @@ interface SortableColumn {
 const TCO_TOOLTIP = "ТСО (Total Cost of Ownership)\u00A0— совокупная стоимость владения: цена и стоимость доставки";
 
 const INPUT_COLUMNS: SortableColumn[] = [
-	{ label: "ОБЪЕМ В\u00A0₽", field: "annualCost" },
+	{ label: "ОБЪЕМ\u00A0₽", field: "annualCost" },
 	{ label: "ТЕКУЩЕЕ\u00A0ТСО", field: "currentPrice", tooltip: TCO_TOOLTIP },
 ];
 
 const ANALYSIS_COLUMNS: SortableColumn[] = [
 	{ label: "ЛУЧШЕЕ\u00A0ТСО", field: "bestPrice", tooltip: TCO_TOOLTIP },
 	{ label: "СРЕДНЕЕ\u00A0ТСО", field: "averagePrice", tooltip: TCO_TOOLTIP },
-	{ label: "ПЕРЕПЛАТА", field: "overpayment" },
-	{ label: "ОТКЛОНЕНИЕ", field: "deviation" },
+	{ label: "ПЕРЕПЛАТА\u00A0₽", field: "overpayment" },
+	{ label: "ПЕРЕПЛАТА\u00A0%", field: "deviation" },
 ];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
@@ -222,7 +222,7 @@ export function ProcurementTable({
 							data-testid="items-empty"
 						>
 							<Inbox className="size-8" aria-hidden="true" />
-							<p className="text-sm">Позиции не найдены</p>
+							<p className="text-sm">Позиций нет</p>
 						</div>
 					)}
 					{!isLoading && !error && items.length > 0 && (
@@ -508,7 +508,7 @@ export function ProcurementTable({
 						data-testid="items-empty"
 					>
 						<Inbox className="size-8" aria-hidden="true" />
-						<p className="text-sm">Позиции не найдены</p>
+						<p className="text-sm">Позиций нет</p>
 					</div>
 				)}
 				{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}

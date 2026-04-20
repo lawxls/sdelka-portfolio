@@ -1,11 +1,9 @@
-import { LoaderCircle, Pencil, X } from "lucide-react";
+import { FileText, LoaderCircle, Pencil, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -150,8 +148,8 @@ function Section({
 	children: React.ReactNode;
 }) {
 	return (
-		<section className="rounded-lg border border-border p-4">
-			<div className="mb-3 flex items-center justify-between">
+		<section className="rounded-lg border border-border p-3">
+			<div className="mb-2 flex items-center justify-between">
 				<h3 className="text-sm font-medium">{title}</h3>
 				{!editing && editLabel && onEdit && (
 					<button
@@ -166,7 +164,7 @@ function Section({
 			</div>
 			{children}
 			{editing && onCancel && onSave && (
-				<div className="mt-4 flex justify-end gap-2">
+				<div className="mt-3 flex justify-end gap-2">
 					<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 						Отмена
 					</Button>
@@ -181,15 +179,14 @@ function Section({
 }
 
 function CardGrid({ children }: { children: React.ReactNode }) {
-	return <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">{children}</div>;
+	return <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
 }
 
-function FieldCard({ label, children, span }: { label: string; children: React.ReactNode; span?: "full" }) {
+function FieldCard({ label, children, span }: { label: string; children: React.ReactNode; span?: "full" | "half" }) {
+	const spanClass = span === "full" ? "sm:col-span-2 lg:col-span-3" : span === "half" ? "lg:col-span-2" : "";
 	return (
-		<div
-			className={`rounded-md border border-border/60 bg-muted/30 p-3 flex flex-col gap-1 ${span === "full" ? "md:col-span-2 lg:col-span-3" : ""}`}
-		>
-			<span className="text-xs text-muted-foreground">{label}</span>
+		<div className={`rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-0.5 ${spanClass}`}>
+			<span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
 			{children}
 		</div>
 	);
@@ -205,6 +202,17 @@ function answerValueText(answer: GeneratedAnswer): string {
 	if (answer.selectedOption) parts.push(answer.selectedOption);
 	if (answer.freeText) parts.push(answer.freeText);
 	return parts.join(" — ");
+}
+
+function formatPaymentTypeWithDeferral(t: PaymentType, deferralDays: number): string {
+	if (t === "deferred" && deferralDays > 0) return `Отсрочка ${deferralDays} дн.`;
+	return PAYMENT_TYPE_LABELS[t];
+}
+
+function formatDeliveryTypeWithCost(t: DeliveryCostType | undefined, cost: number | undefined): string {
+	if (!t) return "";
+	if (t === "paid" && cost != null) return `${DELIVERY_COST_TYPE_LABELS.paid} · ${formatCurrency(cost)}`;
+	return DELIVERY_COST_TYPE_LABELS[t];
 }
 
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
@@ -537,6 +545,26 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				isPending={updateMutation.isPending}
 			>
 				<CardGrid>
+					<FieldCard label="Компания">
+						<ValueText value={company?.name ?? ""} />
+					</FieldCard>
+
+					<FieldCard label="Категория">
+						{isEditingInfo ? (
+							<div className="max-w-48">
+								<FolderSelect
+									folders={folders}
+									value={infoForm.folderId}
+									onChange={(id) => updateInfo("folderId", id)}
+									onCreateFolder={handleCreateFolder}
+									nextFolderColor={nextFolderColor}
+								/>
+							</div>
+						) : (
+							<ValueText value={folder?.name ?? ""} />
+						)}
+					</FieldCard>
+
 					<FieldCard label="Название" span="full">
 						{isEditingInfo ? (
 							<Input
@@ -567,8 +595,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					<FieldCard label="Ед. изм.">
 						{isEditingInfo ? (
 							<Select value={infoForm.unit || undefined} onValueChange={(v) => updateInfo("unit", v as Unit)}>
-								<SelectTrigger aria-label="Ед. изм.">
-									<SelectValue placeholder="Не указана" />
+								<SelectTrigger aria-label="Ед. изм." className="h-8 w-24">
+									<SelectValue placeholder="—" />
 								</SelectTrigger>
 								<SelectContent>
 									{UNITS.map((u) => (
@@ -614,20 +642,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							<ValueText value={String(item.annualQuantity)} />
 						)}
 					</FieldCard>
-
-					<FieldCard label="Категория">
-						{isEditingInfo ? (
-							<FolderSelect
-								folders={folders}
-								value={infoForm.folderId}
-								onChange={(id) => updateInfo("folderId", id)}
-								onCreateFolder={handleCreateFolder}
-								nextFolderColor={nextFolderColor}
-							/>
-						) : (
-							<ValueText value={folder?.name ?? ""} />
-						)}
-					</FieldCard>
 				</CardGrid>
 			</Section>
 
@@ -645,12 +659,21 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				<CardGrid>
 					<FieldCard label="Разгрузка">
 						{isEditingLogistics ? (
-							<SegmentedControl
-								options={UNLOADING_TYPES}
-								labels={UNLOADING_LABELS}
-								value={logisticsForm.unloading || UNLOADING_TYPES[0]}
-								onChange={(v) => updateLogistics("unloading", v)}
-							/>
+							<Select
+								value={logisticsForm.unloading || undefined}
+								onValueChange={(v) => updateLogistics("unloading", v as UnloadingType)}
+							>
+								<SelectTrigger aria-label="Разгрузка" className="h-8">
+									<SelectValue placeholder="Не указана" />
+								</SelectTrigger>
+								<SelectContent>
+									{UNLOADING_TYPES.map((u) => (
+										<SelectItem key={u} value={u}>
+											{UNLOADING_LABELS[u]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						) : (
 							<ValueText value={item.unloading ? UNLOADING_LABELS[item.unloading] : ""} />
 						)}
@@ -658,24 +681,44 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 					<FieldCard label="Оплата">
 						{isEditingLogistics ? (
-							<SegmentedControl
-								options={PAYMENT_TYPES}
-								labels={PAYMENT_TYPE_LABELS}
+							<Select
 								value={logisticsForm.paymentType}
-								onChange={(v) => updateLogistics("paymentType", v)}
-							/>
+								onValueChange={(v) => updateLogistics("paymentType", v as PaymentType)}
+							>
+								<SelectTrigger aria-label="Оплата" className="h-8">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{PAYMENT_TYPES.map((t) => (
+										<SelectItem key={t} value={t}>
+											{PAYMENT_TYPE_LABELS[t]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						) : (
 							<ValueText value={PAYMENT_TYPE_LABELS[item.paymentType ?? "prepayment"]} />
 						)}
 					</FieldCard>
 
-					<FieldCard label="Адреса доставки" span="full">
+					<FieldCard label="Адрес доставки" span="full">
 						{isEditingLogistics ? (
-							<AddressMultiSelect
-								addresses={companyAddresses}
-								selectedIds={logisticsForm.addressIds}
-								onChange={(ids) => updateLogistics("addressIds", ids)}
-							/>
+							<Select
+								value={logisticsForm.addressIds[0] ?? undefined}
+								onValueChange={(v) => updateLogistics("addressIds", v ? [v] : [])}
+								disabled={companyAddresses.length === 0}
+							>
+								<SelectTrigger aria-label="Адрес доставки" className="h-8">
+									<SelectValue placeholder={companyAddresses.length === 0 ? "Нет адресов" : "Выберите адрес"} />
+								</SelectTrigger>
+								<SelectContent>
+									{companyAddresses.map((a) => (
+										<SelectItem key={a.id} value={a.id}>
+											{a.address}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						) : (
 							<ValueText value={addressesText} />
 						)}
@@ -695,57 +738,55 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				isPending={updateMutation.isPending}
 			>
 				<CardGrid>
-					<FieldCard label="Отсрочка нужна">
+					<FieldCard label="Требования" span="half">
 						{isEditingAdditional ? (
-							<div className="flex items-center gap-2">
-								<Checkbox
-									id="detail-deferralRequired"
-									aria-label="Отсрочка нужна"
-									checked={additionalForm.deferralRequired}
-									onCheckedChange={(v) => updateAdditional("deferralRequired", v === true)}
-								/>
-								<label htmlFor="detail-deferralRequired" className="text-sm">
-									Да
-								</label>
+							<div className="flex flex-wrap gap-x-5 gap-y-2">
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="detail-deferralRequired"
+										aria-label="Отсрочка нужна"
+										checked={additionalForm.deferralRequired}
+										onCheckedChange={(v) => updateAdditional("deferralRequired", v === true)}
+									/>
+									<label htmlFor="detail-deferralRequired" className="text-sm">
+										Отсрочка нужна
+									</label>
+								</div>
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="detail-sampleRequired"
+										aria-label="Нужен образец"
+										checked={additionalForm.sampleRequired}
+										onCheckedChange={(v) => updateAdditional("sampleRequired", v === true)}
+									/>
+									<label htmlFor="detail-sampleRequired" className="text-sm">
+										Нужен образец
+									</label>
+								</div>
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="detail-analoguesAllowed"
+										aria-label="Допускаются аналоги"
+										checked={additionalForm.analoguesAllowed}
+										onCheckedChange={(v) => updateAdditional("analoguesAllowed", v === true)}
+									/>
+									<label htmlFor="detail-analoguesAllowed" className="text-sm">
+										Аналоги допускаются
+									</label>
+								</div>
 							</div>
 						) : (
-							<ValueText value={yesNo(item.deferralRequired)} />
-						)}
-					</FieldCard>
-
-					<FieldCard label="Нужен образец">
-						{isEditingAdditional ? (
-							<div className="flex items-center gap-2">
-								<Checkbox
-									id="detail-sampleRequired"
-									aria-label="Нужен образец"
-									checked={additionalForm.sampleRequired}
-									onCheckedChange={(v) => updateAdditional("sampleRequired", v === true)}
-								/>
-								<label htmlFor="detail-sampleRequired" className="text-sm">
-									Да
-								</label>
-							</div>
-						) : (
-							<ValueText value={yesNo(item.sampleRequired)} />
-						)}
-					</FieldCard>
-
-					<FieldCard label="Допускаются аналоги">
-						{isEditingAdditional ? (
-							<div className="flex items-center gap-2">
-								<Checkbox
-									id="detail-analoguesAllowed"
-									aria-label="Допускаются аналоги"
-									checked={additionalForm.analoguesAllowed}
-									onCheckedChange={(v) => updateAdditional("analoguesAllowed", v === true)}
-								/>
-								<label htmlFor="detail-analoguesAllowed" className="text-sm">
-									Да
-								</label>
-							</div>
-						) : (
-							<ValueText value={yesNo(item.analoguesAllowed)} />
+							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+								<li>
+									<span className="text-muted-foreground">Отсрочка:</span> {yesNo(item.deferralRequired)}
+								</li>
+								<li>
+									<span className="text-muted-foreground">Образец:</span> {yesNo(item.sampleRequired)}
+								</li>
+								<li>
+									<span className="text-muted-foreground">Аналоги:</span> {yesNo(item.analoguesAllowed)}
+								</li>
+							</ul>
 						)}
 					</FieldCard>
 
@@ -761,72 +802,84 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							<ValueText value={item.additionalInfo ?? ""} />
 						)}
 					</FieldCard>
-
-					<FieldCard label="Файлы" span="full">
-						{isEditingAdditional ? (
-							<>
-								<button
-									type="button"
-									aria-label="Прикрепить файлы"
-									className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
-									onClick={() => fileInputRef.current?.click()}
-									onDragOver={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-									}}
-									onDrop={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										handleFilesAdd(e.dataTransfer.files);
-									}}
-								>
-									<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
-									<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
-								</button>
-								<input
-									ref={fileInputRef}
-									type="file"
-									multiple
-									className="hidden"
-									onChange={(e) => {
-										handleFilesAdd(e.target.files);
-										e.target.value = "";
-									}}
-								/>
-								{additionalForm.attachedFiles.length > 0 && (
-									<ul className="mt-1 flex flex-col gap-1">
-										{additionalForm.attachedFiles.map((file, i) => (
-											<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
-												<span className="min-w-0 flex-1 truncate">{file.name}</span>
-												<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-												<Button
-													type="button"
-													variant="ghost"
-													size="icon-xs"
-													onClick={() => handleFileRemove(i)}
-													aria-label={`Удалить ${file.name}`}
-												>
-													<X aria-hidden="true" />
-												</Button>
-											</li>
-										))}
-									</ul>
-								)}
-							</>
-						) : item.attachedFiles && item.attachedFiles.length > 0 ? (
-							<ul className="flex flex-col gap-1">
-								{item.attachedFiles.map((file) => (
-									<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
-										<span className="min-w-0 flex-1 truncate">{file.name}</span>
-										<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-									</li>
-								))}
-							</ul>
-						) : (
-							<ValueText value="" />
-						)}
-					</FieldCard>
 				</CardGrid>
+
+				<div className="mt-3">
+					<div className="mb-1.5 flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
+						<FileText className="size-3" aria-hidden="true" />
+						Прикреплённые файлы
+					</div>
+					{isEditingAdditional ? (
+						<>
+							<button
+								type="button"
+								aria-label="Прикрепить файлы"
+								className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input px-4 py-3 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
+								onClick={() => fileInputRef.current?.click()}
+								onDragOver={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+								}}
+								onDrop={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									handleFilesAdd(e.dataTransfer.files);
+								}}
+							>
+								<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
+								<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
+							</button>
+							<input
+								ref={fileInputRef}
+								type="file"
+								multiple
+								className="hidden"
+								onChange={(e) => {
+									handleFilesAdd(e.target.files);
+									e.target.value = "";
+								}}
+							/>
+							{additionalForm.attachedFiles.length > 0 && (
+								<ul className="mt-2 flex flex-wrap gap-1.5">
+									{additionalForm.attachedFiles.map((file, i) => (
+										<li
+											key={`${file.name}-${file.size}`}
+											className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 py-1 pl-2 pr-1 text-sm"
+										>
+											<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+											<span className="max-w-[18rem] truncate">{file.name}</span>
+											<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon-xs"
+												onClick={() => handleFileRemove(i)}
+												aria-label={`Удалить ${file.name}`}
+											>
+												<X aria-hidden="true" />
+											</Button>
+										</li>
+									))}
+								</ul>
+							)}
+						</>
+					) : item.attachedFiles && item.attachedFiles.length > 0 ? (
+						<ul className="flex flex-wrap gap-1.5">
+							{item.attachedFiles.map((file) => (
+								<li
+									key={`${file.name}-${file.size}`}
+									className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm"
+								>
+									<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+									<span className="max-w-[18rem] truncate">{file.name}</span>
+									<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<p className="text-sm text-muted-foreground/50">Нет прикреплённых файлов</p>
+					)}
+				</div>
 			</Section>
 
 			{/* --- Ваш поставщик --- */}
@@ -892,12 +945,21 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					<FieldCard label="Оплата">
 						{isEditingSupplier ? (
 							<div className="flex flex-col gap-2">
-								<SegmentedControl
-									options={PAYMENT_TYPES}
-									labels={PAYMENT_TYPE_LABELS}
+								<Select
 									value={supplierForm.paymentType}
-									onChange={(v) => updateSupplier("paymentType", v)}
-								/>
+									onValueChange={(v) => updateSupplier("paymentType", v as PaymentType)}
+								>
+									<SelectTrigger aria-label="Оплата" className="h-8">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{PAYMENT_TYPES.map((t) => (
+											<SelectItem key={t} value={t}>
+												{PAYMENT_TYPE_LABELS[t]}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 								{supplierForm.paymentType === "deferred" && (
 									<div className="flex items-center gap-1.5">
 										<Input
@@ -915,7 +977,12 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								)}
 							</div>
 						) : (
-							<ValueText value={PAYMENT_TYPE_LABELS[item.currentSupplier?.paymentType ?? "prepayment"]} />
+							<ValueText
+								value={formatPaymentTypeWithDeferral(
+									item.currentSupplier?.paymentType ?? "prepayment",
+									item.currentSupplier?.deferralDays ?? 0,
+								)}
+							/>
 						)}
 					</FieldCard>
 
@@ -926,7 +993,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 									value={supplierForm.deliveryCostType || undefined}
 									onValueChange={(v) => updateSupplier("deliveryCostType", v as DeliveryCostType)}
 								>
-									<SelectTrigger aria-label="Тип доставки">
+									<SelectTrigger aria-label="Тип доставки" className="h-8">
 										<SelectValue placeholder="Не указан" />
 									</SelectTrigger>
 									<SelectContent>
@@ -948,7 +1015,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								)}
 							</div>
 						) : (
-							<ValueText value={item.deliveryCostType ? DELIVERY_COST_TYPE_LABELS[item.deliveryCostType] : ""} />
+							<ValueText value={formatDeliveryTypeWithCost(item.deliveryCostType, item.deliveryCost)} />
 						)}
 					</FieldCard>
 				</CardGrid>

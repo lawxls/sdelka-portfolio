@@ -167,8 +167,8 @@ describe("ProcurementTable", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
 		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШЕЕ\u00A0ТСО/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ПЕРЕПЛАТА/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛОНЕНИЕ/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ПЕРЕПЛАТА\u00A0₽/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ПЕРЕПЛАТА\u00A0%/ })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with correct field", async () => {
@@ -554,7 +554,7 @@ describe("ProcurementTable responsive card/table switch", () => {
 	test("card mode shows empty state", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} items={[]} isMobile />);
 		expect(screen.getByTestId("items-empty")).toBeInTheDocument();
-		expect(screen.getByText("Позиции не найдены")).toBeInTheDocument();
+		expect(screen.getByText("Позиций нет")).toBeInTheDocument();
 	});
 
 	test("card mode renders infinite scroll sentinel when hasNextPage", () => {

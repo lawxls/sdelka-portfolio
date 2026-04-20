@@ -128,7 +128,7 @@ describe("Toolbar", () => {
 
 	test("renders create procurement button", () => {
 		renderToolbar();
-		expect(screen.getByRole("button", { name: /Добавить позицию/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 });
 

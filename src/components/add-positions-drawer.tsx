@@ -1,7 +1,6 @@
 import { CircleHelp, LoaderCircle, X } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AddressMultiSelect } from "@/components/ui/address-multi-select";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -174,10 +173,8 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		if (!lockedCompany) return;
 		if (step1.companyId === lockedCompany.id) return;
 		update1("companyId", lockedCompany.id);
-		update1(
-			"addressIds",
-			lockedCompany.addresses.map((a) => a.id),
-		);
+		const mainAddress = lockedCompany.addresses.find((a) => a.isMain) ?? lockedCompany.addresses[0];
+		update1("addressIds", mainAddress ? [mainAddress.id] : []);
 	}, [open, lockedCompany, step1.companyId]);
 
 	function handleCreateFolder(name: string, color: string) {
@@ -604,7 +601,8 @@ function Step1Body({
 							onValueChange={(v) => {
 								update1("companyId", v);
 								const company = companies.find((c) => c.id === v);
-								update1("addressIds", company?.addresses.map((a) => a.id) ?? []);
+								const mainAddress = company?.addresses.find((a) => a.isMain) ?? company?.addresses[0];
+								update1("addressIds", mainAddress ? [mainAddress.id] : []);
 							}}
 							disabled={companyDisabled}
 						>
@@ -790,14 +788,23 @@ function Step1Body({
 
 			<SectionGroupHeader title="Логистика и Финансы" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
-				<Field label="Адреса доставки">
-					<AddressMultiSelect
-						addresses={selectedCompany?.addresses ?? []}
-						selectedIds={step1.addressIds}
-						onChange={(ids) => update1("addressIds", ids)}
-						placeholder={selectedCompany ? "Выберите адреса" : "Сначала выберите компанию"}
-						disabled={!selectedCompany}
-					/>
+				<Field label="Адрес доставки">
+					<Select
+						value={step1.addressIds[0] ?? undefined}
+						onValueChange={(v) => update1("addressIds", v ? [v] : [])}
+						disabled={!selectedCompany || (selectedCompany?.addresses.length ?? 0) === 0}
+					>
+						<SelectTrigger aria-label="Адрес доставки" className="w-full">
+							<SelectValue placeholder={selectedCompany ? "Выберите адрес" : "Сначала выберите компанию"} />
+						</SelectTrigger>
+						<SelectContent>
+							{(selectedCompany?.addresses ?? []).map((a) => (
+								<SelectItem key={a.id} value={a.id}>
+									{a.address}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</Field>
 
 				<Field label="Разгрузка">
