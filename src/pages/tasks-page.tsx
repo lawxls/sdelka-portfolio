@@ -598,7 +598,7 @@ export function TasksPage() {
 				) : (
 					<div
 						ref={scrollContainerRef}
-						className="flex flex-1 flex-col overflow-auto touch-manipulation"
+						className="flex flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:last-child]:pr-lg"
 						data-testid="table-scroll-container"
 					>
 						<Table>

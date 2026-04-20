@@ -914,7 +914,12 @@ function ProcurementItemDrawerContent({
 				})}
 			</div>
 
-			<div className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden ${activeTab === "details" ? "p-4" : "pt-3"}`}>
+			<div
+				className={cn(
+					"min-h-0 flex-1 overflow-y-auto overflow-x-hidden [&_tr>*:last-child]:pr-lg",
+					activeTab === "details" ? "p-4" : "pt-3",
+				)}
+			>
 				{activeTab === "search" && <SearchTabPanel itemId={itemId} />}
 				{activeTab === "suppliers" && (
 					<SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />

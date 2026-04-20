@@ -172,7 +172,7 @@ export function Toolbar({
 				type="button"
 				size="sm"
 				onClick={onAddPositions}
-				className="bg-status-highlight hover:bg-status-highlight/80"
+				className="rounded-lg bg-status-highlight hover:bg-status-highlight/80"
 			>
 				<Plus data-icon="inline-start" aria-hidden="true" />
 				<span className="hidden sm:inline">Добавить позиции</span>

@@ -266,7 +266,7 @@ export function ProcurementTable({
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div
 				ref={scrollContainerRef}
-				className="flex flex-1 flex-col overflow-auto touch-manipulation"
+				className="flex flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:last-child]:pr-lg"
 				data-testid="table-scroll-container"
 			>
 				<Table>
