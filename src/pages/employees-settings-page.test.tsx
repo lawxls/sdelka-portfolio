@@ -166,6 +166,38 @@ describe("EmployeesSettingsPage row click", () => {
 	});
 });
 
+describe("EmployeesSettingsPage multi-select", () => {
+	test("renders row checkboxes", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
+		});
+		expect(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" })).toBeInTheDocument();
+	});
+
+	test("selecting admin employee disables Удалить action", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
+		});
+		// Иванов has role=admin → cannot delete
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" }));
+		expect(screen.getByRole("button", { name: /Удалить/ })).toBeDisabled();
+	});
+
+	test("selecting only user-role employee enables Удалить", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByText("Петрова Мария Сергеевна")).toBeInTheDocument();
+		});
+		// Петрова has role=user → can delete
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать Петрова Мария Сергеевна" }));
+		expect(screen.getByRole("button", { name: /Удалить/ })).toBeEnabled();
+	});
+});
+
 describe("EmployeesSettingsPage header", () => {
 	test("renders Отправить приглашения button", async () => {
 		renderPage();

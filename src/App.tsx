@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { SettingsLayout } from "@/components/settings-layout";
 import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
+import { EmailsSettingsPage } from "@/pages/emails-settings-page";
 import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
@@ -13,6 +14,7 @@ import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { SettingsIndexPage } from "@/pages/settings-index-page";
+import { TariffsSettingsPage } from "@/pages/tariffs-settings-page";
 import { TasksPage } from "@/pages/tasks-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
@@ -47,6 +49,8 @@ function App() {
 						<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
 						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
 						<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
+						<Route path="/settings/emails" element={<EmailsSettingsPage />} />
+						<Route path="/settings/tariffs" element={<TariffsSettingsPage />} />
 					</Route>
 				</Route>
 			</Route>

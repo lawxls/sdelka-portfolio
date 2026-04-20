@@ -365,6 +365,15 @@ export async function inviteEmployeesMock(invites: InviteEmployeeData[]): Promis
 	}
 }
 
+export async function deleteWorkspaceEmployeesMock(ids: number[]): Promise<void> {
+	await delay();
+	const toRemove = new Set(ids);
+	workspaceEmployeesStore = workspaceEmployeesStore.filter((e) => {
+		if (!toRemove.has(e.id)) return true;
+		return e.role !== "user";
+	});
+}
+
 export async function updateWorkspaceEmployeePermissionsMock(
 	id: number,
 	data: UpdatePermissionsData,

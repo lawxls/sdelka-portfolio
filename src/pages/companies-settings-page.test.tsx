@@ -189,11 +189,40 @@ describe("CompaniesSettingsPage table", () => {
 			expect(screen.getByText("Сделка")).toBeInTheDocument();
 		});
 		const rows = screen.getAllByRole("row");
-		// row[0] = header, row[1] = Сделка, row[2] = СтройМастер
 		const cells = rows[1].querySelectorAll("td");
-		expect(cells[1].textContent).toBe("2"); // 2 addresses
-		expect(cells[2].textContent).toBe("12"); // 12 employees
-		expect(cells[3].textContent).toBe("25"); // 25 procurements
+		expect(cells[2].textContent).toBe("2"); // 2 addresses
+		expect(cells[3].textContent).toBe("12"); // 12 employees
+		expect(cells[4].textContent).toBe("25"); // 25 procurements
+	});
+
+	test("renders row checkboxes", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByText("Сделка")).toBeInTheDocument();
+		});
+		expect(screen.getByRole("checkbox", { name: "Выбрать Сделка" })).toBeInTheDocument();
+		expect(screen.getByRole("checkbox", { name: "Выбрать СтройМастер" })).toBeInTheDocument();
+	});
+
+	test("selecting a row shows bulk actions bar with Удалить", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByText("Сделка")).toBeInTheDocument();
+		});
+		await userEvent.setup().click(screen.getByRole("checkbox", { name: "Выбрать Сделка" }));
+		expect(screen.getByTestId("bulk-actions-bar")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Удалить/ })).toBeInTheDocument();
+	});
+
+	test("selecting all companies disables Удалить to keep at least one", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByText("Сделка")).toBeInTheDocument();
+		});
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать все компании" }));
+		const deleteBtn = screen.getByRole("button", { name: /Удалить/ });
+		expect(deleteBtn).toBeDisabled();
 	});
 });
 

@@ -1,6 +1,5 @@
-import { Building2, ChevronRight, LogOut, Settings, User, Users } from "lucide-react";
+import { Building2, ChevronRight, CreditCard, Mail, Settings, User, Users } from "lucide-react";
 import { Link, Navigate } from "react-router";
-import { clearTokens } from "@/data/auth";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 interface Section {
@@ -16,8 +15,10 @@ const SECTIONS: Section[] = [
 			{ path: "/settings/workspace", label: "Общие настройки", icon: Settings },
 			{ path: "/settings/companies", label: "Компании", icon: Building2 },
 			{ path: "/settings/employees", label: "Сотрудники", icon: Users },
+			{ path: "/settings/emails", label: "Почты", icon: Mail },
 		],
 	},
+	{ title: "Аккаунт", items: [{ path: "/settings/tariffs", label: "Тарифы", icon: CreditCard }] },
 ];
 
 export function SettingsIndexPage() {
@@ -57,21 +58,6 @@ export function SettingsIndexPage() {
 						</div>
 					</section>
 				))}
-
-				<section className="flex flex-col gap-2">
-					<h2 className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Аккаунт</h2>
-					<div className="overflow-hidden rounded-lg border border-border bg-background">
-						<button
-							type="button"
-							className="flex w-full items-center gap-3 px-4 py-3 text-sm text-destructive transition-colors hover:bg-destructive/10"
-							onClick={clearTokens}
-							data-testid="settings-index-logout"
-						>
-							<LogOut className="size-4 shrink-0" aria-hidden />
-							<span className="flex-1 text-left">Выход</span>
-						</button>
-					</div>
-				</section>
 			</div>
 		</main>
 	);

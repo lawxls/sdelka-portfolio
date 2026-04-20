@@ -39,6 +39,10 @@ export function formatDeviation(value: number | null | undefined): { text: strin
 
 const integerFormatter = new Intl.NumberFormat("ru-RU");
 
+export function formatInteger(value: number): string {
+	return integerFormatter.format(value);
+}
+
 /** Format a raw digit string as a grouped integer (e.g. "1234567" → "1 234 567"). */
 export function formatGroupedInteger(raw: string): string {
 	const digits = raw.replace(/\D/g, "");
@@ -59,6 +63,16 @@ const dayMonthFormatter = new Intl.DateTimeFormat("ru-RU", {
 
 export function formatDayMonth(iso: string): string {
 	return dayMonthFormatter.format(new Date(iso));
+}
+
+const dayMonthShortFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "numeric",
+	month: "short",
+});
+
+/** Day with abbreviated month name: «20 апр.». */
+export function formatDayMonthShort(iso: string): string {
+	return dayMonthShortFormatter.format(new Date(iso));
 }
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {

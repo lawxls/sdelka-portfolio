@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	deleteWorkspaceEmployeesMock as deleteWorkspaceEmployees,
 	fetchWorkspaceEmployeeMock as fetchWorkspaceEmployee,
 	fetchWorkspaceEmployeesMock as fetchWorkspaceEmployees,
 	type InviteEmployeeData,
@@ -40,6 +41,17 @@ export function useInviteEmployees() {
 
 	return useMutation({
 		mutationFn: (invites: InviteEmployeeData[]) => inviteEmployees(invites),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
+		},
+	});
+}
+
+export function useDeleteWorkspaceEmployees() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (ids: number[]) => deleteWorkspaceEmployees(ids),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
 		},

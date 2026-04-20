@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Outlet, useLocation, useOutletContext } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
 import { Button } from "@/components/ui/button";
-import { DESKTOP_QUERY } from "@/lib/desktop-query";
 import { SettingsSidebar } from "./settings-sidebar";
 
 type SettingsOutletContext = {
@@ -11,6 +10,8 @@ type SettingsOutletContext = {
 	setCompaniesCreateOpen: (v: boolean) => void;
 	employeesInviteOpen: boolean;
 	setEmployeesInviteOpen: (v: boolean) => void;
+	emailsCreateOpen: boolean;
+	setEmailsCreateOpen: (v: boolean) => void;
 };
 
 export function useSettingsOutletContext() {
@@ -20,14 +21,25 @@ export function useSettingsOutletContext() {
 			setCompaniesCreateOpen: () => {},
 			employeesInviteOpen: false,
 			setEmployeesInviteOpen: () => {},
+			emailsCreateOpen: false,
+			setEmailsCreateOpen: () => {},
 		}
 	);
 }
 
+const BREADCRUMBS: Record<string, [parent: string, current: string]> = {
+	"/settings/profile": ["Пользователь", "Профиль"],
+	"/settings/workspace": ["Рабочее пространство", "Общие настройки"],
+	"/settings/companies": ["Рабочее пространство", "Компании"],
+	"/settings/employees": ["Рабочее пространство", "Сотрудники"],
+	"/settings/emails": ["Рабочее пространство", "Почты"],
+	"/settings/tariffs": ["Аккаунт", "Тарифы"],
+};
+
 export function SettingsLayout() {
-	const [open, setOpen] = useState(() => window.matchMedia(DESKTOP_QUERY).matches);
 	const [companiesCreateOpen, setCompaniesCreateOpen] = useState(false);
 	const [employeesInviteOpen, setEmployeesInviteOpen] = useState(false);
+	const [emailsCreateOpen, setEmailsCreateOpen] = useState(false);
 	const location = useLocation();
 
 	const outletContext: SettingsOutletContext = {
@@ -35,20 +47,15 @@ export function SettingsLayout() {
 		setCompaniesCreateOpen,
 		employeesInviteOpen,
 		setEmployeesInviteOpen,
-	};
-
-	const BREADCRUMBS: Record<string, [parent: string, current: string]> = {
-		"/settings/profile": ["Пользователь", "Профиль"],
-		"/settings/workspace": ["Рабочее пространство", "Общие настройки"],
-		"/settings/companies": ["Рабочее пространство", "Компании"],
-		"/settings/employees": ["Рабочее пространство", "Сотрудники"],
+		emailsCreateOpen,
+		setEmailsCreateOpen,
 	};
 
 	function renderBreadcrumb() {
 		const crumb = BREADCRUMBS[location.pathname];
 		if (!crumb) return null;
 		return (
-			<nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
+			<nav className="flex min-h-7 items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
 				<span>{crumb[0]}</span>
 				<span aria-hidden="true">/</span>
 				<span className="text-foreground">{crumb[1]}</span>
@@ -82,6 +89,18 @@ export function SettingsLayout() {
 						<span>Отправить приглашения</span>
 					</Button>
 				);
+			case "/settings/emails":
+				return (
+					<Button
+						type="button"
+						size="sm"
+						className="bg-status-highlight hover:bg-status-highlight/80"
+						onClick={() => setEmailsCreateOpen(true)}
+					>
+						<Plus data-icon="inline-start" aria-hidden="true" />
+						<span>Добавить почту</span>
+					</Button>
+				);
 		}
 	}
 
@@ -92,7 +111,7 @@ export function SettingsLayout() {
 		>
 			<PageToolbar left={renderBreadcrumb()} right={renderHeaderAction()} />
 			<div className="flex min-h-0 flex-1">
-				<SettingsSidebar open={open} onOpenChange={setOpen} />
+				<SettingsSidebar />
 				<div className="flex min-w-0 flex-1 flex-col overflow-auto">
 					<Outlet context={outletContext} />
 				</div>
