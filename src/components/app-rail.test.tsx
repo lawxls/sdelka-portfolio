@@ -69,6 +69,13 @@ describe("AppRail items", () => {
 		expect(screen.getByRole("button", { name: "Помощь" })).toBeInTheDocument();
 	});
 
+	test("clicking Помощь opens the support dialog", async () => {
+		renderRail();
+		expect(screen.queryByRole("dialog", { name: "Поддержка" })).not.toBeInTheDocument();
+		await userEvent.setup().click(screen.getByRole("button", { name: "Помощь" }));
+		expect(screen.getByRole("dialog", { name: "Поддержка" })).toBeInTheDocument();
+	});
+
 	test("avatar trigger lives at the bottom of the sidebar, separated from nav items", () => {
 		renderRail();
 		const bottom = screen.getByTestId("app-rail-bottom");
