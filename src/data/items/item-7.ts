@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -25,7 +25,7 @@ export const ITEM: ProcurementItem = {
 		"Клей полиуретановый одно-компонентный, время открытой выдержки ≥ 3 мин, расход ≤ 80 г/м². Сертификат гигиенический.",
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-7-1",
 		itemId: "item-7",
@@ -65,7 +65,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-2",
 		itemId: "item-7",
 		companyName: "Клейберит-Рус",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@kleiberit.ru",
 		website: "https://kleiberit.ru",
@@ -94,7 +94,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-3",
 		itemId: "item-7",
 		companyName: "ТД «Клей-Профи»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@klei-profi.ru",
 		website: "https://klei-profi.ru",
@@ -123,7 +123,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-4",
 		itemId: "item-7",
 		companyName: "Акрилан",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@akrilan.ru",
 		website: "https://akrilan.ru",
@@ -152,7 +152,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-5",
 		itemId: "item-7",
 		companyName: "ООО «Химпром-Клей»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "order@himprom-klei.ru",
 		website: "https://himprom-klei.ru",
@@ -174,7 +174,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-6",
 		itemId: "item-7",
 		companyName: "Kiilto Russia",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@kiilto.ru",
 		website: "https://kiilto.ru",
@@ -196,7 +196,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-7",
 		itemId: "item-7",
 		companyName: "ПроклейТех",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@prokleitech.ru",
 		website: "https://prokleitech.ru",
@@ -218,7 +218,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-8",
 		itemId: "item-7",
 		companyName: "Адгезив-Трейд",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@adgeziv-trade.ru",
 		website: "https://adgeziv-trade.ru",
@@ -240,7 +240,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-9",
 		itemId: "item-7",
 		companyName: "Rakoll Rus",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@rakoll.ru",
 		website: "https://rakoll.ru",
@@ -262,7 +262,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-7-10",
 		itemId: "item-7",
 		companyName: "ООО «Термоклей»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@termoklei.ru",
 		website: "https://termoklei.ru",

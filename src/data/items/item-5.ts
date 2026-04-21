@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -31,7 +31,7 @@ export const ITEM: ProcurementItem = {
 	},
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-5-1",
 		itemId: "item-5",
@@ -392,7 +392,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-5-11",
 		itemId: "item-5",
 		companyName: "Ивановский пружинный",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "opt@ivanovo-spring.ru",
 		website: "https://ivanovo-spring.ru",
@@ -421,7 +421,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-5-12",
 		itemId: "item-5",
 		companyName: "ООО «Спринг-Мастер»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@spring-master.ru",
 		website: "https://spring-master.ru",

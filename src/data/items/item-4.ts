@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -31,7 +31,7 @@ export const ITEM: ProcurementItem = {
 	},
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-4-1",
 		itemId: "item-4",
@@ -403,7 +403,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-4-11",
 		itemId: "item-4",
 		companyName: "ООО «МДФ-Плюс»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@mdfplus.ru",
 		website: "https://mdfplus.ru",
@@ -432,7 +432,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-4-12",
 		itemId: "item-4",
 		companyName: "КДК-Сервис",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@kdk-service.ru",
 		website: "https://kdk-service.ru",

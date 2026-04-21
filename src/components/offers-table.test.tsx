@@ -8,7 +8,7 @@ import type { CurrentSupplier } from "@/data/types";
 import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { makeSupplier } from "@/test-utils";
 
-import { SuppliersTable } from "./suppliers-table";
+import { OffersTable } from "./offers-table";
 
 let queryClient: QueryClient;
 
@@ -40,7 +40,7 @@ const defaultSuppliers = [
 	}),
 	makeSupplier("s2", {
 		companyName: "ООО «Бета»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		email: "beta@test.ru",
 		website: "https://beta.ru",
 		deliveryCost: null,
@@ -63,9 +63,10 @@ const defaultSuppliers = [
 
 const itemWithQty = { quantityPerDelivery: 10 };
 
-function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>> = {}) {
-	const defaultProps: React.ComponentProps<typeof SuppliersTable> = {
+function renderTable(props: Partial<React.ComponentProps<typeof OffersTable>> = {}) {
+	const defaultProps: React.ComponentProps<typeof OffersTable> = {
 		suppliers: defaultSuppliers,
+		totalCount: defaultSuppliers.length,
 		item: itemWithQty,
 		currentSupplier: null,
 		isLoading: false,
@@ -73,8 +74,6 @@ function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>>
 		onSearchChange: vi.fn(),
 		sort: null,
 		onSort: vi.fn(),
-		activeStatuses: [],
-		onStatusFilter: vi.fn(),
 		activePaymentTypes: [],
 		onPaymentTypeFilter: vi.fn(),
 		activeDeliveryFilters: [],
@@ -90,13 +89,13 @@ function renderTable(props: Partial<React.ComponentProps<typeof SuppliersTable>>
 	return render(
 		<QueryClientProvider client={queryClient}>
 			<TooltipProvider>
-				<SuppliersTable {...defaultProps} {...props} />
+				<OffersTable {...defaultProps} {...props} />
 			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
 
-describe("SuppliersTable", () => {
+describe("OffersTable", () => {
 	test("renders all column headers in the new order", () => {
 		renderTable();
 		const headers = screen.getAllByRole("columnheader");
@@ -119,14 +118,14 @@ describe("SuppliersTable", () => {
 		expect(headerTexts).not.toContain("ОТСРОЧКА");
 	});
 
-	test("renders supplier rows with company name and status badge", () => {
+	test("renders supplier rows with company name and ИНН", () => {
 		renderTable();
 		expect(screen.getByText("ООО «Альфа»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Бета»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Гамма»")).toBeInTheDocument();
-		expect(screen.getByText("Получено КП")).toBeInTheDocument();
-		expect(screen.getByText("Письмо отправлено")).toBeInTheDocument();
-		expect(screen.getByText("Переговоры")).toBeInTheDocument();
+		// ИНН is rendered under each company name (via makeSupplier default "0000000000").
+		const innLabels = screen.getAllByText(/ИНН:/);
+		expect(innLabels.length).toBeGreaterThanOrEqual(3);
 	});
 
 	test("Стоимость cell = pricePerUnit × quantityPerDelivery", () => {
@@ -168,11 +167,11 @@ describe("SuppliersTable", () => {
 
 	test("shows empty state when no suppliers and no current supplier", () => {
 		renderTable({ suppliers: [] });
-		expect(screen.getByText(/нет поставщиков/i)).toBeInTheDocument();
+		expect(screen.getByText(/нет предложений/i)).toBeInTheDocument();
 	});
 });
 
-describe("SuppliersTable Экономия", () => {
+describe("OffersTable Экономия", () => {
 	const currentSupplier: CurrentSupplier = {
 		companyName: "ООО Старый",
 		deferralDays: 0,
@@ -201,7 +200,7 @@ describe("SuppliersTable Экономия", () => {
 	});
 });
 
-describe("SuppliersTable pinned current supplier", () => {
+describe("OffersTable pinned current supplier", () => {
 	const currentSupplier: CurrentSupplier = {
 		companyName: "ООО Текущий",
 		deferralDays: 0,
@@ -260,11 +259,11 @@ describe("SuppliersTable pinned current supplier", () => {
 	});
 });
 
-describe("SuppliersTable search", () => {
+describe("OffersTable search", () => {
 	test("renders search icon button that expands to input", async () => {
 		const user = userEvent.setup();
 		renderTable();
-		const searchButton = screen.getByRole("button", { name: "Поиск поставщиков" });
+		const searchButton = screen.getByRole("button", { name: "Поиск предложений" });
 		expect(searchButton).toBeInTheDocument();
 		await user.click(searchButton);
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
@@ -275,13 +274,13 @@ describe("SuppliersTable search", () => {
 		const onSearchChange = vi.fn();
 		renderTable({ onSearchChange });
 
-		await user.click(screen.getByRole("button", { name: "Поиск поставщиков" }));
+		await user.click(screen.getByRole("button", { name: "Поиск предложений" }));
 		await user.type(screen.getByPlaceholderText("Поиск…"), "Альфа");
 		await vi.waitFor(() => expect(onSearchChange).toHaveBeenCalledWith("Альфа"));
 	});
 });
 
-describe("SuppliersTable sort", () => {
+describe("OffersTable sort", () => {
 	test("sortable column headers have sort buttons (Компания, ТСО/ЕД., Стоимость, Экономия, Срок поставки)", () => {
 		renderTable();
 		expect(screen.getByRole("button", { name: /Компания/i })).toBeInTheDocument();
@@ -334,39 +333,31 @@ describe("SuppliersTable sort", () => {
 	});
 });
 
-describe("SuppliersTable status filter", () => {
+describe("OffersTable filters", () => {
 	test("renders filter button", () => {
 		renderTable();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 	});
 
-	test("shows indicator dot when filter is active", () => {
-		renderTable({ activeStatuses: ["получено_кп"] });
+	test("shows indicator dot when payment-type filter is active", () => {
+		renderTable({ activePaymentTypes: ["prepayment"] });
 		const btn = screen.getByRole("button", { name: "Фильтры" });
 		expect(within(btn).getByTestId("filter-indicator")).toBeInTheDocument();
 	});
 
-	test("clicking filter button opens popover with status options", async () => {
+	test("clicking filter button opens popover with Тип оплаты and Доставка sections", async () => {
 		const user = userEvent.setup();
 		renderTable();
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
-		expect(screen.getByRole("button", { name: "Получено КП" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Письмо отправлено" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Переговоры" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Отказ" })).toBeInTheDocument();
-	});
-
-	test("clicking status option calls onStatusFilter", async () => {
-		const user = userEvent.setup();
-		const onStatusFilter = vi.fn();
-		renderTable({ onStatusFilter });
-		await user.click(screen.getByRole("button", { name: "Фильтры" }));
-		await user.click(screen.getByRole("button", { name: "Получено КП" }));
-		expect(onStatusFilter).toHaveBeenCalledWith("получено_кп");
+		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Самовывоз" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Бесплатная" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Платная" })).toBeInTheDocument();
 	});
 });
 
-describe("SuppliersTable multi-select", () => {
+describe("OffersTable multi-select", () => {
 	test("renders checkbox in each row", () => {
 		renderTable();
 		// Header checkbox + 3 row checkboxes
@@ -409,7 +400,7 @@ describe("SuppliersTable multi-select", () => {
 	});
 });
 
-describe("SuppliersTable row click", () => {
+describe("OffersTable row click", () => {
 	test("clicking a row calls onRowClick with supplier id", async () => {
 		const user = userEvent.setup();
 		const onRowClick = vi.fn();
@@ -431,7 +422,7 @@ describe("SuppliersTable row click", () => {
 	});
 });
 
-describe("SuppliersTable toolbar", () => {
+describe("OffersTable toolbar", () => {
 	test("shows selection toolbar when items selected", () => {
 		renderTable({ selectedIds: new Set(["s1"]) });
 		expect(screen.getByText(/выбрано: 1/i)).toBeInTheDocument();
@@ -450,7 +441,7 @@ describe("SuppliersTable toolbar", () => {
 
 	test("shows total rows count reflecting loaded suppliers", () => {
 		renderTable();
-		expect(screen.getByText(/3\s*поставщика/)).toBeInTheDocument();
+		expect(screen.getByText(/3\s*предложения/)).toBeInTheDocument();
 	});
 
 	test("total count includes pinned current supplier", () => {
@@ -460,11 +451,11 @@ describe("SuppliersTable toolbar", () => {
 			pricePerUnit: 800,
 		};
 		renderTable({ currentSupplier });
-		expect(screen.getByText(/4\s*поставщика/)).toBeInTheDocument();
+		expect(screen.getByText(/4\s*предложения/)).toBeInTheDocument();
 	});
 });
 
-describe("SuppliersTable mobile cards", () => {
+describe("OffersTable mobile cards", () => {
 	let mobileSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
@@ -482,13 +473,13 @@ describe("SuppliersTable mobile cards", () => {
 		expect(cards).toHaveLength(3);
 	});
 
-	test("each card shows company name and status", () => {
+	test("each card shows company name and ИНН", () => {
 		renderTable();
 		const cards = screen.getAllByTestId("supplier-card");
 		expect(within(cards[0]).getByText("ООО «Альфа»")).toBeInTheDocument();
-		expect(within(cards[0]).getByText("Получено КП")).toBeInTheDocument();
+		expect(within(cards[0]).getByText(/ИНН:/)).toBeInTheDocument();
 		expect(within(cards[1]).getByText("ООО «Бета»")).toBeInTheDocument();
-		expect(within(cards[1]).getByText("Письмо отправлено")).toBeInTheDocument();
+		expect(within(cards[1]).getByText(/ИНН:/)).toBeInTheDocument();
 	});
 
 	test("card shows new metric labels (ТСО/ед., Стоимость, Экономия, Доставка, Тип оплаты, Срок поставки)", () => {
@@ -515,7 +506,7 @@ describe("SuppliersTable mobile cards", () => {
 
 	test("shows empty state on mobile", () => {
 		renderTable({ suppliers: [] });
-		expect(screen.getByText(/нет поставщиков/i)).toBeInTheDocument();
+		expect(screen.getByText(/нет предложений/i)).toBeInTheDocument();
 	});
 
 	test("shows loading skeletons on mobile", () => {
@@ -526,7 +517,7 @@ describe("SuppliersTable mobile cards", () => {
 
 	test("renders search icon on mobile", () => {
 		renderTable();
-		expect(screen.getByRole("button", { name: "Поиск поставщиков" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск предложений" })).toBeInTheDocument();
 	});
 
 	test("renders pinned current supplier card on mobile with «Ваш поставщик» status", () => {
@@ -542,7 +533,7 @@ describe("SuppliersTable mobile cards", () => {
 	});
 });
 
-describe("SuppliersTable context menu", () => {
+describe("OffersTable context menu", () => {
 	test("right-clicking a row opens context menu with Архивировать", () => {
 		renderTable();
 		const rows = screen.getAllByRole("row");
@@ -559,7 +550,7 @@ describe("SuppliersTable context menu", () => {
 		expect(onArchiveSupplier).toHaveBeenCalledWith("s1");
 	});
 
-	test("context menu shows «Выбрать текущего поставщика» for получено_кп supplier", () => {
+	test("context menu shows «Выбрать текущего поставщика» when onSelectSupplier is provided", () => {
 		const onSelectSupplier = vi.fn();
 		renderTable({ onSelectSupplier });
 		const rows = screen.getAllByRole("row");
@@ -567,11 +558,10 @@ describe("SuppliersTable context menu", () => {
 		expect(screen.getByText("Выбрать текущего поставщика")).toBeInTheDocument();
 	});
 
-	test("context menu hides «Выбрать текущего поставщика» for non-получено_кп supplier", () => {
-		const onSelectSupplier = vi.fn();
-		renderTable({ onSelectSupplier });
+	test("context menu hides «Выбрать текущего поставщика» when onSelectSupplier is not provided", () => {
+		renderTable();
 		const rows = screen.getAllByRole("row");
-		fireEvent.contextMenu(rows[2]);
+		fireEvent.contextMenu(rows[1]);
 		expect(screen.queryByText("Выбрать текущего поставщика")).not.toBeInTheDocument();
 	});
 
@@ -585,7 +575,7 @@ describe("SuppliersTable context menu", () => {
 	});
 });
 
-describe("SuppliersTable archive filter toggle", () => {
+describe("OffersTable archive filter toggle", () => {
 	test("archive toggle button is present in toolbar", () => {
 		renderTable();
 		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();

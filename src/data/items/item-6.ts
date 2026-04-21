@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -25,7 +25,7 @@ export const ITEM: ProcurementItem = {
 		"Плита из латексированной кокосовой койры, толщина 20 мм, плотность 80 кг/м³. Импорт — Шри-Ланка / Индия. Без запаха.",
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	// 1. получено_кп — best price
 	{
 		id: "supplier-item-6-1",
@@ -280,12 +280,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 7. письмо_отправлено
+	// 7. кп_запрошено
 	{
 		id: "supplier-item-6-7",
 		itemId: "item-6",
 		companyName: "Coir-Eco",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@coir-eco.ru",
 		website: "https://coir-eco.ru",
@@ -310,12 +310,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 8. письмо_отправлено
+	// 8. кп_запрошено
 	{
 		id: "supplier-item-6-8",
 		itemId: "item-6",
 		companyName: "ООО «Балтика-Койра»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "order@baltica-koira.ru",
 		website: "https://baltica-koira.ru",
@@ -340,12 +340,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 9. письмо_отправлено
+	// 9. кп_запрошено
 	{
 		id: "supplier-item-6-9",
 		itemId: "item-6",
 		companyName: "КокосПремиум",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@kokospremium.ru",
 		website: "https://kokospremium.ru",
@@ -406,12 +406,12 @@ export const SUPPLIERS: Supplier[] = [
 		],
 		positionOffers: [],
 	},
-	// 11. письмо_отправлено
+	// 11. кп_запрошено
 	{
 		id: "supplier-item-6-11",
 		itemId: "item-6",
 		companyName: "ООО «Тропик-Импорт»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@tropik-import.ru",
 		website: "https://tropik-import.ru",
@@ -429,12 +429,12 @@ export const SUPPLIERS: Supplier[] = [
 		chatHistory: [],
 		positionOffers: [],
 	},
-	// 12. письмо_отправлено
+	// 12. кп_запрошено
 	{
 		id: "supplier-item-6-12",
 		itemId: "item-6",
 		companyName: "ИндСнаб-Койра",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "mail@indsnab-koira.ru",
 		website: "https://indsnab-koira.ru",

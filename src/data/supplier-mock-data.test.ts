@@ -24,7 +24,10 @@ afterEach(() => {
 });
 
 const ALL = { limit: Number.POSITIVE_INFINITY };
-const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length;
+// Item-1 = hand-authored ORMATEK seed + 14 non-archived auto-generated pipeline candidates
+// (15 total, 1 pre-archived for demo). See supplier-mock-data.ts → generateCandidates.
+const GENERATED_CANDIDATES_ACTIVE = 14;
+const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length + GENERATED_CANDIDATES_ACTIVE;
 const ITEM_1_KP_COUNT = ORMATEK_SUPPLIERS.filter((s) => s.status === "получено_кп").length;
 
 describe("supplier mock store", () => {

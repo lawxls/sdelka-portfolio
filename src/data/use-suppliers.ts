@@ -8,6 +8,8 @@ import {
 	getSuppliers,
 	selectSupplier,
 	sendSupplierMessage,
+	sendSupplierRequest,
+	unarchiveSuppliers,
 } from "./supplier-mock-data";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
@@ -46,16 +48,36 @@ export function useSupplier(itemId: string, supplierId: string | null) {
 	});
 }
 
+function invalidateSupplierLists(queryClient: ReturnType<typeof useQueryClient>, itemId: string) {
+	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+}
+
 export function useArchiveSuppliers() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
 			archiveSuppliers(itemId, supplierIds),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-		},
+		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
+	});
+}
+
+export function useUnarchiveSuppliers() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
+			unarchiveSuppliers(itemId, supplierIds),
+		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
+	});
+}
+
+export function useSendSupplierRequest() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
+			sendSupplierRequest(itemId, supplierIds),
+		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
 	});
 }
 
@@ -65,9 +87,7 @@ export function useSelectSupplier() {
 		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => selectSupplier(itemId, supplierId),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+			invalidateSupplierLists(queryClient, itemId);
 		},
 	});
 }
@@ -77,11 +97,7 @@ export function useDeleteSuppliers() {
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
 			deleteSuppliers(itemId, supplierIds),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-		},
+		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
 	});
 }
 

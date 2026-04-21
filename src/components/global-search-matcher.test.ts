@@ -1,29 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { WorkspaceEmail } from "@/data/emails-mock-data";
-import type { SearchSupplier } from "@/data/search-supplier-types";
 import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { CompanySummary, ProcurementItem } from "@/data/types";
 import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
 import { makeCompany, makeItem, makeSupplier, makeTask } from "@/test-utils";
 import { matchGlobal } from "./global-search-matcher";
-
-function makeSearchSupplier(id: string, overrides: Partial<SearchSupplier> = {}): SearchSupplier {
-	return {
-		id,
-		itemId: "item-1",
-		companyName: `Кандидат ${id}`,
-		inn: "7701000001",
-		website: "https://example.ru",
-		companyType: "производитель",
-		region: "Москва",
-		foundedYear: 2010,
-		revenue: 100_000_000,
-		requestStatus: "new",
-		archived: false,
-		...overrides,
-	};
-}
 
 function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): WorkspaceEmployee {
 	return {
@@ -48,8 +30,7 @@ function makeInbox(id: string, email: string): WorkspaceEmail {
 
 const EMPTY = {
 	items: [] as ProcurementItem[],
-	pipelineSuppliers: [] as Supplier[],
-	searchSuppliers: [] as SearchSupplier[],
+	suppliers: [] as Supplier[],
 	tasks: [] as Task[],
 	employees: [] as WorkspaceEmployee[],
 	companies: [] as CompanySummary[],
@@ -85,28 +66,39 @@ describe("matchGlobal", () => {
 		expect(items?.results[0].href).toBe("/procurement?item=1");
 	});
 
-	it("matches pipeline suppliers by name, email, website", () => {
+	it("matches suppliers by name, email, website", () => {
 		const suppliers = [
 			makeSupplier("s1", { companyName: "GazPromSbyt" }),
 			makeSupplier("s2", { companyName: "Ромашка", email: "info@gazprom.ru" }),
 			makeSupplier("s3", { companyName: "Ромашка", website: "https://gaz-invest.ru" }),
 			makeSupplier("s4", { companyName: "Неподходящий", email: "x@x.ru", website: "https://x.ru" }),
 		];
-		const groups = matchGlobal({ ...EMPTY, query: "gaz", pipelineSuppliers: suppliers });
+		const groups = matchGlobal({ ...EMPTY, query: "gaz", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
 		expect(sup?.results.map((r) => r.id).sort()).toEqual(["s1", "s2", "s3"]);
 	});
 
-	it("matches search-supplier candidates by name, website, inn; href routes to candidates tab", () => {
-		const candidates = [
-			makeSearchSupplier("c1", { companyName: "ГазПром", itemId: "item-5" }),
-			makeSearchSupplier("c2", { inn: "7712345678", itemId: "item-6" }),
-			makeSearchSupplier("c3", { website: "https://gaz.ru", itemId: "item-7" }),
+	it("does not match suppliers by INN and does not expose INN in results", () => {
+		const suppliers = [makeSupplier("s1", { companyName: "Ромашка", inn: "7712345678" })];
+		const groups = matchGlobal({ ...EMPTY, query: "7712", suppliers });
+		expect(groups.find((g) => g.group === "suppliers")).toBeUndefined();
+
+		const nameHit = matchGlobal({ ...EMPTY, query: "ромашка", suppliers });
+		const row = nameHit.find((g) => g.group === "suppliers")?.results[0];
+		expect(row?.meta).toBeUndefined();
+	});
+
+	it("attaches supplier status to each supplier result", () => {
+		const suppliers = [
+			makeSupplier("s1", { companyName: "test A", status: "new" }),
+			makeSupplier("s2", { companyName: "test B", status: "переговоры" }),
+			makeSupplier("s3", { companyName: "test C", status: "получено_кп" }),
 		];
-		const groups = matchGlobal({ ...EMPTY, query: "7712", searchSuppliers: candidates });
+		const groups = matchGlobal({ ...EMPTY, query: "test", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
-		expect(sup?.results.map((r) => r.id)).toEqual(["c2"]);
-		expect(sup?.results[0].href).toBe("/procurement?item=item-6&tab=search");
+		expect(sup?.results.find((r) => r.id === "s1")).toMatchObject({ status: "new" });
+		expect(sup?.results.find((r) => r.id === "s2")).toMatchObject({ status: "переговоры" });
+		expect(sup?.results.find((r) => r.id === "s3")).toMatchObject({ status: "получено_кп" });
 	});
 
 	it("matches tasks by title", () => {
@@ -177,7 +169,7 @@ describe("matchGlobal", () => {
 			...EMPTY,
 			query: "test",
 			items: [makeItem("1", { name: "test item" })],
-			pipelineSuppliers: [makeSupplier("s1", { companyName: "test sup" })],
+			suppliers: [makeSupplier("s1", { companyName: "test sup" })],
 			tasks: [makeTask("t1", { name: "test task" })],
 			employees: [makeEmployee(1, { firstName: "test" })],
 			companies: [makeCompany("c1", { name: "test co" })],
@@ -200,20 +192,5 @@ describe("matchGlobal", () => {
 		const items = Array.from({ length: 12 }, (_, i) => makeItem(`${i + 1}`, { name: `газ ${i + 1}` }));
 		const groups = matchGlobal({ ...EMPTY, query: "газ", items });
 		expect(groups.find((g) => g.group === "items")?.results).toHaveLength(12);
-	});
-
-	it("tags pipeline suppliers as «source: pipeline» and candidates as «source: candidate»", () => {
-		const groups = matchGlobal({
-			...EMPTY,
-			query: "test",
-			pipelineSuppliers: [makeSupplier("s1", { companyName: "test pipe" })],
-			searchSuppliers: [makeSearchSupplier("c1", { companyName: "test cand" })],
-		});
-		const sup = groups.find((g) => g.group === "suppliers");
-		expect(sup?.results).toHaveLength(2);
-		const s1 = sup?.results.find((r) => r.id === "s1");
-		const c1 = sup?.results.find((r) => r.id === "c1");
-		expect(s1).toMatchObject({ source: "pipeline" });
-		expect(c1).toMatchObject({ source: "candidate" });
 	});
 });

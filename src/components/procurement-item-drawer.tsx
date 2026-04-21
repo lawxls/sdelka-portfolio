@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { LoadMoreSentinel } from "@/components/load-more-sentinel";
+import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
-import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
-import { type DeliveryFilter, matchesDeliveryFilter, SuppliersTable } from "@/components/suppliers-table";
+import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { ToolbarSearch } from "@/components/toolbar-search";
@@ -23,46 +23,50 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type {
-	SearchSupplierCompanyType,
-	SearchSupplierRequestStatus,
-	SearchSupplierSortField,
-	SearchSupplierSortState,
-} from "@/data/search-supplier-types";
-import type { SupplierSortField, SupplierSortState, SupplierStatus } from "@/data/supplier-types";
+import {
+	PIPELINE_STATUSES,
+	type SupplierCompanyType,
+	type SupplierSortField,
+	type SupplierSortState,
+	type SupplierStatus,
+} from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
 import type { PaymentType, ProcurementItem } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
-	useArchiveSearchSuppliers,
-	usePromoteSearchSuppliers,
-	useSearchSuppliers,
-	useUnarchiveSearchSuppliers,
-} from "@/data/use-search-suppliers";
-import {
 	useArchiveSuppliers,
 	useInfiniteSuppliers,
 	useSelectSupplier,
+	useSendSupplierRequest,
 	useSupplier,
 	useSuppliers,
+	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatDayMonthShort, formatDayMonthShortTime, formatRussianPlural, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type ItemDrawerTab = "search" | "suppliers" | "details" | "tasks";
+type ItemDrawerTab = "suppliers" | "offers" | "details" | "tasks";
 
 const TABS: { key: ItemDrawerTab; label: string; mobileLabel?: string }[] = [
-	{ key: "search", label: "Поиск" },
 	{ key: "suppliers", label: "Поставщики" },
+	{ key: "offers", label: "Предложения" },
 	{ key: "tasks", label: "Задачи" },
 	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
-const DEFAULT_TAB: ItemDrawerTab = "search";
+const DEFAULT_TAB: ItemDrawerTab = "suppliers";
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
 
 function parseItemDrawerTab(param: string | null): ItemDrawerTab {
@@ -231,33 +235,47 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	);
 }
 
-function SearchTabPanel({ itemId }: { itemId: string }) {
+function SuppliersTabPanel({ itemId }: { itemId: string }) {
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SearchSupplierSortState>(null);
-	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SearchSupplierCompanyType[]>([]);
-	const [activeRequestStatuses, setActiveRequestStatuses] = useState<SearchSupplierRequestStatus[]>([]);
+	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
+	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
+	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
+	const [confirmingRequestAll, setConfirmingRequestAll] = useState(false);
+
+	// Pipeline = all statuses except получено_кп. If the user has picked a subset via filter,
+	// honor that; otherwise request the full pipeline set.
+	const effectiveStatuses = useMemo(
+		() => (activeStatuses.length > 0 ? activeStatuses : [...PIPELINE_STATUSES]),
+		[activeStatuses],
+	);
 
 	const filterParams = useMemo(
 		() => ({
 			search: search || undefined,
+			statuses: effectiveStatuses,
 			companyTypes: activeCompanyTypes.length > 0 ? activeCompanyTypes : undefined,
-			requestStatuses: activeRequestStatuses.length > 0 ? activeRequestStatuses : undefined,
 			showArchived,
 			sort: sort?.field,
 			dir: sort?.direction,
 		}),
-		[search, activeCompanyTypes, activeRequestStatuses, showArchived, sort],
+		[search, effectiveStatuses, activeCompanyTypes, showArchived, sort],
 	);
 
-	const query = useSearchSuppliers(itemId, filterParams);
-	const archiveMutation = useArchiveSearchSuppliers();
-	const unarchiveMutation = useUnarchiveSearchSuppliers();
-	const promoteMutation = usePromoteSearchSuppliers();
-	const entries = query.data ?? [];
+	const query = useInfiniteSuppliers(itemId, filterParams);
+	const archiveMutation = useArchiveSuppliers();
+	const unarchiveMutation = useUnarchiveSuppliers();
+	const sendRequestMutation = useSendSupplierRequest();
+	const suppliers = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
+	const totalCount = query.data?.pages[0]?.total ?? suppliers.length;
+	const { data: allSuppliersData } = useSuppliers(itemId);
+	const candidateCount = useMemo(
+		() => (allSuppliersData?.suppliers ?? []).filter((s) => s.status === "new" && !s.archived).length,
+		[allSuppliersData?.suppliers],
+	);
 
-	function handleSort(field: SearchSupplierSortField) {
+	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
 			if (prev?.field !== field) return { field, direction: "asc" };
 			if (prev.direction === "asc") return { field, direction: "desc" };
@@ -265,17 +283,17 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 		});
 	}
 
-	function handleCompanyTypeFilter(type: SearchSupplierCompanyType) {
+	function handleCompanyTypeFilter(type: SupplierCompanyType) {
 		setActiveCompanyTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
 	}
 
-	function handleRequestStatusFilter(status: SearchSupplierRequestStatus) {
-		setActiveRequestStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
+	function handleStatusFilter(status: SupplierStatus) {
+		setActiveStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
 	}
 
 	function handleSelectionChange(idOrAll: string) {
 		if (idOrAll === "all") {
-			setSelectedIds((prev) => (prev.size === entries.length ? new Set() : new Set(entries.map((e) => e.id))));
+			setSelectedIds((prev) => (prev.size === suppliers.length ? new Set() : new Set(suppliers.map((s) => s.id))));
 		} else {
 			setSelectedIds((prev) => {
 				const next = new Set(prev);
@@ -289,55 +307,65 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 	// Filter selection against the currently visible rows so changes to search/type/status
 	// filters can't leak batch actions onto hidden entries.
 	function visibleSelectedIds() {
-		const visible = new Set(entries.map((e) => e.id));
+		const visible = new Set(suppliers.map((s) => s.id));
 		return [...selectedIds].filter((id) => visible.has(id));
 	}
 
 	function handleArchiveBatch() {
-		archiveMutation.mutate({ itemId, ids: visibleSelectedIds() }, { onSuccess: () => setSelectedIds(new Set()) });
+		archiveMutation.mutate(
+			{ itemId, supplierIds: visibleSelectedIds() },
+			{ onSuccess: () => setSelectedIds(new Set()) },
+		);
 	}
 
-	function handleArchiveEntry(id: string) {
-		archiveMutation.mutate({ itemId, ids: [id] });
+	function handleArchiveSupplier(id: string) {
+		archiveMutation.mutate({ itemId, supplierIds: [id] });
 	}
 
-	function handleUnarchiveEntry(id: string) {
-		unarchiveMutation.mutate({ itemId, ids: [id] });
+	function handleUnarchiveSupplier(id: string) {
+		unarchiveMutation.mutate({ itemId, supplierIds: [id] });
 	}
 
 	function handleSendRequest(id: string) {
-		promoteMutation.mutate(
-			{ itemId, ids: [id] },
+		sendRequestMutation.mutate(
+			{ itemId, supplierIds: [id] },
 			{
-				onSuccess: (promoted) => {
-					if (promoted.length > 0) toast.success("Запрос отправлен");
+				onSuccess: (transitioned) => {
+					if (transitioned.length > 0) toast.success("Запрашиваем КП");
 				},
 			},
 		);
 	}
 
 	function handleSendRequestBatch() {
-		promoteMutation.mutate(
-			{ itemId, ids: visibleSelectedIds() },
+		sendRequestMutation.mutate(
+			{ itemId, supplierIds: visibleSelectedIds() },
 			{
-				onSuccess: (promoted) => {
+				onSuccess: (transitioned) => {
 					setSelectedIds(new Set());
-					if (promoted.length === 0) return;
-					toast.success(promoted.length === 1 ? "Запрос отправлен" : `Запрос отправлен ${promoted.length} поставщикам`);
+					if (transitioned.length === 0) return;
+					toast.success(transitioned.length === 1 ? "Запрашиваем КП" : "Запрашиваем КП у поставщиков");
 				},
 			},
 		);
 	}
 
 	function handleSendRequestAll() {
-		const ids = entries.filter((e) => e.requestStatus === "new").map((e) => e.id);
+		if (candidateCount === 0) return;
+		setConfirmingRequestAll(true);
+	}
+
+	function handleConfirmSendRequestAll() {
+		// Source ids from the full supplier list so unscrolled candidates are included too.
+		const ids = (allSuppliersData?.suppliers ?? []).filter((s) => s.status === "new" && !s.archived).map((s) => s.id);
+		setConfirmingRequestAll(false);
 		if (ids.length === 0) return;
-		promoteMutation.mutate(
-			{ itemId, ids },
+		sendRequestMutation.mutate(
+			{ itemId, supplierIds: ids },
 			{
-				onSuccess: (promoted) => {
-					if (promoted.length === 0) return;
-					toast.success(promoted.length === 1 ? "Запрос отправлен" : `Запрос отправлен ${promoted.length} поставщикам`);
+				onSuccess: (transitioned) => {
+					if (transitioned.length === 0) return;
+					toast.success(transitioned.length === 1 ? "Запрашиваем КП" : "Запрашиваем КП у поставщиков");
 				},
 			},
 		);
@@ -349,9 +377,10 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 	}
 
 	return (
-		<div data-testid="tab-panel-search">
-			<SearchSuppliersTable
-				entries={entries}
+		<div data-testid="tab-panel-suppliers">
+			<SuppliersTable
+				suppliers={suppliers}
+				totalCount={totalCount}
 				isLoading={query.isLoading}
 				search={search}
 				onSearchChange={setSearch}
@@ -359,25 +388,51 @@ function SearchTabPanel({ itemId }: { itemId: string }) {
 				onSort={handleSort}
 				activeCompanyTypes={activeCompanyTypes}
 				onCompanyTypeFilter={handleCompanyTypeFilter}
-				activeRequestStatuses={activeRequestStatuses}
-				onRequestStatusFilter={handleRequestStatusFilter}
+				activeStatuses={activeStatuses}
+				onStatusFilter={handleStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
 				onArchive={handleArchiveBatch}
 				isArchiving={archiveMutation.isPending}
-				onArchiveEntry={handleArchiveEntry}
-				onUnarchiveEntry={handleUnarchiveEntry}
+				onArchiveSupplier={handleArchiveSupplier}
+				onUnarchiveSupplier={handleUnarchiveSupplier}
 				onSendRequest={handleSendRequest}
 				onSendRequestBatch={handleSendRequestBatch}
 				onSendRequestAll={handleSendRequestAll}
 				showArchived={showArchived}
 				onToggleArchived={handleToggleArchived}
+				hasNextPage={query.hasNextPage}
+				loadMore={query.fetchNextPage}
+				isFetchingNextPage={query.isFetchingNextPage}
 			/>
+			<Dialog
+				open={confirmingRequestAll}
+				onOpenChange={(open) => {
+					if (!open) setConfirmingRequestAll(false);
+				}}
+			>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader className="gap-3">
+						<DialogTitle>Отправить запросы КП?</DialogTitle>
+						<DialogDescription className="leading-relaxed">
+							Вы действительно хотите запросить КП у{"\u00A0"}
+							{formatRussianPlural(candidateCount, ["поставщика", "поставщиков", "поставщиков"])}? Действие нельзя
+							отменить.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setConfirmingRequestAll(false)}>
+							Отмена
+						</Button>
+						<Button onClick={handleConfirmSendRequestAll}>Отправить запросы</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
 
-function SuppliersTabPanel({
+function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
@@ -388,7 +443,6 @@ function SuppliersTabPanel({
 }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>(null);
-	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
 	const [activePaymentTypes, setActivePaymentTypes] = useState<PaymentType[]>([]);
 	const [activeDeliveryFilters, setActiveDeliveryFilters] = useState<DeliveryFilter[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -397,23 +451,31 @@ function SuppliersTabPanel({
 	const filterParams = useMemo(
 		() => ({
 			search: search || undefined,
-			statuses: activeStatuses.length > 0 ? activeStatuses : undefined,
+			statuses: ["получено_кп"] as SupplierStatus[],
 			showArchived,
 			sort: sort?.field,
 			dir: sort?.direction,
 		}),
-		[search, activeStatuses, showArchived, sort],
+		[search, showArchived, sort],
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
+	// When no payment/delivery client-side filters are active, the server total matches.
+	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
+	// all pages just to produce a total isn't worth it for these local filters.
+	const suppliersRaw = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
 	const suppliers = useMemo(() => {
-		const raw = query.data?.pages.flatMap((p) => p.suppliers) ?? [];
-		return raw.filter((s) => {
+		return suppliersRaw.filter((s) => {
 			if (activePaymentTypes.length > 0 && !activePaymentTypes.includes(s.paymentType)) return false;
 			if (!matchesDeliveryFilter(s.deliveryCost, activeDeliveryFilters)) return false;
 			return true;
 		});
-	}, [query.data, activePaymentTypes, activeDeliveryFilters]);
+	}, [suppliersRaw, activePaymentTypes, activeDeliveryFilters]);
+
+	const serverTotal = query.data?.pages[0]?.total ?? suppliers.length;
+	const hasClientFilters = activePaymentTypes.length > 0 || activeDeliveryFilters.length > 0;
+	// With client-side filters active, the server total overstates the count; fall back to the loaded+filtered length.
+	const totalCount = hasClientFilters ? suppliers.length : serverTotal;
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -421,10 +483,6 @@ function SuppliersTabPanel({
 			if (prev.direction === "asc") return { field, direction: "desc" };
 			return null;
 		});
-	}
-
-	function handleStatusFilter(status: SupplierStatus) {
-		setActiveStatuses((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
 	}
 
 	function handlePaymentTypeFilter(t: PaymentType) {
@@ -453,7 +511,6 @@ function SuppliersTabPanel({
 			archiveMutation.mutate({ itemId, supplierIds });
 			return;
 		}
-		// Batch archive: clip selection to visible rows so filter changes can't leak onto hidden suppliers.
 		const visible = new Set(suppliers.map((s) => s.id));
 		const ids = [...selectedIds].filter((id) => visible.has(id));
 		archiveMutation.mutate({ itemId, supplierIds: ids }, { onSuccess: () => setSelectedIds(new Set()) });
@@ -463,9 +520,10 @@ function SuppliersTabPanel({
 	const currentSupplier = itemDetail?.currentSupplier;
 
 	return (
-		<div data-testid="tab-panel-suppliers">
-			<SuppliersTable
+		<div data-testid="tab-panel-offers">
+			<OffersTable
 				suppliers={suppliers}
+				totalCount={totalCount}
 				item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
 				currentSupplier={currentSupplier}
 				isLoading={query.isLoading}
@@ -473,8 +531,6 @@ function SuppliersTabPanel({
 				onSearchChange={setSearch}
 				sort={sort}
 				onSort={handleSort}
-				activeStatuses={activeStatuses}
-				onStatusFilter={handleStatusFilter}
 				activePaymentTypes={activePaymentTypes}
 				onPaymentTypeFilter={handlePaymentTypeFilter}
 				activeDeliveryFilters={activeDeliveryFilters}
@@ -608,6 +664,11 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 
 	const isLoading = taskColumns.assigned.isLoading;
 
+	// Toolbar count is the total matching the active filter across all pages, not just the loaded rows.
+	const tasksTotalCount = activeFilter
+		? taskColumns[activeFilter].count
+		: taskColumns.assigned.count + taskColumns.in_progress.count;
+
 	function handleSelectionChange(idOrAll: string) {
 		if (idOrAll === "all") {
 			setSelectedIds((prev) => {
@@ -644,7 +705,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 
 	const toolbar =
 		selectedIds.size > 0 ? (
-			<div className="mx-3 flex items-center gap-3 rounded-md bg-muted px-3 py-2">
+			<div className="mx-3 flex items-center gap-3 rounded-xl bg-muted px-3 py-2">
 				<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
 				<Button type="button" variant="outline" size="sm" onClick={handleArchiveSelected} aria-label="Архивировать">
 					<Archive className="mr-1 size-4" aria-hidden="true" />
@@ -655,7 +716,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			<div className="flex items-center gap-2 px-3">
 				{!(isMobile && searchExpanded) && (
 					<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-						{formatRussianPlural(tasks.length, ["задача", "задачи", "задач"])}
+						{formatRussianPlural(tasksTotalCount, ["задача", "задачи", "задач"])}
 					</span>
 				)}
 				<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
@@ -800,11 +861,15 @@ function ProcurementItemDrawerContent({
 		if (!list) return { total: 0, quotesReceived: 0, refusals: 0 };
 		let quotesReceived = 0;
 		let refusals = 0;
+		let contacted = 0;
 		for (const s of list) {
+			if (s.archived) continue;
+			if (s.status === "new") continue;
+			contacted++;
 			if (s.status === "получено_кп") quotesReceived++;
 			else if (s.status === "отказ") refusals++;
 		}
-		return { total: list.length, quotesReceived, refusals };
+		return { total: contacted, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
 
 	return (
@@ -893,9 +958,9 @@ function ProcurementItemDrawerContent({
 					activeTab === "details" ? "p-4" : "pt-3",
 				)}
 			>
-				{activeTab === "search" && <SearchTabPanel itemId={itemId} />}
-				{activeTab === "suppliers" && (
-					<SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
+				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} />}
+				{activeTab === "offers" && (
+					<OffersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
 				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
 				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}

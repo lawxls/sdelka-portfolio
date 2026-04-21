@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SUPPLIER_STATUS_LABELS, type SupplierStatus } from "@/data/supplier-types";
 import { PRIVILEGED_ROLES } from "@/data/types";
 import { useAllCompanies } from "@/data/use-companies";
 import { useEmails } from "@/data/use-emails";
 import { useAllItems } from "@/data/use-items";
 import { useMe } from "@/data/use-me";
-import { useAllSearchSuppliers } from "@/data/use-search-suppliers";
 import { useAllSuppliers } from "@/data/use-suppliers";
 import { useAllTasks } from "@/data/use-tasks";
 import { useWorkspaceEmployees } from "@/data/use-workspace-employees";
@@ -24,7 +24,6 @@ import {
 	MIN_QUERY_LENGTH,
 	matchGlobal,
 	type SearchResult,
-	type SupplierSource,
 } from "./global-search-matcher";
 
 const PER_GROUP_CAP = 5;
@@ -39,9 +38,9 @@ const GROUP_ICON: Record<GlobalSearchGroup, typeof Package> = {
 	inboxes: Inbox,
 };
 
-const SUPPLIER_SOURCE_LABEL: Record<SupplierSource, string> = {
-	pipeline: "Связались",
-	candidate: "Кандидат",
+const SUPPLIER_SEARCH_STATUS_LABEL: Record<SupplierStatus, string> = {
+	...SUPPLIER_STATUS_LABELS,
+	new: "Кандидат",
 };
 
 export function GlobalSearch() {
@@ -81,10 +80,8 @@ export function GlobalSearch() {
 
 	const itemsQ = useAllItems({ enabled: everFocused });
 	const items = itemsQ.data ?? [];
-	const itemIds = useMemo(() => items.map((i) => i.id), [items]);
 
-	const pipelineQ = useAllSuppliers({ enabled: everFocused });
-	const candidatesQ = useAllSearchSuppliers(itemIds, { enabled: everFocused });
+	const suppliersQ = useAllSuppliers({ enabled: everFocused });
 	const tasksQ = useAllTasks({ enabled: everFocused });
 	const companiesQ = useAllCompanies({ enabled: everFocused && isPrivileged });
 	const { employees } = useWorkspaceEmployees({ enabled: everFocused && isPrivileged });
@@ -97,25 +94,14 @@ export function GlobalSearch() {
 			matchGlobal({
 				query: debouncedQuery,
 				items,
-				pipelineSuppliers: pipelineQ.data ?? [],
-				searchSuppliers: candidatesQ.data ?? [],
+				suppliers: suppliersQ.data ?? [],
 				tasks: tasksQ.data ?? [],
 				employees,
 				companies: companiesQ.data ?? [],
 				inboxes: emails,
 				isPrivileged,
 			}),
-		[
-			debouncedQuery,
-			items,
-			pipelineQ.data,
-			candidatesQ.data,
-			tasksQ.data,
-			employees,
-			companiesQ.data,
-			emails,
-			isPrivileged,
-		],
+		[debouncedQuery, items, suppliersQ.data, tasksQ.data, employees, companiesQ.data, emails, isPrivileged],
 	);
 
 	const totalMatches = groups.reduce((sum, g) => sum + g.results.length, 0);
@@ -329,7 +315,7 @@ interface ResultRowProps {
 
 function ResultRow({ id, row, query, active, onSelect, onMouseEnter }: ResultRowProps) {
 	const Icon = GROUP_ICON[row.group];
-	const sourceTag = row.group === "suppliers" ? SUPPLIER_SOURCE_LABEL[row.source] : null;
+	const statusTag = row.group === "suppliers" ? SUPPLIER_SEARCH_STATUS_LABEL[row.status] : null;
 	return (
 		<button
 			id={id}
@@ -349,19 +335,14 @@ function ResultRow({ id, row, query, active, onSelect, onMouseEnter }: ResultRow
 			<Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 			<span className="min-w-0 flex-1 truncate">{highlight(row.name, query)}</span>
 			{row.meta && (
-				<span
-					className={cn(
-						"flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground",
-						row.group === "suppliers" && row.source === "candidate" && "tabular-nums",
-					)}
-				>
+				<span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
 					{row.group === "inboxes" && <Mail className="size-3 shrink-0" aria-hidden="true" />}
 					<span className="truncate">{highlight(row.meta, query)}</span>
 				</span>
 			)}
-			{sourceTag && (
+			{statusTag && (
 				<span className="shrink-0 rounded-sm bg-muted/60 px-1.5 py-0.5 text-[0.625rem] font-medium text-muted-foreground">
-					{sourceTag}
+					{statusTag}
 				</span>
 			)}
 		</button>

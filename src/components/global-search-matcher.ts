@@ -1,6 +1,5 @@
 import type { WorkspaceEmail } from "@/data/emails-mock-data";
-import type { SearchSupplier } from "@/data/search-supplier-types";
-import type { Supplier } from "@/data/supplier-types";
+import type { Supplier, SupplierStatus } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { CompanySummary, ProcurementItem } from "@/data/types";
 import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
@@ -25,14 +24,12 @@ interface ResultBase {
 	href: string;
 }
 
-export type SupplierSource = "pipeline" | "candidate";
-
 export interface ItemResult extends ResultBase {
 	group: "items";
 }
 export interface SupplierResult extends ResultBase {
 	group: "suppliers";
-	source: SupplierSource;
+	status: SupplierStatus;
 }
 export interface TaskResult extends ResultBase {
 	group: "tasks";
@@ -57,8 +54,7 @@ export interface GroupResult {
 export interface MatchInput {
 	query: string;
 	items: ProcurementItem[];
-	pipelineSuppliers: Supplier[];
-	searchSuppliers: SearchSupplier[];
+	suppliers: Supplier[];
 	tasks: Task[];
 	employees: WorkspaceEmployee[];
 	companies: CompanySummary[];
@@ -76,6 +72,14 @@ function collect<T, R extends SearchResult>(source: T[], match: (row: T) => bool
 		if (match(row)) out.push(project(row));
 	}
 	return out;
+}
+
+function supplierHref(s: Supplier): string {
+	const tab = s.status === "получено_кп" ? "offers" : "suppliers";
+	const base = `/procurement?item=${encodeURIComponent(s.itemId)}`;
+	// "new" suppliers don't have a detail drawer — open the Поставщики tab only.
+	if (s.status === "new") return `${base}&tab=${tab}`;
+	return `${base}&supplier=${encodeURIComponent(s.id)}${tab === "offers" ? "&tab=offers" : ""}`;
 }
 
 export function matchGlobal(input: MatchInput): GroupResult[] {
@@ -98,31 +102,18 @@ export function matchGlobal(input: MatchInput): GroupResult[] {
 	);
 	if (items.length > 0) groups.push({ group: "items", results: items });
 
-	const pipelineSups = collect<Supplier, SupplierResult>(
-		input.pipelineSuppliers,
+	const suppliers = collect<Supplier, SupplierResult>(
+		input.suppliers,
 		(s) => includesCI(s.companyName, q) || includesCI(s.email, q) || includesCI(s.website, q),
 		(s) => ({
 			group: "suppliers",
-			source: "pipeline",
 			id: s.id,
 			name: s.companyName,
-			meta: s.website || s.email || undefined,
-			href: `/procurement?item=${encodeURIComponent(s.itemId)}&supplier=${encodeURIComponent(s.id)}`,
+			status: s.status,
+			meta: undefined,
+			href: supplierHref(s),
 		}),
 	);
-	const candidateSups = collect<SearchSupplier, SupplierResult>(
-		input.searchSuppliers,
-		(s) => includesCI(s.companyName, q) || includesCI(s.website, q) || s.inn.includes(trimmed),
-		(s) => ({
-			group: "suppliers",
-			source: "candidate",
-			id: s.id,
-			name: s.companyName,
-			meta: s.inn || s.website || undefined,
-			href: `/procurement?item=${encodeURIComponent(s.itemId)}&tab=search`,
-		}),
-	);
-	const suppliers = [...pipelineSups, ...candidateSups];
 	if (suppliers.length > 0) groups.push({ group: "suppliers", results: suppliers });
 
 	const tasks = collect<Task, TaskResult>(

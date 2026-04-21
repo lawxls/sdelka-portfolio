@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -31,7 +31,7 @@ export const ITEM: ProcurementItem = {
 	},
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-2-1",
 		itemId: "item-2",
@@ -398,7 +398,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-2-11",
 		itemId: "item-2",
 		companyName: "Синтезпенал",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@sintezpenal.ru",
 		website: "https://sintezpenal.ru",
@@ -427,7 +427,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-2-12",
 		itemId: "item-2",
 		companyName: "Орматек-Сырьё",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "raw@ormatek-raw.ru",
 		website: "https://ormatek-raw.ru",

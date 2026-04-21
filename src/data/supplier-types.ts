@@ -1,19 +1,35 @@
 import type { PaymentType } from "./types";
 
-export type SupplierStatus = "письмо_отправлено" | "переговоры" | "получено_кп" | "отказ";
+export type SupplierStatus = "new" | "кп_запрошено" | "переговоры" | "получено_кп" | "отказ" | "ошибка";
 
-export const SUPPLIER_STATUSES: SupplierStatus[] = ["письмо_отправлено", "переговоры", "получено_кп", "отказ"];
+export const SUPPLIER_STATUSES: SupplierStatus[] = [
+	"new",
+	"кп_запрошено",
+	"переговоры",
+	"получено_кп",
+	"отказ",
+	"ошибка",
+];
+
+/** Statuses shown in the "Поставщики" (pipeline) tab — everything except получено_кп. */
+export const PIPELINE_STATUSES: readonly SupplierStatus[] = ["new", "кп_запрошено", "переговоры", "отказ", "ошибка"];
 
 export const SUPPLIER_STATUS_LABELS: Record<SupplierStatus, string> = {
-	письмо_отправлено: "Письмо отправлено",
+	new: "Кандидат",
+	кп_запрошено: "Отправлено",
 	переговоры: "Переговоры",
 	получено_кп: "Получено КП",
 	отказ: "Отказ",
+	ошибка: "Ошибка",
 };
 
 export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; className: string }> = {
-	письмо_отправлено: {
-		label: SUPPLIER_STATUS_LABELS.письмо_отправлено,
+	new: {
+		label: SUPPLIER_STATUS_LABELS.new,
+		className: "text-muted-foreground",
+	},
+	кп_запрошено: {
+		label: SUPPLIER_STATUS_LABELS.кп_запрошено,
 		className: "text-violet-600 dark:text-violet-400",
 	},
 	переговоры: { label: SUPPLIER_STATUS_LABELS.переговоры, className: "text-blue-600 dark:text-blue-400" },
@@ -22,14 +38,20 @@ export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; cla
 		className: "text-green-600 dark:text-green-400",
 	},
 	отказ: { label: SUPPLIER_STATUS_LABELS.отказ, className: "text-destructive" },
+	ошибка: { label: SUPPLIER_STATUS_LABELS.ошибка, className: "text-amber-600 dark:text-amber-400" },
 };
 
 /** Statuses that allow sending messages to the supplier */
-export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set([
-	"письмо_отправлено",
-	"переговоры",
-	"получено_кп",
-]);
+export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set(["кп_запрошено", "переговоры", "получено_кп"]);
+
+export type SupplierCompanyType = "производитель" | "дистрибьютор";
+
+export const SUPPLIER_COMPANY_TYPES: SupplierCompanyType[] = ["производитель", "дистрибьютор"];
+
+export const SUPPLIER_COMPANY_TYPE_LABELS: Record<SupplierCompanyType, string> = {
+	производитель: "Производитель",
+	дистрибьютор: "Дистрибьютор",
+};
 
 export interface SupplierDocument {
 	name: string;
@@ -62,12 +84,20 @@ export interface SupplierPositionOffer {
 	total: number;
 }
 
-export type SupplierSortField = "companyName" | "tco" | "batchCost" | "savings" | "leadTimeDays";
+export type SupplierSortField =
+	| "companyName"
+	| "tco"
+	| "batchCost"
+	| "savings"
+	| "leadTimeDays"
+	| "foundedYear"
+	| "revenue";
 export type SupplierSortState = { field: SupplierSortField; direction: "asc" | "desc" } | null;
 
 export interface SupplierFilterParams {
 	search?: string;
 	statuses?: SupplierStatus[];
+	companyTypes?: SupplierCompanyType[];
 	showArchived?: boolean;
 	sort?: SupplierSortField;
 	dir?: "asc" | "desc";
@@ -81,6 +111,13 @@ export interface Supplier {
 	companyName: string;
 	status: SupplierStatus;
 	archived: boolean;
+	/** Company INN (tax ID) — 10 digits for legal entities. */
+	inn: string;
+	companyType: SupplierCompanyType;
+	region: string;
+	foundedYear: number;
+	/** Annual revenue in rubles. */
+	revenue: number;
 	email: string;
 	website: string;
 	address: string;
@@ -98,3 +135,8 @@ export interface Supplier {
 	chatHistory: SupplierChatMessage[];
 	positionOffers: SupplierPositionOffer[];
 }
+
+/** Shape for hand-authored Supplier seeds — identity/offer fields required;
+ * profile fields (inn, companyType, region, foundedYear, revenue) are enriched
+ * deterministically at load time by the mock layer. */
+export type SupplierSeed = Omit<Supplier, "inn" | "companyType" | "region" | "foundedYear" | "revenue">;

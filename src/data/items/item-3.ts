@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -31,7 +31,7 @@ export const ITEM: ProcurementItem = {
 	},
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-3-1",
 		itemId: "item-3",
@@ -404,7 +404,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-3-11",
 		itemId: "item-3",
 		companyName: "Ивтекстиль",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@ivtextile-ru.ru",
 		website: "https://ivtextile-ru.ru",
@@ -416,7 +416,7 @@ export const SUPPLIERS: Supplier[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Запрос отправлен, ответ пока не получили.",
+		aiDescription: "КП Запрошено, ответ пока не получили.",
 		aiRecommendations: "Напомнить через 3 рабочих дня.",
 		documents: [],
 		chatHistory: [
@@ -433,7 +433,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-3-12",
 		itemId: "item-3",
 		companyName: "ПКФ «Мебельная ткань»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "contact@mebel-tkan.ru",
 		website: "https://mebel-tkan.ru",

@@ -1,4 +1,4 @@
-import type { Supplier } from "../supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 import type { ProcurementItem } from "../types";
 
 export const ITEM: ProcurementItem = {
@@ -25,12 +25,12 @@ export const ITEM: ProcurementItem = {
 	additionalInfo: "Уголки картонные защитные 50×50×3 мм, длина 1 м, плотность 550 г/м². Для палет с матрасами.",
 };
 
-export const SUPPLIERS: Supplier[] = [
+export const SUPPLIERS: SupplierSeed[] = [
 	{
 		id: "supplier-item-8-1",
 		itemId: "item-8",
 		companyName: "КартонПак",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@kartonpak.ru",
 		website: "https://kartonpak.ru",
@@ -59,7 +59,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-2",
 		itemId: "item-8",
 		companyName: "ТД «Уголки-Профи»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@ugolki-profi.ru",
 		website: "https://ugolki-profi.ru",
@@ -123,7 +123,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-4",
 		itemId: "item-8",
 		companyName: "ООО «Картонный завод»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@kartonzavod.ru",
 		website: "https://kartonzavod.ru",
@@ -145,7 +145,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-5",
 		itemId: "item-8",
 		companyName: "Пермская картонно-бумажная ф-ка",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@pkbf.ru",
 		website: "https://pkbf.ru",
@@ -167,7 +167,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-6",
 		itemId: "item-8",
 		companyName: "Архбум",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@arkhbum.ru",
 		website: "https://arkhbum.ru",
@@ -189,7 +189,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-7",
 		itemId: "item-8",
 		companyName: "ООО «Каркас-Упак»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@karkas-upak.ru",
 		website: "https://karkas-upak.ru",
@@ -211,7 +211,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-8",
 		itemId: "item-8",
 		companyName: "Картон-Центр",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@karton-centr.ru",
 		website: "https://karton-centr.ru",
@@ -233,7 +233,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-9",
 		itemId: "item-8",
 		companyName: "ПКФ «Упак-Сервис»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "sales@upak-service.ru",
 		website: "https://upak-service.ru",
@@ -255,7 +255,7 @@ export const SUPPLIERS: Supplier[] = [
 		id: "supplier-item-8-10",
 		itemId: "item-8",
 		companyName: "ТД «Бумажный мир»",
-		status: "письмо_отправлено",
+		status: "кп_запрошено",
 		archived: false,
 		email: "info@bumazhnyi-mir.ru",
 		website: "https://bumazhnyi-mir.ru",

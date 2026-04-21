@@ -283,7 +283,7 @@ describe("SupplierDetailDrawer", () => {
 			const user = userEvent.setup();
 			renderDrawer({
 				supplier: makeSupplier("s1", {
-					status: "письмо_отправлено",
+					status: "кп_запрошено",
 					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
 				}),
 			});
@@ -368,8 +368,8 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByRole("button", { name: "Выбрать поставщика" })).toBeInTheDocument();
 		});
 
-		test("hides select supplier icon for письмо_отправлено status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_отправлено" }), onSelectSupplier: vi.fn() });
+		test("hides select supplier icon for кп_запрошено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }), onSelectSupplier: vi.fn() });
 			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
 		});
 
@@ -388,8 +388,8 @@ describe("SupplierDetailDrawer", () => {
 	});
 
 	describe("ChatComposer visibility", () => {
-		test("shows composer for письмо_отправлено status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "письмо_отправлено" }) });
+		test("shows composer for кп_запрошено status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 			expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
 		});

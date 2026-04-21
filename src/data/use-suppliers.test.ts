@@ -13,7 +13,8 @@ import {
 	useSuppliers,
 } from "./use-suppliers";
 
-const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length;
+// useSuppliers returns the full list (including archived), so include all 15 auto-generated candidates.
+const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length + 15;
 
 let queryClient: QueryClient;
 
