@@ -207,6 +207,7 @@ async function cancelAllTaskQueries(queryClient: ReturnType<typeof useQueryClien
 function invalidateAllTaskQueries(queryClient: ReturnType<typeof useQueryClient>, taskId?: string) {
 	queryClient.invalidateQueries({ queryKey: ["tasks"] });
 	queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
+	queryClient.invalidateQueries({ queryKey: ["tasks-global"] });
 	if (taskId) queryClient.invalidateQueries({ queryKey: ["task", taskId] });
 }
 

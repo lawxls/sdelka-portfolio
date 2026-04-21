@@ -114,6 +114,7 @@ function removeItemFromPages(cache: ItemsCache, id: string): ItemsCache {
 
 function invalidateItemQueries(queryClient: ReturnType<typeof useQueryClient>) {
 	queryClient.invalidateQueries({ queryKey: ["items"] });
+	queryClient.invalidateQueries({ queryKey: ["items-global"] });
 	queryClient.invalidateQueries({ queryKey: ["totals"] });
 	queryClient.invalidateQueries({ queryKey: ["folderStats"] });
 }

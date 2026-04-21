@@ -30,6 +30,7 @@ export function useArchiveSearchSuppliers() {
 		mutationFn: ({ itemId, ids }: { itemId: string; ids: string[] }) => archiveSearchSuppliers(itemId, ids),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["searchSuppliers", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["searchSuppliers-global"] });
 		},
 	});
 }
@@ -40,6 +41,7 @@ export function useUnarchiveSearchSuppliers() {
 		mutationFn: ({ itemId, ids }: { itemId: string; ids: string[] }) => unarchiveSearchSuppliers(itemId, ids),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["searchSuppliers", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["searchSuppliers-global"] });
 		},
 	});
 }
@@ -52,6 +54,8 @@ export function usePromoteSearchSuppliers() {
 			queryClient.invalidateQueries({ queryKey: ["searchSuppliers", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["searchSuppliers-global"] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
 		},
 	});
 }

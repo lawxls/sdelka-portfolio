@@ -54,6 +54,7 @@ export function useArchiveSuppliers() {
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
 		},
 	});
 }
@@ -66,6 +67,7 @@ export function useSelectSupplier() {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
 		},
 	});
 }
@@ -78,6 +80,7 @@ export function useDeleteSuppliers() {
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
 		},
 	});
 }

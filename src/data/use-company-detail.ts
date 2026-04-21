@@ -50,6 +50,7 @@ export function useUpdateCompany(id: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", id] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -61,6 +62,7 @@ export function useDeleteCompany() {
 		mutationFn: (id: string) => deleteCompany(id),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -72,6 +74,7 @@ export function useCreateCompany() {
 		mutationFn: (data: CreateCompanyPayload) => createCompany(data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -84,6 +87,7 @@ export function useCreateAddress(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -97,6 +101,7 @@ export function useUpdateAddress(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -109,6 +114,7 @@ export function useDeleteAddress(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -121,6 +127,7 @@ export function useCreateEmployee(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -134,6 +141,7 @@ export function useUpdateEmployee(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
@@ -146,6 +154,7 @@ export function useDeleteEmployee(companyId: string) {
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
+			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
 		},
 	});
 }
