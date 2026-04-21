@@ -1,4 +1,4 @@
-import { FileText, LoaderCircle, Pencil, X } from "lucide-react";
+import { FileText, LoaderCircle, Paperclip, Pencil, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -911,7 +911,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 				<div className="mt-3">
 					<div className="mb-1.5 flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-						<FileText className="size-3" aria-hidden="true" />
+						<Paperclip className="size-3" aria-hidden="true" />
 						Прикреплённые файлы
 					</div>
 					{isEditingAdditional ? (
