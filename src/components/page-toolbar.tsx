@@ -9,7 +9,7 @@ interface PageToolbarProps {
 export function PageToolbar({ left, middle, right }: PageToolbarProps) {
 	return (
 		<div
-			className="sticky top-0 z-20 flex shrink-0 items-center gap-md border-b border-border bg-background px-lg py-sm"
+			className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-md border-b border-border bg-background px-lg"
 			data-testid="page-toolbar"
 		>
 			{left !== undefined && (

@@ -4,13 +4,14 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
-import { ExpandingSearch } from "@/components/expanding-search";
 import { LoadMoreSentinel } from "@/components/load-more-sentinel";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { SearchSuppliersTable } from "@/components/search-suppliers-table";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { type DeliveryFilter, matchesDeliveryFilter, SuppliersTable } from "@/components/suppliers-table";
+import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
+import { ToolbarSearch } from "@/components/toolbar-search";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -54,11 +55,11 @@ import { cn } from "@/lib/utils";
 
 type ItemDrawerTab = "search" | "suppliers" | "details" | "tasks";
 
-const TABS: { key: ItemDrawerTab; label: string }[] = [
+const TABS: { key: ItemDrawerTab; label: string; mobileLabel?: string }[] = [
 	{ key: "search", label: "Поиск" },
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "tasks", label: "Задачи" },
-	{ key: "details", label: "Информация" },
+	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
 const DEFAULT_TAB: ItemDrawerTab = "search";
@@ -558,6 +559,8 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [search, setSearch] = useState("");
+	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
+	const searchExpanded = search.length > 0 || searchUserExpanded;
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [sort, setSort] = useState<DataTableSort | null>({ field: "createdAt", direction: "desc" });
 	const isMobile = useIsMobile();
@@ -650,73 +653,53 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 			</div>
 		) : (
 			<div className="flex items-center gap-2 px-3">
-				<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-					{formatRussianPlural(tasks.length, ["задача", "задачи", "задач"])}
-				</span>
-				<div className="ml-auto flex items-center gap-1">
-					<ExpandingSearch value={search} onChange={setSearch} ariaLabel="Поиск задач" debounceMs={250} />
-					{FILTER_BUTTONS.map(({ key, label }) => {
-						const Icon = STATUS_ICONS[key];
-						const count = taskColumns[key].count;
-						const active = activeFilter === key;
-						return (
-							<Tooltip key={key}>
-								<TooltipTrigger asChild>
-									<button
-										type="button"
-										aria-label={label}
-										aria-pressed={active}
-										className={cn(
-											"inline-flex items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2 py-1 text-sm transition-colors",
-											"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-											active && "bg-muted",
-										)}
-										onClick={() => handleFilterToggle(key)}
-									>
-										<Icon className="size-4" aria-hidden="true" />
-										{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
-									</button>
-								</TooltipTrigger>
-								<TooltipContent>{label}</TooltipContent>
-							</Tooltip>
-						);
-					})}
+				{!(isMobile && searchExpanded) && (
+					<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+						{formatRussianPlural(tasks.length, ["задача", "задачи", "задач"])}
+					</span>
+				)}
+				<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
+					<ToolbarSearch
+						value={search}
+						onChange={setSearch}
+						ariaLabel="Поиск задач"
+						debounceMs={250}
+						expanded={searchUserExpanded}
+						onExpandedChange={setSearchUserExpanded}
+					/>
+					{!(isMobile && searchExpanded) &&
+						FILTER_BUTTONS.map(({ key, label }) => {
+							const Icon = STATUS_ICONS[key];
+							const count = taskColumns[key].count;
+							const active = activeFilter === key;
+							return (
+								<Tooltip key={key}>
+									<TooltipTrigger asChild>
+										<button
+											type="button"
+											aria-label={label}
+											aria-pressed={active}
+											className={cn(
+												"inline-flex items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2 py-1 text-sm transition-colors",
+												"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+												active && "bg-muted",
+											)}
+											onClick={() => handleFilterToggle(key)}
+										>
+											<Icon className="size-4" aria-hidden="true" />
+											{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
+										</button>
+									</TooltipTrigger>
+									<TooltipContent>{label}</TooltipContent>
+								</Tooltip>
+							);
+						})}
 				</div>
 			</div>
 		);
 
 	function renderMobileCard(t: Task) {
-		const overdue = isOverdue(t.deadlineAt);
-		return (
-			<button
-				type="button"
-				data-testid={`task-row-${t.id}`}
-				className="rounded-lg border bg-background p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
-				onClick={() => onTaskClick(t.id)}
-			>
-				<div className="font-medium text-sm">{t.name}</div>
-				<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-					<div>
-						<div className="text-xs text-muted-foreground">Вопросы</div>
-						<div className="tabular-nums">
-							{t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "\u2014"}
-						</div>
-					</div>
-					<div>
-						<div className="text-xs text-muted-foreground">Дедлайн</div>
-						<time dateTime={t.deadlineAt} className={cn("tabular-nums", overdue && "font-medium text-destructive")}>
-							{formatDayMonthShort(t.deadlineAt)}
-						</time>
-					</div>
-					<div>
-						<div className="text-xs text-muted-foreground">Создано</div>
-						<time dateTime={t.createdAt} className="tabular-nums">
-							{formatDayMonthShortTime(t.createdAt)}
-						</time>
-					</div>
-				</div>
-			</button>
-		);
+		return <TaskCard task={t} onClick={onTaskClick} hideItemName />;
 	}
 
 	const sentinel = (
@@ -810,11 +793,7 @@ function ProcurementItemDrawerContent({
 }) {
 	const itemName = item?.name;
 	const itemStatus = item?.status;
-	const taskColumns = useTaskColumns({ item: itemId });
-	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
 
-	const { data: searchSuppliersData } = useSearchSuppliers(itemId);
-	const searchTabCount = searchSuppliersData?.length ?? 0;
 	const { data: allSuppliersData } = useSuppliers(itemId);
 	const headerMetrics = useMemo(() => {
 		const list = allSuppliersData?.suppliers;
@@ -827,13 +806,6 @@ function ProcurementItemDrawerContent({
 		}
 		return { total: list.length, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
-
-	const tabCounts: Record<ItemDrawerTab, number> = {
-		tasks: activeTaskCount,
-		search: searchTabCount,
-		suppliers: headerMetrics.total,
-		details: 0,
-	};
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
@@ -886,7 +858,6 @@ function ProcurementItemDrawerContent({
 
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
 				{TABS.map((tab) => {
-					const count = tabCounts[tab.key];
 					return (
 						<button
 							key={tab.key}
@@ -903,11 +874,13 @@ function ProcurementItemDrawerContent({
 							)}
 							onClick={() => onTabChange(tab.key)}
 						>
-							{tab.label}
-							{count > 0 && (
-								<span aria-hidden="true" className="ml-1.5 tabular-nums text-xs text-muted-foreground">
-									{count}
-								</span>
+							{tab.mobileLabel ? (
+								<>
+									<span className="md:hidden">{tab.mobileLabel}</span>
+									<span className="hidden md:inline">{tab.label}</span>
+								</>
+							) : (
+								tab.label
 							)}
 						</button>
 					);

@@ -162,14 +162,6 @@ describe("ProcurementItemDrawer", () => {
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 
-	test("tasks tab shows active task count badge", async () => {
-		renderDrawer();
-		const tasksTab = screen.getByRole("tab", { name: /Задачи/ });
-		await waitFor(() => {
-			expect(tasksTab).toHaveTextContent(/Задачи\s*3/);
-		});
-	});
-
 	test("tab click updates URL &tab= param", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);

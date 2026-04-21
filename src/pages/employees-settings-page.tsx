@@ -9,6 +9,7 @@ import { useSettingsOutletContext } from "@/components/settings-layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDeleteWorkspaceEmployees, useWorkspaceEmployees } from "@/data/use-workspace-employees";
 import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
@@ -23,6 +24,7 @@ function formatFullName(employee: WorkspaceEmployee): string {
 }
 
 export function EmployeesSettingsPage() {
+	const isMobile = useIsMobile();
 	const [, setSearchParams] = useSearchParams();
 	const { employeesInviteOpen: inviteOpen, setEmployeesInviteOpen: setInviteOpen } = useSettingsOutletContext();
 	const { employees } = useWorkspaceEmployees();
@@ -99,70 +101,113 @@ export function EmployeesSettingsPage() {
 						},
 					]}
 				/>
-				<table className="w-full text-sm">
-					<thead className="sticky top-0 z-10 bg-background border-b border-border">
-						<tr className="text-left text-muted-foreground">
-							<th className="w-10 px-lg py-sm">
-								<Checkbox
-									checked={allSelected}
-									onCheckedChange={toggleAll}
-									aria-label="Выбрать всех сотрудников"
-									disabled={employees.length === 0}
-								/>
-							</th>
-							<th className="px-lg py-sm font-medium">ФИО</th>
-							<th className="px-lg py-sm font-medium">Почта</th>
-							<th className="px-lg py-sm font-medium">Компании</th>
-							<th className="px-lg py-sm font-medium tabular-nums">Дата регистрации</th>
-						</tr>
-					</thead>
-					<tbody>
+				{isMobile ? (
+					<div className="flex flex-col gap-2 p-3">
 						{employees.map((employee) => {
 							const isSelected = selected.has(employee.id);
+							const fullName = formatFullName(employee);
 							return (
-								<tr
+								<article
 									key={employee.id}
+									data-testid={`employee-card-${employee.id}`}
 									className={cn(
-										"border-b border-border cursor-pointer transition-colors",
-										isSelected ? "bg-accent/40" : "bg-background hover:bg-muted/50",
+										"flex items-start gap-2 rounded-lg border bg-background p-3 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
+										isSelected ? "border-primary/60 bg-accent/40" : "hover:bg-muted/50 has-[button:active]:bg-muted/50",
 									)}
-									onClick={() => handleRowClick(employee)}
 								>
-									<td
-										className="px-lg py-sm"
-										onClick={(e) => {
-											e.stopPropagation();
-										}}
-										onKeyDown={(e) => {
-											if (e.key === " " || e.key === "Enter") e.stopPropagation();
-										}}
-									>
+									<div className="pt-0.5">
 										<Checkbox
 											checked={isSelected}
 											onCheckedChange={() => toggleRow(employee.id)}
-											aria-label={`Выбрать ${formatFullName(employee)}`}
+											aria-label={`Выбрать ${fullName}`}
 										/>
-									</td>
-									<td className="px-lg py-sm">
-										<div className="flex flex-col leading-tight">
-											<span className="font-medium text-foreground">{formatFullName(employee)}</span>
-											{employee.position && (
-												<span className="mt-0.5 text-xs text-muted-foreground">{employee.position}</span>
-											)}
-										</div>
-									</td>
-									<td className="px-lg py-sm text-muted-foreground">{employee.email}</td>
-									<td className="px-lg py-sm text-muted-foreground">
-										{employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "\u2014"}
-									</td>
-									<td className="px-lg py-sm tabular-nums text-muted-foreground">
-										{formatRegistrationDate(employee.registeredAt)}
-									</td>
-								</tr>
+									</div>
+									<button type="button" onClick={() => handleRowClick(employee)} className="flex-1 min-w-0 text-left">
+										<div className="truncate font-medium">{fullName}</div>
+										{employee.position && (
+											<div className="mt-0.5 truncate text-xs text-muted-foreground">{employee.position}</div>
+										)}
+										<dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+											<dt className="text-xs text-muted-foreground">Почта</dt>
+											<dd className="truncate">{employee.email}</dd>
+											<dt className="text-xs text-muted-foreground">Компании</dt>
+											<dd className="truncate">
+												{employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "\u2014"}
+											</dd>
+											<dt className="text-xs text-muted-foreground">Регистрация</dt>
+											<dd className="tabular-nums">{formatRegistrationDate(employee.registeredAt)}</dd>
+										</dl>
+									</button>
+								</article>
 							);
 						})}
-					</tbody>
-				</table>
+					</div>
+				) : (
+					<table className="w-full text-sm">
+						<thead className="sticky top-0 z-10 bg-background border-b border-border">
+							<tr className="text-left text-muted-foreground">
+								<th className="w-10 px-lg py-sm">
+									<Checkbox
+										checked={allSelected}
+										onCheckedChange={toggleAll}
+										aria-label="Выбрать всех сотрудников"
+										disabled={employees.length === 0}
+									/>
+								</th>
+								<th className="px-lg py-sm font-medium">ФИО</th>
+								<th className="px-lg py-sm font-medium">Почта</th>
+								<th className="px-lg py-sm font-medium">Компании</th>
+								<th className="px-lg py-sm font-medium tabular-nums">Дата регистрации</th>
+							</tr>
+						</thead>
+						<tbody>
+							{employees.map((employee) => {
+								const isSelected = selected.has(employee.id);
+								return (
+									<tr
+										key={employee.id}
+										className={cn(
+											"border-b border-border cursor-pointer transition-colors",
+											isSelected ? "bg-accent/40" : "bg-background hover:bg-muted/50",
+										)}
+										onClick={() => handleRowClick(employee)}
+									>
+										<td
+											className="px-lg py-sm"
+											onClick={(e) => {
+												e.stopPropagation();
+											}}
+											onKeyDown={(e) => {
+												if (e.key === " " || e.key === "Enter") e.stopPropagation();
+											}}
+										>
+											<Checkbox
+												checked={isSelected}
+												onCheckedChange={() => toggleRow(employee.id)}
+												aria-label={`Выбрать ${formatFullName(employee)}`}
+											/>
+										</td>
+										<td className="px-lg py-sm">
+											<div className="flex flex-col leading-tight">
+												<span className="font-medium text-foreground">{formatFullName(employee)}</span>
+												{employee.position && (
+													<span className="mt-0.5 text-xs text-muted-foreground">{employee.position}</span>
+												)}
+											</div>
+										</td>
+										<td className="px-lg py-sm text-muted-foreground">{employee.email}</td>
+										<td className="px-lg py-sm text-muted-foreground">
+											{employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "\u2014"}
+										</td>
+										<td className="px-lg py-sm tabular-nums text-muted-foreground">
+											{formatRegistrationDate(employee.registeredAt)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				)}
 			</main>
 
 			<InviteEmployeesDrawer open={inviteOpen} onOpenChange={setInviteOpen} />

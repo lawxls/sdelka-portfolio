@@ -1,13 +1,26 @@
 import type { LucideIcon } from "lucide-react";
-import { Archive, CalendarClock, CalendarPlus, MessageCircleQuestion, UserRound, X } from "lucide-react";
+import {
+	Archive,
+	CalendarClock,
+	CalendarPlus,
+	EllipsisVertical,
+	MessageCircleQuestion,
+	UserRound,
+	X,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChatComposer } from "@/components/chat-composer";
 import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SupplierQuestion, TaskAssignee } from "@/data/task-types";
 import { useSupplier } from "@/data/use-suppliers";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
@@ -203,20 +216,18 @@ function TaskDrawerContent({
 				<SheetDescription className="text-xs">{currentTask.item.name}</SheetDescription>
 				<div className="absolute top-3 right-3 flex items-center gap-1">
 					{!isAnswered && (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant="ghost"
-									size="icon-sm"
-									aria-label="В архив"
-									onClick={handleArchive}
-									disabled={updateStatus.isPending}
-								>
-									<Archive aria-hidden="true" />
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="icon-sm" aria-label="Действия" disabled={updateStatus.isPending}>
+									<EllipsisVertical aria-hidden="true" />
 								</Button>
-							</TooltipTrigger>
-							<TooltipContent>В архив</TooltipContent>
-						</Tooltip>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onSelect={handleArchive}>
+									<Archive className="size-3.5" />В архив
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					)}
 					<SheetClose asChild>
 						<Button variant="ghost" size="icon-sm" aria-label="Закрыть">

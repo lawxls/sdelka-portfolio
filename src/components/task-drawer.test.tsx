@@ -138,17 +138,18 @@ describe("TaskDrawer", () => {
 		expect(screen.getByTestId("supplier-question-card-sq-b")).toHaveTextContent("ООО «Бета»");
 	});
 
-	it("archives the task when В архив is clicked", async () => {
+	it("archives the task via the overflow menu", async () => {
 		const spy = vi.spyOn(tasksMock, "changeTaskStatusMock");
 		const onClose = vi.fn();
 		renderDrawer("task-1", onClose);
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Действия" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "В архив" }));
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+		await user.click(await screen.findByRole("menuitem", { name: /В архив/ }));
 
 		await waitFor(() => {
 			expect(spy).toHaveBeenCalledWith("task-1", expect.objectContaining({ status: "archived" }));

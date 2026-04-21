@@ -97,9 +97,10 @@ interface ProcurementCardProps {
 }
 
 const FIELDS: { label: string; key: string }[] = [
-	{ label: "Бюджет в\u00A0год", key: "annualCost" },
-	{ label: "Текущая цена", key: "currentPrice" },
-	{ label: "Лучшая цена", key: "bestPrice" },
+	{ label: "Объем\u00A0₽", key: "annualCost" },
+	{ label: "Текущее\u00A0ТСО", key: "currentPrice" },
+	{ label: "Лучшее\u00A0ТСО", key: "bestPrice" },
+	{ label: "Среднее\u00A0ТСО", key: "averagePrice" },
 ];
 
 export function ProcurementCard({
@@ -128,6 +129,7 @@ export function ProcurementCard({
 		annualCost: formatCurrency(getAnnualCost(item)),
 		currentPrice: formatCurrency(item.currentPrice),
 		bestPrice: formatCurrency(item.bestPrice),
+		averagePrice: formatCurrency(item.averagePrice),
 	};
 
 	const handleClick = onRowClick ? () => onRowClick(item) : undefined;
@@ -171,7 +173,7 @@ export function ProcurementCard({
 			role={onRowClick ? "button" : undefined}
 			data-testid={`card-${item.id}`}
 		>
-			<div className="flex items-start justify-between">
+			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-1.5">
 					<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
 					{showCompanyBadge && companyName && !isEditing && (
@@ -202,7 +204,7 @@ export function ProcurementCard({
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
-								className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								className="relative flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-[-6px] after:content-['']"
 								aria-label="Действия"
 								onClick={(e) => e.stopPropagation()}
 							>
@@ -282,14 +284,16 @@ export function ProcurementCard({
 					</DropdownMenu>
 				)}
 			</div>
-			<div className="mt-1">{nameContent}</div>
-			<span className={cn("mt-0.5 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
-				<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
-				{STATUS_CONFIG[item.status].label}
-				{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
-					<TaskCountBadge count={item.taskCount} />
-				)}
-			</span>
+			<div className="mt-1 flex items-start justify-between gap-2">
+				<div className="min-w-0 flex-1">{nameContent}</div>
+				<span className={cn("shrink-0 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
+					<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
+					{STATUS_CONFIG[item.status].label}
+					{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
+						<TaskCountBadge count={item.taskCount} />
+					)}
+				</span>
+			</div>
 			<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 				{FIELDS.map((f) => (
 					<div key={f.key}>
@@ -298,15 +302,15 @@ export function ProcurementCard({
 					</div>
 				))}
 				<div>
-					<dt className="text-xs text-muted-foreground">Откл.&nbsp;(%)</dt>
-					<dd data-field="deviation" className={`tabular-nums ${dev.className}`}>
-						{dev.text}
+					<dt className="text-xs text-muted-foreground">Переплата&nbsp;₽</dt>
+					<dd data-field="overpayment" className={`tabular-nums ${signClassName(overpayment)}`}>
+						{formatCurrency(overpayment)}
 					</dd>
 				</div>
 				<div>
-					<dt className="text-xs text-muted-foreground">Переплата&nbsp;(₽)</dt>
-					<dd data-field="overpayment" className={`tabular-nums ${signClassName(overpayment)}`}>
-						{formatCurrency(overpayment)}
+					<dt className="text-xs text-muted-foreground">Переплата&nbsp;%</dt>
+					<dd data-field="deviation" className={`tabular-nums ${dev.className}`}>
+						{dev.text}
 					</dd>
 				</div>
 			</dl>

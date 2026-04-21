@@ -1,7 +1,7 @@
 import { Archive, ArchiveRestore, Check, Download, ListFilter, Mails } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { ExpandingSearch } from "@/components/expanding-search";
+import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -74,6 +74,8 @@ export function SearchSuppliersTable({
 	onToggleArchived,
 }: SearchSuppliersTableProps) {
 	const isMobile = useIsMobile();
+	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
+	const searchExpanded = search.length > 0 || searchUserExpanded;
 
 	const hasSelection = selectedIds.size > 0;
 	const entryNamesById = useMemo(() => {
@@ -97,100 +99,112 @@ export function SearchSuppliersTable({
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
-			<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-				{formatRussianPlural(entries.length, ["поставщик", "поставщика", "поставщиков"])}
-			</span>
-			<div className="ml-auto flex items-center gap-1">
-				<ExpandingSearch value={search} onChange={onSearchChange} ariaLabel="Поиск поставщиков" />
-				<Popover>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<PopoverTrigger asChild>
-								<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
-									<ListFilter aria-hidden="true" />
-									{(activeCompanyTypes.length > 0 || activeRequestStatuses.length > 0) && (
-										<span
-											className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
-											data-testid="filter-indicator"
-										/>
-									)}
+			{!(isMobile && searchExpanded) && (
+				<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+					{formatRussianPlural(entries.length, ["поставщик", "поставщика", "поставщиков"])}
+				</span>
+			)}
+			<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
+				<ToolbarSearch
+					value={search}
+					onChange={onSearchChange}
+					ariaLabel="Поиск поставщиков"
+					expanded={searchUserExpanded}
+					onExpandedChange={setSearchUserExpanded}
+				/>
+				{!(isMobile && searchExpanded) && (
+					<>
+						<Popover>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<PopoverTrigger asChild>
+										<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
+											<ListFilter aria-hidden="true" />
+											{(activeCompanyTypes.length > 0 || activeRequestStatuses.length > 0) && (
+												<span
+													className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
+													data-testid="filter-indicator"
+												/>
+											)}
+										</Button>
+									</PopoverTrigger>
+								</TooltipTrigger>
+								<TooltipContent>Фильтры</TooltipContent>
+							</Tooltip>
+							<PopoverContent align="end" className="w-56">
+								<div className="flex flex-col gap-1">
+									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип</div>
+									{SEARCH_SUPPLIER_COMPANY_TYPES.map((type) => (
+										<button
+											key={type}
+											type="button"
+											aria-label={SEARCH_SUPPLIER_COMPANY_TYPE_LABELS[type]}
+											aria-pressed={activeCompanyTypes.includes(type)}
+											className={cn(FILTER_BTN, activeCompanyTypes.includes(type) && FILTER_BTN_ACTIVE)}
+											onClick={() => onCompanyTypeFilter(type)}
+										>
+											{SEARCH_SUPPLIER_COMPANY_TYPE_LABELS[type]}
+										</button>
+									))}
+									<div className="my-1 border-t border-border" />
+									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус поставщика</div>
+									{REQUEST_STATUS_PRESETS.map(({ value, label }) => (
+										<button
+											key={value}
+											type="button"
+											aria-label={label}
+											aria-pressed={activeRequestStatuses.includes(value)}
+											className={cn(FILTER_BTN, activeRequestStatuses.includes(value) && FILTER_BTN_ACTIVE)}
+											onClick={() => onRequestStatusFilter(value)}
+										>
+											{label}
+										</button>
+									))}
+								</div>
+							</PopoverContent>
+						</Popover>
+						{!showArchived && (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										aria-label="Связаться со всеми"
+										onClick={onSendRequestAll}
+									>
+										<Mails aria-hidden="true" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Связаться со всеми</TooltipContent>
+							</Tooltip>
+						)}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
+									<Download aria-hidden="true" />
 								</Button>
-							</PopoverTrigger>
-						</TooltipTrigger>
-						<TooltipContent>Фильтры</TooltipContent>
-					</Tooltip>
-					<PopoverContent align="end" className="w-56">
-						<div className="flex flex-col gap-1">
-							<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип</div>
-							{SEARCH_SUPPLIER_COMPANY_TYPES.map((type) => (
-								<button
-									key={type}
+							</TooltipTrigger>
+							<TooltipContent>Скачать таблицу</TooltipContent>
+						</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
 									type="button"
-									aria-label={SEARCH_SUPPLIER_COMPANY_TYPE_LABELS[type]}
-									aria-pressed={activeCompanyTypes.includes(type)}
-									className={cn(FILTER_BTN, activeCompanyTypes.includes(type) && FILTER_BTN_ACTIVE)}
-									onClick={() => onCompanyTypeFilter(type)}
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Архив"
+									aria-pressed={showArchived}
+									onClick={onToggleArchived}
+									className={showArchived ? "bg-muted" : ""}
 								>
-									{SEARCH_SUPPLIER_COMPANY_TYPE_LABELS[type]}
-								</button>
-							))}
-							<div className="my-1 border-t border-border" />
-							<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус поставщика</div>
-							{REQUEST_STATUS_PRESETS.map(({ value, label }) => (
-								<button
-									key={value}
-									type="button"
-									aria-label={label}
-									aria-pressed={activeRequestStatuses.includes(value)}
-									className={cn(FILTER_BTN, activeRequestStatuses.includes(value) && FILTER_BTN_ACTIVE)}
-									onClick={() => onRequestStatusFilter(value)}
-								>
-									{label}
-								</button>
-							))}
-						</div>
-					</PopoverContent>
-				</Popover>
-				{!showArchived && (
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Связаться со всеми"
-								onClick={onSendRequestAll}
-							>
-								<Mails aria-hidden="true" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Связаться со всеми</TooltipContent>
-					</Tooltip>
+									<Archive aria-hidden="true" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Архив</TooltipContent>
+						</Tooltip>
+					</>
 				)}
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
-							<Download aria-hidden="true" />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Скачать таблицу</TooltipContent>
-				</Tooltip>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon-sm"
-							aria-label="Архив"
-							aria-pressed={showArchived}
-							onClick={onToggleArchived}
-							className={showArchived ? "bg-muted" : ""}
-						>
-							<Archive aria-hidden="true" />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Архив</TooltipContent>
-				</Tooltip>
 			</div>
 		</div>
 	);
@@ -257,18 +271,13 @@ export function SearchSuppliersTable({
 
 	function renderMobileCard(e: SearchSupplier) {
 		return (
-			<div data-testid="search-supplier-card" className="rounded-lg border bg-card p-4 text-left">
+			<div data-testid="search-supplier-card" className="w-full rounded-lg border bg-card p-4 text-left">
 				<div className="mb-1 flex items-start justify-between gap-2">
-					<div className="flex flex-col gap-0.5">
-						<span className="font-medium">{e.companyName}</span>
-						<span className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{e.inn}</span>
+					<div className="min-w-0 flex-1">
+						<div className="truncate font-medium">{e.companyName}</div>
+						<div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{e.inn}</div>
 					</div>
-					{e.requestStatus === "requested" && (
-						<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-							<Check className="size-3" aria-hidden="true" />
-							Связались
-						</span>
-					)}
+					<div className="shrink-0">{renderSendRequestCell(e, onSendRequest)}</div>
 				</div>
 				<a
 					href={e.website}
@@ -296,7 +305,6 @@ export function SearchSuppliersTable({
 						<div className="tabular-nums">{formatCompactRuble(e.revenue)}</div>
 					</div>
 				</div>
-				<div className="mt-3">{renderSendRequestCell(e, onSendRequest)}</div>
 			</div>
 		);
 	}

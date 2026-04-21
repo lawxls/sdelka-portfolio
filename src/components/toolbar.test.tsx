@@ -1,10 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { FilterState, Folder, SortState } from "@/data/types";
+import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { Toolbar } from "./toolbar";
+
+function mockMobile(value: boolean) {
+	vi.spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(value);
+}
+
+afterEach(() => vi.restoreAllMocks());
 
 const defaultFilters: FilterState = { deviation: "all", status: "all" };
 const defaultFolders: Folder[] = [];
@@ -48,14 +55,14 @@ function renderToolbar(
 describe("Toolbar", () => {
 	test("renders collapsed search button; input is not in the DOM", () => {
 		renderToolbar();
-		expect(screen.getByRole("button", { name: "Поиск" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск позиций" })).toBeInTheDocument();
 		expect(screen.queryByPlaceholderText(/Поиск/)).not.toBeInTheDocument();
 	});
 
 	test("clicking search button expands it into an input", async () => {
 		const user = userEvent.setup();
 		renderToolbar();
-		await user.click(screen.getByRole("button", { name: "Поиск" }));
+		await user.click(screen.getByRole("button", { name: "Поиск позиций" }));
 		expect(screen.getByPlaceholderText("Поиск…")).toBeInTheDocument();
 	});
 
@@ -132,14 +139,22 @@ describe("Toolbar", () => {
 	});
 });
 
-describe("SortPopover", () => {
-	test("sort button renders", () => {
+describe("SortPopover (inside mobile overflow)", () => {
+	function openOverflow() {
+		fireEvent.click(screen.getByRole("button", { name: "Ещё" }));
+	}
+
+	test("sort button is reachable via overflow menu", () => {
+		mockMobile(true);
 		renderToolbar();
+		openOverflow();
 		expect(screen.getByRole("button", { name: "Сортировка" })).toBeInTheDocument();
 	});
 
 	test("sort popover shows all sort fields on click", () => {
+		mockMobile(true);
 		renderToolbar();
+		openOverflow();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
 		expect(screen.getByText("Объем в ₽")).toBeInTheDocument();
 		expect(screen.getByText("Текущее ТСО")).toBeInTheDocument();
@@ -150,31 +165,37 @@ describe("SortPopover", () => {
 	});
 
 	test("clicking sort field calls onSort with correct field", () => {
+		mockMobile(true);
 		const onSort = vi.fn();
 		renderToolbar({ onSort });
+		openOverflow();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
 		fireEvent.click(screen.getByText("Текущее ТСО"));
 		expect(onSort).toHaveBeenCalledWith("currentPrice");
 	});
 
 	test("active sort field is visually indicated", () => {
+		mockMobile(true);
 		renderToolbar({ sort: { field: "overpayment", direction: "asc" } });
+		openOverflow();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
 		const activeBtn = screen.getByText("Переплата").closest("button");
 		expect(activeBtn?.className).toContain("font-medium");
 	});
 
-	test("sort button shows active indicator dot when sort is set", () => {
+	test("overflow trigger shows active indicator dot when sort is set", () => {
+		mockMobile(true);
 		renderToolbar({ sort: { field: "currentPrice", direction: "asc" } });
-		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
-		const dot = sortBtn.querySelector(".bg-primary");
+		const overflowBtn = screen.getByRole("button", { name: "Ещё" });
+		const dot = overflowBtn.querySelector(".bg-primary");
 		expect(dot).toBeInTheDocument();
 	});
 
-	test("no active indicator dot when sort is null", () => {
+	test("no active indicator dot when sort is null and no filters applied", () => {
+		mockMobile(true);
 		renderToolbar({ sort: null });
-		const sortBtn = screen.getByRole("button", { name: "Сортировка" });
-		const dot = sortBtn.querySelector(".bg-primary");
+		const overflowBtn = screen.getByRole("button", { name: "Ещё" });
+		const dot = overflowBtn.querySelector(".bg-primary");
 		expect(dot).not.toBeInTheDocument();
 	});
 });

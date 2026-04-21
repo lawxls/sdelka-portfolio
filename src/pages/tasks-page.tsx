@@ -4,9 +4,10 @@ import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Inbox, ListFilter, 
 import { useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { ExpandingSearch } from "@/components/expanding-search";
 import { PageToolbar } from "@/components/page-toolbar";
+import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
+import { ToolbarSearch } from "@/components/toolbar-search";
 import { TotalCount } from "@/components/total-count";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -385,6 +386,8 @@ export function TasksPage() {
 	const statusFilter = parseStatusFilter(searchParams.get("status"));
 	const sort = parseSort(searchParams);
 
+	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
+	const searchExpanded = search.length > 0 || searchUserExpanded;
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const updateStatus = useUpdateTaskStatus();
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -519,6 +522,8 @@ export function TasksPage() {
 		downloadTasksCsv(tasks);
 	}
 
+	const searchFullRow = isMobile && searchExpanded;
+
 	const toolbar =
 		selectedIds.size > 0 ? (
 			<div className="flex items-center gap-3" data-testid="selection-bar">
@@ -532,31 +537,42 @@ export function TasksPage() {
 				</Button>
 			</div>
 		) : (
-			<div className="flex items-center gap-1">
-				<ExpandingSearch value={search} onChange={setSearch} ariaLabel="Поиск задач" debounceMs={250} />
-				<FilterChip
-					icon={STATUS_ICONS.completed}
-					label="Завершённые"
-					count={completedCount}
-					active={statusFilter === "completed"}
-					onClick={() => setStatusFilter(statusFilter === "completed" ? "active" : "completed")}
+			<div className={cn("flex items-center gap-1", searchFullRow && "flex-1")}>
+				<ToolbarSearch
+					value={search}
+					onChange={setSearch}
+					ariaLabel="Поиск задач"
+					debounceMs={250}
+					expanded={searchUserExpanded}
+					onExpandedChange={setSearchUserExpanded}
 				/>
-				<FilterChip
-					icon={STATUS_ICONS.archived}
-					label="Архив"
-					count={archivedCount}
-					active={statusFilter === "archived"}
-					onClick={() => setStatusFilter(statusFilter === "archived" ? "active" : "archived")}
-				/>
-				<ItemFilterPopover activeItem={activeItem} onSelect={setItemFilter} />
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={handleDownload}>
-							<Download aria-hidden="true" />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Скачать таблицу</TooltipContent>
-				</Tooltip>
+				{!searchFullRow && (
+					<>
+						<FilterChip
+							icon={STATUS_ICONS.completed}
+							label="Завершённые"
+							count={completedCount}
+							active={statusFilter === "completed"}
+							onClick={() => setStatusFilter(statusFilter === "completed" ? "active" : "completed")}
+						/>
+						<FilterChip
+							icon={STATUS_ICONS.archived}
+							label="Архив"
+							count={archivedCount}
+							active={statusFilter === "archived"}
+							onClick={() => setStatusFilter(statusFilter === "archived" ? "active" : "archived")}
+						/>
+						<ItemFilterPopover activeItem={activeItem} onSelect={setItemFilter} />
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={handleDownload}>
+									<Download aria-hidden="true" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Скачать таблицу</TooltipContent>
+						</Tooltip>
+					</>
+				)}
 			</div>
 		);
 
@@ -728,47 +744,9 @@ function MobileTaskList({
 			)}
 			{!isLoading && tasks.length > 0 && (
 				<div className="flex flex-col gap-3 p-4">
-					{tasks.map((t) => {
-						const overdue = isOverdue(t.deadlineAt);
-						const assigneeName = formatAssigneeName(t.assignee);
-						return (
-							<button
-								key={t.id}
-								type="button"
-								data-testid={`task-row-${t.id}`}
-								onClick={() => onRowClick(t.id)}
-								className="w-full rounded-lg border bg-background p-4 text-left transition-colors hover:bg-muted/50 active:bg-muted"
-							>
-								<div className="text-sm font-medium">{t.name}</div>
-								<div className="mt-0.5 text-xs text-muted-foreground">{t.item.name}</div>
-								<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-									<div>
-										<div className="text-xs text-muted-foreground">Назначена</div>
-										<div className="truncate">{assigneeName}</div>
-									</div>
-									<div>
-										<div className="text-xs text-muted-foreground">Вопросы</div>
-										<div className="tabular-nums">{t.questionCount > 0 ? t.questionCount : "—"}</div>
-									</div>
-									<div>
-										<div className="text-xs text-muted-foreground">Дедлайн</div>
-										<time
-											dateTime={t.deadlineAt}
-											className={cn("tabular-nums", overdue && "font-medium text-destructive")}
-										>
-											{formatDayMonthShort(t.deadlineAt)}
-										</time>
-									</div>
-									<div>
-										<div className="text-xs text-muted-foreground">Создана</div>
-										<time dateTime={t.createdAt} className="tabular-nums">
-											{formatDayMonthShortTime(t.createdAt)}
-										</time>
-									</div>
-								</div>
-							</button>
-						);
-					})}
+					{tasks.map((t) => (
+						<TaskCard key={t.id} task={t} onClick={onRowClick} />
+					))}
 				</div>
 			)}
 			{hasNextPage && <div ref={sentinelRef} className="h-px" />}

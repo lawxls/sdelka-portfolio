@@ -52,12 +52,12 @@ describe("ProcurementCard", () => {
 		expect(overpaymentEl?.className).toContain("text-green-600");
 	});
 
-	it("does not render average price", () => {
+	it("renders average price (column-parity with desktop table)", () => {
 		const item = makeItem("x", { averagePrice: 45 });
 		render(<ProcurementCard item={item} index={0} />);
 
-		expect(screen.queryByText("45 ₽")).not.toBeInTheDocument();
-		expect(screen.queryByText(/средняя/i)).not.toBeInTheDocument();
+		expect(screen.getByText("45 ₽")).toBeInTheDocument();
+		expect(screen.getByText(/Среднее/)).toBeInTheDocument();
 	});
 
 	it("renders status icon and color for each status variant", () => {

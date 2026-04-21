@@ -1,8 +1,9 @@
-import { Plus, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { Outlet, useLocation, useOutletContext } from "react-router";
+import { Link, Outlet, useLocation, useOutletContext } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { SettingsSidebar } from "./settings-sidebar";
 
 type SettingsOutletContext = {
@@ -41,6 +42,7 @@ export function SettingsLayout() {
 	const [employeesInviteOpen, setEmployeesInviteOpen] = useState(false);
 	const [emailsCreateOpen, setEmailsCreateOpen] = useState(false);
 	const location = useLocation();
+	const isMobile = useIsMobile();
 
 	const outletContext: SettingsOutletContext = {
 		companiesCreateOpen,
@@ -53,12 +55,40 @@ export function SettingsLayout() {
 
 	function renderBreadcrumb() {
 		const crumb = BREADCRUMBS[location.pathname];
-		if (!crumb) return null;
+		if (isMobile && crumb) {
+			return (
+				<nav className="flex items-center gap-1 text-sm leading-none" aria-label="breadcrumb">
+					<Button
+						type="button"
+						asChild
+						variant="ghost"
+						size="icon-sm"
+						aria-label="Назад к настройкам"
+						className="relative after:absolute after:inset-[-4px] after:content-['']"
+					>
+						<Link to="/settings">
+							<ArrowLeft aria-hidden="true" />
+						</Link>
+					</Button>
+					<span className="font-semibold text-foreground">{crumb[1]}</span>
+				</nav>
+			);
+		}
 		return (
-			<nav className="flex min-h-7 items-center gap-1 text-sm text-muted-foreground" aria-label="breadcrumb">
-				<span>{crumb[0]}</span>
-				<span aria-hidden="true">/</span>
-				<span className="text-foreground">{crumb[1]}</span>
+			<nav className="flex items-center gap-1 text-sm leading-none" aria-label="breadcrumb">
+				<h1 className="font-semibold text-foreground">Настройки</h1>
+				{crumb && (
+					<>
+						<span aria-hidden="true" className="text-border">
+							/
+						</span>
+						<span className="text-muted-foreground">{crumb[0]}</span>
+						<span aria-hidden="true" className="text-border">
+							/
+						</span>
+						<span className="text-foreground">{crumb[1]}</span>
+					</>
+				)}
 			</nav>
 		);
 	}

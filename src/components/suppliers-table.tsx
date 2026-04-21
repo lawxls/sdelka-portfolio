@@ -1,9 +1,9 @@
 import { Archive, Download, ListFilter, LoaderCircle, UserCheck } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
-import { ExpandingSearch } from "@/components/expanding-search";
 import { SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { DeliveryValue } from "@/components/supplier-value-displays";
+import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -136,6 +136,8 @@ export function SuppliersTable({
 	isFetchingNextPage,
 }: SuppliersTableProps) {
 	const isMobile = useIsMobile();
+	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
+	const searchExpanded = search.length > 0 || searchUserExpanded;
 	const sentinelRef = useIntersectionObserver(() => loadMore?.());
 
 	const hasSelection = selectedIds.size > 0;
@@ -175,98 +177,112 @@ export function SuppliersTable({
 		</div>
 	) : (
 		<div className="flex items-center gap-2 px-3">
-			<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-				{formatRussianPlural(rowsCount, ["поставщик", "поставщика", "поставщиков"])}
-			</span>
-			<div className="ml-auto flex items-center gap-1">
-				<ExpandingSearch value={search} onChange={onSearchChange} ariaLabel="Поиск поставщиков" />
-				<Popover>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<PopoverTrigger asChild>
-								<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
-									<ListFilter aria-hidden="true" />
-									{(activeStatuses.length > 0 || activePaymentTypes.length > 0 || activeDeliveryFilters.length > 0) && (
-										<span
-											className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
-											data-testid="filter-indicator"
-										/>
-									)}
+			{!(isMobile && searchExpanded) && (
+				<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+					{formatRussianPlural(rowsCount, ["поставщик", "поставщика", "поставщиков"])}
+				</span>
+			)}
+			<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
+				<ToolbarSearch
+					value={search}
+					onChange={onSearchChange}
+					ariaLabel="Поиск поставщиков"
+					expanded={searchUserExpanded}
+					onExpandedChange={setSearchUserExpanded}
+				/>
+				{!(isMobile && searchExpanded) && (
+					<>
+						<Popover>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<PopoverTrigger asChild>
+										<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
+											<ListFilter aria-hidden="true" />
+											{(activeStatuses.length > 0 ||
+												activePaymentTypes.length > 0 ||
+												activeDeliveryFilters.length > 0) && (
+												<span
+													className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
+													data-testid="filter-indicator"
+												/>
+											)}
+										</Button>
+									</PopoverTrigger>
+								</TooltipTrigger>
+								<TooltipContent>Фильтры</TooltipContent>
+							</Tooltip>
+							<PopoverContent align="end" className="w-56">
+								<div className="flex flex-col gap-1">
+									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус</div>
+									{SUPPLIER_STATUSES.map((status) => (
+										<button
+											key={status}
+											type="button"
+											aria-label={SUPPLIER_STATUS_LABELS[status]}
+											aria-pressed={activeStatuses.includes(status)}
+											className={cn(FILTER_BTN, activeStatuses.includes(status) && FILTER_BTN_ACTIVE)}
+											onClick={() => onStatusFilter(status)}
+										>
+											{SUPPLIER_STATUS_LABELS[status]}
+										</button>
+									))}
+									<div className="my-1 border-t border-border" />
+									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип оплаты</div>
+									{PAYMENT_TYPES.map((t) => (
+										<button
+											key={t}
+											type="button"
+											aria-label={PAYMENT_TYPE_LABELS[t]}
+											aria-pressed={activePaymentTypes.includes(t)}
+											className={cn(FILTER_BTN, activePaymentTypes.includes(t) && FILTER_BTN_ACTIVE)}
+											onClick={() => onPaymentTypeFilter(t)}
+										>
+											{PAYMENT_TYPE_LABELS[t]}
+										</button>
+									))}
+									<div className="my-1 border-t border-border" />
+									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Доставка</div>
+									{DELIVERY_FILTERS.map((t) => (
+										<button
+											key={t}
+											type="button"
+											aria-label={DELIVERY_FILTER_LABELS[t]}
+											aria-pressed={activeDeliveryFilters.includes(t)}
+											className={cn(FILTER_BTN, activeDeliveryFilters.includes(t) && FILTER_BTN_ACTIVE)}
+											onClick={() => onDeliveryFilter(t)}
+										>
+											{DELIVERY_FILTER_LABELS[t]}
+										</button>
+									))}
+								</div>
+							</PopoverContent>
+						</Popover>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
+									<Download aria-hidden="true" />
 								</Button>
-							</PopoverTrigger>
-						</TooltipTrigger>
-						<TooltipContent>Фильтры</TooltipContent>
-					</Tooltip>
-					<PopoverContent align="end" className="w-56">
-						<div className="flex flex-col gap-1">
-							<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус</div>
-							{SUPPLIER_STATUSES.map((status) => (
-								<button
-									key={status}
+							</TooltipTrigger>
+							<TooltipContent>Скачать таблицу</TooltipContent>
+						</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
 									type="button"
-									aria-label={SUPPLIER_STATUS_LABELS[status]}
-									aria-pressed={activeStatuses.includes(status)}
-									className={cn(FILTER_BTN, activeStatuses.includes(status) && FILTER_BTN_ACTIVE)}
-									onClick={() => onStatusFilter(status)}
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Архив"
+									aria-pressed={showArchived}
+									onClick={onToggleArchived}
+									className={showArchived ? "bg-muted" : ""}
 								>
-									{SUPPLIER_STATUS_LABELS[status]}
-								</button>
-							))}
-							<div className="my-1 border-t border-border" />
-							<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип оплаты</div>
-							{PAYMENT_TYPES.map((t) => (
-								<button
-									key={t}
-									type="button"
-									aria-label={PAYMENT_TYPE_LABELS[t]}
-									aria-pressed={activePaymentTypes.includes(t)}
-									className={cn(FILTER_BTN, activePaymentTypes.includes(t) && FILTER_BTN_ACTIVE)}
-									onClick={() => onPaymentTypeFilter(t)}
-								>
-									{PAYMENT_TYPE_LABELS[t]}
-								</button>
-							))}
-							<div className="my-1 border-t border-border" />
-							<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Доставка</div>
-							{DELIVERY_FILTERS.map((t) => (
-								<button
-									key={t}
-									type="button"
-									aria-label={DELIVERY_FILTER_LABELS[t]}
-									aria-pressed={activeDeliveryFilters.includes(t)}
-									className={cn(FILTER_BTN, activeDeliveryFilters.includes(t) && FILTER_BTN_ACTIVE)}
-									onClick={() => onDeliveryFilter(t)}
-								>
-									{DELIVERY_FILTER_LABELS[t]}
-								</button>
-							))}
-						</div>
-					</PopoverContent>
-				</Popover>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Скачать таблицу">
-							<Download aria-hidden="true" />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Скачать таблицу</TooltipContent>
-				</Tooltip>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon-sm"
-							aria-label="Архив"
-							aria-pressed={showArchived}
-							onClick={onToggleArchived}
-							className={showArchived ? "bg-muted" : ""}
-						>
-							<Archive aria-hidden="true" />
-						</Button>
-					</TooltipTrigger>
-					<TooltipContent>Архив</TooltipContent>
-				</Tooltip>
+									<Archive aria-hidden="true" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Архив</TooltipContent>
+						</Tooltip>
+					</>
+				)}
 			</div>
 		</div>
 	);
@@ -357,22 +373,22 @@ export function SuppliersTable({
 				type="button"
 				data-testid="supplier-card"
 				className={cn(
-					"rounded-lg border p-4 text-left transition-colors",
+					"w-full rounded-lg border p-4 text-left transition-colors",
 					ctx.isPinned ? "bg-accent/60" : "bg-card hover:bg-muted/50 active:bg-muted",
 				)}
 				onClick={ctx.isPinned ? undefined : () => onRowClick?.(s.id)}
 			>
-				<div className="mb-1 flex items-center justify-between gap-2">
-					<span className="font-medium">{s.companyName}</span>
+				<div className="mb-3 flex items-start justify-between gap-2">
+					<span className="min-w-0 flex-1 truncate font-medium">{s.companyName}</span>
+					{ctx.isPinned ? (
+						<span className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">
+							<UserCheck className="size-3" aria-hidden="true" />
+							Ваш поставщик
+						</span>
+					) : (
+						<SupplierStatusIndicator status={s.status} className="shrink-0 text-xs" />
+					)}
 				</div>
-				{ctx.isPinned ? (
-					<span className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">
-						<UserCheck className="size-3" aria-hidden="true" />
-						Ваш поставщик
-					</span>
-				) : (
-					<SupplierStatusIndicator status={s.status} className="mb-3 text-xs" />
-				)}
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
 						<div className="text-muted-foreground">Тип оплаты</div>
