@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	archiveSearchSuppliers,
+	fetchAllSearchSuppliersMock,
 	listSearchSuppliers,
 	promoteSearchSuppliers,
 	unarchiveSearchSuppliers,
@@ -12,6 +13,14 @@ export function useSearchSuppliers(itemId: string | null, params?: SearchSupplie
 		queryKey: ["searchSuppliers", itemId, params ?? {}],
 		queryFn: () => listSearchSuppliers(itemId as string, params),
 		enabled: itemId !== null,
+	});
+}
+
+export function useAllSearchSuppliers(itemIds: readonly string[], options?: { enabled?: boolean }) {
+	return useQuery({
+		queryKey: ["searchSuppliers-global", itemIds],
+		queryFn: () => fetchAllSearchSuppliersMock(itemIds),
+		enabled: (options?.enabled ?? true) && itemIds.length > 0,
 	});
 }
 

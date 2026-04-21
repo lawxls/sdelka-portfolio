@@ -223,6 +223,11 @@ export interface FetchCompaniesParams {
 	limit?: number;
 }
 
+export async function fetchAllCompaniesMock(): Promise<CompanySummary[]> {
+	await delay();
+	return companiesStore.map(toSummary);
+}
+
 export async function fetchCompaniesMock(params: FetchCompaniesParams): Promise<{
 	companies: CompanySummary[];
 	nextCursor: string | null;

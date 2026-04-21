@@ -167,6 +167,11 @@ export async function getAllSuppliers(itemId: string): Promise<{ suppliers: Supp
 	return { suppliers };
 }
 
+export async function fetchAllSuppliersMock(): Promise<Supplier[]> {
+	await simulateDelay();
+	return Object.keys(SUPPLIERS_BY_ITEM).flatMap((itemId) => getSuppliersForItem(itemId).filter((s) => !s.archived));
+}
+
 const DEFAULT_PAGE_SIZE = 30;
 
 export async function getSuppliers(

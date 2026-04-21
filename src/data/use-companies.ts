@@ -1,5 +1,5 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchCompaniesMock as fetchCompanies } from "./companies-mock-data";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { fetchAllCompaniesMock, fetchCompaniesMock as fetchCompanies } from "./companies-mock-data";
 import type { CompanySortState } from "./types";
 
 interface CompanyQueryParams {
@@ -36,6 +36,14 @@ export function useCompanies(params: CompanyQueryParams) {
 		error: query.error,
 		refetch: query.refetch,
 	};
+}
+
+export function useAllCompanies(options?: { enabled?: boolean }) {
+	return useQuery({
+		queryKey: ["companies-global"],
+		queryFn: fetchAllCompaniesMock,
+		enabled: options?.enabled ?? true,
+	});
 }
 
 export function useProcurementCompanies() {

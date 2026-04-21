@@ -5,6 +5,7 @@ import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
 import {
 	changeTaskStatusMock as changeTaskStatus,
+	fetchAllTasksMock,
 	fetchTaskMock as fetchTask,
 	fetchTaskBoardMock as fetchTaskBoard,
 	fetchTasksMock as fetchTasks,
@@ -33,6 +34,14 @@ function addTaskToCache(cache: TasksCache, task: Task): TasksCache {
 		...cache,
 		pages: [{ ...cache.pages[0], tasks: [task, ...cache.pages[0].tasks] }, ...cache.pages.slice(1)],
 	};
+}
+
+export function useAllTasks(options?: { enabled?: boolean }) {
+	return useQuery({
+		queryKey: ["tasks-global"],
+		queryFn: fetchAllTasksMock,
+		enabled: options?.enabled ?? true,
+	});
 }
 
 export function useTaskColumns(params?: TaskFilterParams) {

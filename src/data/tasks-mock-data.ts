@@ -523,6 +523,11 @@ export interface TaskListResponse {
 	previous: string | null;
 }
 
+export async function fetchAllTasksMock(): Promise<Task[]> {
+	await delay();
+	return tasksStore.map(cloneTask);
+}
+
 export async function fetchTasksMock(params: FetchTasksParams = {}): Promise<TaskListResponse> {
 	await delay();
 	const filterParams: TaskFilterParams = {

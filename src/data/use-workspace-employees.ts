@@ -9,10 +9,11 @@ import {
 	updateWorkspaceEmployeePermissionsMock as updateWorkspaceEmployeePermissions,
 } from "./workspace-mock-data";
 
-export function useWorkspaceEmployees() {
+export function useWorkspaceEmployees(options?: { enabled?: boolean }) {
 	const query = useQuery({
 		queryKey: ["workspace-employees"],
 		queryFn: fetchWorkspaceEmployees,
+		enabled: options?.enabled ?? true,
 	});
 
 	return {

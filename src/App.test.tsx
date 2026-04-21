@@ -270,7 +270,7 @@ describe("ProcurementPage", () => {
 
 	test("renders toolbar with search, filters, and create button", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Поиск позиций" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Фильтры" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
@@ -287,7 +287,8 @@ describe("ProcurementPage", () => {
 		const table = screen.getByRole("table");
 		const initialRowCount = within(table).getAllByRole("row").length;
 
-		const input = screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…");
+		await user.click(screen.getByRole("button", { name: "Поиск позиций" }));
+		const input = screen.getByPlaceholderText("Поиск…");
 		await user.clear(input);
 		await user.type(input, "Арматура");
 

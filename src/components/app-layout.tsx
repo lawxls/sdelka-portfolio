@@ -2,7 +2,7 @@ import { Bell, Moon, Sun } from "lucide-react";
 import { Outlet } from "react-router";
 import { AppRail } from "@/components/app-rail";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
-import { HeaderSearch } from "@/components/header-search";
+import { GlobalSearch } from "@/components/global-search";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -18,10 +18,10 @@ export function AppLayout() {
 				<AppRail />
 				<div className="flex min-w-0 flex-1 flex-col">
 					<header
-						className="flex h-12 shrink-0 items-center justify-between gap-3 px-3 md:px-4"
+						className="relative flex h-12 shrink-0 items-center justify-between gap-3 px-3 md:px-4"
 						data-testid="global-header"
 					>
-						<HeaderSearch />
+						<GlobalSearch />
 						<div className="flex items-center gap-1">
 							<Tooltip>
 								<TooltipTrigger asChild>

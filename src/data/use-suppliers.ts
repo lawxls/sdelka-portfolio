@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import {
 	archiveSuppliers,
 	deleteSuppliers,
+	fetchAllSuppliersMock,
 	getAllSuppliers,
 	getSupplier,
 	getSuppliers,
@@ -16,6 +17,14 @@ export function useSuppliers(itemId: string | null) {
 		queryKey: ["suppliers-all", itemId],
 		queryFn: () => getAllSuppliers(itemId as string),
 		enabled: itemId !== null,
+	});
+}
+
+export function useAllSuppliers(options?: { enabled?: boolean }) {
+	return useQuery({
+		queryKey: ["suppliers-global"],
+		queryFn: fetchAllSuppliersMock,
+		enabled: options?.enabled ?? true,
 	});
 }
 

@@ -7,6 +7,7 @@ import {
 	createItemsBatchMock as createItemsBatch,
 	exportItemsMock as exportItems,
 	type FilterParams as FetchItemsParams,
+	fetchAllItemsMock,
 	fetchItemsMock as fetchItems,
 	fetchTotalsMock as fetchTotals,
 } from "./items-mock-data";
@@ -59,6 +60,14 @@ export function useItems(params: ItemQueryParams) {
 		error: query.error,
 		refetch: query.refetch,
 	};
+}
+
+export function useAllItems(options?: { enabled?: boolean }) {
+	return useQuery({
+		queryKey: ["items-global"],
+		queryFn: fetchAllItemsMock,
+		enabled: options?.enabled ?? true,
+	});
 }
 
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {

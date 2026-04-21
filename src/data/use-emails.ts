@@ -8,10 +8,11 @@ import {
 
 const EMAILS_KEY = ["workspace-emails"];
 
-export function useEmails() {
+export function useEmails(options?: { enabled?: boolean }) {
 	const query = useQuery({
 		queryKey: EMAILS_KEY,
 		queryFn: fetchEmails,
+		enabled: options?.enabled ?? true,
 	});
 
 	return {

@@ -174,6 +174,11 @@ function sortItems(items: ProcurementItem[], field: SortField, dir: SortDirectio
 
 // --- Mock API functions ---
 
+export async function fetchAllItemsMock(): Promise<ProcurementItem[]> {
+	await delay();
+	return itemsStore.filter((i) => !archivedIds.has(i.id)).map((i) => ({ ...i }));
+}
+
 export async function fetchItemsMock(params: FilterParams): Promise<{
 	items: ProcurementItem[];
 	nextCursor: string | null;

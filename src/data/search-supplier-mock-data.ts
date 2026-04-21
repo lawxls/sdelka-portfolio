@@ -176,6 +176,11 @@ export async function listSearchSuppliers(
 	return applyFilters(getSearchSuppliersForItem(itemId), params);
 }
 
+export async function fetchAllSearchSuppliersMock(itemIds: readonly string[]): Promise<SearchSupplier[]> {
+	await simulateDelay();
+	return itemIds.flatMap((itemId) => getSearchSuppliersForItem(itemId).filter((e) => !e.archived));
+}
+
 export async function archiveSearchSuppliers(itemId: string, ids: string[]): Promise<void> {
 	await simulateDelay();
 	const entries = getSearchSuppliersForItem(itemId);
