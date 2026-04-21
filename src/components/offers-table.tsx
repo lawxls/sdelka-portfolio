@@ -12,7 +12,7 @@ import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types
 import { formatPaymentType as formatPaymentTypeLabel, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatCurrency, formatPercent, formatRussianPlural, savingsClassName } from "@/lib/format";
+import { formatCurrency, formatPercent, formatRussianPlural, formatShortDate, savingsClassName } from "@/lib/format";
 import { batchCost, savingsPercent } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
@@ -157,7 +157,7 @@ export function OffersTable({
 
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex items-center gap-3 rounded-xl bg-muted px-3 py-2">
-			<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+			<span className="text-sm font-medium tabular-nums">Выбрано: {selectedIds.size}</span>
 			<Button
 				type="button"
 				variant="outline"
@@ -279,9 +279,11 @@ export function OffersTable({
 							<UserCheck className="size-3" aria-hidden="true" />
 							Ваш поставщик
 						</span>
-					) : (
-						<span className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</span>
-					)}
+					) : s.quoteReceivedAt ? (
+						<span className="text-xs text-muted-foreground tabular-nums">
+							Актуально на:&nbsp;{formatShortDate(s.quoteReceivedAt)}
+						</span>
+					) : null}
 				</div>
 			),
 		},
@@ -352,15 +354,21 @@ export function OffersTable({
 				type="button"
 				data-testid="supplier-card"
 				className={cn(
-					"w-full rounded-lg border p-4 text-left transition-colors",
-					ctx.isPinned ? "bg-accent/60" : "bg-card hover:bg-muted/50 active:bg-muted",
+					"w-full rounded-lg border p-4 text-left transition-[background-color,scale] duration-150 ease-out",
+					ctx.isPinned
+						? "bg-accent/60"
+						: "bg-card hover:bg-muted/50 active:scale-[0.96] active:bg-muted motion-reduce:active:scale-100",
 				)}
 				onClick={ctx.isPinned ? undefined : () => onRowClick?.(s.id)}
 			>
 				<div className="mb-3 flex items-start justify-between gap-2">
 					<div className="min-w-0 flex-1">
 						<div className="truncate font-medium">{s.companyName}</div>
-						{!ctx.isPinned && <div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</div>}
+						{!ctx.isPinned && s.quoteReceivedAt && (
+							<div className="text-xs text-muted-foreground tabular-nums">
+								Актуально на:&nbsp;{formatShortDate(s.quoteReceivedAt)}
+							</div>
+						)}
 					</div>
 					{ctx.isPinned && (
 						<span className="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">

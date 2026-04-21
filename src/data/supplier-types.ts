@@ -134,9 +134,14 @@ export interface Supplier {
 	documents: SupplierDocument[];
 	chatHistory: SupplierChatMessage[];
 	positionOffers: SupplierPositionOffer[];
+	/** ISO timestamp when the supplier's quote (КП) was received. Set only for `получено_кп`. */
+	quoteReceivedAt?: string;
 }
 
 /** Shape for hand-authored Supplier seeds — identity/offer fields required;
- * profile fields (inn, companyType, region, foundedYear, revenue) are enriched
- * deterministically at load time by the mock layer. */
-export type SupplierSeed = Omit<Supplier, "inn" | "companyType" | "region" | "foundedYear" | "revenue">;
+ * profile fields (inn, companyType, region, foundedYear, revenue) and
+ * `quoteReceivedAt` are enriched deterministically at load time by the mock layer. */
+export type SupplierSeed = Omit<
+	Supplier,
+	"inn" | "companyType" | "region" | "foundedYear" | "revenue" | "quoteReceivedAt"
+>;

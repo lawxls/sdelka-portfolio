@@ -37,10 +37,11 @@ const defaultSuppliers = [
 		paymentType: "prepayment",
 		deferralDays: 0,
 		leadTimeDays: 7,
+		quoteReceivedAt: "2026-04-15T10:00:00.000Z",
 	}),
 	makeSupplier("s2", {
 		companyName: "ООО «Бета»",
-		status: "кп_запрошено",
+		status: "получено_кп",
 		email: "beta@test.ru",
 		website: "https://beta.ru",
 		deliveryCost: null,
@@ -48,16 +49,18 @@ const defaultSuppliers = [
 		prepaymentPercent: 30,
 		deferralDays: 0,
 		leadTimeDays: 14,
+		quoteReceivedAt: "2026-04-10T10:00:00.000Z",
 	}),
 	makeSupplier("s3", {
 		companyName: "ООО «Гамма»",
-		status: "переговоры",
+		status: "получено_кп",
 		email: "gamma@test.ru",
 		website: "https://gamma.ru",
 		deliveryCost: 0,
 		paymentType: "deferred",
 		deferralDays: 30,
 		leadTimeDays: 21,
+		quoteReceivedAt: "2026-04-05T10:00:00.000Z",
 	}),
 ];
 
@@ -118,14 +121,15 @@ describe("OffersTable", () => {
 		expect(headerTexts).not.toContain("ОТСРОЧКА");
 	});
 
-	test("renders supplier rows with company name and ИНН", () => {
+	test("renders supplier rows with company name and «Актуально на» date", () => {
 		renderTable();
 		expect(screen.getByText("ООО «Альфа»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Бета»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Гамма»")).toBeInTheDocument();
-		// ИНН is rendered under each company name (via makeSupplier default "0000000000").
-		const innLabels = screen.getAllByText(/ИНН:/);
-		expect(innLabels.length).toBeGreaterThanOrEqual(3);
+		// «Актуально на: dd.mm.yyyy» is rendered under each company name.
+		const dateLabels = screen.getAllByText(/Актуально на:/);
+		expect(dateLabels.length).toBeGreaterThanOrEqual(3);
+		expect(screen.getByText(/15\.04\.2026/)).toBeInTheDocument();
 	});
 
 	test("Стоимость cell = pricePerUnit × quantityPerDelivery", () => {
@@ -473,13 +477,13 @@ describe("OffersTable mobile cards", () => {
 		expect(cards).toHaveLength(3);
 	});
 
-	test("each card shows company name and ИНН", () => {
+	test("each card shows company name and «Актуально на» date", () => {
 		renderTable();
 		const cards = screen.getAllByTestId("supplier-card");
 		expect(within(cards[0]).getByText("ООО «Альфа»")).toBeInTheDocument();
-		expect(within(cards[0]).getByText(/ИНН:/)).toBeInTheDocument();
+		expect(within(cards[0]).getByText(/Актуально на:/)).toBeInTheDocument();
 		expect(within(cards[1]).getByText("ООО «Бета»")).toBeInTheDocument();
-		expect(within(cards[1]).getByText(/ИНН:/)).toBeInTheDocument();
+		expect(within(cards[1]).getByText(/Актуально на:/)).toBeInTheDocument();
 	});
 
 	test("card shows new metric labels (ТСО/ед., Стоимость, Экономия, Доставка, Тип оплаты, Срок поставки)", () => {

@@ -88,6 +88,17 @@ export function formatDate(iso: string): string {
 	return dateFormatter.format(new Date(iso));
 }
 
+const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
+	day: "2-digit",
+	month: "2-digit",
+	year: "numeric",
+});
+
+/** Numeric short date: «22.04.2026». */
+export function formatShortDate(iso: string): string {
+	return shortDateFormatter.format(new Date(iso));
+}
+
 const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {
 	day: "numeric",
 	month: "long",

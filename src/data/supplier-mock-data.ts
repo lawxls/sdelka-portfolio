@@ -70,6 +70,17 @@ function inferCompanyType(companyName: string): SupplierCompanyType {
 	return hash(companyName) % 3 === 0 ? "дистрибьютор" : "производитель";
 }
 
+// Anchor the generated "quote received" dates to a stable reference so tests
+// and storybook-like snapshots stay deterministic across runs.
+const QUOTE_DATE_ANCHOR = new Date("2026-04-20T12:00:00Z").getTime();
+const DAY_MS = 86_400_000;
+
+function makeQuoteReceivedAt(h: number): string {
+	// Spread quote dates across the last ~45 days before the anchor.
+	const offsetDays = h % 45;
+	return new Date(QUOTE_DATE_ANCHOR - offsetDays * DAY_MS).toISOString();
+}
+
 function enrichSeed(seed: SupplierSeed): Supplier {
 	const h = hash(`${seed.itemId}:${seed.id}`);
 	return {
@@ -79,6 +90,7 @@ function enrichSeed(seed: SupplierSeed): Supplier {
 		region: REGIONS[h % REGIONS.length],
 		foundedYear: 1992 + (h % 30),
 		revenue: REVENUE_TIERS[h % REVENUE_TIERS.length],
+		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(h) : undefined,
 	};
 }
 

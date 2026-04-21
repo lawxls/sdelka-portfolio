@@ -237,7 +237,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 });
 
 describe("ProcurementItemDrawer — Предложения (offers) tab", () => {
-	test("renders offer columns with ИНН under company name (no status column)", async () => {
+	test("renders offer columns with «Актуально на» date under company name (no status column)", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 		expect(screen.getByText("СТОИМОСТЬ")).toBeInTheDocument();
 		expect(screen.queryByText("СТАТУС")).not.toBeInTheDocument();
 		await waitFor(() => {
-			expect(screen.getAllByText(/ИНН:/).length).toBeGreaterThan(0);
+			expect(screen.getAllByText(/Актуально на:/).length).toBeGreaterThan(0);
 		});
 	});
 
