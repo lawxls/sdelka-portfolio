@@ -34,7 +34,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-	PIPELINE_STATUSES,
+	SUPPLIER_STATUSES,
 	type SupplierCompanyType,
 	type SupplierSortField,
 	type SupplierSortState,
@@ -235,7 +235,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	);
 }
 
-function SuppliersTabPanel({ itemId }: { itemId: string }) {
+function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -247,7 +247,7 @@ function SuppliersTabPanel({ itemId }: { itemId: string }) {
 	// Pipeline = all statuses except получено_кп. If the user has picked a subset via filter,
 	// honor that; otherwise request the full pipeline set.
 	const effectiveStatuses = useMemo(
-		() => (activeStatuses.length > 0 ? activeStatuses : [...PIPELINE_STATUSES]),
+		() => (activeStatuses.length > 0 ? activeStatuses : [...SUPPLIER_STATUSES]),
 		[activeStatuses],
 	);
 
@@ -351,7 +351,10 @@ function SuppliersTabPanel({ itemId }: { itemId: string }) {
 	}
 
 	function handleSendRequestAll() {
-		if (candidateCount === 0) return;
+		if (candidateCount === 0) {
+			toast.info("Нет поставщиков со статусом «Кандидат»");
+			return;
+		}
 		setConfirmingRequestAll(true);
 	}
 
@@ -382,6 +385,7 @@ function SuppliersTabPanel({ itemId }: { itemId: string }) {
 				suppliers={suppliers}
 				totalCount={totalCount}
 				isLoading={query.isLoading}
+				onRowClick={onSupplierClick}
 				search={search}
 				onSearchChange={setSearch}
 				sort={sort}
@@ -413,18 +417,18 @@ function SuppliersTabPanel({ itemId }: { itemId: string }) {
 			>
 				<DialogContent showCloseButton={false}>
 					<DialogHeader className="gap-3">
-						<DialogTitle>Отправить запросы КП?</DialogTitle>
+						<DialogTitle>Запросить КП у поставщиков</DialogTitle>
 						<DialogDescription className="leading-relaxed">
 							Вы действительно хотите запросить КП у{"\u00A0"}
 							{formatRussianPlural(candidateCount, ["поставщика", "поставщиков", "поставщиков"])}? Действие нельзя
 							отменить.
 						</DialogDescription>
 					</DialogHeader>
-					<DialogFooter>
+					<DialogFooter className="sm:justify-between">
 						<Button variant="outline" onClick={() => setConfirmingRequestAll(false)}>
 							Отмена
 						</Button>
-						<Button onClick={handleConfirmSendRequestAll}>Отправить запросы</Button>
+						<Button onClick={handleConfirmSendRequestAll}>Отправить</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
@@ -706,7 +710,7 @@ function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (
 	const toolbar =
 		selectedIds.size > 0 ? (
 			<div className="mx-3 flex items-center gap-3 rounded-xl bg-muted px-3 py-2">
-				<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+				<span className="text-sm font-medium tabular-nums">Выбрано: {selectedIds.size}</span>
 				<Button type="button" variant="outline" size="sm" onClick={handleArchiveSelected} aria-label="Архивировать">
 					<Archive className="mr-1 size-4" aria-hidden="true" />
 					Архивировать
@@ -856,28 +860,36 @@ function ProcurementItemDrawerContent({
 	const itemStatus = item?.status;
 
 	const { data: allSuppliersData } = useSuppliers(itemId);
-	const headerMetrics = useMemo(() => {
+	const supplierCounts = useMemo(() => {
 		const list = allSuppliersData?.suppliers;
-		if (!list) return { total: 0, quotesReceived: 0, refusals: 0 };
+		if (!list) return { contacted: 0, quotesReceived: 0, refusals: 0, suppliers: 0 };
+		let contacted = 0;
 		let quotesReceived = 0;
 		let refusals = 0;
-		let contacted = 0;
+		let suppliers = 0;
 		for (const s of list) {
 			if (s.archived) continue;
-			if (s.status === "new") continue;
-			contacted++;
+			suppliers++;
+			if (s.status !== "new") contacted++;
 			if (s.status === "получено_кп") quotesReceived++;
 			else if (s.status === "отказ") refusals++;
 		}
-		return { total: contacted, quotesReceived, refusals };
+		return { contacted, quotesReceived, refusals, suppliers };
 	}, [allSuppliersData?.suppliers]);
+
+	const taskBoard = useTaskColumns({ item: itemId });
+	const tabCountByKey: Partial<Record<ItemDrawerTab, number>> = {
+		suppliers: supplierCounts.suppliers,
+		offers: supplierCounts.quotesReceived,
+		tasks: taskBoard.assigned.count + taskBoard.in_progress.count,
+	};
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
 				<SheetTitle>{itemName ?? "Позиция"}</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
-				{(itemStatus || headerMetrics.total > 0) && (
+				{(itemStatus || supplierCounts.contacted > 0) && (
 					<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
 						{itemStatus && (
 							<span className={`inline-flex items-center gap-1.5 font-normal ${STATUS_CONFIG[itemStatus].className}`}>
@@ -897,21 +909,21 @@ function ProcurementItemDrawerContent({
 						<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 							<HeaderMetric
 								icon={Users}
-								count={headerMetrics.total}
+								count={supplierCounts.contacted}
 								label="Всего поставщиков"
 								colorClass="text-muted-foreground"
 								testId="header-metric-total"
 							/>
 							<HeaderMetric
 								icon={Check}
-								count={headerMetrics.quotesReceived}
+								count={supplierCounts.quotesReceived}
 								label="Получено КП"
 								colorClass="text-green-600 dark:text-green-400"
 								testId="header-metric-quotes"
 							/>
 							<HeaderMetric
 								icon={Ban}
-								count={headerMetrics.refusals}
+								count={supplierCounts.refusals}
 								label="Отказ"
 								colorClass="text-destructive"
 								testId="header-metric-refusals"
@@ -923,6 +935,7 @@ function ProcurementItemDrawerContent({
 
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
 				{TABS.map((tab) => {
+					const count = tabCountByKey[tab.key];
 					return (
 						<button
 							key={tab.key}
@@ -931,7 +944,7 @@ function ProcurementItemDrawerContent({
 							aria-selected={activeTab === tab.key}
 							aria-label={tab.label}
 							className={cn(
-								"shrink-0 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
+								"inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
 								"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
 								activeTab === tab.key
 									? "border-b-2 border-primary text-foreground"
@@ -947,6 +960,9 @@ function ProcurementItemDrawerContent({
 							) : (
 								tab.label
 							)}
+							{count != null && count > 0 && (
+								<span className="hidden font-normal tabular-nums text-muted-foreground md:inline">{count}</span>
+							)}
 						</button>
 					);
 				})}
@@ -958,7 +974,7 @@ function ProcurementItemDrawerContent({
 					activeTab === "details" ? "p-4" : "pt-3",
 				)}
 			>
-				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} />}
+				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
 				{activeTab === "offers" && (
 					<OffersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
 				)}

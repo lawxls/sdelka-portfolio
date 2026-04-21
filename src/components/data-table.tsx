@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -238,11 +238,30 @@ function DataTableRow<T>({
 }: DataTableRowProps<T>) {
 	const actions = rowActions?.(row) ?? [];
 	const interactive = onRowClick != null;
+	// Track pointer-down position so a drag-select (start ≠ end) doesn't fire a row-open click.
+	const pressStart = useRef<{ x: number; y: number } | null>(null);
 
 	const tableRow = (
 		<TableRow
 			className={cn(interactive && "cursor-pointer hover:bg-muted/50", className)}
-			onClick={interactive ? () => onRowClick?.(rowId) : undefined}
+			onMouseDown={
+				interactive
+					? (e) => {
+							pressStart.current = { x: e.clientX, y: e.clientY };
+						}
+					: undefined
+			}
+			onClick={
+				interactive
+					? (e) => {
+							const start = pressStart.current;
+							pressStart.current = null;
+							if (start && (Math.abs(e.clientX - start.x) > 3 || Math.abs(e.clientY - start.y) > 3)) return;
+							if (window.getSelection()?.isCollapsed === false) return;
+							onRowClick?.(rowId);
+						}
+					: undefined
+			}
 			data-testid={isPinned ? "data-table-pinned-row" : undefined}
 		>
 			{selection &&

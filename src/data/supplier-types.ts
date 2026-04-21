@@ -11,9 +11,6 @@ export const SUPPLIER_STATUSES: SupplierStatus[] = [
 	"ошибка",
 ];
 
-/** Statuses shown in the "Поставщики" (pipeline) tab — everything except получено_кп. */
-export const PIPELINE_STATUSES: readonly SupplierStatus[] = ["new", "кп_запрошено", "переговоры", "отказ", "ошибка"];
-
 export const SUPPLIER_STATUS_LABELS: Record<SupplierStatus, string> = {
 	new: "Кандидат",
 	кп_запрошено: "Отправлено",

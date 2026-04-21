@@ -1,4 +1,14 @@
-import { Archive, ArchiveRestore, Download, ListFilter, LoaderCircle, Mails } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	Download,
+	Factory,
+	ListFilter,
+	LoaderCircle,
+	type LucideIcon,
+	Mails,
+	Truck,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { STATUS_ICONS, SupplierStatusIndicator } from "@/components/supplier-status-indicator";
@@ -14,10 +24,10 @@ import type {
 	SupplierStatus,
 } from "@/data/supplier-types";
 import {
-	PIPELINE_STATUSES,
 	SUPPLIER_COMPANY_TYPE_LABELS,
 	SUPPLIER_COMPANY_TYPES,
 	SUPPLIER_STATUS_LABELS,
+	SUPPLIER_STATUSES,
 } from "@/data/supplier-types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -50,11 +60,27 @@ interface SuppliersTableProps {
 	hasNextPage?: boolean;
 	loadMore?: () => void;
 	isFetchingNextPage?: boolean;
+	onRowClick?: (id: string) => void;
 }
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
+
+const SUPPLIER_COMPANY_TYPE_ICONS: Record<SupplierCompanyType, LucideIcon> = {
+	производитель: Factory,
+	дистрибьютор: Truck,
+};
+
+function CompanyTypeBadge({ type }: { type: SupplierCompanyType }) {
+	const Icon = SUPPLIER_COMPANY_TYPE_ICONS[type];
+	return (
+		<span className="inline-flex items-center gap-1.5">
+			<Icon className="size-3.5 text-muted-foreground" aria-hidden="true" />
+			{SUPPLIER_COMPANY_TYPE_LABELS[type]}
+		</span>
+	);
+}
 
 export function SuppliersTable({
 	suppliers,
@@ -82,6 +108,7 @@ export function SuppliersTable({
 	hasNextPage,
 	loadMore,
 	isFetchingNextPage,
+	onRowClick,
 }: SuppliersTableProps) {
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
@@ -97,14 +124,15 @@ export function SuppliersTable({
 
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex flex-wrap items-center gap-3 rounded-xl bg-muted px-3 py-2">
-			<span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+			<span className="text-sm font-medium tabular-nums">Выбрано: {selectedIds.size}</span>
 			<Button type="button" variant="outline" size="sm" disabled={isArchiving} onClick={onArchive}>
 				<Archive className="mr-1 size-4" aria-hidden="true" />
 				Архивировать
 			</Button>
 			{!showArchived && (
 				<Button type="button" variant="outline" size="sm" onClick={onSendRequestBatch}>
-					Запросить КП
+					<Mails data-icon="inline-start" aria-hidden="true" />
+					Отправить запросы
 				</Button>
 			)}
 		</div>
@@ -145,21 +173,29 @@ export function SuppliersTable({
 							<PopoverContent align="end" className="w-56">
 								<div className="flex flex-col gap-1">
 									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип</div>
-									{SUPPLIER_COMPANY_TYPES.map((type) => (
-										<button
-											key={type}
-											type="button"
-											aria-label={SUPPLIER_COMPANY_TYPE_LABELS[type]}
-											aria-pressed={activeCompanyTypes.includes(type)}
-											className={cn(FILTER_BTN, activeCompanyTypes.includes(type) && FILTER_BTN_ACTIVE)}
-											onClick={() => onCompanyTypeFilter(type)}
-										>
-											{SUPPLIER_COMPANY_TYPE_LABELS[type]}
-										</button>
-									))}
+									{SUPPLIER_COMPANY_TYPES.map((type) => {
+										const Icon = SUPPLIER_COMPANY_TYPE_ICONS[type];
+										const active = activeCompanyTypes.includes(type);
+										return (
+											<button
+												key={type}
+												type="button"
+												aria-label={SUPPLIER_COMPANY_TYPE_LABELS[type]}
+												aria-pressed={active}
+												className={cn(FILTER_BTN, "inline-flex items-center gap-2", active && FILTER_BTN_ACTIVE)}
+												onClick={() => onCompanyTypeFilter(type)}
+											>
+												<Icon
+													className={cn("size-3.5 text-muted-foreground", active && "text-highlight-foreground")}
+													aria-hidden="true"
+												/>
+												{SUPPLIER_COMPANY_TYPE_LABELS[type]}
+											</button>
+										);
+									})}
 									<div className="my-1 border-t border-border" />
 									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус</div>
-									{PIPELINE_STATUSES.map((status) => {
+									{SUPPLIER_STATUSES.map((status) => {
 										const Icon = STATUS_ICONS[status];
 										return (
 											<button
@@ -244,13 +280,6 @@ export function SuppliersTable({
 			),
 		},
 		{
-			id: "companyType",
-			header: "ТИП",
-			headerClassName: "w-[120px]",
-			cellClassName: "w-[120px] whitespace-nowrap",
-			cell: (s) => SUPPLIER_COMPANY_TYPE_LABELS[s.companyType],
-		},
-		{
 			id: "website",
 			header: "САЙТ",
 			headerClassName: "w-[160px]",
@@ -260,12 +289,19 @@ export function SuppliersTable({
 					href={s.website}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="block truncate text-foreground underline decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground"
+					className="inline-block max-w-full truncate align-bottom text-foreground underline decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground"
 					onClick={(ev) => ev.stopPropagation()}
 				>
 					{stripProtocol(s.website)}
 				</a>
 			),
+		},
+		{
+			id: "companyType",
+			header: "ТИП",
+			headerClassName: "w-[140px]",
+			cellClassName: "w-[140px] whitespace-nowrap",
+			cell: (s) => <CompanyTypeBadge type={s.companyType} />,
 		},
 		{
 			id: "region",
@@ -303,8 +339,36 @@ export function SuppliersTable({
 	];
 
 	function renderMobileCard(s: Supplier) {
+		const interactive = onRowClick != null;
 		return (
-			<div className="w-full rounded-lg border bg-card p-4 text-left">
+			// biome-ignore lint/a11y/noStaticElementInteractions: wraps nested <a>/<button>, so a <button> wrapper isn't valid; role="button" is the right primitive here
+			<div
+				role={interactive ? "button" : undefined}
+				tabIndex={interactive ? 0 : undefined}
+				className={cn(
+					"w-full rounded-lg border bg-card p-4 text-left",
+					interactive &&
+						"cursor-pointer transition-[background-color,scale] duration-150 ease-out hover:bg-muted/50 active:scale-[0.96] active:bg-muted motion-reduce:active:scale-100",
+				)}
+				onClick={
+					interactive
+						? () => {
+								if (window.getSelection()?.isCollapsed === false) return;
+								onRowClick?.(s.id);
+							}
+						: undefined
+				}
+				onKeyDown={
+					interactive
+						? (ev) => {
+								if (ev.key === "Enter" || ev.key === " ") {
+									ev.preventDefault();
+									onRowClick?.(s.id);
+								}
+							}
+						: undefined
+				}
+			>
 				<div className="mb-1 flex items-start justify-between gap-2">
 					<div className="min-w-0 flex-1">
 						<div className="truncate font-medium">{s.companyName}</div>
@@ -316,14 +380,17 @@ export function SuppliersTable({
 					href={s.website}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="mb-3 block text-sm text-foreground underline decoration-muted-foreground/60 underline-offset-4 hover:decoration-foreground"
+					onClick={(ev) => ev.stopPropagation()}
+					className="mb-3 inline-block max-w-full truncate align-bottom text-sm text-foreground underline decoration-muted-foreground/60 underline-offset-4 hover:decoration-foreground"
 				>
 					{stripProtocol(s.website)}
 				</a>
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
 						<div className="text-xs text-muted-foreground">Тип</div>
-						<div>{SUPPLIER_COMPANY_TYPE_LABELS[s.companyType]}</div>
+						<div>
+							<CompanyTypeBadge type={s.companyType} />
+						</div>
 					</div>
 					<div>
 						<div className="text-xs text-muted-foreground">Регион</div>
@@ -376,6 +443,7 @@ export function SuppliersTable({
 			}}
 			toolbar={toolbar}
 			mobileCardRender={renderMobileCard}
+			onRowClick={onRowClick}
 			isMobile={isMobile}
 			sentinel={
 				<>

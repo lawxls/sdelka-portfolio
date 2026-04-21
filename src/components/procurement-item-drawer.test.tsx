@@ -210,7 +210,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 			expect(screen.getByRole("button", { name: "Отправить запросы" })).toBeInTheDocument();
 		});
 		await user.click(screen.getByRole("button", { name: "Отправить запросы" }));
-		const dialog = await screen.findByRole("dialog", { name: /Отправить запросы КП/ });
+		const dialog = await screen.findByRole("dialog", { name: /Запросить КП у поставщиков/ });
 		expect(within(dialog).getByText(/Вы действительно хотите запросить КП у/)).toBeInTheDocument();
 		expect(within(dialog).getByText(/Действие нельзя отменить/)).toBeInTheDocument();
 	});
