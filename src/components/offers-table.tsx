@@ -88,6 +88,7 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 		email: "",
 		website: "",
 		address: "",
+		postalCode: "",
 		pricePerUnit: currentSupplier.pricePerUnit,
 		tco: null,
 		rating: null,

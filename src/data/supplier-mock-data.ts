@@ -54,6 +54,39 @@ const REGIONS = [
 	"Ленинградская область",
 ];
 
+// Region → administrative centre + 2-digit postal prefix.
+// Prefix follows the real Russian postal zoning (Moscow 1xxxxx, SPb 19xxxx, etc.).
+const REGION_META: Record<string, { city: string; postalPrefix: string }> = {
+	Москва: { city: "Москва", postalPrefix: "12" },
+	"Санкт-Петербург": { city: "Санкт-Петербург", postalPrefix: "19" },
+	"Свердловская область": { city: "Екатеринбург", postalPrefix: "62" },
+	"Челябинская область": { city: "Челябинск", postalPrefix: "45" },
+	"Новосибирская область": { city: "Новосибирск", postalPrefix: "63" },
+	"Республика Татарстан": { city: "Казань", postalPrefix: "42" },
+	"Нижегородская область": { city: "Нижний Новгород", postalPrefix: "60" },
+	"Ростовская область": { city: "Ростов-на-Дону", postalPrefix: "34" },
+	"Самарская область": { city: "Самара", postalPrefix: "44" },
+	"Краснодарский край": { city: "Краснодар", postalPrefix: "35" },
+	"Воронежская область": { city: "Воронеж", postalPrefix: "39" },
+	"Пермский край": { city: "Пермь", postalPrefix: "61" },
+	"Красноярский край": { city: "Красноярск", postalPrefix: "66" },
+	"Тульская область": { city: "Тула", postalPrefix: "30" },
+	"Ленинградская область": { city: "Гатчина", postalPrefix: "18" },
+};
+
+const STREETS = [
+	"ул. Промышленная",
+	"пр-т Индустриальный",
+	"ул. Заводская",
+	"ул. Складская",
+	"ул. Производственная",
+	"пр-т Магистральный",
+	"ул. Логистическая",
+	"ш. Автомобильное",
+	"ул. Машиностроителей",
+	"ул. Северная",
+];
+
 const REVENUE_TIERS = [10_000_000, 45_000_000, 120_000_000, 350_000_000, 900_000_000, 1_800_000_000, 5_000_000_000];
 
 function hash(s: string): number {
@@ -65,6 +98,19 @@ function hash(s: string): number {
 function makeInn(seed: number): string {
 	const base = ((seed + 1) * 2_654_435_761) % 10_000_000_000;
 	return base.toString().padStart(10, "0");
+}
+
+function makePostalCode(region: string, h: number): string {
+	const prefix = REGION_META[region]?.postalPrefix ?? "10";
+	const suffix = (h % 10_000).toString().padStart(4, "0");
+	return prefix + suffix;
+}
+
+function makeAddress(region: string, h: number): string {
+	const city = REGION_META[region]?.city ?? region;
+	const street = STREETS[h % STREETS.length];
+	const building = (h % 120) + 1;
+	return `г. ${city}, ${street}, д. ${building}`;
 }
 
 function inferCompanyType(companyName: string): SupplierCompanyType {
@@ -86,94 +132,237 @@ function makeQuoteReceivedAt(h: number): string {
 	return new Date(QUOTE_DATE_ANCHOR - offsetDays * DAY_MS).toISOString();
 }
 
-function enrichSeed(seed: SupplierSeed): Supplier {
-	// Hash by companyName (not itemId:id) so the same supplier across items shares
-	// a stable INN and identity profile — required for the drawer's «Предложения»
-	// tab to join quotes across items by INN.
-	const identityHash = hash(seed.companyName);
-	const perRowHash = hash(`${seed.itemId}:${seed.id}`);
+// Shared identity profile — hashed by companyName so the same supplier across
+// items collapses to the same INN/region/address (required for the drawer's
+// «Предложения» tab to join quotes across items by INN).
+function makeIdentityProfile(identityHash: number) {
+	const region = REGIONS[identityHash % REGIONS.length];
 	return {
-		...seed,
 		inn: makeInn(identityHash),
-		companyType: inferCompanyType(seed.companyName),
-		region: REGIONS[identityHash % REGIONS.length],
+		region,
+		postalCode: makePostalCode(region, identityHash),
 		foundedYear: 1992 + (identityHash % 30),
 		revenue: REVENUE_TIERS[identityHash % REVENUE_TIERS.length],
-		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(perRowHash) : undefined,
-		chatHistory: enrichChatHistory(seed),
+		address: makeAddress(region, identityHash),
 	};
 }
 
-function enrichChatHistory(seed: SupplierSeed): SupplierChatMessage[] {
-	if (seed.chatHistory.length === 0) return seed.chatHistory;
-	// Tag the supplier's final message with the status-derived event badge so the
-	// chat surfaces the outcome (получено КП / отказ) inline with the message that
-	// triggered it — without requiring every seed to spell it out.
-	const terminalEvent: MessageEvent | null =
-		seed.status === "получено_кп" ? "quote_received" : seed.status === "отказ" ? "refusal" : null;
-	let lastSupplierIdx = -1;
+function enrichSeed(seed: SupplierSeed): Supplier {
+	const identityHash = hash(seed.companyName);
+	const perRowHash = hash(`${seed.itemId}:${seed.id}`);
+	const profile = makeIdentityProfile(identityHash);
+	return {
+		...seed,
+		...profile,
+		companyType: inferCompanyType(seed.companyName),
+		address: seed.address.length > 0 ? seed.address : profile.address,
+		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(perRowHash) : undefined,
+		chatHistory: enrichChatHistory(seed, perRowHash),
+	};
+}
+
+// Quote-request anchor — matches the hand-authored chats so auto-seeded requests
+// interleave naturally with real ones in the agent's notification thread.
+const QUOTE_REQUEST_ANCHOR = new Date("2026-03-02T10:00:00Z").getTime();
+
+function makeQuoteRequestTimestamp(h: number): string {
+	const offsetMinutes = h % (60 * 24 * 14); // spread across 2 weeks
+	return new Date(QUOTE_REQUEST_ANCHOR + offsetMinutes * 60_000).toISOString();
+}
+
+function makeDefaultQuoteRequest(itemId: string, h: number): SupplierChatMessage {
+	const itemName = _getItem(itemId)?.name;
+	const body = itemName
+		? `Добрый день! Запрашиваем коммерческое предложение на «${itemName}». Ждём ваше КП.`
+		: "Добрый день! Запрашиваем ваше коммерческое предложение. Ждём КП.";
+	return {
+		sender: "Агент",
+		senderEmail: AGENT_EMAIL,
+		timestamp: makeQuoteRequestTimestamp(h),
+		body,
+		isOurs: true,
+	};
+}
+
+// Status → terminal event badge rendered inline on the message that triggered
+// the outcome. «Ошибка» tags the outgoing agent message (our send failed); the
+// others tag the supplier's last reply.
+const TERMINAL_EVENT: Partial<Record<SupplierStatus, MessageEvent>> = {
+	получено_кп: "quote_received",
+	отказ: "refusal",
+	ошибка: "delivery_failed",
+};
+
+function enrichChatHistory(seed: SupplierSeed, perRowHash: number): SupplierChatMessage[] {
+	const needsAutoRequest =
+		seed.chatHistory.length === 0 && (seed.status === "кп_запрошено" || seed.status === "ошибка");
+	const history = needsAutoRequest ? [makeDefaultQuoteRequest(seed.itemId, perRowHash)] : seed.chatHistory;
+	if (history.length === 0) return history;
+
+	const terminalEvent = TERMINAL_EVENT[seed.status] ?? null;
+	const tagOurs = terminalEvent === "delivery_failed";
+	let tagIdx = -1;
 	if (terminalEvent != null) {
-		for (let i = seed.chatHistory.length - 1; i >= 0; i--) {
-			if (!seed.chatHistory[i].isOurs) {
-				lastSupplierIdx = i;
+		for (let i = history.length - 1; i >= 0; i--) {
+			if (history[i].isOurs === tagOurs) {
+				tagIdx = i;
 				break;
 			}
 		}
 	}
-	return seed.chatHistory.map((msg, i): SupplierChatMessage => {
+	return history.map((msg, i): SupplierChatMessage => {
 		const senderEmail = msg.senderEmail ?? (msg.isOurs ? AGENT_EMAIL : seed.email);
 		const events: MessageEvent[] | undefined =
-			msg.events ?? (terminalEvent != null && i === lastSupplierIdx ? [terminalEvent] : undefined);
+			msg.events ?? (terminalEvent != null && i === tagIdx ? [terminalEvent] : undefined);
 		return events ? { ...msg, senderEmail, events } : { ...msg, senderEmail };
 	});
 }
 
 // --- Candidate ("new"-status) generation ---
 
-const CANDIDATE_POOL: { name: string; type: SupplierCompanyType; domain: string }[] = [
-	{ name: "ООО «СтальПром»", type: "производитель", domain: "stalprom.ru" },
-	{ name: "ЗАО «МеталлИнвест»", type: "производитель", domain: "metallinvest.ru" },
-	{ name: "ООО «Восток-Металл»", type: "производитель", domain: "vostok-metall.ru" },
-	{ name: "ООО «УралСтальКомплект»", type: "производитель", domain: "uralstal.ru" },
-	{ name: "ЗАО «Северсталь-Трейд»", type: "дистрибьютор", domain: "severstal-trade.ru" },
-	{ name: "ООО «ПромСнаб-Поволжье»", type: "дистрибьютор", domain: "promsnab-povolzhe.ru" },
-	{ name: "ООО «ТоргСнабМеталл»", type: "дистрибьютор", domain: "torgsnab-metall.ru" },
-	{ name: "ООО «ГлавМетКом»", type: "дистрибьютор", domain: "glavmetkom.ru" },
-	{ name: "ООО «Металл-Экспресс»", type: "производитель", domain: "metall-express.ru" },
-	{ name: "ИП Соловьёв М.А.", type: "производитель", domain: "solovev-metal.ru" },
-	{ name: "ООО «ПрофильТорг»", type: "производитель", domain: "profiltorg.ru" },
-	{ name: "ООО «СибМетКомплект»", type: "производитель", domain: "sibmetcomplekt.ru" },
-	{ name: "ООО «АрматураЦентр»", type: "производитель", domain: "armaturacentr.ru" },
-	{ name: "ООО «МеталлСтандарт»", type: "производитель", domain: "metallstandart.ru" },
-	{ name: "ООО «СтройМетКомплект»", type: "дистрибьютор", domain: "stroymetcomplekt.ru" },
-	{ name: "ЗАО «ПромСталь»", type: "производитель", domain: "promstal.ru" },
+// `type` is only a hint — the pool builder below overrides it based on legal form
+// (corporate forms skew manufacturer, trading forms skew distributor), so the
+// final role distribution is mixed regardless of the stem's original type.
+const CANDIDATE_STEMS: { stem: string; type: SupplierCompanyType; slug: string }[] = [
+	{ stem: "СтальПром", type: "производитель", slug: "stalprom" },
+	{ stem: "МеталлИнвест", type: "производитель", slug: "metallinvest" },
+	{ stem: "Восток-Металл", type: "производитель", slug: "vostok-metall" },
+	{ stem: "УралСтальКомплект", type: "производитель", slug: "uralstal-komplekt" },
+	{ stem: "Северсталь-Трейд", type: "дистрибьютор", slug: "severstal-trade" },
+	{ stem: "ПромСнаб-Поволжье", type: "дистрибьютор", slug: "promsnab-povolzhe" },
+	{ stem: "ТоргСнабМеталл", type: "дистрибьютор", slug: "torgsnab-metall" },
+	{ stem: "ГлавМетКом", type: "дистрибьютор", slug: "glavmetkom" },
+	{ stem: "Металл-Экспресс", type: "производитель", slug: "metall-express" },
+	{ stem: "ПрофильТорг", type: "производитель", slug: "profiltorg" },
+	{ stem: "СибМетКомплект", type: "производитель", slug: "sibmetcomplekt" },
+	{ stem: "АрматураЦентр", type: "производитель", slug: "armaturacentr" },
+	{ stem: "МеталлСтандарт", type: "производитель", slug: "metallstandart" },
+	{ stem: "СтройМетКомплект", type: "дистрибьютор", slug: "stroymetcomplekt" },
+	{ stem: "ПромСталь", type: "производитель", slug: "promstal" },
+	{ stem: "Химпром-Центр", type: "производитель", slug: "himprom-centr" },
+	{ stem: "ПолимерИнвест", type: "производитель", slug: "polimerinvest" },
+	{ stem: "ХимТехСнаб", type: "дистрибьютор", slug: "himtechsnab" },
+	{ stem: "Пластик-Сервис", type: "производитель", slug: "plastik-servis" },
+	{ stem: "ЭлектроПром", type: "производитель", slug: "elektroprom" },
+	{ stem: "Промкабель-Трейд", type: "дистрибьютор", slug: "promkabel-trade" },
+	{ stem: "СибЭнергоКомплект", type: "дистрибьютор", slug: "sibenergokomplekt" },
+	{ stem: "Энергомаш-Урал", type: "производитель", slug: "energomash-ural" },
+	{ stem: "МашСтройСнаб", type: "дистрибьютор", slug: "mashstroysnab" },
+	{ stem: "ТехноПром-Юг", type: "производитель", slug: "tehnoprom-yug" },
+	{ stem: "СеверТехСнаб", type: "дистрибьютор", slug: "severtehsnab" },
+	{ stem: "Центр-Комплект", type: "дистрибьютор", slug: "centr-komplekt" },
+	{ stem: "ИндустрияСервис", type: "дистрибьютор", slug: "industriya-servis" },
+	{ stem: "АвтоКомплект-Поволжье", type: "дистрибьютор", slug: "avtokomplekt-povolzhe" },
+	{ stem: "ТрансПром", type: "дистрибьютор", slug: "transprom" },
+	{ stem: "Логист-Снаб", type: "дистрибьютор", slug: "logist-snab" },
+	{ stem: "Ростех-Маркет", type: "дистрибьютор", slug: "rostech-market" },
+	{ stem: "УралИндустрия", type: "производитель", slug: "ural-industriya" },
+	{ stem: "Новотех", type: "производитель", slug: "novotech" },
+	{ stem: "СтройПромМаркет", type: "дистрибьютор", slug: "stroyprommarket" },
+	{ stem: "ДревПром-Центр", type: "производитель", slug: "drevprom-centr" },
+	{ stem: "ФанераПром", type: "производитель", slug: "faneraprom" },
+	{ stem: "МебельПром-Снаб", type: "дистрибьютор", slug: "mebelprom-snab" },
+	{ stem: "ЛесСнаб-Сибирь", type: "дистрибьютор", slug: "lessnab-sibir" },
+	{ stem: "ТД «Дерев-Мастер»", type: "дистрибьютор", slug: "derev-master" },
+	{ stem: "КартонПром-Урал", type: "производитель", slug: "kartonprom-ural" },
+	{ stem: "БумагаСнаб", type: "дистрибьютор", slug: "bumagasnab" },
+	{ stem: "ЦеллюлозаЦентр", type: "производитель", slug: "cellulosa-centr" },
+	{ stem: "УпакТрейд", type: "дистрибьютор", slug: "upaktrade" },
+	{ stem: "ПромПак-Поволжье", type: "производитель", slug: "prompak-povolzhe" },
+	{ stem: "КоробТорг", type: "дистрибьютор", slug: "korobtorg" },
+	{ stem: "СтеклоПром", type: "производитель", slug: "steklo-prom" },
+	{ stem: "ПромСтройИнвест", type: "дистрибьютор", slug: "promstroyinvest" },
+	{ stem: "Железобетон-Юг", type: "производитель", slug: "zhbetonyug" },
+	{ stem: "ЦементПром", type: "производитель", slug: "cementprom" },
+	{ stem: "СтройКомплект-СПб", type: "дистрибьютор", slug: "stroykomplekt-spb" },
+	{ stem: "ГрадСтрой", type: "дистрибьютор", slug: "gradstroy" },
+	{ stem: "ЭкоСтройСнаб", type: "дистрибьютор", slug: "ecostroysnab" },
+	{ stem: "ПромТехноСнаб", type: "дистрибьютор", slug: "promtehnosnab" },
+	{ stem: "ВолгаТрейд", type: "дистрибьютор", slug: "volga-trade" },
+	{ stem: "КамаСнаб", type: "дистрибьютор", slug: "kama-snab" },
+	{ stem: "Дон-Комплект", type: "дистрибьютор", slug: "don-komplekt" },
+	{ stem: "Ока-Металл", type: "производитель", slug: "oka-metall" },
+	{ stem: "Алтай-Маш", type: "производитель", slug: "altay-mash" },
+	{ stem: "Приморье-Снаб", type: "дистрибьютор", slug: "primore-snab" },
+	{ stem: "Байкал-Пром", type: "производитель", slug: "baikal-prom" },
+	{ stem: "Кузбасс-Трейд", type: "дистрибьютор", slug: "kuzbass-trade" },
+	{ stem: "Казань-Комплект", type: "дистрибьютор", slug: "kazan-komplekt" },
+	{ stem: "Москва-Снаб", type: "дистрибьютор", slug: "moskva-snab" },
+	{ stem: "Тула-Металл", type: "производитель", slug: "tula-metall" },
+	{ stem: "Воронеж-Пром", type: "производитель", slug: "voronezh-prom" },
+	{ stem: "Ростов-ТехСнаб", type: "дистрибьютор", slug: "rostov-tehsnab" },
+	{ stem: "Нева-Пром", type: "производитель", slug: "neva-prom" },
+	{ stem: "Балтика-Трейд", type: "дистрибьютор", slug: "baltika-trade" },
+	{ stem: "АвтоДеталь", type: "производитель", slug: "avto-detal" },
+	{ stem: "Резинотех", type: "производитель", slug: "rezinoteh" },
+	{ stem: "Компонент-Сервис", type: "дистрибьютор", slug: "komponent-servis" },
+	{ stem: "Гидропром", type: "производитель", slug: "gidroprom" },
 ];
 
-const CANDIDATES_PER_ITEM = 15;
+// `typeBias` overrides each stem's hint so the resulting pool balances roles
+// (corporate forms skew manufacturer, trading forms skew distributor).
+const LEGAL_WRAPPERS: { prefix: string; suffix: string; typeBias?: SupplierCompanyType; tag: string }[] = [
+	{ prefix: "ООО «", suffix: "»", tag: "ooo" },
+	{ prefix: "ЗАО «", suffix: "»", tag: "zao" },
+	{ prefix: "АО «", suffix: "»", tag: "ao" },
+	{ prefix: "ПКФ «", suffix: "»", typeBias: "производитель", tag: "pkf" },
+	{ prefix: "ТД «", suffix: "»", typeBias: "дистрибьютор", tag: "td" },
+];
 
-function generateCandidates(itemId: string): Supplier[] {
+const CANDIDATE_POOL: { name: string; type: SupplierCompanyType; domain: string }[] = (() => {
+	const pool: { name: string; type: SupplierCompanyType; domain: string }[] = [];
+	for (const s of CANDIDATE_STEMS) {
+		for (const w of LEGAL_WRAPPERS) {
+			const startsWithLegal = s.stem.startsWith("ТД ") || s.stem.startsWith("ИП ");
+			const name = startsWithLegal ? s.stem : `${w.prefix}${s.stem}${w.suffix}`;
+			pool.push({
+				name,
+				type: w.typeBias ?? s.type,
+				domain: `${s.slug}-${w.tag}.ru`,
+			});
+			if (startsWithLegal) break;
+		}
+	}
+	return pool;
+})();
+
+function targetSupplierCount(itemId: string): number {
+	// item-8 stays small per product decision — every other item spreads across 200–300.
+	if (itemId === "item-8") return 25;
+	return 200 + (hash(itemId) % 101);
+}
+
+function generateCandidates(itemId: string, count: number): Supplier[] {
 	const seed = hash(itemId);
-	return Array.from({ length: CANDIDATES_PER_ITEM }, (_, i) => {
-		const pool = CANDIDATE_POOL[(seed + i * 7) % CANDIDATE_POOL.length];
+	// "Ошибка" means a КП request failed to deliver — it only makes sense once we've started
+	// reaching out, so suppress it while the item is still in the searching phase.
+	const item = _getItem(itemId);
+	const skipErrorCandidate = item?.status === "searching";
+	// Walk the pool with a coprime step so each item picks a different rotation; when the item
+	// needs more candidates than the pool holds, we wrap — duplicates become distinct rows
+	// because the id + perRowHash stay unique.
+	const step = 7;
+	return Array.from({ length: count }, (_, i) => {
+		const pool = CANDIDATE_POOL[(seed + i * step) % CANDIDATE_POOL.length];
 		// Identity hash by pool.name so the same candidate name collapses to one
 		// canonical supplier (same INN/profile) across items.
 		const identityHash = hash(pool.name);
+		const perRowHash = hash(`${itemId}:candidate-${i + 1}`);
+		const profile = makeIdentityProfile(identityHash);
 		// One pre-archived (i=7) and one "ошибка"-status (i=11) for demo coverage.
-		const status: SupplierStatus = i === 11 ? "ошибка" : "new";
+		const status: SupplierStatus = i === 11 && !skipErrorCandidate ? "ошибка" : "new";
+		const chatHistory: SupplierChatMessage[] =
+			status === "ошибка" ? [{ ...makeDefaultQuoteRequest(itemId, perRowHash), events: ["delivery_failed"] }] : [];
 		return {
 			id: `candidate-supplier-${itemId}-${i + 1}`,
 			itemId,
 			companyName: pool.name,
 			status,
 			archived: i === 7,
-			inn: makeInn(identityHash),
+			...profile,
 			companyType: pool.type,
-			region: REGIONS[identityHash % REGIONS.length],
-			foundedYear: 1992 + (identityHash % 30),
-			revenue: REVENUE_TIERS[identityHash % REVENUE_TIERS.length],
 			email: `info@${pool.domain}`,
 			website: `https://${pool.domain}`,
-			address: "",
 			pricePerUnit: null,
 			tco: null,
 			rating: null,
@@ -183,7 +372,7 @@ function generateCandidates(itemId: string): Supplier[] {
 			leadTimeDays: null,
 			agentComment: "",
 			documents: [],
-			chatHistory: [],
+			chatHistory,
 		};
 	});
 }
@@ -198,6 +387,11 @@ function cloneSupplier(s: Supplier): Supplier {
 	return { ...s, chatHistory: [...s.chatHistory] };
 }
 
+function computeCandidateCount(itemId: string, seedCount: number): number {
+	const target = targetSupplierCount(itemId);
+	return Math.max(0, target - seedCount);
+}
+
 function getSuppliersForItem(itemId: string): Supplier[] {
 	let suppliers = store.get(itemId);
 	if (!suppliers) {
@@ -207,7 +401,7 @@ function getSuppliersForItem(itemId: string): Supplier[] {
 			return [];
 		}
 		const enriched = seed.map(enrichSeed).map(cloneSupplier);
-		const candidates = generateCandidates(itemId);
+		const candidates = generateCandidates(itemId, computeCandidateCount(itemId, enriched.length));
 		suppliers = [...enriched, ...candidates];
 		store.set(itemId, suppliers);
 	}
@@ -221,7 +415,7 @@ export function _resetSupplierStore() {
 
 export function _setSuppliersForItem(itemId: string, seeds: readonly SupplierSeed[]) {
 	const enriched = seeds.map(enrichSeed).map(cloneSupplier);
-	const candidates = generateCandidates(itemId);
+	const candidates = generateCandidates(itemId, computeCandidateCount(itemId, enriched.length));
 	store.set(itemId, [...enriched, ...candidates]);
 }
 
@@ -411,7 +605,8 @@ export async function unarchiveSuppliers(itemId: string, supplierIds: string[]):
 }
 
 /** Transitions eligible (status="new") suppliers to "кп_запрошено".
- * Returns ids actually transitioned (already-requested ones are skipped). */
+ * Returns ids actually transitioned (already-requested ones are skipped).
+ * When the item was in a completed-search state, the first request burst flips it to negotiating. */
 export async function sendSupplierRequest(itemId: string, supplierIds: string[]): Promise<string[]> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
@@ -423,6 +618,14 @@ export async function sendSupplierRequest(itemId: string, supplierIds: string[])
 		return { ...s, status: "кп_запрошено" as const };
 	});
 	store.set(itemId, next);
+
+	if (transitioned.length > 0) {
+		const item = _getItem(itemId);
+		if (item && item.status === "searching" && item.searchCompleted) {
+			_patchItem(itemId, { status: "negotiating", searchCompleted: false });
+		}
+	}
+
 	return transitioned;
 }
 

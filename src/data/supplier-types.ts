@@ -66,7 +66,7 @@ export function filesToAttachments(files: File[]): MessageAttachment[] {
 	return files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }));
 }
 
-export type MessageEvent = "task_created" | "quote_received" | "refusal";
+export type MessageEvent = "task_created" | "quote_received" | "refusal" | "delivery_failed";
 
 export interface SupplierChatMessage {
 	sender: string;
@@ -119,6 +119,8 @@ export interface Supplier {
 	email: string;
 	website: string;
 	address: string;
+	/** Russian 6-digit postal code. Enriched deterministically at load time. */
+	postalCode: string;
 	pricePerUnit: number | null;
 	tco: number | null;
 	rating: number | null;
@@ -160,9 +162,9 @@ export interface SupplierQuote {
 }
 
 /** Shape for hand-authored Supplier seeds — identity/offer fields required;
- * profile fields (inn, companyType, region, foundedYear, revenue) and
+ * profile fields (inn, companyType, region, postalCode, foundedYear, revenue) and
  * `quoteReceivedAt` are enriched deterministically at load time by the mock layer. */
 export type SupplierSeed = Omit<
 	Supplier,
-	"inn" | "companyType" | "region" | "foundedYear" | "revenue" | "quoteReceivedAt"
+	"inn" | "companyType" | "region" | "postalCode" | "foundedYear" | "revenue" | "quoteReceivedAt"
 >;

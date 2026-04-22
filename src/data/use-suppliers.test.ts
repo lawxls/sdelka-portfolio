@@ -2,9 +2,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
-import { _resetSupplierStore, _setSendShouldFail, _setSupplierMockDelay } from "./supplier-mock-data";
+import { _resetSupplierStore, _setSendShouldFail, _setSupplierMockDelay, getAllSuppliers } from "./supplier-mock-data";
 import type { Supplier } from "./supplier-types";
-import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 import {
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
@@ -13,8 +12,11 @@ import {
 	useSuppliers,
 } from "./use-suppliers";
 
-// useSuppliers returns the full list (including archived), so include all 15 auto-generated candidates.
-const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length + 15;
+// useSuppliers returns the full list (including archived); the exact count depends on the
+// mock layer's per-item target, so we resolve it at the start of each test.
+async function getItem1TotalCount(): Promise<number> {
+	return (await getAllSuppliers("item-1")).suppliers.length;
+}
 
 let queryClient: QueryClient;
 
@@ -31,6 +33,7 @@ afterEach(() => {
 
 describe("useSuppliers", () => {
 	it("fetches all suppliers for a procurement item", async () => {
+		const expected = await getItem1TotalCount();
 		const { result } = renderHook(() => useSuppliers("item-1"), {
 			wrapper: createQueryWrapper(queryClient),
 		});
@@ -39,7 +42,7 @@ describe("useSuppliers", () => {
 			expect(result.current.data).toBeTruthy();
 		});
 
-		expect(result.current.data?.suppliers).toHaveLength(ITEM_1_COUNT);
+		expect(result.current.data?.suppliers).toHaveLength(expected);
 		for (const s of result.current.data?.suppliers ?? []) {
 			expect(s.itemId).toBe("item-1");
 		}
@@ -117,11 +120,12 @@ describe("useSupplier", () => {
 
 describe("useDeleteSuppliers", () => {
 	it("deletes suppliers and invalidates cache", async () => {
+		const expected = await getItem1TotalCount();
 		const wrapper = createQueryWrapper(queryClient);
 
 		const { result: suppliersResult } = renderHook(() => useSuppliers("item-1"), { wrapper });
 		await waitFor(() => {
-			expect(suppliersResult.current.data?.suppliers).toHaveLength(ITEM_1_COUNT);
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(expected);
 		});
 
 		const idToDelete = suppliersResult.current.data?.suppliers[0].id as string;
@@ -130,7 +134,7 @@ describe("useDeleteSuppliers", () => {
 		await deleteResult.current.mutateAsync({ itemId: "item-1", supplierIds: [idToDelete] });
 
 		await waitFor(() => {
-			expect(suppliersResult.current.data?.suppliers).toHaveLength(ITEM_1_COUNT - 1);
+			expect(suppliersResult.current.data?.suppliers).toHaveLength(expected - 1);
 		});
 	});
 });

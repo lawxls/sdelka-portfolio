@@ -24,16 +24,23 @@ afterEach(() => {
 });
 
 const ALL = { limit: Number.POSITIVE_INFINITY };
-// Item-1 = hand-authored ORMATEK seed + 14 non-archived auto-generated pipeline candidates
-// (15 total, 1 pre-archived for demo). See supplier-mock-data.ts → generateCandidates.
-const GENERATED_CANDIDATES_ACTIVE = 14;
-const ITEM_1_COUNT = ORMATEK_SUPPLIERS.length + GENERATED_CANDIDATES_ACTIVE;
 const ITEM_1_KP_COUNT = ORMATEK_SUPPLIERS.filter((s) => s.status === "получено_кп").length;
+
+// Total non-archived supplier count for item-1 — derived from the mock layer at runtime
+// so tests stay agnostic to the exact candidate-pool target (spread 200–300 per item).
+async function itemNonArchivedCount(itemId: string): Promise<number> {
+	const { suppliers } = await getSuppliers(itemId, ALL);
+	return suppliers.length;
+}
 
 describe("supplier mock store", () => {
 	it("has the full seeded list of suppliers for item-1", async () => {
+		// Items (except item-8) target 200–300 total suppliers; item-1 seeds ORMATEK's hand-authored list
+		// plus generated candidates up to the item's deterministic target.
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		expect(suppliers.length).toBe(ITEM_1_COUNT);
+		expect(suppliers.length).toBeGreaterThanOrEqual(200);
+		expect(suppliers.length).toBeLessThanOrEqual(300);
+		expect(suppliers.length).toBeGreaterThanOrEqual(ORMATEK_SUPPLIERS.length);
 	});
 
 	it("returns empty array for unknown itemId", async () => {
@@ -135,8 +142,9 @@ describe("getSuppliers search", () => {
 	});
 
 	it("returns all suppliers with empty search", async () => {
+		const expected = await itemNonArchivedCount("item-1");
 		const { suppliers } = await getSuppliers("item-1", { search: "", ...ALL });
-		expect(suppliers).toHaveLength(ITEM_1_COUNT);
+		expect(suppliers).toHaveLength(expected);
 	});
 });
 
@@ -223,27 +231,30 @@ describe("getSuppliers status filter", () => {
 	});
 
 	it("returns all when statuses is empty", async () => {
+		const expected = await itemNonArchivedCount("item-1");
 		const { suppliers } = await getSuppliers("item-1", { statuses: [], ...ALL });
-		expect(suppliers).toHaveLength(ITEM_1_COUNT);
+		expect(suppliers).toHaveLength(expected);
 	});
 });
 
 describe("deleteSuppliers", () => {
 	it("removes suppliers by IDs", async () => {
 		const { suppliers: before } = await getSuppliers("item-1", ALL);
+		const initialCount = before.length;
 		const idsToDelete = [before[0].id, before[1].id];
 		await deleteSuppliers("item-1", idsToDelete);
 		const { suppliers: after } = await getSuppliers("item-1", ALL);
-		expect(after).toHaveLength(ITEM_1_COUNT - idsToDelete.length);
+		expect(after).toHaveLength(initialCount - idsToDelete.length);
 		for (const id of idsToDelete) {
 			expect(after.find((s) => s.id === id)).toBeUndefined();
 		}
 	});
 
 	it("no-ops for non-existent IDs", async () => {
+		const expected = await itemNonArchivedCount("item-1");
 		await deleteSuppliers("item-1", ["nonexistent-id"]);
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		expect(suppliers).toHaveLength(ITEM_1_COUNT);
+		expect(suppliers).toHaveLength(expected);
 	});
 });
 
