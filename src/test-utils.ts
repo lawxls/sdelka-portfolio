@@ -143,11 +143,9 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 		paymentType: "deferred",
 		deferralDays: 14,
 		leadTimeDays: 14,
-		aiDescription: "Тестовое описание",
-		aiRecommendations: "Тестовые рекомендации",
+		agentComment: "Тестовый комментарий агента",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 		...overrides,
 	};
 }

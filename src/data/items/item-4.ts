@@ -48,10 +48,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 45,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription:
-			"Крупнейший европейский производитель ЛДСП. Российская площадка в Егорьевске, стабильные объёмы, широкая палитра декоров.",
-		aiRecommendations:
-			"Текущий поставщик ОРМАТЕК. Отсрочка 45 дней, цена на уровне рынка. Рекомендуется запросить снижение на 2-3% при сохранении объёма.",
+		agentComment:
+			"Крупнейший европейский производитель ЛДСП. Российская площадка в Егорьевске, стабильные объёмы, широкая палитра декоров.\n\nТекущий поставщик ОРМАТЕК. Отсрочка 45 дней, цена на уровне рынка. Рекомендуется запросить снижение на 2-3% при сохранении объёма.",
 		documents: [],
 		chatHistory: [
 			{
@@ -67,7 +65,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-2",
@@ -85,9 +82,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Турецкий холдинг с заводом в ОЭЗ «Алабуга». Высокое качество декоров, стабильная логистика по ЮФО.",
-		aiRecommendations:
-			"Цена выше минимальной, но крупный игрок с устойчивыми поставками. Подходит как резервный поставщик.",
+		agentComment:
+			"Турецкий холдинг с заводом в ОЭЗ «Алабуга». Высокое качество декоров, стабильная логистика по ЮФО.\n\nЦена выше минимальной, но крупный игрок с устойчивыми поставками. Подходит как резервный поставщик.",
 		documents: [],
 		chatHistory: [
 			{
@@ -103,7 +99,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-3",
@@ -121,8 +116,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 21,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "Российский производитель ЛДСП и ДСП полного цикла. Собственное деревозаготовительное производство.",
-		aiRecommendations: "Цена выше среднего. Рассмотреть при переговорах о снижении или для нишевых декоров.",
+		agentComment:
+			"Российский производитель ЛДСП и ДСП полного цикла. Собственное деревозаготовительное производство.\n\nЦена выше среднего. Рассмотреть при переговорах о снижении или для нишевых декоров.",
 		documents: [],
 		chatHistory: [
 			{
@@ -138,7 +133,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-4",
@@ -156,10 +150,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription:
-			"Один из крупнейших сибирских производителей ЛДСП. Собственные мощности по ламинированию и упаковке.",
-		aiRecommendations:
-			"Минимальная TCO среди полученных КП. Рекомендуется зафиксировать цену и согласовать тестовую поставку.",
+		agentComment:
+			"Один из крупнейших сибирских производителей ЛДСП. Собственные мощности по ламинированию и упаковке.\n\nМинимальная TCO среди полученных КП. Рекомендуется зафиксировать цену и согласовать тестовую поставку.",
 		documents: [],
 		chatHistory: [
 			{
@@ -175,7 +167,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-5",
@@ -193,8 +184,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Австрийский концерн, завод в Гагарине. Премиальные декоры, высокое качество ламинации.",
-		aiRecommendations: "Цена выше рынка. Целесообразно только для ограниченных партий с премиальными декорами.",
+		agentComment:
+			"Австрийский концерн, завод в Гагарине. Премиальные декоры, высокое качество ламинации.\n\nЦена выше рынка. Целесообразно только для ограниченных партий с премиальными декорами.",
 		documents: [],
 		chatHistory: [
 			{
@@ -210,7 +201,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-6",
@@ -228,8 +218,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Производитель ЛДСП из Приозерска. Специализируется на плитах для мебельного сектора.",
-		aiRecommendations: "Отказ по декору. При смене декора можно вернуться.",
+		agentComment:
+			"Производитель ЛДСП из Приозерска. Специализируется на плитах для мебельного сектора.\n\nОтказ по декору. При смене декора можно вернуться.",
 		documents: [],
 		chatHistory: [
 			{
@@ -245,7 +235,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-7",
@@ -263,8 +252,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Специализируется на ламинировании плит, собственного производства ДСП не имеет.",
-		aiRecommendations: "Производственные мощности не позволяют обеспечить годовой объём.",
+		agentComment:
+			"Специализируется на ламинировании плит, собственного производства ДСП не имеет.\n\nПроизводственные мощности не позволяют обеспечить годовой объём.",
 		documents: [],
 		chatHistory: [
 			{
@@ -280,7 +269,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-8",
@@ -298,8 +286,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Торговый дом, дистрибьютор нескольких российских производителей ЛДСП.",
-		aiRecommendations: "Отказ по условиям оплаты — требуется 100% предоплата.",
+		agentComment:
+			"Торговый дом, дистрибьютор нескольких российских производителей ЛДСП.\n\nОтказ по условиям оплаты — требуется 100% предоплата.",
 		documents: [],
 		chatHistory: [
 			{
@@ -315,7 +303,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-9",
@@ -333,8 +320,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Производитель ЛДСП и компонентов для мебельного производства.",
-		aiRecommendations: "Обсуждается возможность спеццены при гарантированном годовом объёме. Ждём финальное КП.",
+		agentComment:
+			"Производитель ЛДСП и компонентов для мебельного производства.\n\nОбсуждается возможность спеццены при гарантированном годовом объёме. Ждём финальное КП.",
 		documents: [],
 		chatHistory: [
 			{
@@ -362,7 +349,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-10",
@@ -380,8 +366,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 21,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "Региональный поставщик ЛДСП для мебельных фабрик Центрального и Южного ФО.",
-		aiRecommendations: "Запросили спецификацию декора и сертификаты эмиссии, ждём ответ.",
+		agentComment:
+			"Региональный поставщик ЛДСП для мебельных фабрик Центрального и Южного ФО.\n\nЗапросили спецификацию декора и сертификаты эмиссии, ждём ответ.",
 		documents: [],
 		chatHistory: [
 			{
@@ -397,7 +383,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-11",
@@ -415,8 +400,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Производитель МДФ и ЛДСП в Дзержинске. Обслуживает крупные мебельные фабрики Поволжья.",
-		aiRecommendations: "Отправили запрос, ответа ещё не получили. Напомнить через 2 дня.",
+		agentComment:
+			"Производитель МДФ и ЛДСП в Дзержинске. Обслуживает крупные мебельные фабрики Поволжья.\n\nОтправили запрос, ответа ещё не получили. Напомнить через 2 дня.",
 		documents: [],
 		chatHistory: [
 			{
@@ -426,7 +411,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-4-12",
@@ -444,10 +428,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Дистрибьютор ЛДСП, работает преимущественно с мебельными фабриками Сибири и Урала.",
-		aiRecommendations: "Собрать контакт менеджера и отправить запрос КП.",
+		agentComment:
+			"Дистрибьютор ЛДСП, работает преимущественно с мебельными фабриками Сибири и Урала.\n\nСобрать контакт менеджера и отправить запрос КП.",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

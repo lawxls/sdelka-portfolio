@@ -17,11 +17,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-2",
@@ -39,11 +37,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-3",
@@ -61,8 +57,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -78,7 +73,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-4",
@@ -96,11 +90,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-5",
@@ -118,8 +110,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -135,7 +126,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-6",
@@ -153,8 +143,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -170,7 +159,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-7",
@@ -188,11 +176,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-8",
@@ -210,11 +196,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-9",
@@ -232,8 +216,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -249,7 +232,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-10",
@@ -267,8 +249,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 16,
 		paymentType: "deferred",
 		leadTimeDays: 12,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -284,7 +265,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-11",
@@ -302,10 +282,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 27,
 		paymentType: "deferred",
 		leadTimeDays: 23,
-		aiDescription:
-			"Крупный складской оператор в Московской области с высоким рейтингом (85), но собственного производства нет. Работают только по готовому ассортименту — максимальная ширина рукава 1500 мм, 2600 мм в наличии не держат. Заказы под ТЗ не исполняют.",
-		aiRecommendations:
-			"Для основного контракта не подходит из-за ширины. Оставить контакт на случай срочных поставок готовой продукции 1500 мм — бывают пиковые потребности на переупаковке. Архивировать не нужно.",
+		agentComment:
+			"Крупный складской оператор в Московской области с высоким рейтингом (85), но собственного производства нет. Работают только по готовому ассортименту — максимальная ширина рукава 1500 мм, 2600 мм в наличии не держат. Заказы под ТЗ не исполняют.\n\nДля основного контракта не подходит из-за ширины. Оставить контакт на случай срочных поставок готовой продукции 1500 мм — бывают пиковые потребности на переупаковке. Архивировать не нужно.",
 		documents: [],
 		chatHistory: [
 			{
@@ -349,7 +327,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				],
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-12",
@@ -367,11 +344,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-13",
@@ -389,11 +364,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-14",
@@ -411,8 +384,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -428,7 +400,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-15",
@@ -446,8 +417,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -463,7 +433,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-16",
@@ -481,11 +450,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-17",
@@ -503,11 +470,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-18",
@@ -525,8 +490,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -542,7 +506,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-19",
@@ -560,8 +523,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -577,7 +539,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-20",
@@ -595,11 +556,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-21",
@@ -617,11 +576,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-22",
@@ -639,8 +596,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -656,7 +612,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-23",
@@ -674,11 +629,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-24",
@@ -696,8 +649,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -713,7 +665,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-25",
@@ -731,8 +682,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -748,7 +698,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-26",
@@ -766,8 +715,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 12,
 		paymentType: "deferred",
 		leadTimeDays: 22,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -783,7 +731,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-27",
@@ -801,11 +748,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-28",
@@ -823,11 +768,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-29",
@@ -845,11 +788,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-30",
@@ -867,8 +808,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -884,7 +824,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-31",
@@ -902,8 +841,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -919,7 +857,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-32",
@@ -937,11 +874,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-33",
@@ -959,11 +894,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-34",
@@ -981,8 +914,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 10,
 		paymentType: "deferred",
 		leadTimeDays: 20,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -998,7 +930,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-35",
@@ -1016,8 +947,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 21,
 		paymentType: "deferred",
 		leadTimeDays: 17,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1033,7 +963,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-36",
@@ -1051,11 +980,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-37",
@@ -1073,11 +1000,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-38",
@@ -1095,8 +1020,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1112,7 +1036,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-39",
@@ -1130,8 +1053,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1147,7 +1069,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-40",
@@ -1165,8 +1086,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 16,
 		paymentType: "deferred",
 		leadTimeDays: 12,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1182,7 +1102,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-41",
@@ -1200,8 +1119,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1217,7 +1135,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-42",
@@ -1235,8 +1152,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 8,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1252,7 +1168,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-43",
@@ -1270,8 +1185,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 19,
 		paymentType: "deferred",
 		leadTimeDays: 15,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1287,7 +1201,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-44",
@@ -1305,8 +1218,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 12,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1322,7 +1234,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-45",
@@ -1340,11 +1251,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-46",
@@ -1362,10 +1271,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 22,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription:
-			"Производитель из Каспийска, собственная экструзия полотна 2600 мм без шва. Рейтинг 80. Цена 1 965 ₽/пм включает доставку до Аксая (близкое плечо — Каспийск → Ростов). Отсрочка 22 дня стандартная.",
-		aiRecommendations:
-			"Крепкий дублёр на 20–30% объёма. Логистическое преимущество — 8 часов до склада. Запросить паспорт качества и зафиксировать цену до конца Q3. Критичен для сценария срочных поставок.",
+		agentComment:
+			"Производитель из Каспийска, собственная экструзия полотна 2600 мм без шва. Рейтинг 80. Цена 1 965 ₽/пм включает доставку до Аксая (близкое плечо — Каспийск → Ростов). Отсрочка 22 дня стандартная.\n\nКрепкий дублёр на 20–30% объёма. Логистическое преимущество — 8 часов до склада. Запросить паспорт качества и зафиксировать цену до конца Q3. Критичен для сценария срочных поставок.",
 		documents: [],
 		chatHistory: [
 			{
@@ -1407,7 +1314,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				attachments: [{ name: "Kaspack_ramochniy_dogovor.docx", type: "docx", size: 75_000 }],
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-47",
@@ -1425,11 +1331,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-48",
@@ -1447,8 +1351,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1464,7 +1367,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-49",
@@ -1482,11 +1384,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-50",
@@ -1504,8 +1404,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1521,7 +1420,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-51",
@@ -1539,11 +1437,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-52",
@@ -1561,8 +1457,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1578,7 +1473,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-53",
@@ -1596,8 +1490,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1613,7 +1506,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-54",
@@ -1631,10 +1523,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 20,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription:
-			"Хабаровск — плечо доставки до Аксая 7 500 км. Цена за пм привлекательная (1 461 ₽), но логистика добавляет 318 ₽/пм и съедает экономию. Рейтинг 36 — в отзывах частые жалобы на задержки и несоответствие сортности.",
-		aiRecommendations:
-			"Отклонить. TCO 1 779 ₽/пм без учёта рисков срыва сроков из-за расстояния. Плечо доставки >7 000 км делает оперативные замены невозможными — неприемлемо для производства с непрерывным циклом.",
+		agentComment:
+			"Хабаровск — плечо доставки до Аксая 7 500 км. Цена за пм привлекательная (1 461 ₽), но логистика добавляет 318 ₽/пм и съедает экономию. Рейтинг 36 — в отзывах частые жалобы на задержки и несоответствие сортности.\n\nОтклонить. TCO 1 779 ₽/пм без учёта рисков срыва сроков из-за расстояния. Плечо доставки >7 000 км делает оперативные замены невозможными — неприемлемо для производства с непрерывным циклом.",
 		documents: [],
 		chatHistory: [
 			{
@@ -1680,7 +1570,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-55",
@@ -1698,11 +1587,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-56",
@@ -1720,11 +1607,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-57",
@@ -1742,11 +1627,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-58",
@@ -1764,8 +1647,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 34,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1781,7 +1663,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-59",
@@ -1799,11 +1680,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-60",
@@ -1821,8 +1700,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1838,7 +1716,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-61",
@@ -1856,8 +1733,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1873,7 +1749,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-62",
@@ -1891,8 +1766,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 18,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1908,7 +1782,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-63",
@@ -1926,8 +1799,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1943,7 +1815,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-64",
@@ -1961,8 +1832,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -1978,7 +1848,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-65",
@@ -1996,11 +1865,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-66",
@@ -2018,10 +1885,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 32,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription:
-			"Региональный производитель с собственной экструзионной линией. Вторая по цене позиция (1 505 ₽/пм), готовы к отсрочке 32 дня. Коммуникация быстрая, но паспорт качества пришлют только после тест-заказа.",
-		aiRecommendations:
-			"Сильный кандидат в резерв за «Полимер76». Запросить образец 50 пм и сертификат соответствия. При положительном тесте — зафиксировать цену до конца Q3 контрактом.",
+		agentComment:
+			"Региональный производитель с собственной экструзионной линией. Вторая по цене позиция (1 505 ₽/пм), готовы к отсрочке 32 дня. Коммуникация быстрая, но паспорт качества пришлют только после тест-заказа.\n\nСильный кандидат в резерв за «Полимер76». Запросить образец 50 пм и сертификат соответствия. При положительном тесте — зафиксировать цену до конца Q3 контрактом.",
 		documents: [],
 		chatHistory: [
 			{
@@ -2062,7 +1927,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				attachments: [{ name: "UPMP_sertifikat_sootv_2026.pdf", type: "pdf", size: 412_000 }],
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-67",
@@ -2080,8 +1944,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2097,7 +1960,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-68",
@@ -2115,8 +1977,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 24,
 		paymentType: "deferred",
 		leadTimeDays: 20,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2132,7 +1993,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-69",
@@ -2150,8 +2010,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2167,7 +2026,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-70",
@@ -2185,11 +2043,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-71",
@@ -2207,8 +2063,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2224,7 +2079,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-72",
@@ -2242,8 +2096,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2259,7 +2112,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-73",
@@ -2277,8 +2129,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2294,7 +2145,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-74",
@@ -2312,8 +2162,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2329,7 +2178,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-75",
@@ -2347,11 +2195,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-76",
@@ -2369,11 +2215,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-77",
@@ -2391,11 +2235,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-78",
@@ -2413,8 +2255,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2430,7 +2271,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-79",
@@ -2448,11 +2288,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-80",
@@ -2470,8 +2308,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2487,7 +2324,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-81",
@@ -2505,11 +2341,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-82",
@@ -2527,8 +2361,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2544,7 +2377,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-83",
@@ -2562,8 +2394,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2579,7 +2410,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-84",
@@ -2597,11 +2427,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-85",
@@ -2619,8 +2447,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2636,7 +2463,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-86",
@@ -2654,11 +2480,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-87",
@@ -2676,8 +2500,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 23,
 		paymentType: "deferred",
 		leadTimeDays: 19,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2693,7 +2516,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-88",
@@ -2711,11 +2533,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-89",
@@ -2733,8 +2553,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2750,7 +2569,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-90",
@@ -2768,11 +2586,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-91",
@@ -2790,11 +2606,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-92",
@@ -2812,11 +2626,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-93",
@@ -2834,11 +2646,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-94",
@@ -2856,11 +2666,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-95",
@@ -2878,11 +2686,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-96",
@@ -2900,8 +2706,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -2917,7 +2722,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-97",
@@ -2935,11 +2739,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-98",
@@ -2957,11 +2759,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-99",
@@ -2979,11 +2779,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-100",
@@ -3001,8 +2799,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 16,
 		paymentType: "deferred",
 		leadTimeDays: 12,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3018,7 +2815,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-101",
@@ -3036,11 +2832,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-102",
@@ -3058,8 +2852,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3075,7 +2868,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-103",
@@ -3093,8 +2885,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3110,7 +2901,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-104",
@@ -3128,11 +2918,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-105",
@@ -3150,11 +2938,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-106",
@@ -3172,11 +2958,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-107",
@@ -3194,11 +2978,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-108",
@@ -3216,8 +2998,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3233,7 +3014,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-109",
@@ -3251,8 +3031,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3268,7 +3047,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-110",
@@ -3286,8 +3064,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3303,7 +3080,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-111",
@@ -3321,11 +3097,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-112",
@@ -3343,8 +3117,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 28,
 		paymentType: "deferred",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3360,7 +3133,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-113",
@@ -3378,8 +3150,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3395,7 +3166,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-114",
@@ -3413,8 +3183,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 20,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3430,7 +3199,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-115",
@@ -3448,8 +3216,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3465,7 +3232,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-116",
@@ -3483,11 +3249,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-117",
@@ -3505,8 +3269,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3522,7 +3285,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-118",
@@ -3540,8 +3302,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 34,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3557,7 +3318,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-119",
@@ -3575,11 +3335,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-120",
@@ -3597,11 +3355,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-121",
@@ -3619,8 +3375,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3636,7 +3391,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-122",
@@ -3654,8 +3408,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 18,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3671,7 +3424,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-123",
@@ -3689,11 +3441,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-124",
@@ -3711,11 +3461,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-125",
@@ -3733,8 +3481,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3750,7 +3497,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-126",
@@ -3768,11 +3514,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-127",
@@ -3790,8 +3534,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 13,
 		paymentType: "deferred",
 		leadTimeDays: 23,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3807,7 +3550,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-128",
@@ -3825,8 +3567,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3842,7 +3583,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-129",
@@ -3860,8 +3600,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3877,7 +3616,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-130",
@@ -3895,8 +3633,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 16,
 		paymentType: "deferred",
 		leadTimeDays: 12,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3912,7 +3649,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-131",
@@ -3930,11 +3666,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-132",
@@ -3952,8 +3686,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -3969,7 +3702,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-133",
@@ -3987,8 +3719,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4004,7 +3735,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-134",
@@ -4022,11 +3752,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-135",
@@ -4044,8 +3772,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4061,7 +3788,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-136",
@@ -4079,11 +3805,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-137",
@@ -4101,11 +3825,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-138",
@@ -4123,8 +3845,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4140,7 +3861,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-139",
@@ -4158,11 +3878,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-140",
@@ -4180,8 +3898,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 36,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4197,7 +3914,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-141",
@@ -4215,11 +3931,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-142",
@@ -4237,11 +3951,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-143",
@@ -4259,11 +3971,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-144",
@@ -4281,8 +3991,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4298,7 +4007,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-145",
@@ -4316,8 +4024,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4333,7 +4040,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-146",
@@ -4351,11 +4057,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-147",
@@ -4373,8 +4077,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4390,7 +4093,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-148",
@@ -4408,11 +4110,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-149",
@@ -4430,8 +4130,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4447,7 +4146,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-150",
@@ -4465,11 +4163,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-151",
@@ -4487,8 +4183,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4504,7 +4199,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-152",
@@ -4522,8 +4216,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4539,7 +4232,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-153",
@@ -4557,8 +4249,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4574,7 +4265,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-154",
@@ -4592,8 +4282,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 10,
 		paymentType: "deferred",
 		leadTimeDays: 20,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4609,7 +4298,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-155",
@@ -4627,11 +4315,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-156",
@@ -4649,11 +4335,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-157",
@@ -4671,11 +4355,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-158",
@@ -4693,11 +4375,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-159",
@@ -4715,10 +4395,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 35,
 		paymentType: "deferred",
 		leadTimeDays: 17,
-		aiDescription:
-			"Производитель с сильной репутацией (81), отсрочка 35 дней. Первое КП пришло с условием 100% предоплаты и самовывоза — после переговоров удалось сдвинуть на отсрочку, но доставку не включили. TCO с логистикой — 1 984 ₽/пм.",
-		aiRecommendations:
-			"Перспективный дублёр. Дожать на включение логистики в цену или зафиксировать её на уровне 270 ₽/пм. При TCO ≤ 1 850 ₽/пм — кандидат на 30% объёма. Запросить сертификат соответствия и паспорт качества.",
+		agentComment:
+			"Производитель с сильной репутацией (81), отсрочка 35 дней. Первое КП пришло с условием 100% предоплаты и самовывоза — после переговоров удалось сдвинуть на отсрочку, но доставку не включили. TCO с логистикой — 1 984 ₽/пм.\n\nПерспективный дублёр. Дожать на включение логистики в цену или зафиксировать её на уровне 270 ₽/пм. При TCO ≤ 1 850 ₽/пм — кандидат на 30% объёма. Запросить сертификат соответствия и паспорт качества.",
 		documents: [],
 		chatHistory: [
 			{
@@ -4764,7 +4442,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-160",
@@ -4782,8 +4459,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4799,7 +4475,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-161",
@@ -4817,11 +4492,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-162",
@@ -4839,11 +4512,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-163",
@@ -4861,11 +4532,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-164",
@@ -4883,11 +4552,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-165",
@@ -4905,8 +4572,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4922,7 +4588,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-166",
@@ -4940,8 +4605,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4957,7 +4621,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-167",
@@ -4975,8 +4638,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -4992,7 +4654,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-168",
@@ -5010,8 +4671,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5027,7 +4687,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-169",
@@ -5045,8 +4704,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5062,7 +4720,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-170",
@@ -5080,11 +4737,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-171",
@@ -5102,11 +4757,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-172",
@@ -5124,8 +4777,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5141,7 +4793,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-173",
@@ -5160,11 +4811,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-174",
@@ -5182,11 +4831,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-175",
@@ -5204,8 +4851,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 31,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5221,7 +4867,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-176",
@@ -5239,8 +4884,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5256,7 +4900,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-177",
@@ -5274,8 +4917,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5291,7 +4933,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-178",
@@ -5309,11 +4950,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-179",
@@ -5331,11 +4970,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-180",
@@ -5353,11 +4990,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-181",
@@ -5375,8 +5010,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5392,7 +5026,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-182",
@@ -5410,8 +5043,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 18,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5427,7 +5059,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-183",
@@ -5445,8 +5076,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5462,7 +5092,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-184",
@@ -5480,8 +5109,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 10,
 		paymentType: "deferred",
 		leadTimeDays: 20,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5497,7 +5125,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-185",
@@ -5515,8 +5142,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5532,7 +5158,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-186",
@@ -5550,8 +5175,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 32,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5567,7 +5191,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-187",
@@ -5585,8 +5208,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5602,7 +5224,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-188",
@@ -5620,8 +5241,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5637,7 +5257,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-189",
@@ -5655,10 +5274,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription:
-			"Региональный дистрибьютор (Ростов-на-Дону, 161 регион), логистика до Аксая — собственная. Прислали три сорта по ценам от 31 до 42 ₽/пог.м. В рабочем варианте (высший сорт, 100 мкм) TCO 1 814 ₽/пм. Отсрочка — только после 4 предоплатных поставок.",
-		aiRecommendations:
-			"Не основной кандидат — требование 4 предоплат ломает нашу платёжную модель. Оставить в резерве для внеплановых дозакупок по готовой продукции. Дожимать на отсрочку нецелесообразно: в ответе прямо отказали.",
+		agentComment:
+			"Региональный дистрибьютор (Ростов-на-Дону, 161 регион), логистика до Аксая — собственная. Прислали три сорта по ценам от 31 до 42 ₽/пог.м. В рабочем варианте (высший сорт, 100 мкм) TCO 1 814 ₽/пм. Отсрочка — только после 4 предоплатных поставок.\n\nНе основной кандидат — требование 4 предоплат ломает нашу платёжную модель. Оставить в резерве для внеплановых дозакупок по готовой продукции. Дожимать на отсрочку нецелесообразно: в ответе прямо отказали.",
 		documents: [],
 		chatHistory: [
 			{
@@ -5699,7 +5316,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				attachments: [{ name: "GrandPak_dogovor_postavki.pdf", type: "pdf", size: 240_000 }],
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-190",
@@ -5717,11 +5333,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-191",
@@ -5739,10 +5353,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 27,
 		paymentType: "deferred",
 		leadTimeDays: 23,
-		aiDescription:
-			"Производитель верхнего сегмента. Высший рейтинг в пуле (85), собственная лаборатория ОТК, ISO 9001. Цена на 23% выше минимума (1 830 ₽/пм), но отсрочка 27 дней и доставка включена. Готовы прислать полный пакет документов до заказа.",
-		aiRecommendations:
-			"Топовый кандидат в основные поставщики — надёжность стоит премии. Провести тест 500 пм, по результатам фиксировать 60% объёма. В связке с более дешёвым дублёром получится оптимальный микс.",
+		agentComment:
+			"Производитель верхнего сегмента. Высший рейтинг в пуле (85), собственная лаборатория ОТК, ISO 9001. Цена на 23% выше минимума (1 830 ₽/пм), но отсрочка 27 дней и доставка включена. Готовы прислать полный пакет документов до заказа.\n\nТоповый кандидат в основные поставщики — надёжность стоит премии. Провести тест 500 пм, по результатам фиксировать 60% объёма. В связке с более дешёвым дублёром получится оптимальный микс.",
 		documents: [],
 		chatHistory: [
 			{
@@ -5787,7 +5399,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-192",
@@ -5805,8 +5416,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5822,7 +5432,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-193",
@@ -5840,11 +5449,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-194",
@@ -5862,11 +5469,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-195",
@@ -5884,11 +5489,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-196",
@@ -5906,8 +5509,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5923,7 +5525,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-197",
@@ -5941,11 +5542,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-198",
@@ -5963,8 +5562,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -5980,7 +5578,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-199",
@@ -5998,8 +5595,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6015,7 +5611,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-200",
@@ -6033,8 +5628,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 36,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6050,7 +5644,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-201",
@@ -6068,11 +5661,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-202",
@@ -6090,11 +5681,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-203",
@@ -6112,8 +5701,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6129,7 +5717,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-204",
@@ -6147,11 +5734,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-205",
@@ -6169,11 +5754,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-206",
@@ -6191,10 +5774,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 12,
 		paymentType: "deferred",
 		leadTimeDays: 22,
-		aiDescription:
-			"Трейдер без собственного производства. Самая низкая цена на рынке (1 485 ₽/пм), но источник сырья не раскрывают и сертификат соответствия вперёд не присылают. Рейтинг 40 совпадает с жалобами на нестабильное качество партий.",
-		aiRecommendations:
-			"Высокий риск для основного контракта. До заключения договора запросить тест-отгрузку 50 пм, паспорт качества и сертификат соответствия. Если за 3 дня не предоставят — в резерв.",
+		agentComment:
+			"Трейдер без собственного производства. Самая низкая цена на рынке (1 485 ₽/пм), но источник сырья не раскрывают и сертификат соответствия вперёд не присылают. Рейтинг 40 совпадает с жалобами на нестабильное качество партий.\n\nВысокий риск для основного контракта. До заключения договора запросить тест-отгрузку 50 пм, паспорт качества и сертификат соответствия. Если за 3 дня не предоставят — в резерв.",
 		documents: [],
 		chatHistory: [
 			{
@@ -6234,7 +5815,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-207",
@@ -6252,11 +5832,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-208",
@@ -6274,11 +5852,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-209",
@@ -6296,8 +5872,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6313,7 +5888,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-210",
@@ -6331,11 +5905,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-211",
@@ -6353,11 +5925,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-212",
@@ -6375,11 +5945,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-213",
@@ -6397,8 +5965,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6414,7 +5981,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-214",
@@ -6432,8 +5998,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6449,7 +6014,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-215",
@@ -6467,8 +6031,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6484,7 +6047,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-216",
@@ -6502,11 +6064,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-217",
@@ -6524,11 +6084,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-218",
@@ -6546,8 +6104,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6563,7 +6120,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-219",
@@ -6581,8 +6137,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 35,
 		paymentType: "deferred",
 		leadTimeDays: 17,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6598,7 +6153,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-220",
@@ -6616,11 +6170,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-221",
@@ -6638,11 +6190,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-222",
@@ -6660,8 +6210,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 8,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6677,7 +6226,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-223",
@@ -6695,11 +6243,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-224",
@@ -6717,11 +6263,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-225",
@@ -6739,11 +6283,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-226",
@@ -6761,11 +6303,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-227",
@@ -6783,8 +6323,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6800,7 +6339,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-228",
@@ -6818,11 +6356,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-229",
@@ -6840,8 +6376,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -6857,7 +6392,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-230",
@@ -6875,11 +6409,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-231",
@@ -6897,11 +6429,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-232",
@@ -6919,11 +6449,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-233",
@@ -6941,11 +6469,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-234",
@@ -6963,11 +6489,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-235",
@@ -6985,11 +6509,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-236",
@@ -7007,10 +6529,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 12,
 		paymentType: "deferred",
 		leadTimeDays: 22,
-		aiDescription:
-			"Производитель из СПб, экструзия под ширину 2600 мм есть. Цена средняя (1 595 ₽/пм), но доставку до Ростова в КП не включил — TCO может вырасти. Срок изготовления 3 недели при первом заказе.",
-		aiRecommendations:
-			"Держать в шорт-листе как дублёра с поставкой через ТК. Запросить окончательную TCO с логистикой до Аксая и условия по 6-месячной фиксации цены. При TCO ≤ 1 750 ₽/пм — кандидат на 20% объёма.",
+		agentComment:
+			"Производитель из СПб, экструзия под ширину 2600 мм есть. Цена средняя (1 595 ₽/пм), но доставку до Ростова в КП не включил — TCO может вырасти. Срок изготовления 3 недели при первом заказе.\n\nДержать в шорт-листе как дублёра с поставкой через ТК. Запросить окончательную TCO с логистикой до Аксая и условия по 6-месячной фиксации цены. При TCO ≤ 1 750 ₽/пм — кандидат на 20% объёма.",
 		documents: [],
 		chatHistory: [
 			{
@@ -7054,7 +6574,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				],
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-237",
@@ -7072,11 +6591,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-238",
@@ -7094,8 +6611,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -7111,7 +6627,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-239",
@@ -7129,11 +6644,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-240",
@@ -7151,11 +6664,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-241",
@@ -7173,11 +6684,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-242",
@@ -7195,11 +6704,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-243",
@@ -7217,11 +6724,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-244",
@@ -7239,11 +6744,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-245",
@@ -7261,11 +6764,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-246",
@@ -7283,11 +6784,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-247",
@@ -7305,11 +6804,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-248",
@@ -7327,11 +6824,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-249",
@@ -7349,11 +6844,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-250",
@@ -7371,11 +6864,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-251",
@@ -7393,11 +6884,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-252",
@@ -7415,11 +6904,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-253",
@@ -7437,8 +6924,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -7454,7 +6940,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-254",
@@ -7472,8 +6957,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -7489,7 +6973,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-255",
@@ -7507,11 +6990,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-256",
@@ -7529,8 +7010,7 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 22,
 		paymentType: "deferred",
 		leadTimeDays: 18,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -7546,7 +7026,6 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-257",
@@ -7564,11 +7043,9 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-1-258",
@@ -7586,10 +7063,8 @@ export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 10,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

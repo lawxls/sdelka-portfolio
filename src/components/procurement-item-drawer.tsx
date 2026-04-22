@@ -7,7 +7,11 @@ import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { LoadMoreSentinel } from "@/components/load-more-sentinel";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
-import { SupplierDetailDrawer } from "@/components/supplier-detail-drawer";
+import {
+	SUPPLIER_DRAWER_TABS,
+	SupplierDetailDrawer,
+	type SupplierDrawerTab,
+} from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
@@ -74,6 +78,13 @@ function parseItemDrawerTab(param: string | null): ItemDrawerTab {
 	return DEFAULT_TAB;
 }
 
+const VALID_SUPPLIER_TABS = new Set<string>(SUPPLIER_DRAWER_TABS);
+
+function parseSupplierTab(param: string | null): SupplierDrawerTab {
+	if (param && VALID_SUPPLIER_TABS.has(param)) return param as SupplierDrawerTab;
+	return "info";
+}
+
 interface ProcurementItemDrawerProps {
 	item?: ProcurementItem;
 }
@@ -85,6 +96,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const itemId = searchParams.get("item");
 	const activeTab = parseItemDrawerTab(searchParams.get("tab"));
 	const supplierId = searchParams.get("supplier");
+	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
 	const taskId = searchParams.get("task");
 	const open = itemId != null;
 
@@ -122,11 +134,12 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		);
 	}
 
-	function handleSupplierOpen(id: string) {
+	function handleSupplierOpen(id: string, origin: SupplierDrawerTab = "info") {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
 				next.set("supplier", id);
+				next.set("supplier_tab", origin);
 				return next;
 			},
 			{ replace: false },
@@ -138,6 +151,34 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 			(prev) => {
 				const next = new URLSearchParams(prev);
 				next.delete("supplier");
+				next.delete("supplier_tab");
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleSupplierTabChange(tab: SupplierDrawerTab) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("supplier_tab", tab);
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
+	function handleNavigateToItem(targetItemId: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("item", targetItemId);
+				// Land on the «Информация» (details) tab — the buyer wants item specs,
+				// not another suppliers table when they click a card title.
+				next.set("tab", "details");
+				next.delete("supplier");
+				next.delete("supplier_tab");
 				return next;
 			},
 			{ replace: false },
@@ -209,7 +250,9 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				supplier={supplier ?? null}
 				open={supplierId != null}
 				onClose={handleSupplierClose}
-				onSelectSupplier={handleSelectSupplier}
+				activeTab={supplierTab}
+				onTabChange={handleSupplierTabChange}
+				onNavigateToItem={handleNavigateToItem}
 			/>
 			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 			<AlertDialog
@@ -852,7 +895,7 @@ function ProcurementItemDrawerContent({
 	item?: ProcurementItem;
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
-	onSupplierClick: (id: string) => void;
+	onSupplierClick: (id: string, origin?: SupplierDrawerTab) => void;
 	onTaskClick: (id: string) => void;
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
@@ -974,9 +1017,15 @@ function ProcurementItemDrawerContent({
 					activeTab === "details" ? "p-4" : "pt-3",
 				)}
 			>
-				{activeTab === "suppliers" && <SuppliersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} />}
+				{activeTab === "suppliers" && (
+					<SuppliersTabPanel itemId={itemId} onSupplierClick={(id) => onSupplierClick(id, "info")} />
+				)}
 				{activeTab === "offers" && (
-					<OffersTabPanel itemId={itemId} onSupplierClick={onSupplierClick} onSelectSupplier={onSelectSupplier} />
+					<OffersTabPanel
+						itemId={itemId}
+						onSupplierClick={(id) => onSupplierClick(id, "offers")}
+						onSelectSupplier={onSelectSupplier}
+					/>
 				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
 				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}

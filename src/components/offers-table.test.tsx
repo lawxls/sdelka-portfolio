@@ -121,13 +121,13 @@ describe("OffersTable", () => {
 		expect(headerTexts).not.toContain("ОТСРОЧКА");
 	});
 
-	test("renders supplier rows with company name and «Актуально на» date", () => {
+	test("renders supplier rows with company name and «Получено» date", () => {
 		renderTable();
 		expect(screen.getByText("ООО «Альфа»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Бета»")).toBeInTheDocument();
 		expect(screen.getByText("ООО «Гамма»")).toBeInTheDocument();
-		// «Актуально на: dd.mm.yyyy» is rendered under each company name.
-		const dateLabels = screen.getAllByText(/Актуально на:/);
+		// «Получено: dd.mm.yyyy» is rendered under each company name.
+		const dateLabels = screen.getAllByText(/Получено:/);
 		expect(dateLabels.length).toBeGreaterThanOrEqual(3);
 		expect(screen.getByText(/15\.04\.2026/)).toBeInTheDocument();
 	});
@@ -477,13 +477,13 @@ describe("OffersTable mobile cards", () => {
 		expect(cards).toHaveLength(3);
 	});
 
-	test("each card shows company name and «Актуально на» date", () => {
+	test("each card shows company name and «Получено» date", () => {
 		renderTable();
 		const cards = screen.getAllByTestId("supplier-card");
 		expect(within(cards[0]).getByText("ООО «Альфа»")).toBeInTheDocument();
-		expect(within(cards[0]).getByText(/Актуально на:/)).toBeInTheDocument();
+		expect(within(cards[0]).getByText(/Получено:/)).toBeInTheDocument();
 		expect(within(cards[1]).getByText("ООО «Бета»")).toBeInTheDocument();
-		expect(within(cards[1]).getByText(/Актуально на:/)).toBeInTheDocument();
+		expect(within(cards[1]).getByText(/Получено:/)).toBeInTheDocument();
 	});
 
 	test("card shows new metric labels (ТСО/ед., Стоимость, Экономия, Доставка, Тип оплаты, Срок поставки)", () => {

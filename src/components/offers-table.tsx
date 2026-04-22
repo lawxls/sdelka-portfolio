@@ -9,10 +9,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Supplier, SupplierSortField, SupplierSortState } from "@/data/supplier-types";
 import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types";
-import { formatPaymentType as formatPaymentTypeLabel, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
+import { formatQuotePaymentType, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatCurrency, formatPercent, formatRussianPlural, formatShortDate, savingsClassName } from "@/lib/format";
+import {
+	formatCurrency,
+	formatLeadTime,
+	formatPercent,
+	formatRussianPlural,
+	formatShortDate,
+	savingsClassName,
+} from "@/lib/format";
 import { batchCost, savingsPercent } from "@/lib/math";
 import { cn } from "@/lib/utils";
 
@@ -66,19 +73,6 @@ const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
 const PINNED_ID = "__current__";
 
-function formatPaymentType(paymentType: PaymentType, deferralDays: number, prepaymentPercent?: number): string {
-	if (paymentType === "deferred") {
-		if (deferralDays > 0) return `Отсрочка ${formatRussianPlural(deferralDays, ["день", "дня", "дней"])}`;
-		return "Отсрочка";
-	}
-	return formatPaymentTypeLabel("prepayment", { prepaymentPercent });
-}
-
-function formatLeadTime(days: number | null): string {
-	if (days == null) return "\u2014";
-	return formatRussianPlural(days, ["день", "дня", "дней"]);
-}
-
 function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 	return {
 		id: PINNED_ID,
@@ -102,11 +96,9 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 		deferralDays: currentSupplier.deferralDays,
 		prepaymentPercent: currentSupplier.prepaymentPercent,
 		leadTimeDays: null,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	};
 }
 
@@ -281,7 +273,7 @@ export function OffersTable({
 						</span>
 					) : s.quoteReceivedAt ? (
 						<span className="text-xs text-muted-foreground tabular-nums">
-							Актуально на:&nbsp;{formatShortDate(s.quoteReceivedAt)}
+							Получено:&nbsp;{formatShortDate(s.quoteReceivedAt)}
 						</span>
 					) : null}
 				</div>
@@ -290,7 +282,7 @@ export function OffersTable({
 		{
 			id: "paymentType",
 			header: "ТИП ОПЛАТЫ",
-			cell: (s) => formatPaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent),
+			cell: (s) => formatQuotePaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent),
 		},
 		{
 			id: "deliveryCost",
@@ -366,7 +358,7 @@ export function OffersTable({
 						<div className="truncate font-medium">{s.companyName}</div>
 						{!ctx.isPinned && s.quoteReceivedAt && (
 							<div className="text-xs text-muted-foreground tabular-nums">
-								Актуально на:&nbsp;{formatShortDate(s.quoteReceivedAt)}
+								Получено:&nbsp;{formatShortDate(s.quoteReceivedAt)}
 							</div>
 						)}
 					</div>
@@ -380,7 +372,7 @@ export function OffersTable({
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
 						<div className="text-muted-foreground">Тип оплаты</div>
-						<div>{formatPaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent)}</div>
+						<div>{formatQuotePaymentType(s.paymentType, s.deferralDays, s.prepaymentPercent)}</div>
 					</div>
 					<div>
 						<div className="text-muted-foreground">Доставка</div>

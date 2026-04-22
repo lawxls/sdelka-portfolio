@@ -5,6 +5,7 @@ import {
 	fetchAllSuppliersMock,
 	getAllSuppliers,
 	getSupplier,
+	getSupplierQuotesByInn,
 	getSuppliers,
 	selectSupplier,
 	sendSupplierMessage,
@@ -48,10 +49,19 @@ export function useSupplier(itemId: string, supplierId: string | null) {
 	});
 }
 
+export function useSupplierQuotes(inn: string | null, contextItemId: string) {
+	return useQuery({
+		queryKey: ["supplier-quotes", inn, contextItemId],
+		queryFn: () => getSupplierQuotesByInn(inn as string, contextItemId),
+		enabled: inn !== null && inn.length > 0,
+	});
+}
+
 function invalidateSupplierLists(queryClient: ReturnType<typeof useQueryClient>, itemId: string) {
 	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
 	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
 	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
 }
 
 export function useArchiveSuppliers() {

@@ -22,19 +22,28 @@ interface FileEntry {
 interface ChatComposerProps {
 	onSend: (body: string, files: File[]) => Promise<unknown>;
 	isPending?: boolean;
+	/** Fully block interaction (distinct from isPending which only runs during a submit). */
+	disabled?: boolean;
 	error?: string | null;
 	placeholder?: string;
 }
 
-export function ChatComposer({ onSend, isPending, error, placeholder = "Написать сообщение…" }: ChatComposerProps) {
+export function ChatComposer({
+	onSend,
+	isPending,
+	disabled,
+	error,
+	placeholder = "Написать сообщение…",
+}: ChatComposerProps) {
 	const [body, setBody] = useState("");
 	const [entries, setEntries] = useState<FileEntry[]>([]);
 	const [fileError, setFileError] = useState<string | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const nextFileId = useRef(0);
 
+	const isInactive = !!(isPending || disabled);
 	const trimmed = body.trim();
-	const canSend = (trimmed.length > 0 || entries.length > 0) && !isPending;
+	const canSend = (trimmed.length > 0 || entries.length > 0) && !isInactive;
 
 	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const selected = Array.from(e.target.files ?? []);
@@ -89,15 +98,15 @@ export function ChatComposer({ onSend, isPending, error, placeholder = "Напи
 	const displayError = error || fileError;
 
 	return (
-		<form onSubmit={handleSubmit} className="flex flex-col gap-2">
+		<form onSubmit={handleSubmit} className="flex flex-col gap-2" aria-disabled={disabled || undefined}>
 			<div className="relative rounded-2xl border border-input bg-muted/30 transition-colors focus-within:border-ring">
 				<Textarea
 					value={body}
 					onChange={(e) => setBody(e.target.value)}
 					placeholder={placeholder}
 					rows={3}
-					disabled={isPending}
-					className="resize-none border-0 bg-transparent px-5 pt-4 pr-14 shadow-none focus-visible:ring-0 dark:bg-transparent"
+					disabled={isInactive}
+					className="resize-none border-0 bg-transparent px-5 pt-4 pr-14 shadow-none focus-visible:ring-0 disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent"
 				/>
 				{entries.length > 0 && (
 					<div className="flex flex-wrap gap-1.5 px-3 pb-2">
@@ -132,7 +141,7 @@ export function ChatComposer({ onSend, isPending, error, placeholder = "Напи
 					/>
 					<button
 						type="button"
-						disabled={isPending}
+						disabled={isInactive}
 						aria-label="Прикрепить файл"
 						onClick={() => fileInputRef.current?.click()}
 						className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"

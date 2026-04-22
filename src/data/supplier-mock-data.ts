@@ -1,3 +1,4 @@
+import { batchCost } from "../lib/math";
 import { ITEM as ITEM_2, SUPPLIERS as SUPPLIERS_2 } from "./items/item-2";
 import { ITEM as ITEM_3, SUPPLIERS as SUPPLIERS_3 } from "./items/item-3";
 import { ITEM as ITEM_4, SUPPLIERS as SUPPLIERS_4 } from "./items/item-4";
@@ -5,17 +6,19 @@ import { ITEM as ITEM_5, SUPPLIERS as SUPPLIERS_5 } from "./items/item-5";
 import { ITEM as ITEM_6, SUPPLIERS as SUPPLIERS_6 } from "./items/item-6";
 import { ITEM as ITEM_7, SUPPLIERS as SUPPLIERS_7 } from "./items/item-7";
 import { ITEM as ITEM_8, SUPPLIERS as SUPPLIERS_8 } from "./items/item-8";
-import { _patchItem } from "./items-mock-data";
+import { _getItem, _patchItem } from "./items-mock-data";
 import type {
+	MessageEvent,
 	Supplier,
 	SupplierChatMessage,
 	SupplierCompanyType,
 	SupplierFilterParams,
+	SupplierQuote,
 	SupplierSeed,
 	SupplierSortField,
 	SupplierStatus,
 } from "./supplier-types";
-import { filesToAttachments } from "./supplier-types";
+import { AGENT_EMAIL, filesToAttachments } from "./supplier-types";
 import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 
 const SUPPLIERS_BY_ITEM: Record<string, readonly SupplierSeed[]> = {
@@ -28,6 +31,8 @@ const SUPPLIERS_BY_ITEM: Record<string, readonly SupplierSeed[]> = {
 	[ITEM_7.id]: SUPPLIERS_7,
 	[ITEM_8.id]: SUPPLIERS_8,
 };
+
+const ALL_ITEM_IDS: readonly string[] = Object.keys(SUPPLIERS_BY_ITEM);
 
 // --- Deterministic profile enrichment (inn / region / companyType / foundedYear / revenue) ---
 
@@ -82,16 +87,45 @@ function makeQuoteReceivedAt(h: number): string {
 }
 
 function enrichSeed(seed: SupplierSeed): Supplier {
-	const h = hash(`${seed.itemId}:${seed.id}`);
+	// Hash by companyName (not itemId:id) so the same supplier across items shares
+	// a stable INN and identity profile — required for the drawer's «Предложения»
+	// tab to join quotes across items by INN.
+	const identityHash = hash(seed.companyName);
+	const perRowHash = hash(`${seed.itemId}:${seed.id}`);
 	return {
 		...seed,
-		inn: makeInn(h),
+		inn: makeInn(identityHash),
 		companyType: inferCompanyType(seed.companyName),
-		region: REGIONS[h % REGIONS.length],
-		foundedYear: 1992 + (h % 30),
-		revenue: REVENUE_TIERS[h % REVENUE_TIERS.length],
-		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(h) : undefined,
+		region: REGIONS[identityHash % REGIONS.length],
+		foundedYear: 1992 + (identityHash % 30),
+		revenue: REVENUE_TIERS[identityHash % REVENUE_TIERS.length],
+		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(perRowHash) : undefined,
+		chatHistory: enrichChatHistory(seed),
 	};
+}
+
+function enrichChatHistory(seed: SupplierSeed): SupplierChatMessage[] {
+	if (seed.chatHistory.length === 0) return seed.chatHistory;
+	// Tag the supplier's final message with the status-derived event badge so the
+	// chat surfaces the outcome (получено КП / отказ) inline with the message that
+	// triggered it — without requiring every seed to spell it out.
+	const terminalEvent: MessageEvent | null =
+		seed.status === "получено_кп" ? "quote_received" : seed.status === "отказ" ? "refusal" : null;
+	let lastSupplierIdx = -1;
+	if (terminalEvent != null) {
+		for (let i = seed.chatHistory.length - 1; i >= 0; i--) {
+			if (!seed.chatHistory[i].isOurs) {
+				lastSupplierIdx = i;
+				break;
+			}
+		}
+	}
+	return seed.chatHistory.map((msg, i): SupplierChatMessage => {
+		const senderEmail = msg.senderEmail ?? (msg.isOurs ? AGENT_EMAIL : seed.email);
+		const events: MessageEvent[] | undefined =
+			msg.events ?? (terminalEvent != null && i === lastSupplierIdx ? [terminalEvent] : undefined);
+		return events ? { ...msg, senderEmail, events } : { ...msg, senderEmail };
+	});
 }
 
 // --- Candidate ("new"-status) generation ---
@@ -121,7 +155,9 @@ function generateCandidates(itemId: string): Supplier[] {
 	const seed = hash(itemId);
 	return Array.from({ length: CANDIDATES_PER_ITEM }, (_, i) => {
 		const pool = CANDIDATE_POOL[(seed + i * 7) % CANDIDATE_POOL.length];
-		const h = hash(`${itemId}:candidate:${i}`);
+		// Identity hash by pool.name so the same candidate name collapses to one
+		// canonical supplier (same INN/profile) across items.
+		const identityHash = hash(pool.name);
 		// One pre-archived (i=7) and one "ошибка"-status (i=11) for demo coverage.
 		const status: SupplierStatus = i === 11 ? "ошибка" : "new";
 		return {
@@ -130,11 +166,11 @@ function generateCandidates(itemId: string): Supplier[] {
 			companyName: pool.name,
 			status,
 			archived: i === 7,
-			inn: makeInn(h),
+			inn: makeInn(identityHash),
 			companyType: pool.type,
-			region: REGIONS[h % REGIONS.length],
-			foundedYear: 1992 + (h % 30),
-			revenue: REVENUE_TIERS[h % REVENUE_TIERS.length],
+			region: REGIONS[identityHash % REGIONS.length],
+			foundedYear: 1992 + (identityHash % 30),
+			revenue: REVENUE_TIERS[identityHash % REVENUE_TIERS.length],
 			email: `info@${pool.domain}`,
 			website: `https://${pool.domain}`,
 			address: "",
@@ -145,11 +181,9 @@ function generateCandidates(itemId: string): Supplier[] {
 			paymentType: "prepayment" as const,
 			deferralDays: 0,
 			leadTimeDays: null,
-			aiDescription: "",
-			aiRecommendations: "",
+			agentComment: "",
 			documents: [],
 			chatHistory: [],
-			positionOffers: [],
 		};
 	});
 }
@@ -423,6 +457,7 @@ export async function sendSupplierMessage(
 
 	const message: SupplierChatMessage = {
 		sender: "Агент",
+		senderEmail: AGENT_EMAIL,
 		timestamp: new Date().toISOString(),
 		body,
 		isOurs: true,
@@ -430,4 +465,65 @@ export async function sendSupplierMessage(
 	};
 	supplier.chatHistory.push(message);
 	return message;
+}
+
+/** Returns the supplier's `получено_кп` quotes across all items, keyed by item.
+ * Used by the supplier drawer's «Предложения» tab. Suppliers are matched by INN
+ * — the stable identity we enrich onto every seeded/generated supplier row.
+ * Archived rows are excluded so the tab reflects active offers only.
+ *
+ * `contextItemId` (the item the drawer was opened from) sorts first so the
+ * user sees the quote that matches their entry point at the top of the list. */
+export async function getSupplierQuotesByInn(inn: string, contextItemId: string): Promise<SupplierQuote[]> {
+	await simulateDelay();
+	if (!inn) return [];
+	const quotes: SupplierQuote[] = [];
+	for (const itemId of ALL_ITEM_IDS) {
+		const suppliers = getSuppliersForItem(itemId);
+		const match = suppliers.find((s) => s.inn === inn && s.status === "получено_кп" && !s.archived);
+		if (!match) continue;
+		const item = _getItem(itemId);
+		const isCurrentSupplier =
+			item?.currentSupplier != null &&
+			(item.currentSupplier.inn === inn ||
+				(item.currentSupplier.inn == null && item.currentSupplier.companyName === match.companyName));
+
+		const supplierBatch = item ? batchCost(match, item) : null;
+		const currentBatch = item?.currentSupplier
+			? batchCost({ pricePerUnit: item.currentSupplier.pricePerUnit }, item)
+			: null;
+		// Savings are only meaningful when comparing against a different incumbent.
+		const canCompare = !isCurrentSupplier && supplierBatch != null && currentBatch != null;
+		const savingsRub = canCompare ? (currentBatch as number) - (supplierBatch as number) : null;
+		const savingsPct =
+			canCompare && (currentBatch as number) > 0
+				? (((currentBatch as number) - (supplierBatch as number)) / (currentBatch as number)) * 100
+				: null;
+
+		quotes.push({
+			itemId,
+			itemName: item?.name ?? itemId,
+			pricePerUnit: match.pricePerUnit,
+			tco: match.tco,
+			deliveryCost: match.deliveryCost,
+			deferralDays: match.deferralDays,
+			paymentType: match.paymentType,
+			prepaymentPercent: match.prepaymentPercent,
+			leadTimeDays: match.leadTimeDays,
+			quoteReceivedAt: match.quoteReceivedAt,
+			documents: match.documents,
+			isCurrentSupplier,
+			batchCost: supplierBatch,
+			savingsRub,
+			savingsPct,
+		});
+	}
+	quotes.sort((a, b) => {
+		if (a.itemId === contextItemId) return -1;
+		if (b.itemId === contextItemId) return 1;
+		const ta = a.quoteReceivedAt ? Date.parse(a.quoteReceivedAt) : 0;
+		const tb = b.quoteReceivedAt ? Date.parse(b.quoteReceivedAt) : 0;
+		return tb - ta;
+	});
+	return quotes;
 }

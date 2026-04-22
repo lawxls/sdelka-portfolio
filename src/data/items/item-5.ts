@@ -48,8 +48,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -65,7 +64,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-2",
@@ -83,8 +81,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -100,7 +97,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-3",
@@ -118,8 +114,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -135,7 +130,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-4",
@@ -153,8 +147,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -170,7 +163,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-5",
@@ -188,8 +180,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -205,7 +196,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-6",
@@ -223,8 +213,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -240,7 +229,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-7",
@@ -258,8 +246,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -275,7 +262,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-8",
@@ -293,8 +279,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -310,7 +295,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-9",
@@ -328,8 +312,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -351,7 +334,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-10",
@@ -369,8 +351,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -386,7 +367,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-11",
@@ -404,8 +384,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -415,7 +394,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-5-12",
@@ -433,10 +411,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

@@ -42,8 +42,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 7,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "Международный лидер по промышленным клеям, широкая линейка ПУ-систем.",
-		aiRecommendations: "Запросить образец и технический лист, уточнить расход.",
+		agentComment:
+			"Международный лидер по промышленным клеям, широкая линейка ПУ-систем.\n\nЗапросить образец и технический лист, уточнить расход.",
 		documents: [],
 		chatHistory: [
 			{
@@ -59,7 +59,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-2",
@@ -77,8 +76,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Российское представительство немецкого производителя ПУ-клеев.",
-		aiRecommendations: "Подождать 2–3 дня, при отсутствии ответа напомнить.",
+		agentComment:
+			"Российское представительство немецкого производителя ПУ-клеев.\n\nПодождать 2–3 дня, при отсутствии ответа напомнить.",
 		documents: [],
 		chatHistory: [
 			{
@@ -88,7 +87,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-3",
@@ -106,8 +104,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Торговый дом, широкий ассортимент промышленных клеёв.",
-		aiRecommendations: "Дождаться КП, сравнить с прямыми поставщиками.",
+		agentComment:
+			"Торговый дом, широкий ассортимент промышленных клеёв.\n\nДождаться КП, сравнить с прямыми поставщиками.",
 		documents: [],
 		chatHistory: [
 			{
@@ -117,7 +115,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-4",
@@ -135,8 +132,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Российский производитель клеёв и дисперсий, есть ПУ-направление.",
-		aiRecommendations: "Ожидать ответ, уточнить наличие одно-компонентной системы.",
+		agentComment:
+			"Российский производитель клеёв и дисперсий, есть ПУ-направление.\n\nОжидать ответ, уточнить наличие одно-компонентной системы.",
 		documents: [],
 		chatHistory: [
 			{
@@ -146,7 +143,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-5",
@@ -164,11 +160,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-6",
@@ -186,11 +180,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-7",
@@ -208,11 +200,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-8",
@@ -230,11 +220,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-9",
@@ -252,11 +240,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-7-10",
@@ -274,10 +260,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

@@ -66,20 +66,21 @@ export function filesToAttachments(files: File[]): MessageAttachment[] {
 	return files.map((f) => ({ name: f.name, type: f.name.split(".").pop() ?? "", size: f.size }));
 }
 
+export type MessageEvent = "task_created" | "quote_received" | "refusal";
+
 export interface SupplierChatMessage {
 	sender: string;
+	senderEmail?: string;
 	timestamp: string;
 	body: string;
 	isOurs: boolean;
 	attachments?: MessageAttachment[];
+	/** Status/event badges rendered inline with the message (supplier-only). */
+	events?: MessageEvent[];
 }
 
-export interface SupplierPositionOffer {
-	name: string;
-	quantity: number;
-	pricePerUnit: number;
-	total: number;
-}
+/** Fallback email shown next to «Агент» when a message doesn't carry an explicit sender email. */
+export const AGENT_EMAIL = "agent@sdelka.ru";
 
 export type SupplierSortField =
 	| "companyName"
@@ -126,13 +127,36 @@ export interface Supplier {
 	deferralDays: number;
 	prepaymentPercent?: number;
 	leadTimeDays: number | null;
-	aiDescription: string;
-	aiRecommendations: string;
+	/** Supplier-level AI summary. Same for the same supplier across items. */
+	agentComment: string;
 	documents: SupplierDocument[];
 	chatHistory: SupplierChatMessage[];
-	positionOffers: SupplierPositionOffer[];
 	/** ISO timestamp when the supplier's quote (КП) was received. Set only for `получено_кп`. */
 	quoteReceivedAt?: string;
+}
+
+/** Cross-item quote card data for the supplier drawer's «Предложения» tab.
+ * One entry per (supplier, item) where the supplier has `получено_кп` status. */
+export interface SupplierQuote {
+	itemId: string;
+	itemName: string;
+	pricePerUnit: number | null;
+	tco: number | null;
+	deliveryCost: number | null;
+	deferralDays: number;
+	paymentType: import("./types").PaymentType;
+	prepaymentPercent?: number;
+	leadTimeDays: number | null;
+	quoteReceivedAt?: string;
+	documents: SupplierDocument[];
+	isCurrentSupplier: boolean;
+	/** Derived: pricePerUnit × quantityPerDelivery. Null when either input missing. */
+	batchCost: number | null;
+	/** Derived: savings in ₽ vs the item's current supplier (currentCost − supplierCost).
+	 * Positive = we save, negative = we overpay. Null when supplier is the incumbent or data is missing. */
+	savingsRub: number | null;
+	/** Derived: same comparison as `savingsRub`, expressed as %. */
+	savingsPct: number | null;
 }
 
 /** Shape for hand-authored Supplier seeds — identity/offer fields required;

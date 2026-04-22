@@ -42,8 +42,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -53,7 +52,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-2",
@@ -71,8 +69,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -82,7 +79,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-3",
@@ -100,8 +96,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -117,7 +112,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-4",
@@ -135,11 +129,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-5",
@@ -157,11 +149,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-6",
@@ -179,11 +169,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-7",
@@ -201,11 +189,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-8",
@@ -223,11 +209,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-9",
@@ -245,11 +229,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-8-10",
@@ -267,10 +249,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

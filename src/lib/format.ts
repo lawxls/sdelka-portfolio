@@ -121,9 +121,9 @@ export function formatDelivery(cost: number | null): string {
 	return currencyFormatter.format(cost);
 }
 
-export function formatDeferral(days: number): string {
-	if (days === 0) return "Предоплата";
-	return pluralizeRu(days, "день", "дня", "дней");
+export function formatLeadTime(days: number | null): string {
+	if (days == null) return "\u2014";
+	return formatRussianPlural(days, ["день", "дня", "дней"]);
 }
 
 export function stripProtocol(url: string): string {

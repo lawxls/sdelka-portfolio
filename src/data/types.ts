@@ -1,3 +1,5 @@
+import { formatRussianPlural } from "@/lib/format";
+
 export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<ProcurementStatus, string> = {
@@ -25,6 +27,20 @@ export function formatPaymentType(
 	}
 	const percent = opts.prepaymentPercent ?? 100;
 	return percent !== 100 ? `Предоплата ${percent}%` : "Предоплата";
+}
+
+/** Long-form variant used by supplier quote surfaces (table + drawer card).
+ * Differs from formatPaymentType: renders "Отсрочка 30 дней" (full plural) vs "Отсрочка 30 дн." (abbreviated). */
+export function formatQuotePaymentType(
+	paymentType: PaymentType,
+	deferralDays: number,
+	prepaymentPercent?: number,
+): string {
+	if (paymentType === "deferred") {
+		if (deferralDays > 0) return `Отсрочка ${formatRussianPlural(deferralDays, ["день", "дня", "дней"])}`;
+		return "Отсрочка";
+	}
+	return formatPaymentType("prepayment", { prepaymentPercent });
 }
 
 export type PaymentMethod = "bank_transfer" | "cash";

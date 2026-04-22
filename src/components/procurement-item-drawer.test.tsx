@@ -237,7 +237,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 });
 
 describe("ProcurementItemDrawer — Предложения (offers) tab", () => {
-	test("renders offer columns with «Актуально на» date under company name (no status column)", async () => {
+	test("renders offer columns with «Получено» date under company name (no status column)", async () => {
 		renderDrawer(["/procurement?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
@@ -246,7 +246,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 		expect(screen.getByText("СТОИМОСТЬ")).toBeInTheDocument();
 		expect(screen.queryByText("СТАТУС")).not.toBeInTheDocument();
 		await waitFor(() => {
-			expect(screen.getAllByText(/Актуально на:/).length).toBeGreaterThan(0);
+			expect(screen.getAllByText(/Получено:/).length).toBeGreaterThan(0);
 		});
 	});
 
@@ -268,10 +268,24 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 		// rows[0]=header, rows[1]=pinned (not clickable to open drawer), rows[2..]=КП data rows
 		await user.click(screen.getAllByRole("row")[2]);
 		await waitFor(() => {
-			expect(screen.getByTestId("url-spy").textContent).toContain("supplier=");
+			const url = screen.getByTestId("url-spy").textContent ?? "";
+			expect(url).toContain("supplier=");
+			expect(url).toContain("supplier_tab=offers");
 		});
+	});
+
+	test("clicking a Поставщики row opens drawer with supplier_tab=info", async () => {
+		const user = userEvent.setup();
+		renderDrawer(["/procurement?item=item-1"]);
+		// Wait for a real supplier name to appear (data loaded, not just skeletons).
 		await waitFor(() => {
-			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
+			expect(screen.getByText("ТД СОМ")).toBeInTheDocument();
+		});
+		await user.click(screen.getByText("ТД СОМ"));
+		await waitFor(() => {
+			const url = screen.getByTestId("url-spy").textContent ?? "";
+			expect(url).toContain("supplier=");
+			expect(url).toContain("supplier_tab=info");
 		});
 	});
 });

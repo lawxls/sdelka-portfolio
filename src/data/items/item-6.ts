@@ -43,9 +43,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription:
-			"Крупный импортёр натуральных наполнителей из Юго-Восточной Азии, прямые контракты со шри-ланкийскими фабриками.",
-		aiRecommendations: "Лучшее ценовое предложение, готовы к тестовой партии 500 м². Рекомендуем к отгрузке образца.",
+		agentComment:
+			"Крупный импортёр натуральных наполнителей из Юго-Восточной Азии, прямые контракты со шри-ланкийскими фабриками.\n\nЛучшее ценовое предложение, готовы к тестовой партии 500 м². Рекомендуем к отгрузке образца.",
 		documents: [],
 		chatHistory: [
 			{
@@ -73,7 +72,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	// 2. получено_кп
 	{
@@ -92,9 +90,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 7,
 		paymentType: "deferred",
 		leadTimeDays: 14,
-		aiDescription: "Торговый дом со складом в Москве, регулярные поставки из Шри-Ланки контейнерами 40HQ.",
-		aiRecommendations:
-			"Цена средняя, но предлагают отсрочку 7 дней после первой поставки. Проверить минимальную партию.",
+		agentComment:
+			"Торговый дом со складом в Москве, регулярные поставки из Шри-Ланки контейнерами 40HQ.\n\nЦена средняя, но предлагают отсрочку 7 дней после первой поставки. Проверить минимальную партию.",
 		documents: [],
 		chatHistory: [
 			{
@@ -116,7 +113,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	// 3. получено_кп
 	{
@@ -135,8 +131,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Дистрибьютор индийской койры, работают с мебельными фабриками ЦФО.",
-		aiRecommendations: "Цена выше рынка, но стабильные поставки и готовность к long-term контракту 12 мес.",
+		agentComment:
+			"Дистрибьютор индийской койры, работают с мебельными фабриками ЦФО.\n\nЦена выше рынка, но стабильные поставки и готовность к long-term контракту 12 мес.",
 		documents: [],
 		chatHistory: [
 			{
@@ -152,7 +148,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	// 4. получено_кп
 	{
@@ -171,8 +166,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Региональный поставщик натуральных наполнителей для матрасного производства ЮФО.",
-		aiRecommendations: "Самое дорогое предложение, но есть отсрочка 14 дней. Держим как резервный вариант.",
+		agentComment:
+			"Региональный поставщик натуральных наполнителей для матрасного производства ЮФО.\n\nСамое дорогое предложение, но есть отсрочка 14 дней. Держим как резервный вариант.",
 		documents: [],
 		chatHistory: [
 			{
@@ -188,7 +183,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	// 5. переговоры
 	{
@@ -207,8 +201,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Ростовский импортёр, прямые поставки из Индии, склад в 40 км от Аксая.",
-		aiRecommendations: "Близкая логистика — потенциально лучшая цена по доставке. Дожимаем по цене и объёму.",
+		agentComment:
+			"Ростовский импортёр, прямые поставки из Индии, склад в 40 км от Аксая.\n\nБлизкая логистика — потенциально лучшая цена по доставке. Дожимаем по цене и объёму.",
 		documents: [],
 		chatHistory: [
 			{
@@ -236,7 +230,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	// 6. переговоры
 	{
@@ -255,8 +248,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Небольшой поставщик, работает с мебельными цехами Черноземья.",
-		aiRecommendations: "Обсуждает минимальную партию и график поставок — нужна уточнённая спецификация.",
+		agentComment:
+			"Небольшой поставщик, работает с мебельными цехами Черноземья.\n\nОбсуждает минимальную партию и график поставок — нужна уточнённая спецификация.",
 		documents: [],
 		chatHistory: [
 			{
@@ -278,7 +271,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	// 7. кп_запрошено
 	{
@@ -297,8 +289,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -308,7 +299,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	// 8. кп_запрошено
 	{
@@ -327,8 +317,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -338,7 +327,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	// 9. кп_запрошено
 	{
@@ -357,8 +345,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [
 			{
@@ -368,7 +355,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	// 10. отказ
 	{
@@ -387,8 +373,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "Отказ из-за минимальной партии. Возможен возврат при росте потребления.",
+		agentComment: "Отказ из-за минимальной партии. Возможен возврат при росте потребления.",
 		documents: [],
 		chatHistory: [
 			{
@@ -404,7 +389,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	// 11. кп_запрошено
 	{
@@ -423,11 +407,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 	// 12. кп_запрошено
 	{
@@ -446,10 +428,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

@@ -48,8 +48,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 45,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "Крупная фабрика трикотажного жаккарда с собственным крашением и отделкой.",
-		aiRecommendations: "Лучшая цена на рынке, бесплатная доставка. Рекомендуем к заключению договора.",
+		agentComment:
+			"Крупная фабрика трикотажного жаккарда с собственным крашением и отделкой.\n\nЛучшая цена на рынке, бесплатная доставка. Рекомендуем к заключению договора.",
 		documents: [],
 		chatHistory: [
 			{
@@ -65,7 +65,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-2",
@@ -83,8 +82,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Действующий поставщик, стабильное качество, выдерживает плановые объёмы.",
-		aiRecommendations: "Сохранить как резервного поставщика на случай дефицита.",
+		agentComment:
+			"Действующий поставщик, стабильное качество, выдерживает плановые объёмы.\n\nСохранить как резервного поставщика на случай дефицита.",
 		documents: [],
 		chatHistory: [
 			{
@@ -100,7 +99,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-3",
@@ -118,8 +116,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 21,
 		paymentType: "deferred",
 		leadTimeDays: 16,
-		aiDescription: "Специализируется на мебельных тканях премиум-сегмента, собственный дизайн-бюро.",
-		aiRecommendations: "Выше средней цены, но предлагает эксклюзивные дизайны — полезно для новых коллекций.",
+		agentComment:
+			"Специализируется на мебельных тканях премиум-сегмента, собственный дизайн-бюро.\n\nВыше средней цены, но предлагает эксклюзивные дизайны — полезно для новых коллекций.",
 		documents: [],
 		chatHistory: [
 			{
@@ -135,7 +133,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-4",
@@ -153,8 +150,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Торговый дом, работает с несколькими фабриками, широкий ассортимент.",
-		aiRecommendations: "Цена выше среднего, но гибкие условия по минимальной партии.",
+		agentComment:
+			"Торговый дом, работает с несколькими фабриками, широкий ассортимент.\n\nЦена выше среднего, но гибкие условия по минимальной партии.",
 		documents: [],
 		chatHistory: [
 			{
@@ -170,7 +167,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-5",
@@ -188,8 +184,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Небольшая фабрика, ориентирована на дизайнерские коллекции.",
-		aiRecommendations: "Цена высокая для массового производства, подходит для спецсерий.",
+		agentComment:
+			"Небольшая фабрика, ориентирована на дизайнерские коллекции.\n\nЦена высокая для массового производства, подходит для спецсерий.",
 		documents: [],
 		chatHistory: [
 			{
@@ -205,7 +201,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-6",
@@ -223,8 +218,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Производитель загружен долгосрочными контрактами.",
-		aiRecommendations: "Повторно связаться через полгода.",
+		agentComment: "Производитель загружен долгосрочными контрактами.\n\nПовторно связаться через полгода.",
 		documents: [],
 		chatHistory: [
 			{
@@ -240,7 +234,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-7",
@@ -258,8 +251,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Специализируется на хлопковых тканях, жаккард — не профильное направление.",
-		aiRecommendations: "Исключить из списка по данной позиции.",
+		agentComment:
+			"Специализируется на хлопковых тканях, жаккард — не профильное направление.\n\nИсключить из списка по данной позиции.",
 		documents: [],
 		chatHistory: [
 			{
@@ -275,7 +268,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-8",
@@ -293,8 +285,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Отказ из-за удалённой логистики и отсутствия стрейч-линии.",
-		aiRecommendations: "Не подходит по техническим требованиям.",
+		agentComment:
+			"Отказ из-за удалённой логистики и отсутствия стрейч-линии.\n\nНе подходит по техническим требованиям.",
 		documents: [],
 		chatHistory: [
 			{
@@ -310,7 +302,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-9",
@@ -328,8 +319,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Крупный производитель, уточняют возможность увеличить линию для наших объёмов.",
-		aiRecommendations: "Держать на контроле — интересная альтернатива по цене.",
+		agentComment:
+			"Крупный производитель, уточняют возможность увеличить линию для наших объёмов.\n\nДержать на контроле — интересная альтернатива по цене.",
 		documents: [],
 		chatHistory: [
 			{
@@ -357,7 +348,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-10",
@@ -375,8 +365,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Опытная фабрика, обсуждают снижение цены при увеличении годового объёма.",
-		aiRecommendations: "Попросить финальное КП с учётом бонуса за объём 850 000 м/год.",
+		agentComment:
+			"Опытная фабрика, обсуждают снижение цены при увеличении годового объёма.\n\nПопросить финальное КП с учётом бонуса за объём 850 000 м/год.",
 		documents: [],
 		chatHistory: [
 			{
@@ -398,7 +388,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-11",
@@ -416,8 +405,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "КП Запрошено, ответ пока не получили.",
-		aiRecommendations: "Напомнить через 3 рабочих дня.",
+		agentComment: "КП Запрошено, ответ пока не получили.\n\nНапомнить через 3 рабочих дня.",
 		documents: [],
 		chatHistory: [
 			{
@@ -427,7 +415,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-3-12",
@@ -445,10 +432,9 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Новый контакт, запрос ещё не отправлен — требуется верификация реквизитов.",
-		aiRecommendations: "Проверить ИНН и направить запрос на следующей неделе.",
+		agentComment:
+			"Новый контакт, запрос ещё не отправлен — требуется верификация реквизитов.\n\nПроверить ИНН и направить запрос на следующей неделе.",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];

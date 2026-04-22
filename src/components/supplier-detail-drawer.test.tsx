@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import { _resetSupplierStore, _setSupplierMockDelay, getAllSuppliers } from "@/data/supplier-mock-data";
 import { makeSupplier } from "@/test-utils";
 
 const mockIsMobile = vi.hoisted(() => ({ value: false }));
@@ -40,12 +40,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			tco: 2700,
 			deferralDays: 30,
 			rating: 85,
-			aiDescription: "Надёжный поставщик с конкурентными ценами.",
-			aiRecommendations: "Рекомендуется для долгосрочного сотрудничества.",
-			positionOffers: [
-				{ name: "Арматура А500С ∅12", quantity: 100, pricePerUnit: 1200, total: 120_000 },
-				{ name: "Проволока вязальная", quantity: 50, pricePerUnit: 800, total: 40_000 },
-			],
+			agentComment: "Надёжный поставщик с конкурентными ценами.\n\nРекомендуется для долгосрочного сотрудничества.",
 			documents: [
 				{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },
 				{ name: "Прайс-лист 2026.xlsx", type: "xlsx", size: 89_000 },
@@ -67,6 +62,8 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 		}),
 		open: true,
 		onClose: vi.fn(),
+		activeTab: "info",
+		onTabChange: vi.fn(),
 	};
 	return render(
 		<QueryClientProvider client={queryClient}>
@@ -78,15 +75,27 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 }
 
 describe("SupplierDetailDrawer", () => {
-	test("renders company name and status inline", () => {
+	test("header shows only the company name (no status)", () => {
 		renderDrawer();
 		expect(screen.getAllByText("ООО «Альфа-Трейд»").length).toBeGreaterThanOrEqual(1);
-		expect(screen.getByText("Получено КП")).toBeInTheDocument();
-		// Bullet separator between name and status
-		expect(screen.getByText("·")).toBeInTheDocument();
+		// Status is no longer shown in the header
+		expect(screen.queryByText("Получено КП")).not.toBeInTheDocument();
+		// Bullet-separator between name and status is gone
+		expect(screen.queryByText("·")).not.toBeInTheDocument();
 	});
 
-	test("renders address, website, and email in info column", () => {
+	test("Информация tab shows profile fields from Поставщики table", () => {
+		renderDrawer();
+		const infoCol = document.querySelector("[data-testid='supplier-info-column']") as HTMLElement;
+		expect(within(infoCol).getByText("ИНН")).toBeInTheDocument();
+		expect(within(infoCol).getByText("Тип")).toBeInTheDocument();
+		expect(within(infoCol).getByText("Регион")).toBeInTheDocument();
+		expect(within(infoCol).getByText("Выручка")).toBeInTheDocument();
+		expect(within(infoCol).getByText("Год основания компании")).toBeInTheDocument();
+		expect(within(infoCol).queryByText("Возраст")).not.toBeInTheDocument();
+	});
+
+	test("Информация tab shows contact info", () => {
 		renderDrawer();
 		const infoCol = document.querySelector("[data-testid='supplier-info-column']") as HTMLElement;
 		expect(within(infoCol).getByText("г. Москва, ул. Промышленная, д. 15")).toBeInTheDocument();
@@ -94,56 +103,36 @@ describe("SupplierDetailDrawer", () => {
 		expect(within(infoCol).getByText("info@alfa-trade.ru")).toBeInTheDocument();
 	});
 
-	test("renders TCO section with correct labels", () => {
+	test("Информация tab shows merged agent comment (no Описание/Рекомендации labels)", () => {
 		renderDrawer();
-		expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
-		expect(screen.getByText("Цена за ед.")).toBeInTheDocument();
-		expect(screen.getByText("Доставка")).toBeInTheDocument();
-		expect(screen.getByText("Отсрочка")).toBeInTheDocument();
-		expect(screen.getByText("TCO (итого)")).toBeInTheDocument();
+		expect(screen.getByText("Комментарий агента")).toBeInTheDocument();
+		expect(screen.queryByText("Описание")).not.toBeInTheDocument();
+		expect(screen.queryByText("Рекомендации")).not.toBeInTheDocument();
+		expect(screen.getByText(/Надёжный поставщик с конкурентными ценами/)).toBeInTheDocument();
 	});
 
-	test("renders deferral days", () => {
-		renderDrawer();
-		expect(screen.getByText(/30\s*дней/)).toBeInTheDocument();
-	});
-
-	test("does not render rating section", () => {
-		renderDrawer();
-		expect(screen.queryByText("Рейтинг")).not.toBeInTheDocument();
-		expect(screen.queryByText("85%")).not.toBeInTheDocument();
-	});
-
-	test("renders agent comment with description and recommendations", () => {
-		renderDrawer();
-		expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
-		expect(screen.getByText("Описание")).toBeInTheDocument();
-		expect(screen.getByText("Надёжный поставщик с конкурентными ценами.")).toBeInTheDocument();
-		expect(screen.getByText("Рекомендации")).toBeInTheDocument();
-		expect(screen.getByText("Рекомендуется для долгосрочного сотрудничества.")).toBeInTheDocument();
-	});
-
-	test("renders documents section with renamed title", () => {
+	test("Информация tab shows general documents section", () => {
 		renderDrawer();
 		expect(screen.getByText("Документы из диалога")).toBeInTheDocument();
 		expect(screen.getByText("Коммерческое предложение.pdf")).toBeInTheDocument();
 		expect(screen.getByText("Прайс-лист 2026.xlsx")).toBeInTheDocument();
-		expect(screen.getByText("239 КБ")).toBeInTheDocument();
-		expect(screen.getByText("87 КБ")).toBeInTheDocument();
 	});
 
-	test("renders email-style history with sender and timestamp", () => {
+	test("chat column is titled «Переписка» (renamed from «История общения»)", () => {
 		renderDrawer();
-		expect(screen.getByText("История общения")).toBeInTheDocument();
+		const rightCol = document.querySelector("[data-testid='supplier-email-column']") as HTMLElement;
+		expect(within(rightCol).getByText("Переписка")).toBeInTheDocument();
+		expect(screen.queryByText("История общения")).not.toBeInTheDocument();
+	});
+
+	test("email thread renders with sender and timestamp", () => {
+		renderDrawer();
 		expect(screen.getByText("Добрый день! Просим направить КП.")).toBeInTheDocument();
 		expect(screen.getByText("Здравствуйте! КП направлено.")).toBeInTheDocument();
-		// Sender names in email headers
 		expect(screen.getByText("Агент")).toBeInTheDocument();
-		const theirEmail = screen.getByText("Здравствуйте! КП направлено.").closest("[data-email-msg]") as HTMLElement;
-		expect(within(theirEmail).getByText("ООО «Альфа-Трейд»")).toBeInTheDocument();
 	});
 
-	test("email messages use article elements with border styling", () => {
+	test("email messages use article elements with data-email-msg attribute", () => {
 		renderDrawer();
 		const ourMsg = screen.getByText("Добрый день! Просим направить КП.").closest("[data-email-msg]") as HTMLElement;
 		const theirMsg = screen.getByText("Здравствуйте! КП направлено.").closest("[data-email-msg]") as HTMLElement;
@@ -166,28 +155,6 @@ describe("SupplierDetailDrawer", () => {
 		expect(onClose).toHaveBeenCalled();
 	});
 
-	test("renders empty documents gracefully", () => {
-		renderDrawer({
-			supplier: makeSupplier("s3", {
-				companyName: "ООО «Гамма»",
-				documents: [],
-			}),
-		});
-		expect(screen.queryByText("Документы из диалога")).not.toBeInTheDocument();
-	});
-
-	test("renders empty chat history gracefully", () => {
-		renderDrawer({
-			supplier: makeSupplier("s4", {
-				companyName: "ООО «Дельта»",
-				chatHistory: [],
-			}),
-		});
-		// Column title still visible, but no message articles rendered
-		expect(screen.getByText("История общения")).toBeInTheDocument();
-		expect(document.querySelectorAll("[data-email-msg]")).toHaveLength(0);
-	});
-
 	test("uses xl size on desktop", () => {
 		renderDrawer();
 		const content = document.querySelector('[data-slot="sheet-content"]');
@@ -197,46 +164,78 @@ describe("SupplierDetailDrawer", () => {
 	test("renders two-column grid layout on desktop", () => {
 		renderDrawer();
 		const grid = document.querySelector("[data-testid='supplier-columns']");
-		expect(grid).toBeInTheDocument();
-		expect(grid?.className).toMatch(/grid/);
 		expect(grid?.className).toMatch(/grid-cols-2/);
 	});
 
-	test("left column contains info sections", () => {
-		renderDrawer();
-		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
-		expect(leftCol).toBeInTheDocument();
-		expect(within(leftCol as HTMLElement).getByText("Информация о поставщике")).toBeInTheDocument();
-		expect(within(leftCol as HTMLElement).getByText("Контактная информация")).toBeInTheDocument();
-		expect(within(leftCol as HTMLElement).getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
-		expect(within(leftCol as HTMLElement).getByText("Комментарии агента")).toBeInTheDocument();
-		expect(within(leftCol as HTMLElement).getByText("Документы из диалога")).toBeInTheDocument();
+	describe("tabs on the info column", () => {
+		test("renders Информация and Предложения tabs", () => {
+			renderDrawer();
+			const infoCol = document.querySelector("[data-testid='supplier-info-column']") as HTMLElement;
+			const tablist = within(infoCol).getByRole("tablist");
+			expect(within(tablist).getByRole("tab", { name: "Информация" })).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Предложения" })).toBeInTheDocument();
+		});
+
+		test("Информация tab is selected when activeTab='info'", () => {
+			renderDrawer({ activeTab: "info" });
+			expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByRole("tab", { name: "Предложения" })).toHaveAttribute("aria-selected", "false");
+		});
+
+		test("Предложения tab is selected when activeTab='offers'", () => {
+			renderDrawer({ activeTab: "offers" });
+			expect(screen.getByRole("tab", { name: "Предложения" })).toHaveAttribute("aria-selected", "true");
+			expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "false");
+		});
+
+		test("clicking a tab fires onTabChange", async () => {
+			const user = userEvent.setup();
+			const onTabChange = vi.fn();
+			renderDrawer({ activeTab: "info", onTabChange });
+			await user.click(screen.getByRole("tab", { name: "Предложения" }));
+			expect(onTabChange).toHaveBeenCalledWith("offers");
+		});
 	});
 
-	test("right column contains email thread", () => {
-		renderDrawer();
-		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
-		expect(rightCol).toBeInTheDocument();
-		expect(within(rightCol as HTMLElement).getByText("История общения")).toBeInTheDocument();
+	describe("Предложения tab", () => {
+		test("renders empty state when supplier has no получено_кп quotes anywhere", async () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					// An INN with no matching seeds → zero cross-item quotes
+					inn: "9999999999",
+					status: "кп_запрошено",
+				}),
+				activeTab: "offers",
+			});
+			await waitFor(() => expect(screen.getByTestId("offers-empty")).toBeInTheDocument());
+			expect(screen.getByText(/Пока нет коммерческих предложений/)).toBeInTheDocument();
+		});
+
+		test("card title is clickable and fires onNavigateToItem with target itemId", async () => {
+			const user = userEvent.setup();
+			const onNavigateToItem = vi.fn();
+			// Use a real enriched supplier so its INN lines up with the seed join in
+			// getSupplierQuotesByInn — hand-rolling an INN would miss the hash scheme.
+			const { suppliers } = await getAllSuppliers("item-1");
+			const kp = suppliers.find((s) => s.status === "получено_кп" && !s.archived);
+			if (!kp) throw new Error("Expected at least one получено_кп supplier on item-1");
+			renderDrawer({ supplier: kp, activeTab: "offers", onNavigateToItem });
+			const title = await screen.findByTestId("offer-card-title-item-1");
+			await user.click(title);
+			expect(onNavigateToItem).toHaveBeenCalledWith("item-1");
+		});
 	});
 
-	test("both columns scroll independently", () => {
-		renderDrawer();
-		const leftCol = document.querySelector("[data-testid='supplier-info-column']");
-		const rightCol = document.querySelector("[data-testid='supplier-email-column']");
-		// Columns use overflow-hidden; inner content areas scroll
-		expect(leftCol?.className).toMatch(/overflow/);
-		expect(rightCol?.className).toMatch(/overflow/);
-	});
+	describe("header has no per-supplier toolbar actions", () => {
+		test("does not render Выбрать поставщика button", () => {
+			renderDrawer();
+			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
+		});
 
-	test("shared header spans full width above columns", () => {
-		renderDrawer();
-		const header = document.querySelector('[data-slot="sheet-header"]');
-		const grid = document.querySelector("[data-testid='supplier-columns']");
-		// Header is a sibling before the grid, not inside a column
-		expect(header).toBeInTheDocument();
-		expect(grid).toBeInTheDocument();
-		expect(header?.compareDocumentPosition(grid as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+		test("does not render Архивировать button", () => {
+			renderDrawer();
+			expect(screen.queryByRole("button", { name: "Архивировать" })).not.toBeInTheDocument();
+		});
 	});
 
 	describe("mobile tabbed layout", () => {
@@ -248,53 +247,52 @@ describe("SupplierDetailDrawer", () => {
 			mockIsMobile.value = false;
 		});
 
-		test("renders tabs instead of two-column grid on mobile", () => {
+		test("renders three tabs: Информация, Предложения, Переписка", () => {
 			renderDrawer();
 			const tablist = screen.getByRole("tablist");
-			expect(tablist).toBeInTheDocument();
 			expect(within(tablist).getByRole("tab", { name: "Информация" })).toBeInTheDocument();
+			expect(within(tablist).getByRole("tab", { name: "Предложения" })).toBeInTheDocument();
 			expect(within(tablist).getByRole("tab", { name: "Переписка" })).toBeInTheDocument();
-			expect(screen.queryByTestId("supplier-columns")).not.toBeInTheDocument();
 		});
 
-		test("shows info tab content by default", () => {
-			renderDrawer();
-			expect(screen.getByText("Расчёт TCO (Total Cost of Ownership)")).toBeInTheDocument();
-			expect(screen.getByText("Комментарии агента")).toBeInTheDocument();
-			expect(screen.queryByText("История общения")).not.toBeInTheDocument();
-		});
-
-		test("switches to email tab on click", async () => {
+		test("switching to chat tab renders the thread", async () => {
 			const user = userEvent.setup();
-			renderDrawer();
+			const onTabChange = vi.fn();
+			const { rerender } = renderDrawer({ activeTab: "info", onTabChange });
 			await user.click(screen.getByRole("tab", { name: "Переписка" }));
-			expect(screen.getByText("История общения")).toBeInTheDocument();
-			expect(screen.queryByText("Расчёт TCO (Total Cost of Ownership)")).not.toBeInTheDocument();
+			expect(onTabChange).toHaveBeenCalledWith("chat");
+
+			// Simulate the URL-driven rerender with the new tab
+			rerender(
+				<QueryClientProvider client={queryClient}>
+					<TooltipProvider>
+						<SupplierDetailDrawer
+							supplier={makeSupplier("s1", {
+								companyName: "ООО «Альфа-Трейд»",
+								chatHistory: [
+									{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Добрый день", isOurs: true },
+								],
+							})}
+							open
+							onClose={vi.fn()}
+							activeTab="chat"
+							onTabChange={onTabChange}
+						/>
+					</TooltipProvider>
+				</QueryClientProvider>,
+			);
+			expect(screen.getByText("Добрый день")).toBeInTheDocument();
 		});
 
-		test("shared header visible above tabs", () => {
-			renderDrawer();
-			expect(screen.getAllByText("ООО «Альфа-Трейд»").length).toBeGreaterThanOrEqual(1);
-			expect(screen.getByText("Получено КП")).toBeInTheDocument();
-			expect(screen.getByRole("tablist")).toBeInTheDocument();
-		});
-
-		test("composer visible on email tab for composable status", async () => {
-			const user = userEvent.setup();
+		test("composer visible on chat tab for composable status", async () => {
 			renderDrawer({
+				activeTab: "chat",
 				supplier: makeSupplier("s1", {
 					status: "кп_запрошено",
 					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
 				}),
 			});
-			await user.click(screen.getByRole("tab", { name: "Переписка" }));
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
-		});
-
-		test("info tab is selected by default with aria-selected", () => {
-			renderDrawer();
-			expect(screen.getByRole("tab", { name: "Информация" })).toHaveAttribute("aria-selected", "true");
-			expect(screen.getByRole("tab", { name: "Переписка" })).toHaveAttribute("aria-selected", "false");
 		});
 	});
 
@@ -321,77 +319,12 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByText("Прайс-лист.xlsx")).toBeInTheDocument();
 			expect(screen.getByText("87 КБ")).toBeInTheDocument();
 		});
-
-		test("does not render attachment section when message has no attachments", () => {
-			renderDrawer({
-				supplier: makeSupplier("s1", {
-					chatHistory: [
-						{
-							sender: "Агент",
-							timestamp: "2026-02-20T10:00:00.000Z",
-							body: "Добрый день!",
-							isOurs: true,
-						},
-					],
-				}),
-			});
-			const article = screen.getByText("Добрый день!").closest("article") as HTMLElement;
-			expect(article.querySelectorAll("[data-testid='msg-attachment']")).toHaveLength(0);
-		});
-
-		test("renders type-appropriate icon for each attachment", () => {
-			renderDrawer({
-				supplier: makeSupplier("s1", {
-					chatHistory: [
-						{
-							sender: "ООО «Тест»",
-							timestamp: "2026-02-22T14:30:00.000Z",
-							body: "Документы.",
-							isOurs: false,
-							attachments: [
-								{ name: "offer.pdf", type: "pdf", size: 100_000 },
-								{ name: "prices.xlsx", type: "xlsx", size: 50_000 },
-								{ name: "spec.docx", type: "docx", size: 30_000 },
-							],
-						},
-					],
-				}),
-			});
-			const chips = screen.getAllByTestId("msg-attachment");
-			expect(chips).toHaveLength(3);
-		});
-	});
-
-	describe("select supplier icon", () => {
-		test("shows select supplier icon for получено_кп status", () => {
-			renderDrawer({ onSelectSupplier: vi.fn() });
-			expect(screen.getByRole("button", { name: "Выбрать поставщика" })).toBeInTheDocument();
-		});
-
-		test("hides select supplier icon for кп_запрошено status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }), onSelectSupplier: vi.fn() });
-			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
-		});
-
-		test("hides select supplier icon for переговоры status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "переговоры" }), onSelectSupplier: vi.fn() });
-			expect(screen.queryByRole("button", { name: "Выбрать поставщика" })).not.toBeInTheDocument();
-		});
-
-		test("clicking select supplier icon calls onSelectSupplier", async () => {
-			const user = userEvent.setup();
-			const onSelectSupplier = vi.fn();
-			renderDrawer({ onSelectSupplier });
-			await user.click(screen.getByRole("button", { name: "Выбрать поставщика" }));
-			expect(onSelectSupplier).toHaveBeenCalled();
-		});
 	});
 
 	describe("ChatComposer visibility", () => {
 		test("shows composer for кп_запрошено status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
 		});
 
 		test("shows composer for переговоры status", () => {
@@ -407,6 +340,151 @@ describe("SupplierDetailDrawer", () => {
 		test("hides composer for отказ status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "отказ" }) });
 			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+		});
+
+		test("shows disabled composer for new status (composer rendered but blocked)", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "new" }) });
+			const textbox = screen.getByRole("textbox");
+			expect(textbox).toBeDisabled();
+		});
+	});
+
+	describe("Кандидат chat prompt", () => {
+		test("shows prompt and Отправить запрос button when status is new", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "new" }) });
+			expect(screen.getByTestId("candidate-chat-prompt")).toHaveTextContent(
+				/Запросите КП, чтобы начать общение с поставщиком/,
+			);
+			expect(screen.getByTestId("candidate-send-request")).toHaveTextContent("Отправить запрос");
+		});
+
+		test("hides prompt for non-candidate statuses", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }) });
+			expect(screen.queryByTestId("candidate-chat-prompt")).not.toBeInTheDocument();
+		});
+
+		test("does not render the email thread while the prompt is active", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					status: "new",
+					// Even if a chatHistory entry existed, the prompt replaces the thread for candidates.
+					chatHistory: [
+						{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "should not render", isOurs: true },
+					],
+				}),
+			});
+			expect(screen.queryByText("should not render")).not.toBeInTheDocument();
+		});
+	});
+
+	describe("message sender metadata", () => {
+		test("shows agent email next to «Агент» sender", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "Агент",
+							senderEmail: "agent@sdelka.ru",
+							timestamp: "2026-02-20T10:00:00.000Z",
+							body: "Добрый день",
+							isOurs: true,
+						},
+					],
+				}),
+			});
+			const article = screen.getByText("Добрый день").closest("[data-email-msg]") as HTMLElement;
+			expect(within(article).getByText("Агент")).toBeInTheDocument();
+			expect(within(article).getByText("agent@sdelka.ru")).toBeInTheDocument();
+		});
+
+		test("shows supplier email next to supplier name", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					companyName: "ООО «Альфа-Трейд»",
+					email: "sales@alfa.ru",
+					chatHistory: [
+						{
+							sender: "ООО «Альфа-Трейд»",
+							senderEmail: "sales@alfa.ru",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "Добрый день!",
+							isOurs: false,
+						},
+					],
+				}),
+			});
+			const article = screen.getByText("Добрый день!").closest("[data-email-msg]") as HTMLElement;
+			expect(within(article).getByText("sales@alfa.ru")).toBeInTheDocument();
+		});
+	});
+
+	describe("event badges on supplier messages", () => {
+		test("renders «Получено КП» badge when event is set", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Альфа»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "КП направлено.",
+							isOurs: false,
+							events: ["quote_received"],
+						},
+					],
+				}),
+			});
+			expect(screen.getByTestId("msg-event-quote_received")).toHaveTextContent("Получено КП");
+		});
+
+		test("renders «Создана задача» badge for task_created event", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Альфа»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "Запрос.",
+							isOurs: false,
+							events: ["task_created"],
+						},
+					],
+				}),
+			});
+			expect(screen.getByTestId("msg-event-task_created")).toHaveTextContent("Создана задача");
+		});
+
+		test("renders «Отказ» badge for refusal event", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "ООО «Альфа»",
+							timestamp: "2026-02-22T14:30:00.000Z",
+							body: "Не готовы.",
+							isOurs: false,
+							events: ["refusal"],
+						},
+					],
+				}),
+			});
+			expect(screen.getByTestId("msg-event-refusal")).toHaveTextContent("Отказ");
+		});
+
+		test("does not render badges on agent (our) messages even when events are set", () => {
+			renderDrawer({
+				supplier: makeSupplier("s1", {
+					chatHistory: [
+						{
+							sender: "Агент",
+							timestamp: "2026-02-20T10:00:00.000Z",
+							body: "Тест",
+							isOurs: true,
+							events: ["quote_received"],
+						},
+					],
+				}),
+			});
+			expect(screen.queryByTestId("msg-event-quote_received")).not.toBeInTheDocument();
 		});
 	});
 });

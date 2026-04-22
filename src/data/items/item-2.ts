@@ -48,8 +48,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Крупный российский производитель ППУ, стабильные поставки и сертифицированное качество.",
-		aiRecommendations: "Закрепить как основного поставщика, зафиксировать цену на год.",
+		agentComment:
+			"Крупный российский производитель ППУ, стабильные поставки и сертифицированное качество.\n\nЗакрепить как основного поставщика, зафиксировать цену на год.",
 		documents: [],
 		chatHistory: [
 			{
@@ -65,7 +65,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-2",
@@ -83,8 +82,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Средний по объёму производитель, агрессивная ценовая политика, требует контроля качества.",
-		aiRecommendations: "Рассмотреть как резервного поставщика, запросить образцы партии.",
+		agentComment:
+			"Средний по объёму производитель, агрессивная ценовая политика, требует контроля качества.\n\nРассмотреть как резервного поставщика, запросить образцы партии.",
 		documents: [],
 		chatHistory: [
 			{
@@ -100,7 +99,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-3",
@@ -118,8 +116,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Нижегородский производитель, стабильные показатели плотности, средний уровень сервиса.",
-		aiRecommendations: "Цена выше рынка, для сравнения не интересно.",
+		agentComment:
+			"Нижегородский производитель, стабильные показатели плотности, средний уровень сервиса.\n\nЦена выше рынка, для сравнения не интересно.",
 		documents: [],
 		chatHistory: [
 			{
@@ -135,7 +133,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-4",
@@ -153,8 +150,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Петербургский переработчик полиуретана, преимущественно мелкие партии.",
-		aiRecommendations: "Не подходит по цене и объёмам, отклонить.",
+		agentComment:
+			"Петербургский переработчик полиуретана, преимущественно мелкие партии.\n\nНе подходит по цене и объёмам, отклонить.",
 		documents: [],
 		chatHistory: [
 			{
@@ -170,7 +167,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-5",
@@ -188,8 +184,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Небольшой владимирский производитель, ограниченные мощности.",
-		aiRecommendations: "Цена существенно выше рынка, отклонить.",
+		agentComment:
+			"Небольшой владимирский производитель, ограниченные мощности.\n\nЦена существенно выше рынка, отклонить.",
 		documents: [],
 		chatHistory: [
 			{
@@ -205,7 +201,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-6",
@@ -223,8 +218,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Производственные мощности загружены, собственные контракты в приоритете.",
-		aiRecommendations: "Оставить в базе, вернуться в следующем квартале.",
+		agentComment:
+			"Производственные мощности загружены, собственные контракты в приоритете.\n\nОставить в базе, вернуться в следующем квартале.",
 		documents: [],
 		chatHistory: [
 			{
@@ -240,7 +235,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-7",
@@ -258,8 +252,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Не работают с маркой ST2240, основная линейка — HR-пены.",
-		aiRecommendations: "Не подходит по ассортименту, исключить.",
+		agentComment: "Не работают с маркой ST2240, основная линейка — HR-пены.\n\nНе подходит по ассортименту, исключить.",
 		documents: [],
 		chatHistory: [
 			{
@@ -275,7 +268,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-8",
@@ -293,8 +285,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Торговый дом, перепродажа по наценке, невыгодно при прямых поставках.",
-		aiRecommendations: "Закупаться напрямую у производителя, не через ТД.",
+		agentComment:
+			"Торговый дом, перепродажа по наценке, невыгодно при прямых поставках.\n\nЗакупаться напрямую у производителя, не через ТД.",
 		documents: [],
 		chatHistory: [
 			{
@@ -310,7 +302,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: false,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-9",
@@ -328,8 +319,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 14,
 		paymentType: "deferred",
 		leadTimeDays: 9,
-		aiDescription: "Региональный производитель, удобная логистика до Аксая.",
-		aiRecommendations: "Довести переговоры, запросить финальное КП.",
+		agentComment:
+			"Региональный производитель, удобная логистика до Аксая.\n\nДовести переговоры, запросить финальное КП.",
 		documents: [],
 		chatHistory: [
 			{
@@ -351,7 +342,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-10",
@@ -369,8 +359,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 30,
 		paymentType: "deferred",
 		leadTimeDays: 13,
-		aiDescription: "Воронежский завод, согласовывают скидку при годовом контракте.",
-		aiRecommendations: "Дожать скидку 3–5 %, затем принять решение.",
+		agentComment:
+			"Воронежский завод, согласовывают скидку при годовом контракте.\n\nДожать скидку 3–5 %, затем принять решение.",
 		documents: [],
 		chatHistory: [
 			{
@@ -392,7 +382,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-11",
@@ -410,8 +399,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "Самарский производитель, запрос отправлен, ожидается КП.",
-		aiRecommendations: "Подождать 2–3 дня, затем напомнить о запросе.",
+		agentComment:
+			"Самарский производитель, запрос отправлен, ожидается КП.\n\nПодождать 2–3 дня, затем напомнить о запросе.",
 		documents: [],
 		chatHistory: [
 			{
@@ -421,7 +410,6 @@ export const SUPPLIERS: SupplierSeed[] = [
 				isOurs: true,
 			},
 		],
-		positionOffers: [],
 	},
 	{
 		id: "supplier-item-2-12",
@@ -439,10 +427,8 @@ export const SUPPLIERS: SupplierSeed[] = [
 		deferralDays: 0,
 		paymentType: "prepayment",
 		leadTimeDays: 7,
-		aiDescription: "",
-		aiRecommendations: "",
+		agentComment: "",
 		documents: [],
 		chatHistory: [],
-		positionOffers: [],
 	},
 ];
