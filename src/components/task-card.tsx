@@ -17,7 +17,7 @@ export function TaskCard({ task, onClick, hideItemName }: TaskCardProps) {
 			type="button"
 			data-testid={`task-row-${task.id}`}
 			onClick={() => onClick(task.id)}
-			className="w-full rounded-lg border bg-background p-4 text-left touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out hover:bg-muted/50 active:bg-muted active:scale-[0.99] motion-reduce:active:scale-100"
+			className="w-full rounded-lg border bg-background p-4 text-left touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out hover:bg-muted/50 active:bg-muted active:scale-[0.96] motion-reduce:active:scale-100"
 		>
 			<div className="min-w-0 line-clamp-2 text-sm font-medium break-words">{task.name}</div>
 			{!hideItemName && <div className="mt-0.5 truncate text-xs text-muted-foreground">{task.item.name}</div>}

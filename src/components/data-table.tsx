@@ -132,8 +132,9 @@ export function DataTable<T>({
 					<TableHeader>
 						<TableRow className="border-t bg-transparent hover:bg-transparent">
 							{selection && (
-								<TableHead className="w-10">
+								<TableHead className="w-10 text-center">
 									<Checkbox
+										className="mx-auto"
 										checked={allSelected}
 										onCheckedChange={() => selection.onChange("all")}
 										aria-label="Выбрать все"
@@ -164,8 +165,8 @@ export function DataTable<T>({
 								// biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows
 								<TableRow key={i}>
 									{selection && (
-										<TableCell>
-											<Skeleton className="size-4" />
+										<TableCell className="w-10 text-center">
+											<Skeleton className="mx-auto size-4" />
 										</TableCell>
 									)}
 									{columns.map((col) => (
@@ -266,10 +267,11 @@ function DataTableRow<T>({
 		>
 			{selection &&
 				(isPinned ? (
-					<TableCell />
+					<TableCell className="w-10" />
 				) : (
-					<TableCell onClick={(e) => e.stopPropagation()}>
+					<TableCell onClick={(e) => e.stopPropagation()} className="w-10 text-center">
 						<Checkbox
+							className="mx-auto"
 							checked={selection.selectedIds.has(rowId)}
 							onCheckedChange={() => selection.onChange(rowId)}
 							aria-label={selection.getRowLabel?.(rowId) ?? `Выбрать ${rowId}`}

@@ -84,7 +84,7 @@ function TariffCard({ tariff }: { tariff: Tariff }) {
 		<article
 			data-testid={`tariff-${tariff.id}`}
 			className={cn(
-				"relative flex flex-col rounded-2xl border bg-background p-6 shadow-sm transition-all",
+				"relative flex flex-col rounded-2xl border bg-background p-6 shadow-sm transition-[border-color,box-shadow] duration-150 ease-out",
 				isPopular ? "border-primary/60 ring-1 ring-primary/40" : "border-border",
 			)}
 		>

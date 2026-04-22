@@ -19,7 +19,7 @@ export function AppLayout() {
 				<AppRail />
 				<div className="flex min-w-0 flex-1 flex-col">
 					<header
-						className="relative flex h-12 shrink-0 items-center justify-between gap-3 px-3 md:px-4"
+						className="relative flex h-12 shrink-0 items-center justify-between gap-3 px-3 md:pl-px md:pr-4"
 						data-testid="global-header"
 					>
 						<GlobalSearch />

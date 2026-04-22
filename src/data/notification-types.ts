@@ -50,7 +50,7 @@ export const NOTIFICATION_TITLES: Record<NotificationType, string> = {
 	search_completed: "Поиск поставщиков завершён",
 	task_assigned: "Назначена новая задача",
 	offer_received: "Получено новое предложение",
-	task_deadline_24h: "Дедлайн задачи через 24\u00A0часа",
+	task_deadline_24h: "Дедлайн задачи подходит к концу",
 	negotiation_completed: "Переговоры завершены",
 };
 
@@ -60,12 +60,4 @@ export const NOTIFICATION_ICONS: Record<NotificationType, LucideIcon> = {
 	offer_received: FileText,
 	task_deadline_24h: Clock,
 	negotiation_completed: CheckCircle2,
-};
-
-export const NOTIFICATION_ICON_COLORS: Record<NotificationType, string> = {
-	search_completed: "text-blue-600 dark:text-blue-400",
-	task_assigned: "text-violet-600 dark:text-violet-400",
-	offer_received: "text-green-600 dark:text-green-400",
-	task_deadline_24h: "text-amber-600 dark:text-amber-400",
-	negotiation_completed: "text-emerald-600 dark:text-emerald-400",
 };

@@ -337,8 +337,13 @@ function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive 
 			data-testid={`task-row-${task.id}`}
 			data-state={isSelected ? "selected" : undefined}
 		>
-			<TableCell onClick={(e) => e.stopPropagation()} className="w-10 pr-0">
-				<Checkbox checked={isSelected} onCheckedChange={onToggleSelect} aria-label={`Выбрать ${task.name}`} />
+			<TableCell onClick={(e) => e.stopPropagation()} className="w-10 text-center">
+				<Checkbox
+					className="mx-auto"
+					checked={isSelected}
+					onCheckedChange={onToggleSelect}
+					aria-label={`Выбрать ${task.name}`}
+				/>
 			</TableCell>
 			<TableCell className="w-[1%] font-medium">
 				<div className="max-w-[440px]">
@@ -620,8 +625,13 @@ export function TasksPage() {
 						<Table>
 							<TableHeader>
 								<TableRow className="border-b-0">
-									<TableHead className={cn("w-10 pr-0", STICKY_HEAD)}>
-										<Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Выбрать все" />
+									<TableHead className={cn("w-10 text-center", STICKY_HEAD)}>
+										<Checkbox
+											className="mx-auto"
+											checked={allSelected}
+											onCheckedChange={toggleAll}
+											aria-label="Выбрать все"
+										/>
 									</TableHead>
 									{COLUMNS.map((col) => (
 										<TableHead key={col.field} className={cn(col.align === "right" && "text-right", STICKY_HEAD)}>
@@ -634,8 +644,8 @@ export function TasksPage() {
 								{query.isLoading &&
 									SKELETON_KEYS.map((key) => (
 										<TableRow key={key} data-testid="skeleton-row">
-											<TableCell className="w-10 pr-0">
-												<Skeleton className="size-4" />
+											<TableCell className="w-10 text-center">
+												<Skeleton className="mx-auto size-4" />
 											</TableCell>
 											<TableCell>
 												<Skeleton className="h-4 w-64" />

@@ -5,12 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-	NOTIFICATION_ICON_COLORS,
-	NOTIFICATION_ICONS,
-	NOTIFICATION_TITLES,
-	type Notification,
-} from "@/data/notification-types";
+import { NOTIFICATION_ICONS, NOTIFICATION_TITLES, type Notification } from "@/data/notification-types";
 import { useAllItems } from "@/data/use-items";
 import { useMarkAllNotificationsAsRead, useMarkNotificationAsRead, useNotifications } from "@/data/use-notifications";
 import { useAllSuppliers } from "@/data/use-suppliers";
@@ -162,7 +157,7 @@ export function NotificationsPopover() {
 		return (
 			<Sheet open={open} onOpenChange={handleOpenChange}>
 				<SheetTrigger asChild>{trigger}</SheetTrigger>
-				<SheetContent side="bottom" className="max-h-[80dvh] gap-0 overflow-hidden rounded-t-xl p-0">
+				<SheetContent side="bottom" size="full" className="gap-0 overflow-hidden p-0">
 					{body}
 				</SheetContent>
 			</Sheet>
@@ -177,7 +172,7 @@ export function NotificationsPopover() {
 				</TooltipTrigger>
 				<TooltipContent>Уведомления</TooltipContent>
 			</Tooltip>
-			<PopoverContent align="end" className="w-[380px] gap-0 overflow-hidden p-0">
+			<PopoverContent align="end" className="max-h-[480px] w-[380px] gap-0 overflow-hidden p-0">
 				{body}
 			</PopoverContent>
 		</Popover>
@@ -202,8 +197,8 @@ function NotificationsBody({
 	onMarkAll,
 }: NotificationsBodyProps) {
 	return (
-		<div className="flex max-h-[480px] flex-col">
-			<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+		<div className="flex min-h-0 flex-1 flex-col">
+			<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2 pr-12 md:pr-3">
 				<div className="font-heading text-sm font-medium text-foreground">Уведомления</div>
 				<Button
 					type="button"
@@ -219,7 +214,7 @@ function NotificationsBody({
 			{resolved.length === 0 ? (
 				<EmptyState />
 			) : (
-				<ul className="flex-1 overflow-y-auto">
+				<ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
 					{resolved.map((item) => (
 						<NotificationRow
 							key={item.notification.id}
@@ -254,7 +249,6 @@ interface NotificationRowProps {
 function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: NotificationRowProps) {
 	const { notification, title, context, href } = resolved;
 	const Icon = NOTIFICATION_ICONS[notification.type];
-	const iconColor = NOTIFICATION_ICON_COLORS[notification.type];
 	const disabled = href === null;
 
 	function handleClick() {
@@ -270,7 +264,7 @@ function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: Notificati
 
 	const content = (
 		<>
-			<div className={cn("mt-0.5 shrink-0", iconColor)}>
+			<div className="mt-0.5 shrink-0 text-foreground">
 				<Icon className="size-4" aria-hidden="true" />
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
