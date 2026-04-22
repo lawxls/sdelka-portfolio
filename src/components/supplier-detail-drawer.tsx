@@ -1,4 +1,5 @@
 import {
+	AlertTriangle,
 	ArrowUpRight,
 	Bot,
 	CheckCircle2,
@@ -101,17 +102,18 @@ function ProfileSection({ supplier }: { supplier: Supplier }) {
 }
 
 function ContactInfoSection({ supplier }: { supplier: Supplier }) {
-	const hasAddress = supplier.address.length > 0;
 	return (
 		<section>
 			<h3 className="mb-2 text-sm font-semibold">Контактная информация</h3>
 			<div className="flex flex-col gap-1.5 text-sm">
-				{hasAddress && (
-					<div className="flex items-start gap-2">
-						<MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-						<span>{supplier.address}</span>
-					</div>
-				)}
+				<div className="flex items-start gap-2">
+					<MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+					<address className="not-italic leading-snug">
+						<div className="tabular-nums text-muted-foreground">{supplier.postalCode}, Россия</div>
+						<div>{supplier.region}</div>
+						<div>{supplier.address}</div>
+					</address>
+				</div>
 				<div className="flex items-center gap-2">
 					<Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 					<a
@@ -362,6 +364,11 @@ const EVENT_BADGE: Record<MessageEvent, EventBadgeSpec> = {
 		className: "bg-destructive/10 text-destructive",
 		Icon: XCircle,
 	},
+	delivery_failed: {
+		label: "Ошибка доставки",
+		className: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+		Icon: AlertTriangle,
+	},
 };
 
 function EventBadges({ events }: { events: MessageEvent[] }) {
@@ -402,7 +409,7 @@ function EmailThread({
 		<div>
 			{supplier.chatHistory.map((msg, i) => {
 				const senderEmail = resolveSenderEmail(msg, supplier.email);
-				const showBadges = !msg.isOurs && msg.events && msg.events.length > 0;
+				const showBadges = !!(msg.events && msg.events.length > 0);
 				return (
 					<article
 						key={`${msg.timestamp}-${msg.sender}`}
@@ -482,9 +489,13 @@ function ChatPanel({
 	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
 	const sendRequestMutation = useSendSupplierRequest();
 	const isCandidate = supplier.status === "new";
-	// Candidates get a disabled composer — it blocks typing but still anchors where
-	// messages will land once the request is sent.
-	const showComposer = COMPOSABLE_STATUSES.has(supplier.status) || isCandidate;
+	const isError = supplier.status === "ошибка";
+	// Candidates and «ошибка» rows keep a disabled composer so the thread still
+	// shows where messages will land once the request is (re)sent.
+	const showComposer = COMPOSABLE_STATUSES.has(supplier.status) || isCandidate || isError;
+	const composerError = isError
+		? "Доставка невозможна. Проверьте email поставщика."
+		: (sendMutation.error?.message ?? null);
 
 	function handleSendRequest() {
 		sendRequestMutation.mutate({ itemId: supplier.itemId, supplierIds: [supplier.id] });
@@ -509,8 +520,8 @@ function ChatPanel({
 					<ChatComposer
 						onSend={(body, files) => sendMutation.mutateAsync({ body, files })}
 						isPending={sendMutation.isPending}
-						disabled={isCandidate}
-						error={sendMutation.error?.message ?? null}
+						disabled={isCandidate || isError}
+						error={composerError}
 					/>
 				</div>
 			)}

@@ -418,7 +418,7 @@ describe("SupplierDetailDrawer", () => {
 		});
 	});
 
-	describe("event badges on supplier messages", () => {
+	describe("event badges on chat messages", () => {
 		test("renders «Получено КП» badge when event is set", () => {
 			renderDrawer({
 				supplier: makeSupplier("s1", {
@@ -470,21 +470,22 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByTestId("msg-event-refusal")).toHaveTextContent("Отказ");
 		});
 
-		test("does not render badges on agent (our) messages even when events are set", () => {
+		test("renders «Ошибка доставки» badge on agent message for delivery_failed event", () => {
 			renderDrawer({
 				supplier: makeSupplier("s1", {
+					status: "ошибка",
 					chatHistory: [
 						{
 							sender: "Агент",
 							timestamp: "2026-02-20T10:00:00.000Z",
-							body: "Тест",
+							body: "Запрос КП",
 							isOurs: true,
-							events: ["quote_received"],
+							events: ["delivery_failed"],
 						},
 					],
 				}),
 			});
-			expect(screen.queryByTestId("msg-event-quote_received")).not.toBeInTheDocument();
+			expect(screen.getByTestId("msg-event-delivery_failed")).toHaveTextContent("Ошибка доставки");
 		});
 	});
 });
