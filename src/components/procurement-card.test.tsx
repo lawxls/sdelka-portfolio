@@ -74,8 +74,8 @@ describe("ProcurementCard", () => {
 		u1();
 
 		const { unmount: u1b } = render(<ProcurementCard item={searchingDone} index={0} />);
-		const searchDoneStatus = screen.getByText("Ищем поставщиков");
-		expect(searchDoneStatus.className).toContain("text-orange-600");
+		const searchDoneStatus = screen.getByText("Поиск поставщиков завершён");
+		expect(searchDoneStatus.className).toContain("text-violet-600");
 		// checkmark icon (no spinner) when search is completed
 		expect(searchDoneStatus.querySelector("svg.animate-spin")).toBeFalsy();
 		expect(searchDoneStatus.querySelector("svg")).toBeTruthy();

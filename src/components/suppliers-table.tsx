@@ -46,6 +46,8 @@ interface SuppliersTableProps {
 	onCompanyTypeFilter: (type: SupplierCompanyType) => void;
 	activeStatuses: SupplierStatus[];
 	onStatusFilter: (status: SupplierStatus) => void;
+	/** Non-archived supplier counts by status — displayed next to each status row in the filter dropdown. */
+	statusCounts?: Partial<Record<SupplierStatus, number>>;
 	selectedIds: Set<string>;
 	onSelectionChange: (idOrAll: string) => void;
 	onArchive: () => void;
@@ -61,7 +63,12 @@ interface SuppliersTableProps {
 	loadMore?: () => void;
 	isFetchingNextPage?: boolean;
 	onRowClick?: (id: string) => void;
+	/** When true, the per-row «Запросить КП» button is disabled with a tooltip —
+	 * the parent still routes bulk actions through a toast so the blocked state is consistent. */
+	searchBlocked?: boolean;
 }
+
+const SEARCH_IN_PROGRESS_TOOLTIP = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
 
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -94,6 +101,7 @@ export function SuppliersTable({
 	onCompanyTypeFilter,
 	activeStatuses,
 	onStatusFilter,
+	statusCounts,
 	selectedIds,
 	onSelectionChange,
 	onArchive,
@@ -109,6 +117,7 @@ export function SuppliersTable({
 	loadMore,
 	isFetchingNextPage,
 	onRowClick,
+	searchBlocked,
 }: SuppliersTableProps) {
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
@@ -197,26 +206,29 @@ export function SuppliersTable({
 									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Статус</div>
 									{SUPPLIER_STATUSES.map((status) => {
 										const Icon = STATUS_ICONS[status];
+										const active = activeStatuses.includes(status);
+										const count = statusCounts?.[status];
 										return (
 											<button
 												key={status}
 												type="button"
 												aria-label={SUPPLIER_STATUS_LABELS[status]}
-												aria-pressed={activeStatuses.includes(status)}
-												className={cn(
-													FILTER_BTN,
-													"inline-flex items-center gap-2",
-													activeStatuses.includes(status) && FILTER_BTN_ACTIVE,
-												)}
+												aria-pressed={active}
+												className={cn(FILTER_BTN, "inline-flex w-full items-center gap-2", active && FILTER_BTN_ACTIVE)}
 												onClick={() => onStatusFilter(status)}
 											>
-												<Icon
-													className={cn(
-														"size-3.5 text-muted-foreground",
-														activeStatuses.includes(status) && "text-highlight-foreground",
-													)}
-												/>
-												{SUPPLIER_STATUS_LABELS[status]}
+												<Icon className={cn("size-3.5 text-muted-foreground", active && "text-highlight-foreground")} />
+												<span className="flex-1 text-left">{SUPPLIER_STATUS_LABELS[status]}</span>
+												{count != null && (
+													<span
+														className={cn(
+															"shrink-0 tabular-nums text-xs text-muted-foreground",
+															active && "text-highlight-foreground",
+														)}
+													>
+														{count}
+													</span>
+												)}
 											</button>
 										);
 									})}
@@ -334,7 +346,7 @@ export function SuppliersTable({
 			align: "right",
 			headerClassName: "w-[160px]",
 			cellClassName: "w-[160px] whitespace-nowrap",
-			cell: (s) => renderStateCell(s, onSendRequest),
+			cell: (s) => renderStateCell(s, onSendRequest, searchBlocked),
 		},
 	];
 
@@ -374,7 +386,7 @@ export function SuppliersTable({
 						<div className="truncate font-medium">{s.companyName}</div>
 						<div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</div>
 					</div>
-					<div className="shrink-0">{renderStateCell(s, onSendRequest)}</div>
+					<div className="shrink-0">{renderStateCell(s, onSendRequest, searchBlocked)}</div>
 				</div>
 				<a
 					href={s.website}
@@ -459,13 +471,17 @@ export function SuppliersTable({
 	);
 }
 
-function renderStateCell(s: Supplier, onSendRequest: (id: string) => void) {
+function renderStateCell(s: Supplier, onSendRequest: (id: string) => void, searchBlocked?: boolean) {
 	if (s.status === "new") {
-		return (
+		// Use aria-disabled (not `disabled`) so the button stays focusable and the tooltip can trigger;
+		// the click still routes through — the parent shows a toast on blocked attempts.
+		const button = (
 			<Button
 				type="button"
 				variant="outline"
 				size="sm"
+				aria-disabled={searchBlocked || undefined}
+				className={searchBlocked ? "cursor-not-allowed opacity-50" : undefined}
 				onClick={(ev) => {
 					ev.stopPropagation();
 					onSendRequest(s.id);
@@ -475,6 +491,15 @@ function renderStateCell(s: Supplier, onSendRequest: (id: string) => void) {
 				Запросить КП
 			</Button>
 		);
+		if (searchBlocked) {
+			return (
+				<Tooltip>
+					<TooltipTrigger asChild>{button}</TooltipTrigger>
+					<TooltipContent>{SEARCH_IN_PROGRESS_TOOLTIP}</TooltipContent>
+				</Tooltip>
+			);
+		}
+		return button;
 	}
 	return (
 		<span data-testid={`supplier-state-${s.id}`}>

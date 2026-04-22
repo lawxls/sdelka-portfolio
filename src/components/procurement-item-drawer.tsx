@@ -1,4 +1,4 @@
-import { Archive, Ban, Check, Users } from "lucide-react";
+import { Archive, Ban, Check, Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -46,6 +46,7 @@ import {
 } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
 import type { PaymentType, ProcurementItem } from "@/data/types";
+import { getDisplayStatus } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSuppliers,
@@ -278,7 +279,12 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	);
 }
 
+const SEARCH_IN_PROGRESS_SINGLE = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
+const SEARCH_IN_PROGRESS_BATCH = "Дождитесь завершения поиска поставщиков чтобы отправить запросы";
+
 function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
+	const { data: itemDetail } = useItemDetail(itemId);
+	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -313,10 +319,15 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	const suppliers = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
 	const totalCount = query.data?.pages[0]?.total ?? suppliers.length;
 	const { data: allSuppliersData } = useSuppliers(itemId);
-	const candidateCount = useMemo(
-		() => (allSuppliersData?.suppliers ?? []).filter((s) => s.status === "new" && !s.archived).length,
-		[allSuppliersData?.suppliers],
-	);
+	const statusCounts = useMemo(() => {
+		const counts: Partial<Record<SupplierStatus, number>> = {};
+		for (const s of allSuppliersData?.suppliers ?? []) {
+			if (s.archived) continue;
+			counts[s.status] = (counts[s.status] ?? 0) + 1;
+		}
+		return counts;
+	}, [allSuppliersData?.suppliers]);
+	const candidateCount = statusCounts.new ?? 0;
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -369,7 +380,14 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 		unarchiveMutation.mutate({ itemId, supplierIds: [id] });
 	}
 
+	function blockIfSearching(message: string): boolean {
+		if (!searchBlocked) return false;
+		toast.info(message);
+		return true;
+	}
+
 	function handleSendRequest(id: string) {
+		if (blockIfSearching(SEARCH_IN_PROGRESS_SINGLE)) return;
 		sendRequestMutation.mutate(
 			{ itemId, supplierIds: [id] },
 			{
@@ -381,6 +399,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	}
 
 	function handleSendRequestBatch() {
+		if (blockIfSearching(SEARCH_IN_PROGRESS_BATCH)) return;
 		sendRequestMutation.mutate(
 			{ itemId, supplierIds: visibleSelectedIds() },
 			{
@@ -394,6 +413,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	}
 
 	function handleSendRequestAll() {
+		if (blockIfSearching(SEARCH_IN_PROGRESS_BATCH)) return;
 		if (candidateCount === 0) {
 			toast.info("Нет поставщиков со статусом «Кандидат»");
 			return;
@@ -429,6 +449,8 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				totalCount={totalCount}
 				isLoading={query.isLoading}
 				onRowClick={onSupplierClick}
+				searchBlocked={searchBlocked}
+				statusCounts={statusCounts}
 				search={search}
 				onSearchChange={setSearch}
 				sort={sort}
@@ -489,7 +511,7 @@ function OffersTabPanel({
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
 	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SupplierSortState>(null);
+	const [sort, setSort] = useState<SupplierSortState>({ field: "savings", direction: "desc" });
 	const [activePaymentTypes, setActivePaymentTypes] = useState<PaymentType[]>([]);
 	const [activeDeliveryFilters, setActiveDeliveryFilters] = useState<DeliveryFilter[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -900,51 +922,60 @@ function ProcurementItemDrawerContent({
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
 	const itemName = item?.name;
-	const itemStatus = item?.status;
+	const displayStatus = item ? getDisplayStatus(item) : null;
 
 	const { data: allSuppliersData } = useSuppliers(itemId);
 	const supplierCounts = useMemo(() => {
 		const list = allSuppliersData?.suppliers;
-		if (!list) return { contacted: 0, quotesReceived: 0, refusals: 0 };
+		if (!list) return { total: 0, contacted: 0, quotesReceived: 0, refusals: 0 };
+		let total = 0;
 		let contacted = 0;
 		let quotesReceived = 0;
 		let refusals = 0;
 		for (const s of list) {
 			if (s.archived) continue;
+			total++;
 			if (s.status !== "new") contacted++;
 			if (s.status === "получено_кп") quotesReceived++;
 			else if (s.status === "отказ") refusals++;
 		}
-		return { contacted, quotesReceived, refusals };
+		return { total, contacted, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
+
+	const taskColumns = useTaskColumns({ item: itemId });
+	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
+
+	const tabCounts: Partial<Record<ItemDrawerTab, number>> = {
+		suppliers: supplierCounts.total,
+		offers: supplierCounts.quotesReceived,
+		tasks: activeTaskCount,
+	};
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
 				<SheetTitle>{itemName ?? "Позиция"}</SheetTitle>
 				<SheetDescription className="sr-only">Детали позиции закупки</SheetDescription>
-				{(itemStatus || supplierCounts.contacted > 0) && (
+				{(displayStatus || supplierCounts.contacted > 0) && (
 					<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-						{itemStatus && (
-							<span className={`inline-flex items-center gap-1.5 font-normal ${STATUS_CONFIG[itemStatus].className}`}>
-								<ProcurementStatusIcon
-									status={itemStatus}
-									searchCompleted={item?.searchCompleted}
-									iconClassName="size-3.5"
-								/>
-								{STATUS_CONFIG[itemStatus].label}
+						{displayStatus && (
+							<span
+								className={`inline-flex items-center gap-1.5 font-normal ${STATUS_CONFIG[displayStatus].className}`}
+							>
+								<ProcurementStatusIcon status={displayStatus} iconClassName="size-3.5" />
+								{STATUS_CONFIG[displayStatus].label}
 							</span>
 						)}
-						{itemStatus && (
+						{displayStatus && (
 							<span className="select-none text-muted-foreground/50" aria-hidden="true">
 								•
 							</span>
 						)}
 						<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
 							<HeaderMetric
-								icon={Users}
+								icon={Mail}
 								count={supplierCounts.contacted}
-								label="Всего поставщиков"
+								label="Написали поставщикам"
 								colorClass="text-muted-foreground"
 								testId="header-metric-total"
 							/>
@@ -968,32 +999,45 @@ function ProcurementItemDrawerContent({
 			</SheetHeader>
 
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
-				{TABS.map((tab) => (
-					<button
-						key={tab.key}
-						type="button"
-						role="tab"
-						aria-selected={activeTab === tab.key}
-						aria-label={tab.label}
-						className={cn(
-							"inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
-							"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-							activeTab === tab.key
-								? "border-b-2 border-primary text-foreground"
-								: "text-muted-foreground hover:text-foreground",
-						)}
-						onClick={() => onTabChange(tab.key)}
-					>
-						{tab.mobileLabel ? (
-							<>
-								<span className="md:hidden">{tab.mobileLabel}</span>
-								<span className="hidden md:inline">{tab.label}</span>
-							</>
-						) : (
-							tab.label
-						)}
-					</button>
-				))}
+				{TABS.map((tab) => {
+					const count = tabCounts[tab.key];
+					const isActive = activeTab === tab.key;
+					return (
+						<button
+							key={tab.key}
+							type="button"
+							role="tab"
+							aria-selected={isActive}
+							aria-label={tab.label}
+							className={cn(
+								"inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
+								"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+								isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
+							)}
+							onClick={() => onTabChange(tab.key)}
+						>
+							{tab.mobileLabel ? (
+								<>
+									<span className="md:hidden">{tab.mobileLabel}</span>
+									<span className="hidden md:inline">{tab.label}</span>
+								</>
+							) : (
+								tab.label
+							)}
+							{count != null && count > 0 && (
+								<span
+									className={cn(
+										"hidden min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs tabular-nums md:inline-flex",
+										isActive ? "text-foreground" : "text-muted-foreground",
+									)}
+									aria-hidden="true"
+								>
+									{count}
+								</span>
+							)}
+						</button>
+					);
+				})}
 			</div>
 
 			<div

@@ -2,8 +2,13 @@ import { formatRussianPlural } from "@/lib/format";
 
 export type ProcurementStatus = "searching" | "negotiating" | "completed";
 
-export const STATUS_LABELS: Record<ProcurementStatus, string> = {
+/** Derived visual status. "searching_completed" is not a stored status —
+ * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
+export type DisplayStatus = ProcurementStatus | "searching_completed";
+
+export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching: "Ищем поставщиков",
+	searching_completed: "Поиск поставщиков завершён",
 	negotiating: "Ведём переговоры",
 	completed: "Переговоры завершены",
 };
@@ -132,7 +137,14 @@ export const ITEM_NAME_DISPLAY_MAX_LENGTH = 40;
 export const FOLDER_COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "teal"] as const;
 
 export type DeviationFilter = "all" | "overpaying" | "saving";
-export type StatusFilter = ProcurementStatus | "all";
+export type StatusFilter = DisplayStatus | "all";
+
+/** Visual status for an item — folds `searchCompleted` into a dedicated value
+ * so the status badge and filter dropdown share one vocabulary. */
+export function getDisplayStatus(item: Pick<ProcurementItem, "status" | "searchCompleted">): DisplayStatus {
+	if (item.status === "searching" && item.searchCompleted) return "searching_completed";
+	return item.status;
+}
 
 export interface FilterState {
 	deviation: DeviationFilter;

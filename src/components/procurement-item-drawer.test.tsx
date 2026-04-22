@@ -277,11 +277,16 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 	test("clicking a Поставщики row opens drawer with supplier_tab=info", async () => {
 		const user = userEvent.setup();
 		renderDrawer(["/procurement?item=item-1"]);
-		// Wait for a real supplier name to appear (data loaded, not just skeletons).
+		// Wait for the first data row to render, then click it. The exact first-page supplier
+		// depends on the default alphabetical sort across the full candidate pool, so we don't
+		// pin the test to a specific company name.
 		await waitFor(() => {
-			expect(screen.getByText("ТД СОМ")).toBeInTheDocument();
+			const panel = screen.getByTestId("tab-panel-suppliers");
+			expect(within(panel).getAllByTestId(/^send-request-|^supplier-state-/).length).toBeGreaterThan(0);
 		});
-		await user.click(screen.getByText("ТД СОМ"));
+		const panel = screen.getByTestId("tab-panel-suppliers");
+		const firstRow = within(panel).getAllByRole("row")[1];
+		await user.click(firstRow);
 		await waitFor(() => {
 			const url = screen.getByTestId("url-spy").textContent ?? "";
 			expect(url).toContain("supplier=");

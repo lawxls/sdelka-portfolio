@@ -7,7 +7,7 @@ import { ITEM as ITEM_7 } from "./items/item-7";
 import { ITEM as ITEM_8 } from "./items/item-8";
 import { delay, nextId, paginate } from "./mock-utils";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
-import { getAnnualCost, getDeviation, getOverpayment } from "./types";
+import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "./types";
 
 // --- Seed data ---
 
@@ -131,12 +131,17 @@ function matchesDeviation(item: ProcurementItem, deviation: string | undefined):
 	return true;
 }
 
+function matchesStatus(item: ProcurementItem, status: string | undefined): boolean {
+	if (!status || status === "all") return true;
+	return getDisplayStatus(item) === status;
+}
+
 function applyFilters(items: ProcurementItem[], params: FilterParams): ProcurementItem[] {
 	const q = params.q?.trim().toLowerCase();
 	return items.filter((item) => {
 		if (!matchesFolder(item, params.folder, archivedIds.has(item.id))) return false;
 		if (params.company && item.companyId !== params.company) return false;
-		if (params.status && params.status !== "all" && item.status !== params.status) return false;
+		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
 		return true;

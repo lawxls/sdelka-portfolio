@@ -87,7 +87,13 @@ export function useSendSupplierRequest() {
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
 			sendSupplierRequest(itemId, supplierIds),
-		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
+		onSuccess: (_data, { itemId }) => {
+			invalidateSupplierLists(queryClient, itemId);
+			// The item may have flipped to "negotiating" — refresh the item list/detail queries.
+			queryClient.invalidateQueries({ queryKey: ["items"] });
+			queryClient.invalidateQueries({ queryKey: ["totals"] });
+			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
+		},
 	});
 }
 

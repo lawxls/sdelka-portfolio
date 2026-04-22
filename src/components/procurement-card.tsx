@@ -42,35 +42,36 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Folder, ProcurementItem, ProcurementStatus } from "@/data/types";
-import { getAnnualCost, getDeviation, getOverpayment, STATUS_LABELS } from "@/data/types";
+import type { DisplayStatus, Folder, ProcurementItem } from "@/data/types";
+import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, STATUS_LABELS } from "@/data/types";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
 import { TruncatedName } from "./truncated-name";
 
-export const STATUS_CONFIG: Record<ProcurementStatus, { label: string; className: string }> = {
+export const STATUS_CONFIG: Record<DisplayStatus, { label: string; className: string }> = {
 	searching: { label: STATUS_LABELS.searching, className: "text-orange-600 dark:text-orange-400" },
+	searching_completed: {
+		label: STATUS_LABELS.searching_completed,
+		className: "text-violet-600 dark:text-violet-400",
+	},
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
 	completed: { label: STATUS_LABELS.completed, className: "text-green-600 dark:text-green-400" },
 };
 
 export function ProcurementStatusIcon({
 	status,
-	searchCompleted,
 	iconClassName = "size-3",
 }: {
-	status: ProcurementStatus;
-	searchCompleted?: boolean;
+	status: DisplayStatus;
 	iconClassName?: string;
 }) {
 	if (status === "searching") {
-		return searchCompleted ? (
-			<Check className={iconClassName} aria-hidden="true" />
-		) : (
-			<LoaderCircle className={cn(iconClassName, "animate-spin")} aria-hidden="true" />
-		);
+		return <LoaderCircle className={cn(iconClassName, "animate-spin")} aria-hidden="true" />;
+	}
+	if (status === "searching_completed") {
+		return <Check className={iconClassName} aria-hidden="true" />;
 	}
 	if (status === "negotiating") {
 		return <span className="size-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />;
@@ -120,6 +121,7 @@ export function ProcurementCard({
 	const deviation = getDeviation(item);
 	const overpayment = getOverpayment(item);
 	const dev = formatDeviation(deviation);
+	const displayStatus = getDisplayStatus(item);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [optimisticName, setOptimisticName] = useState<string>();
@@ -165,7 +167,7 @@ export function ProcurementCard({
 			className={cn(
 				"rounded-lg border bg-background p-4",
 				onRowClick &&
-					"cursor-pointer transition-[background-color,border-color,scale] duration-150 ease-out touch-manipulation hover:border-border/80 active:bg-muted/50 active:scale-[0.99] motion-reduce:active:scale-100",
+					"cursor-pointer transition-[background-color,border-color,scale] duration-150 ease-out touch-manipulation hover:border-border/80 active:bg-muted/50 active:scale-[0.96] motion-reduce:active:scale-100",
 			)}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
@@ -286,10 +288,12 @@ export function ProcurementCard({
 			</div>
 			<div className="mt-1 flex items-start justify-between gap-2">
 				<div className="min-w-0 flex-1">{nameContent}</div>
-				<span className={cn("shrink-0 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[item.status].className)}>
-					<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
-					{STATUS_CONFIG[item.status].label}
-					{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
+				<span
+					className={cn("shrink-0 inline-flex items-center gap-1.5 text-xs", STATUS_CONFIG[displayStatus].className)}
+				>
+					<ProcurementStatusIcon status={displayStatus} />
+					{STATUS_CONFIG[displayStatus].label}
+					{displayStatus === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
 						<TaskCountBadge count={item.taskCount} />
 					)}
 				</span>

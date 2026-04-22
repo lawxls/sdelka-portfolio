@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Folder, ProcurementItem, SortField, SortState } from "@/data/types";
-import { getAnnualCost, getDeviation, getOverpayment } from "@/data/types";
+import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
@@ -332,7 +332,8 @@ export function ProcurementTable({
 								const deviation = getDeviation(item);
 								const overpayment = getOverpayment(item);
 								const dev = formatDeviation(deviation);
-								const status = STATUS_CONFIG[item.status];
+								const displayStatus = getDisplayStatus(item);
+								const status = STATUS_CONFIG[displayStatus];
 								const folder = item.folderId ? folderMap[item.folderId] : undefined;
 								const isEditing = editingItemId === item.id;
 								const rowCls = onRowClick && !isEditing ? "cursor-pointer group" : "group";
@@ -383,9 +384,9 @@ export function ProcurementTable({
 												<span
 													className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
 												>
-													<ProcurementStatusIcon status={item.status} searchCompleted={item.searchCompleted} />
+													<ProcurementStatusIcon status={displayStatus} />
 													{status.label}
-													{item.status === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
+													{displayStatus === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
 														<TaskCountBadge count={item.taskCount} />
 													)}
 												</span>
