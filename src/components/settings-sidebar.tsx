@@ -62,10 +62,6 @@ export function SettingsSidebar() {
 			className="hidden w-52 shrink-0 flex-col border-r border-border bg-background md:flex"
 			data-testid="settings-sidebar"
 		>
-			<div className="flex shrink-0 items-center border-b border-border px-3 py-2">
-				<h2 className="text-sm font-semibold">Настройки</h2>
-			</div>
-
 			<nav className="flex-1 overflow-y-auto p-2" aria-label="Настройки">
 				<NavSection title="Пользователь" items={USER_ITEMS} currentPath={location.pathname} />
 				<NavSection title="Рабочее пространство" items={WORKSPACE_ITEMS} currentPath={location.pathname} />
