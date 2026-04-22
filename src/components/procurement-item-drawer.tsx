@@ -905,27 +905,18 @@ function ProcurementItemDrawerContent({
 	const { data: allSuppliersData } = useSuppliers(itemId);
 	const supplierCounts = useMemo(() => {
 		const list = allSuppliersData?.suppliers;
-		if (!list) return { contacted: 0, quotesReceived: 0, refusals: 0, suppliers: 0 };
+		if (!list) return { contacted: 0, quotesReceived: 0, refusals: 0 };
 		let contacted = 0;
 		let quotesReceived = 0;
 		let refusals = 0;
-		let suppliers = 0;
 		for (const s of list) {
 			if (s.archived) continue;
-			suppliers++;
 			if (s.status !== "new") contacted++;
 			if (s.status === "получено_кп") quotesReceived++;
 			else if (s.status === "отказ") refusals++;
 		}
-		return { contacted, quotesReceived, refusals, suppliers };
+		return { contacted, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
-
-	const taskBoard = useTaskColumns({ item: itemId });
-	const tabCountByKey: Partial<Record<ItemDrawerTab, number>> = {
-		suppliers: supplierCounts.suppliers,
-		offers: supplierCounts.quotesReceived,
-		tasks: taskBoard.assigned.count + taskBoard.in_progress.count,
-	};
 
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
@@ -977,38 +968,32 @@ function ProcurementItemDrawerContent({
 			</SheetHeader>
 
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
-				{TABS.map((tab) => {
-					const count = tabCountByKey[tab.key];
-					return (
-						<button
-							key={tab.key}
-							type="button"
-							role="tab"
-							aria-selected={activeTab === tab.key}
-							aria-label={tab.label}
-							className={cn(
-								"inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
-								"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-								activeTab === tab.key
-									? "border-b-2 border-primary text-foreground"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-							onClick={() => onTabChange(tab.key)}
-						>
-							{tab.mobileLabel ? (
-								<>
-									<span className="md:hidden">{tab.mobileLabel}</span>
-									<span className="hidden md:inline">{tab.label}</span>
-								</>
-							) : (
-								tab.label
-							)}
-							{count != null && count > 0 && (
-								<span className="hidden font-normal tabular-nums text-muted-foreground md:inline">{count}</span>
-							)}
-						</button>
-					);
-				})}
+				{TABS.map((tab) => (
+					<button
+						key={tab.key}
+						type="button"
+						role="tab"
+						aria-selected={activeTab === tab.key}
+						aria-label={tab.label}
+						className={cn(
+							"inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors",
+							"focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+							activeTab === tab.key
+								? "border-b-2 border-primary text-foreground"
+								: "text-muted-foreground hover:text-foreground",
+						)}
+						onClick={() => onTabChange(tab.key)}
+					>
+						{tab.mobileLabel ? (
+							<>
+								<span className="md:hidden">{tab.mobileLabel}</span>
+								<span className="hidden md:inline">{tab.label}</span>
+							</>
+						) : (
+							tab.label
+						)}
+					</button>
+				))}
 			</div>
 
 			<div
