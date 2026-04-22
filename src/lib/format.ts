@@ -107,6 +107,21 @@ const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {
 	minute: "2-digit",
 });
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("ru-RU", { numeric: "auto" });
+
+/** Russian relative time: «только что», «5 мин назад», «2 ч назад», «вчера», «3 дн назад», or absolute date for older. */
+export function formatRelativeTime(iso: string, nowMs: number = Date.now()): string {
+	const then = new Date(iso).getTime();
+	const diffSec = Math.round((then - nowMs) / 1000);
+	const absSec = Math.abs(diffSec);
+	if (absSec < 45) return "только что";
+	if (absSec < 60 * 60) return relativeTimeFormatter.format(Math.round(diffSec / 60), "minute");
+	if (absSec < 24 * 60 * 60) return relativeTimeFormatter.format(Math.round(diffSec / (60 * 60)), "hour");
+	const diffDays = Math.round(diffSec / (24 * 60 * 60));
+	if (Math.abs(diffDays) < 7) return relativeTimeFormatter.format(diffDays, "day");
+	return formatDayMonthShort(iso);
+}
+
 export function formatDateTime(iso: string): string {
 	return datetimeFormatter.format(new Date(iso));
 }

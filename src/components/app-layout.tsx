@@ -1,8 +1,9 @@
-import { Bell, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Outlet } from "react-router";
 import { AppRail } from "@/components/app-rail";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { GlobalSearch } from "@/components/global-search";
+import { NotificationsPopover } from "@/components/notifications-popover";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -39,20 +40,7 @@ export function AppLayout() {
 								</TooltipTrigger>
 								<TooltipContent>Сменить тему</TooltipContent>
 							</Tooltip>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon"
-										aria-label="Уведомления"
-										className="text-muted-foreground hover:text-foreground"
-									>
-										<Bell className="size-5" aria-hidden="true" />
-									</Button>
-								</TooltipTrigger>
-								<TooltipContent>Уведомления</TooltipContent>
-							</Tooltip>
+							<NotificationsPopover />
 						</div>
 					</header>
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-t border-sidebar-border bg-background md:rounded-tl-xl md:border-l">
