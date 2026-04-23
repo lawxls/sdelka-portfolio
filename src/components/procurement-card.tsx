@@ -10,7 +10,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { TaskCountBadge } from "@/components/task-count-badge";
 import {
 	AlertDialog,
@@ -23,17 +23,6 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-	ContextMenu,
-	ContextMenuCheckboxItem,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuSeparator,
-	ContextMenuSub,
-	ContextMenuSubContent,
-	ContextMenuSubTrigger,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
@@ -45,6 +34,7 @@ import {
 import type { DisplayStatus, Folder, ProcurementItem } from "@/data/types";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, STATUS_LABELS } from "@/data/types";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatCurrency, formatDeviation, signClassName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
@@ -125,7 +115,12 @@ export function ProcurementCard({
 	const [isEditing, setIsEditing] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [optimisticName, setOptimisticName] = useState<string>();
+	const [menuOpen, setMenuOpen] = useState(false);
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
+
+	const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const longPressFiredRef = useRef(false);
+	const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
 	const values: Record<string, string> = {
 		annualCost: formatCurrency(getAnnualCost(item)),
@@ -134,7 +129,55 @@ export function ProcurementCard({
 		averagePrice: formatCurrency(item.averagePrice),
 	};
 
-	const handleClick = onRowClick ? () => onRowClick(item) : undefined;
+	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
+
+	function clearLongPressTimer() {
+		if (longPressTimerRef.current) {
+			clearTimeout(longPressTimerRef.current);
+			longPressTimerRef.current = null;
+		}
+	}
+
+	useMountEffect(() => () => {
+		if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+	});
+
+	function handleTouchStart(e: React.TouchEvent) {
+		if (!hasActions || isEditing) return;
+		const t = e.touches[0];
+		touchStartRef.current = { x: t.clientX, y: t.clientY };
+		longPressFiredRef.current = false;
+		clearLongPressTimer();
+		longPressTimerRef.current = setTimeout(() => {
+			longPressFiredRef.current = true;
+			setMenuOpen(true);
+		}, 500);
+	}
+
+	function handleTouchMove(e: React.TouchEvent) {
+		if (!touchStartRef.current) return;
+		const t = e.touches[0];
+		const dx = Math.abs(t.clientX - touchStartRef.current.x);
+		const dy = Math.abs(t.clientY - touchStartRef.current.y);
+		if (dx > 10 || dy > 10) clearLongPressTimer();
+	}
+
+	function handleTouchEnd() {
+		clearLongPressTimer();
+	}
+
+	function handleContextMenu(e: React.MouseEvent) {
+		if (!hasActions || isEditing) return;
+		e.preventDefault();
+		setMenuOpen(true);
+	}
+
+	const handleClick = onRowClick
+		? () => {
+				if (longPressFiredRef.current) return;
+				onRowClick(item);
+			}
+		: undefined;
 	const handleKeyDown = onRowClick
 		? (e: React.KeyboardEvent) => {
 				if (e.key === "Enter" || e.key === " ") {
@@ -143,8 +186,6 @@ export function ProcurementCard({
 				}
 			}
 		: undefined;
-
-	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
 
 	const displayName = optimisticName ?? item.name;
 
@@ -168,9 +209,15 @@ export function ProcurementCard({
 				"rounded-lg border bg-background p-4",
 				onRowClick &&
 					"cursor-pointer transition-[background-color,border-color,scale] duration-150 ease-out touch-manipulation hover:border-border/80 active:bg-muted/50 active:scale-[0.96] motion-reduce:active:scale-100",
+				hasActions && "select-none [-webkit-touch-callout:none]",
 			)}
 			onClick={handleClick}
 			onKeyDown={handleKeyDown}
+			onContextMenu={hasActions ? handleContextMenu : undefined}
+			onTouchStart={hasActions ? handleTouchStart : undefined}
+			onTouchMove={hasActions ? handleTouchMove : undefined}
+			onTouchEnd={hasActions ? handleTouchEnd : undefined}
+			onTouchCancel={hasActions ? handleTouchEnd : undefined}
 			tabIndex={onRowClick ? 0 : undefined}
 			role={onRowClick ? "button" : undefined}
 			data-testid={`card-${item.id}`}
@@ -202,7 +249,7 @@ export function ProcurementCard({
 					)}
 				</div>
 				{hasActions && (
-					<DropdownMenu>
+					<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
@@ -344,80 +391,5 @@ export function ProcurementCard({
 		</article>
 	);
 
-	if (!hasActions) return card;
-
-	return (
-		<ContextMenu>
-			<ContextMenuTrigger asChild>{card}</ContextMenuTrigger>
-			<ContextMenuContent className="min-w-56" onCloseAutoFocus={onCloseAutoFocus}>
-				{onRenameItem && (
-					<ContextMenuItem
-						onSelect={() => {
-							willEditRef.current = true;
-							setIsEditing(true);
-						}}
-					>
-						<Pencil className="size-3.5" />
-						Переименовать
-					</ContextMenuItem>
-				)}
-				{onAssignFolder && folders && !isArchiveView && (
-					<ContextMenuSub>
-						<ContextMenuSubTrigger>
-							<FolderInput className="size-3.5" />
-							Переместить в категорию
-						</ContextMenuSubTrigger>
-						<ContextMenuSubContent>
-							{folders.map((f) => (
-								<ContextMenuCheckboxItem
-									key={f.id}
-									checked={item.folderId === f.id}
-									onCheckedChange={() => onAssignFolder(item.id, f.id)}
-								>
-									<span
-										className="size-2 shrink-0 rounded-full"
-										style={{ backgroundColor: `var(--folder-${f.color})` }}
-										aria-hidden="true"
-									/>
-									{f.name}
-								</ContextMenuCheckboxItem>
-							))}
-							<ContextMenuSeparator />
-							<ContextMenuCheckboxItem
-								checked={item.folderId == null}
-								onCheckedChange={() => onAssignFolder(item.id, null)}
-							>
-								<Inbox className="size-3.5" />
-								Без категории
-							</ContextMenuCheckboxItem>
-							{onArchiveItem && (
-								<>
-									<ContextMenuSeparator />
-									<ContextMenuItem onSelect={() => onArchiveItem(item.id, true)}>
-										<Archive className="size-3.5" />
-										Архив
-									</ContextMenuItem>
-								</>
-							)}
-						</ContextMenuSubContent>
-					</ContextMenuSub>
-				)}
-				{onArchiveItem && isArchiveView && (
-					<ContextMenuItem onSelect={() => onArchiveItem(item.id, false)}>
-						<ArchiveRestore className="size-3.5" />
-						Восстановить из архива
-					</ContextMenuItem>
-				)}
-				{onDeleteItem && (
-					<>
-						<ContextMenuSeparator />
-						<ContextMenuItem variant="destructive" onSelect={() => setIsDeleting(true)}>
-							<Trash2 className="size-3.5" />
-							Удалить
-						</ContextMenuItem>
-					</>
-				)}
-			</ContextMenuContent>
-		</ContextMenu>
-	);
+	return card;
 }
