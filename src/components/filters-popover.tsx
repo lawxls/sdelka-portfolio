@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CompanySummary, DeviationFilter, FilterState, StatusFilter } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
+import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
 
 const DEVIATION_PRESETS: { label: string; value: DeviationFilter }[] = [
@@ -34,6 +35,7 @@ interface FiltersPopoverProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
+	triggerVariant?: "icon" | "row";
 }
 
 export function FiltersPopover({
@@ -43,22 +45,32 @@ export function FiltersPopover({
 	selectedCompany,
 	onCompanySelect,
 	showCompanies = false,
+	triggerVariant = "icon",
 }: FiltersPopoverProps) {
+	const active = hasActiveFilter(filters);
 	return (
 		<Popover>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<PopoverTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
-							<ListFilter aria-hidden="true" />
-							{hasActiveFilter(filters) && (
-								<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />
-							)}
-						</Button>
-					</PopoverTrigger>
-				</TooltipTrigger>
-				<TooltipContent>Фильтры</TooltipContent>
-			</Tooltip>
+			{triggerVariant === "row" ? (
+				<PopoverTrigger asChild>
+					<button type="button" className={cn(OVERFLOW_ROW_BTN, "relative")}>
+						<ListFilter className="size-4" aria-hidden="true" />
+						<span>Фильтры</span>
+						{active && <span className="ml-auto size-2 rounded-full bg-primary" aria-hidden="true" />}
+					</button>
+				</PopoverTrigger>
+			) : (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
+								<ListFilter aria-hidden="true" />
+								{active && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Фильтры</TooltipContent>
+				</Tooltip>
+			)}
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="flex max-h-[70vh] flex-col overflow-y-auto p-1.5">
 					{showCompanies && onCompanySelect && (

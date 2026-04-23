@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
 import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
 
 interface ToolbarProps {
@@ -99,19 +100,29 @@ export function Toolbar({
 		);
 	}
 
-	const sortPopover = (
+	const renderSortPopover = (variant: "icon" | "row") => (
 		<Popover>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<PopoverTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Сортировка" className="relative">
-							<ArrowUpDown aria-hidden="true" />
-							{sort && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
-						</Button>
-					</PopoverTrigger>
-				</TooltipTrigger>
-				<TooltipContent>Сортировка</TooltipContent>
-			</Tooltip>
+			{variant === "row" ? (
+				<PopoverTrigger asChild>
+					<button type="button" className={cn(OVERFLOW_ROW_BTN, "relative")}>
+						<ArrowUpDown className="size-4" aria-hidden="true" />
+						<span>Сортировка</span>
+						{sort && <span className="ml-auto size-2 rounded-full bg-primary" aria-hidden="true" />}
+					</button>
+				</PopoverTrigger>
+			) : (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Сортировка" className="relative">
+								<ArrowUpDown aria-hidden="true" />
+								{sort && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Сортировка</TooltipContent>
+				</Tooltip>
+			)}
 			<PopoverContent align="end" className="w-56">
 				<div className="flex flex-col gap-1">
 					{SORT_FIELD_PRESETS.map((preset) => {
@@ -140,7 +151,7 @@ export function Toolbar({
 		</Popover>
 	);
 
-	const categoriesPopover = (
+	const renderCategoriesPopover = (variant: "icon" | "row") => (
 		<CategoriesPopover
 			folders={folders}
 			folderCounts={folderCounts}
@@ -151,10 +162,11 @@ export function Toolbar({
 			onRenameFolder={onRenameFolder}
 			onRecolorFolder={onRecolorFolder}
 			onDeleteFolder={onDeleteFolder}
+			triggerVariant={variant}
 		/>
 	);
 
-	const filtersPopover = (
+	const renderFiltersPopover = (variant: "icon" | "row") => (
 		<FiltersPopover
 			filters={filters}
 			onFiltersChange={onFiltersChange}
@@ -162,6 +174,7 @@ export function Toolbar({
 			selectedCompany={selectedCompany}
 			onCompanySelect={onCompanySelect}
 			showCompanies={showCompanies}
+			triggerVariant={variant}
 		/>
 	);
 
@@ -194,36 +207,34 @@ export function Toolbar({
 						</TooltipTrigger>
 						<TooltipContent>Ещё</TooltipContent>
 					</Tooltip>
-					<PopoverContent align="end" className="w-auto p-1">
-						<div className="flex items-center gap-1">
-							{sortPopover}
-							{categoriesPopover}
-							{filtersPopover}
+					<PopoverContent align="end" className="w-52 p-1">
+						<div className="flex flex-col gap-0.5">
+							{renderSortPopover("row")}
+							{renderCategoriesPopover("row")}
+							{renderFiltersPopover("row")}
 							{onArchiveToggle && (
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon-sm"
-											aria-label="Архив"
-											aria-pressed={isArchiveView}
-											onClick={onArchiveToggle}
-											className={cn(isArchiveView && "bg-muted text-highlight-foreground")}
-										>
-											{isArchiveView ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
-										</Button>
-									</TooltipTrigger>
-									<TooltipContent>{isArchiveView ? "Выйти из архива" : "Архив"}</TooltipContent>
-								</Tooltip>
+								<button
+									type="button"
+									aria-label={isArchiveView ? "Выйти из архива" : "Архив"}
+									aria-pressed={isArchiveView}
+									onClick={onArchiveToggle}
+									className={cn(OVERFLOW_ROW_BTN, isArchiveView && "font-medium text-highlight-foreground")}
+								>
+									{isArchiveView ? (
+										<ArchiveRestore className="size-4" aria-hidden="true" />
+									) : (
+										<Archive className="size-4" aria-hidden="true" />
+									)}
+									<span>{isArchiveView ? "Выйти из архива" : "Архив"}</span>
+								</button>
 							)}
 						</div>
 					</PopoverContent>
 				</Popover>
 			) : (
 				<div className="flex items-center gap-2">
-					{categoriesPopover}
-					{filtersPopover}
+					{renderCategoriesPopover("icon")}
+					{renderFiltersPopover("icon")}
 					{onArchiveToggle && (
 						<Tooltip>
 							<TooltipTrigger asChild>

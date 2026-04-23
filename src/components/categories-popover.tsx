@@ -27,6 +27,7 @@ import { FOLDER_COLORS, FOLDER_NAME_MAX_LENGTH } from "@/data/types";
 import { nextUnusedColor } from "@/data/use-folders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
+import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
 
 const ROW_BTN =
@@ -44,6 +45,7 @@ interface CategoriesPopoverProps {
 	onRenameFolder: (id: string, name: string) => void;
 	onRecolorFolder: (id: string, color: string) => void;
 	onDeleteFolder: (id: string) => void;
+	triggerVariant?: "icon" | "row";
 }
 
 export function CategoriesPopover({
@@ -56,21 +58,32 @@ export function CategoriesPopover({
 	onRenameFolder,
 	onRecolorFolder,
 	onDeleteFolder,
+	triggerVariant = "icon",
 }: CategoriesPopoverProps) {
 	const hasActive = activeFolder !== undefined && activeFolder !== "archive";
 	return (
 		<Popover>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<PopoverTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label="Категории" className="relative">
-							<FolderOpen aria-hidden="true" />
-							{hasActive && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
-						</Button>
-					</PopoverTrigger>
-				</TooltipTrigger>
-				<TooltipContent>Категории</TooltipContent>
-			</Tooltip>
+			{triggerVariant === "row" ? (
+				<PopoverTrigger asChild>
+					<button type="button" className={cn(OVERFLOW_ROW_BTN, "relative")}>
+						<FolderOpen className="size-4" aria-hidden="true" />
+						<span>Категории</span>
+						{hasActive && <span className="ml-auto size-2 rounded-full bg-primary" aria-hidden="true" />}
+					</button>
+				</PopoverTrigger>
+			) : (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label="Категории" className="relative">
+								<FolderOpen aria-hidden="true" />
+								{hasActive && <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" />}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>Категории</TooltipContent>
+				</Tooltip>
+			)}
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="flex max-h-[70vh] flex-col overflow-y-auto p-1.5">
 					<CategorySection
