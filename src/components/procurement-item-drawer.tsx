@@ -589,7 +589,7 @@ function OffersTabPanel({
 	const currentSupplier = itemDetail?.currentSupplier;
 
 	return (
-		<div data-testid="tab-panel-offers">
+		<div data-testid="tab-panel-offers" className="h-full">
 			<OffersTable
 				suppliers={suppliers}
 				totalCount={totalCount}

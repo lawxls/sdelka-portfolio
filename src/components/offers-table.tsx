@@ -142,10 +142,6 @@ export function OffersTable({
 		return map;
 	}, [suppliers]);
 
-	if (!isLoading && suppliers.length === 0 && !currentSupplier && !search && !showArchived) {
-		return <p className="py-8 text-center text-sm text-muted-foreground">Нет предложений</p>;
-	}
-
 	const rowsCount = totalCount + (currentSupplier ? 1 : 0);
 
 	const toolbar = hasSelection ? (
@@ -431,7 +427,7 @@ export function OffersTable({
 			pinnedRows={pinnedRows}
 			getRowId={(s) => s.id}
 			isLoading={isLoading}
-			emptyMessage="Ничего не найдено"
+			emptyMessage="Нет предложений"
 			selection={{
 				selectedIds,
 				onChange: onSelectionChange,
