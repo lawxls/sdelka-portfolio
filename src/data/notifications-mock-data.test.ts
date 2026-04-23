@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Notification } from "./notification-types";
 import {
 	_resetNotificationsStore,
@@ -19,12 +19,7 @@ function makeNotification(id: string, overrides: Partial<Notification> = {}): No
 }
 
 beforeEach(() => {
-	window.localStorage.clear();
 	_resetNotificationsStore();
-});
-
-afterEach(() => {
-	window.localStorage.clear();
 });
 
 describe("fetchNotificationsMock", () => {
@@ -46,10 +41,9 @@ describe("fetchNotificationsMock", () => {
 		expect(types.has("negotiation_completed")).toBe(true);
 	});
 
-	it("applies initiallyRead seed defaults when no localStorage is present", async () => {
-		const { notifications, readIds } = await fetchNotificationsMock();
-		expect(readIds.length).toBeGreaterThan(0);
-		expect(readIds.length).toBeLessThan(notifications.length);
+	it("starts with no read ids on seed", async () => {
+		const { readIds } = await fetchNotificationsMock();
+		expect(readIds).toEqual([]);
 	});
 });
 
@@ -72,13 +66,11 @@ describe("markNotificationAsReadMock", () => {
 		expect(readIds.filter((id) => id === "n1")).toHaveLength(1);
 	});
 
-	it("persists the read id to localStorage", async () => {
+	it("does not persist the read id to localStorage", async () => {
 		_setNotifications([makeNotification("n1")]);
 		await markNotificationAsReadMock("n1");
 
-		const raw = window.localStorage.getItem("notification-read-ids");
-		expect(raw).not.toBeNull();
-		expect(JSON.parse(raw as string)).toContain("n1");
+		expect(window.localStorage.getItem("notification-read-ids")).toBeNull();
 	});
 });
 
@@ -91,11 +83,22 @@ describe("markAllNotificationsAsReadMock", () => {
 		expect(new Set(readIds)).toEqual(new Set(["n1", "n2", "n3"]));
 	});
 
-	it("persists to localStorage", async () => {
+	it("does not persist to localStorage", async () => {
 		_setNotifications([makeNotification("n1"), makeNotification("n2")]);
 		await markAllNotificationsAsReadMock();
 
-		const raw = window.localStorage.getItem("notification-read-ids");
-		expect(JSON.parse(raw as string).sort()).toEqual(["n1", "n2"]);
+		expect(window.localStorage.getItem("notification-read-ids")).toBeNull();
+	});
+});
+
+describe("_resetNotificationsStore", () => {
+	it("clears session read state on reset (simulates page reload)", async () => {
+		await markAllNotificationsAsReadMock();
+		const before = await fetchNotificationsMock();
+		expect(before.readIds.length).toBeGreaterThan(0);
+
+		_resetNotificationsStore();
+		const after = await fetchNotificationsMock();
+		expect(after.readIds).toEqual([]);
 	});
 });

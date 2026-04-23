@@ -101,7 +101,10 @@ export function NotificationsPopover() {
 		};
 	}, [itemsQ.data, tasksQ.data, suppliersQ.data]);
 
-	const resolved = useMemo(() => notifications.map((n) => resolveNotification(n, lookups)), [notifications, lookups]);
+	const resolved = useMemo(
+		() => notifications.filter((n) => !isRead(n.id)).map((n) => resolveNotification(n, lookups)),
+		[notifications, isRead, lookups],
+	);
 
 	function handleOpenChange(next: boolean) {
 		setOpen(next);
@@ -145,7 +148,6 @@ export function NotificationsPopover() {
 	const body = (
 		<NotificationsBody
 			resolved={resolved}
-			isRead={isRead}
 			unreadCount={unreadCount}
 			onRowClick={handleRowClick}
 			onMarkOne={handleMarkOne}
@@ -181,34 +183,26 @@ export function NotificationsPopover() {
 
 interface NotificationsBodyProps {
 	resolved: ResolvedNotification[];
-	isRead: (id: string) => boolean;
 	unreadCount: number;
 	onRowClick: (href: string | null) => void;
 	onMarkOne: (id: string) => void;
 	onMarkAll: () => void;
 }
 
-function NotificationsBody({
-	resolved,
-	isRead,
-	unreadCount,
-	onRowClick,
-	onMarkOne,
-	onMarkAll,
-}: NotificationsBodyProps) {
+function NotificationsBody({ resolved, unreadCount, onRowClick, onMarkOne, onMarkAll }: NotificationsBodyProps) {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2 pr-12 md:pr-3">
+			<div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-3 pr-12 md:py-2 md:pr-3">
 				<div className="font-heading text-sm font-medium text-foreground">Уведомления</div>
 				<Button
 					type="button"
 					variant="ghost"
 					size="sm"
-					className="relative h-7 px-2 text-xs after:absolute after:inset-[-6px] after:content-['']"
+					className="relative h-7 px-2 text-xs tabular-nums after:absolute after:inset-[-6px] after:content-['']"
 					disabled={unreadCount === 0}
 					onClick={onMarkAll}
 				>
-					Прочитать все
+					Прочитать все{unreadCount > 0 ? ` (${unreadCount})` : ""}
 				</Button>
 			</div>
 			{resolved.length === 0 ? (
@@ -216,13 +210,7 @@ function NotificationsBody({
 			) : (
 				<ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
 					{resolved.map((item) => (
-						<NotificationRow
-							key={item.notification.id}
-							resolved={item}
-							isRead={isRead(item.notification.id)}
-							onRowClick={onRowClick}
-							onMarkOne={onMarkOne}
-						/>
+						<NotificationRow key={item.notification.id} resolved={item} onRowClick={onRowClick} onMarkOne={onMarkOne} />
 					))}
 				</ul>
 			)}
@@ -234,19 +222,18 @@ function EmptyState() {
 	return (
 		<div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
 			<Bell className="size-8 text-muted-foreground/60" aria-hidden="true" />
-			<div className="text-sm text-muted-foreground">Нет уведомлений</div>
+			<div className="text-sm text-muted-foreground">Непрочитанных уведомлений нет</div>
 		</div>
 	);
 }
 
 interface NotificationRowProps {
 	resolved: ResolvedNotification;
-	isRead: boolean;
 	onRowClick: (href: string | null) => void;
 	onMarkOne: (id: string) => void;
 }
 
-function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: NotificationRowProps) {
+function NotificationRow({ resolved, onRowClick, onMarkOne }: NotificationRowProps) {
 	const { notification, title, context, href } = resolved;
 	const Icon = NOTIFICATION_ICONS[notification.type];
 	const disabled = href === null;
@@ -260,8 +247,6 @@ function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: Notificati
 		onMarkOne(notification.id);
 	}
 
-	const showMarkAction = !isRead && !disabled;
-
 	const content = (
 		<>
 			<div className="mt-0.5 shrink-0 text-foreground">
@@ -269,12 +254,8 @@ function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: Notificati
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<div className="flex items-center gap-1.5">
-					{!isRead && !disabled && (
-						<span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-destructive" />
-					)}
-					<div className={cn("truncate text-sm", isRead ? "text-foreground" : "font-medium text-foreground")}>
-						{title}
-					</div>
+					{!disabled && <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-destructive" />}
+					<div className="truncate text-sm text-foreground">{title}</div>
 				</div>
 				{context && <div className="truncate text-xs text-muted-foreground">{context}</div>}
 				<div className="flex items-center gap-2 pt-0.5 text-xs text-muted-foreground">
@@ -293,7 +274,6 @@ function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: Notificati
 
 	const surfaceClass = cn(
 		"flex w-full gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-b-0",
-		!isRead && !disabled && "bg-accent/40",
 		disabled && "cursor-default text-muted-foreground",
 	);
 
@@ -309,18 +289,17 @@ function NotificationRow({ resolved, isRead, onRowClick, onMarkOne }: Notificati
 					onClick={handleClick}
 					className={cn(
 						surfaceClass,
-						"cursor-pointer hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
-						showMarkAction && "pr-20",
+						"cursor-pointer pr-20 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
 					)}
 				>
 					{content}
 				</button>
 			)}
-			{showMarkAction && (
+			{!disabled && (
 				<button
 					type="button"
 					onClick={handleMarkClick}
-					className="absolute right-3 bottom-2.5 text-xs text-primary transition-[scale,opacity] duration-150 hover:underline focus-visible:underline focus-visible:outline-none active:scale-[0.96] after:absolute after:inset-[-8px] after:content-['']"
+					className="absolute right-3 bottom-2.5 text-xs text-muted-foreground transition-[scale,opacity,color] duration-150 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:underline focus-visible:outline-none active:scale-[0.96] after:absolute after:inset-[-12px] after:content-['']"
 				>
 					Прочитать
 				</button>
