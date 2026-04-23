@@ -38,12 +38,11 @@ export function AppRail() {
 								aria-current={active ? "page" : undefined}
 								className={cn(
 									NAV_ITEM_CLASSES,
-									active
-										? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-										: "text-sidebar-foreground hover:bg-sidebar-accent/50",
+									"text-sidebar-foreground",
+									active ? "bg-foreground/[0.06]" : "hover:bg-sidebar-accent/50",
 								)}
 							>
-								<Icon className="size-4 shrink-0" aria-hidden="true" />
+								<Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden="true" />
 								<span className="flex-1 text-left">{label}</span>
 							</Link>
 						);
