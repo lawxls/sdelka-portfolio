@@ -265,7 +265,7 @@ export function SuppliersTable({
 								size="sm"
 								onClick={onSendRequestAll}
 								aria-label="Отправить запросы"
-								className="rounded-lg bg-status-highlight hover:bg-status-highlight/80"
+								className="btn-cta rounded-full border-0"
 							>
 								<Mails data-icon="inline-start" aria-hidden="true" />
 								<span className="hidden sm:inline">Отправить запросы</span>

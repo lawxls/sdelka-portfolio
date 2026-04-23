@@ -272,12 +272,7 @@ export function Toolbar({
 				<TooltipContent>Скачать таблицу</TooltipContent>
 			</Tooltip>
 
-			<Button
-				type="button"
-				size="sm"
-				onClick={onAddPositions}
-				className="rounded-lg bg-status-highlight hover:bg-status-highlight/80"
-			>
+			<Button type="button" size="sm" onClick={onAddPositions} className="btn-cta rounded-full border-0">
 				<Plus data-icon="inline-start" aria-hidden="true" />
 				<span className="hidden sm:inline">Добавить позиции</span>
 				<span className="sm:hidden">Добавить</span>
