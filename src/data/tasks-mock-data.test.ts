@@ -284,15 +284,29 @@ describe("seed coherence", () => {
 		const all = _getAllTasks();
 		const itemIds = new Set(all.map((t) => t.item.id));
 		expect(itemIds.has("item-1")).toBe(true);
+		expect(itemIds.has("item-2")).toBe(true);
+		expect(itemIds.has("item-3")).toBe(true);
+		expect(itemIds.has("item-4")).toBe(true);
 	});
 
-	it("distributes seed tasks across assigned and completed statuses", async () => {
+	it("distributes seed tasks across all four statuses", async () => {
 		_resetTasksStore();
 		const result = await fetchTaskBoardMock();
-		// Current seed has 6 assigned + 10 completed, 0 in_progress, 0 archived
-		expect(result.assigned?.count).toBe(6);
-		expect(result.in_progress?.count).toBe(0);
-		expect(result.completed?.count).toBe(10);
-		expect(result.archived?.count).toBe(0);
+		expect(result.assigned?.count).toBe(18);
+		expect(result.in_progress?.count).toBe(13);
+		expect(result.completed?.count).toBe(25);
+		expect(result.archived?.count).toBe(10);
+	});
+
+	it("seed tasks cover question counts across the 1-10 range", async () => {
+		_resetTasksStore();
+		const all = _getAllTasks();
+		const counts = new Set(all.map((t) => t.questionCount));
+		for (let n = 1; n <= 10; n++) {
+			expect(counts.has(n)).toBe(true);
+		}
+		for (const t of all) {
+			expect(t.supplierQuestions).toHaveLength(t.questionCount);
+		}
 	});
 });
