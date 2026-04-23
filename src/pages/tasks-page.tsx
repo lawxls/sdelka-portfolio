@@ -326,10 +326,12 @@ interface TaskRowProps {
 	onToggleSelect: () => void;
 	onRowClick: () => void;
 	onArchive: () => void;
+	onUnarchive: () => void;
 }
 
-function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive }: TaskRowProps) {
+function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive, onUnarchive }: TaskRowProps) {
 	const overdue = isOverdue(task.deadlineAt);
+	const isArchived = task.status === "archived";
 	const row = (
 		<TableRow
 			className="group cursor-pointer"
@@ -372,9 +374,9 @@ function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive 
 		<ContextMenu>
 			<ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
 			<ContextMenuContent>
-				<ContextMenuItem onSelect={onArchive}>
+				<ContextMenuItem onSelect={isArchived ? onUnarchive : onArchive}>
 					<Archive className="size-3.5" />
-					Архивировать
+					{isArchived ? "Разархивировать" : "Архивировать"}
 				</ContextMenuItem>
 			</ContextMenuContent>
 		</ContextMenu>
@@ -509,12 +511,31 @@ export function TasksPage() {
 		toast.success(`Архивировано ${formatRussianPlural(ids.length, ["задача", "задачи", "задач"])}`);
 	}
 
+	function handleUnarchiveSelected() {
+		const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
+		for (const t of selectedTasks) {
+			updateStatus.mutate({ id: t.id, status: t.statusBeforeArchive ?? "assigned" });
+		}
+		setSelectedIds(new Set());
+		toast.success(`Разархивировано ${formatRussianPlural(selectedTasks.length, ["задача", "задачи", "задач"])}`);
+	}
+
 	function handleArchiveRow(id: string) {
 		updateStatus.mutate({ id, status: "archived" });
 		setSelectedIds((prev) => {
 			if (!prev.has(id)) return prev;
 			const next = new Set(prev);
 			next.delete(id);
+			return next;
+		});
+	}
+
+	function handleUnarchiveRow(task: Task) {
+		updateStatus.mutate({ id: task.id, status: task.statusBeforeArchive ?? "assigned" });
+		setSelectedIds((prev) => {
+			if (!prev.has(task.id)) return prev;
+			const next = new Set(prev);
+			next.delete(task.id);
 			return next;
 		});
 	}
@@ -529,13 +550,20 @@ export function TasksPage() {
 
 	const searchFullRow = isMobile && searchExpanded;
 
+	const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
+	const allSelectedArchived = selectedTasks.length > 0 && selectedTasks.every((t) => t.status === "archived");
+
 	const toolbar =
 		selectedIds.size > 0 ? (
 			<div className="flex items-center gap-3" data-testid="selection-bar">
 				<span className="text-sm font-medium tabular-nums">Выбрано: {selectedIds.size}</span>
-				<Button variant="outline" size="sm" onClick={handleArchiveSelected}>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={allSelectedArchived ? handleUnarchiveSelected : handleArchiveSelected}
+				>
 					<Archive className="size-4" aria-hidden="true" />
-					Архивировать
+					{allSelectedArchived ? "Разархивировать" : "Архивировать"}
 				</Button>
 				<Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
 					Отмена
@@ -674,6 +702,7 @@ export function TasksPage() {
 											onToggleSelect={() => toggleRow(task.id)}
 											onRowClick={() => openTask(task.id)}
 											onArchive={() => handleArchiveRow(task.id)}
+											onUnarchive={() => handleUnarchiveRow(task)}
 										/>
 									))}
 							</TableBody>

@@ -156,6 +156,30 @@ describe("TaskDrawer", () => {
 		});
 	});
 
+	it("unarchives an archived task via the overflow menu, restoring the prior status", async () => {
+		const archivedTask = makeTask("task-archived", {
+			name: "Архивная задача",
+			status: "archived",
+			statusBeforeArchive: "in_progress",
+		});
+		tasksMock._setTasks([archivedTask]);
+
+		const spy = vi.spyOn(tasksMock, "changeTaskStatusMock");
+		renderDrawer("task-archived");
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Действия" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Действия" }));
+		await user.click(await screen.findByRole("menuitem", { name: /Разархивировать/ }));
+
+		await waitFor(() => {
+			expect(spy).toHaveBeenCalledWith("task-archived", expect.objectContaining({ status: "in_progress" }));
+		});
+	});
+
 	it("renders as full-screen bottom sheet when isMobile", async () => {
 		render(
 			<QueryClientProvider client={queryClient}>

@@ -176,6 +176,23 @@ describe("TasksPage", () => {
 		});
 	});
 
+	it("Разархивировать bulk action restores selected archived tasks", async () => {
+		renderPage(["/tasks?status=archived"]);
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Archived 1")).toBeInTheDocument());
+
+		const rowCheckbox = screen.getAllByRole("checkbox", { name: /Выбрать Archived 1/ })[0];
+		await user.click(rowCheckbox);
+
+		expect(screen.queryByRole("button", { name: "Архивировать" })).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Разархивировать" }));
+
+		await waitFor(() => {
+			expect(screen.queryByText("Archived 1")).not.toBeInTheDocument();
+		});
+	});
+
 	it("renders table columns in the required order", async () => {
 		renderPage();
 

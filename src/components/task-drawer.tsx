@@ -184,6 +184,7 @@ function TaskDrawerContent({
 
 	const currentTask = task;
 	const isAnswered = !!currentTask.completedResponse;
+	const isArchived = currentTask.status === "archived";
 	const overdue = isOverdue(currentTask.deadlineAt);
 
 	async function handleSend(body: string, files: File[]) {
@@ -197,12 +198,13 @@ function TaskDrawerContent({
 		onClose();
 	}
 
-	function handleArchive() {
+	function handleToggleArchive() {
+		const nextStatus = isArchived ? (currentTask.statusBeforeArchive ?? "assigned") : "archived";
 		updateStatus.mutate(
-			{ id: currentTask.id, status: "archived" },
+			{ id: currentTask.id, status: nextStatus },
 			{
 				onSuccess: () => {
-					toast.success("Задача отправлена в архив");
+					toast.success(isArchived ? "Задача восстановлена из архива" : "Задача отправлена в архив");
 					onClose();
 				},
 			},
@@ -215,7 +217,7 @@ function TaskDrawerContent({
 				<SheetTitle className="pr-4">{currentTask.name}</SheetTitle>
 				<SheetDescription className="text-xs">{currentTask.item.name}</SheetDescription>
 				<div className="absolute top-3 right-3 flex items-center gap-1">
-					{!isAnswered && (
+					{(!isAnswered || isArchived) && (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="ghost" size="icon-sm" aria-label="Действия" disabled={updateStatus.isPending}>
@@ -223,8 +225,9 @@ function TaskDrawerContent({
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem onSelect={handleArchive}>
-									<Archive className="size-3.5" />В архив
+								<DropdownMenuItem onSelect={handleToggleArchive}>
+									<Archive className="size-3.5" />
+									{isArchived ? "Разархивировать" : "В архив"}
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
