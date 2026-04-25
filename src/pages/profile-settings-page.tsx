@@ -1,9 +1,9 @@
-import { Loader2 } from "lucide-react";
+import { IdCard, KeyRound, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { extractFormErrors, forgotPassword } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
 import { useSettings, useUpdateSettings } from "@/data/use-settings";
@@ -111,51 +111,59 @@ function ProfileForm({ data }: { data: UserSettings }) {
 			</section>
 
 			<section className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm">
-				<h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Личные данные</h3>
-				<form onSubmit={handleSubmit} className="w-full max-w-[28rem] space-y-4">
-					<FloatingInput
-						label="Имя"
-						name="first_name"
-						value={firstName}
-						onChange={(e) => setFirstName(e.target.value)}
-						error={fieldErrors.first_name}
-						autoComplete="given-name"
-					/>
-					<FloatingInput
-						label="Фамилия"
-						name="last_name"
-						value={lastName}
-						onChange={(e) => setLastName(e.target.value)}
-						error={fieldErrors.last_name}
-						autoComplete="family-name"
-					/>
-					<FloatingInput
-						label="Отчество"
-						name="patronymic"
-						value={patronymic}
-						onChange={(e) => setPatronymic(e.target.value)}
-						autoComplete="off"
-					/>
-					<FloatingInput
-						label="Номер телефона"
-						name="phone"
-						value={phone}
-						onChange={(e) => setPhone(e.target.value)}
-						error={phoneError ?? fieldErrors.phone}
-						inputMode="tel"
-						autoComplete="tel"
-					/>
-					<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: Radix Checkbox renders input internally */}
-					<label className="flex items-center gap-2 pt-1">
-						<Checkbox
-							checked={mailingAllowed}
-							onCheckedChange={(checked) => setMailingAllowed(checked === true)}
-							aria-label="Получать уведомления на почту"
+				<div className="mb-4 flex items-center gap-2">
+					<IdCard aria-hidden="true" className="size-5 shrink-0 text-primary" />
+					<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Личные данные</h3>
+				</div>
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<div className="grid gap-4 sm:grid-cols-3">
+						<FloatingInput
+							label="Имя"
+							name="first_name"
+							value={firstName}
+							onChange={(e) => setFirstName(e.target.value)}
+							error={fieldErrors.first_name}
+							autoComplete="given-name"
 						/>
-						<span className="text-sm">Получать уведомления на почту</span>
-					</label>
-					<div className="pt-2">
+						<FloatingInput
+							label="Фамилия"
+							name="last_name"
+							value={lastName}
+							onChange={(e) => setLastName(e.target.value)}
+							error={fieldErrors.last_name}
+							autoComplete="family-name"
+						/>
+						<FloatingInput
+							label="Отчество"
+							name="patronymic"
+							value={patronymic}
+							onChange={(e) => setPatronymic(e.target.value)}
+							autoComplete="off"
+						/>
+					</div>
+					<div className="grid gap-4 sm:grid-cols-2">
+						<FloatingInput
+							label="Номер телефона"
+							name="phone"
+							value={phone}
+							onChange={(e) => setPhone(e.target.value)}
+							error={phoneError ?? fieldErrors.phone}
+							inputMode="tel"
+							autoComplete="tel"
+						/>
+						<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
+					</div>
+					<div className="pt-1">
+						<CheckboxBadge
+							id="mailing-allowed"
+							checked={mailingAllowed}
+							onChange={setMailingAllowed}
+							ariaLabel="Получать уведомления на почту"
+						>
+							Получать уведомления на почту
+						</CheckboxBadge>
+					</div>
+					<div className="flex justify-end border-t border-border pt-4">
 						<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
 							{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
 							Сохранить
@@ -165,15 +173,26 @@ function ProfileForm({ data }: { data: UserSettings }) {
 			</section>
 
 			<section className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm">
-				<h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Безопасность</h3>
-				<h2 className="text-base font-semibold">Изменить пароль</h2>
-				<p className="mt-1 mb-4 max-w-[28rem] text-sm text-muted-foreground">
-					Получить письмо со ссылкой для обновления пароля
-				</p>
-				<Button type="button" variant="outline" onClick={handleForgotPassword} disabled={forgotPending}>
-					{forgotPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-					Изменить пароль
-				</Button>
+				<div className="mb-4 flex items-center gap-2">
+					<KeyRound aria-hidden="true" className="size-5 shrink-0 text-primary" />
+					<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Безопасность</h3>
+				</div>
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="min-w-0">
+						<h2 className="text-base font-semibold">Изменить пароль</h2>
+						<p className="mt-0.5 text-sm text-muted-foreground">Получить письмо со ссылкой для обновления пароля</p>
+					</div>
+					<Button
+						type="button"
+						variant="outline"
+						onClick={handleForgotPassword}
+						disabled={forgotPending}
+						className="sm:shrink-0"
+					>
+						{forgotPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+						Изменить пароль
+					</Button>
+				</div>
 			</section>
 		</>
 	);

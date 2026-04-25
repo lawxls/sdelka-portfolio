@@ -20,13 +20,13 @@ describe("WorkspaceSettingsPage", () => {
 	describe("deadline input", () => {
 		test("renders with default value 3", () => {
 			renderPage();
-			expect(screen.getByLabelText("Дедлайн на ответ")).toHaveValue("3");
+			expect(screen.getByLabelText("Дедлайн ответа на задачи")).toHaveValue("3");
 		});
 
 		test("manual input clamps to bounds on blur", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "50");
 			await user.tab();
@@ -36,7 +36,7 @@ describe("WorkspaceSettingsPage", () => {
 		test("manual input clamps to min on blur", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "0");
 			await user.tab();
@@ -46,7 +46,7 @@ describe("WorkspaceSettingsPage", () => {
 		test("non-numeric characters are rejected", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "abc");
 			expect(input).toHaveValue("");
@@ -69,7 +69,7 @@ describe("WorkspaceSettingsPage", () => {
 		test("save button enabled after deadline change", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "5");
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
@@ -85,7 +85,7 @@ describe("WorkspaceSettingsPage", () => {
 		test("save triggers toast and resets dirty state", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "5");
 			await user.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -96,7 +96,7 @@ describe("WorkspaceSettingsPage", () => {
 		test("save resets dirty tracking to new values", async () => {
 			renderPage();
 			const user = userEvent.setup();
-			const input = screen.getByLabelText("Дедлайн на ответ");
+			const input = screen.getByLabelText("Дедлайн ответа на задачи");
 			await user.clear(input);
 			await user.type(input, "4");
 			await user.click(screen.getByRole("button", { name: "Сохранить" }));
