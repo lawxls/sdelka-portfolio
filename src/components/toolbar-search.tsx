@@ -104,18 +104,8 @@ export function ToolbarSearch({
 						spellCheck={false}
 						autoComplete="off"
 						aria-label={ariaLabel}
-						className="h-9 w-full rounded-[min(var(--radius-md),12px)] pl-9 pr-9 text-base md:text-[0.8125rem]"
+						className="h-9 w-full rounded-[min(var(--radius-md),12px)] pl-9 text-base md:text-[0.8125rem]"
 					/>
-					{value.length > 0 && (
-						<button
-							type="button"
-							aria-label="Очистить"
-							onClick={() => onChange("")}
-							className="absolute right-1 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						>
-							<X className="size-3.5" aria-hidden="true" />
-						</button>
-					)}
 				</div>
 			</div>
 		);

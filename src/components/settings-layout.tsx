@@ -100,7 +100,7 @@ export function SettingsLayout() {
 					<Button
 						type="button"
 						size="sm"
-						className="bg-status-highlight hover:bg-status-highlight/80"
+						className="btn-cta rounded-full border-0"
 						onClick={() => setCompaniesCreateOpen(true)}
 					>
 						<Plus data-icon="inline-start" aria-hidden="true" />
@@ -112,7 +112,7 @@ export function SettingsLayout() {
 					<Button
 						type="button"
 						size="sm"
-						className="bg-status-highlight hover:bg-status-highlight/80"
+						className="btn-cta rounded-full border-0"
 						onClick={() => setEmployeesInviteOpen(true)}
 					>
 						<UserPlus data-icon="inline-start" aria-hidden="true" />
@@ -124,7 +124,7 @@ export function SettingsLayout() {
 					<Button
 						type="button"
 						size="sm"
-						className="bg-status-highlight hover:bg-status-highlight/80"
+						className="btn-cta rounded-full border-0"
 						onClick={() => setEmailsCreateOpen(true)}
 					>
 						<Plus data-icon="inline-start" aria-hidden="true" />
