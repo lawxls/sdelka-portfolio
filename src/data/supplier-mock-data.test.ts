@@ -67,7 +67,8 @@ describe("supplier mock store", () => {
 	it("has получено_кп suppliers for item-1", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
 		const kpCount = suppliers.filter((s) => s.status === "получено_кп").length;
-		expect(kpCount).toBe(ITEM_1_KP_COUNT);
+		// +1 for the auto-seeded «Ваш поставщик» row mirroring item-1.currentSupplier (ПолимерПром).
+		expect(kpCount).toBe(ITEM_1_KP_COUNT + 1);
 	});
 
 	it("получено_кп suppliers have non-null price, tco, and rating", async () => {

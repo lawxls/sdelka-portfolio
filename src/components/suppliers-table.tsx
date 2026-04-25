@@ -8,6 +8,7 @@ import {
 	type LucideIcon,
 	Mails,
 	Truck,
+	UserCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -66,6 +67,10 @@ interface SuppliersTableProps {
 	/** When true, the per-row «Запросить КП» button is disabled with a tooltip —
 	 * the parent still routes bulk actions through a toast so the blocked state is consistent. */
 	searchBlocked?: boolean;
+	/** INN of the item's currentSupplier, if any — drives the «Ваш поставщик» subtext that
+	 * replaces «ИНН: …» on the matching row. Falls back to companyName when INN is absent. */
+	currentSupplierInn?: string;
+	currentSupplierName?: string;
 }
 
 const SEARCH_IN_PROGRESS_TOOLTIP = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
@@ -118,7 +123,14 @@ export function SuppliersTable({
 	isFetchingNextPage,
 	onRowClick,
 	searchBlocked,
+	currentSupplierInn,
+	currentSupplierName,
 }: SuppliersTableProps) {
+	const isYourSupplier = (s: Supplier) => {
+		if (currentSupplierInn) return s.inn === currentSupplierInn;
+		if (currentSupplierName) return s.companyName === currentSupplierName;
+		return false;
+	};
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
 	const searchExpanded = search.length > 0 || searchUserExpanded;
@@ -287,7 +299,14 @@ export function SuppliersTable({
 			cell: (s) => (
 				<div className="flex min-w-0 flex-col gap-0.5">
 					<span className="truncate font-medium">{s.companyName}</span>
-					<span className="truncate text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</span>
+					{isYourSupplier(s) ? (
+						<span className="inline-flex items-center gap-1.5 truncate text-xs font-medium text-highlight-foreground">
+							<UserCheck className="size-3 shrink-0" aria-hidden="true" />
+							Ваш поставщик
+						</span>
+					) : (
+						<span className="truncate text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</span>
+					)}
 				</div>
 			),
 		},
@@ -384,7 +403,14 @@ export function SuppliersTable({
 				<div className="mb-1 flex items-start justify-between gap-2">
 					<div className="min-w-0 flex-1">
 						<div className="truncate font-medium">{s.companyName}</div>
-						<div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</div>
+						{isYourSupplier(s) ? (
+							<div className="inline-flex items-center gap-1.5 text-xs font-medium text-highlight-foreground">
+								<UserCheck className="size-3 shrink-0" aria-hidden="true" />
+								Ваш поставщик
+							</div>
+						) : (
+							<div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</div>
+						)}
 					</div>
 					<div className="shrink-0">{renderStateCell(s, onSendRequest, searchBlocked)}</div>
 				</div>

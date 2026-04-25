@@ -19,37 +19,16 @@ vi.mock("sonner", async () => {
 });
 
 const TEST_ADDRESSES: Address[] = [
-	{
-		id: "addr-1",
-		name: "Главный офис",
-		type: "office",
-		postalCode: "",
-		address: "г. Москва, ул. Ленина, д. 15",
-		contactPerson: "",
-		phone: "",
-		isMain: true,
-	},
-	{
-		id: "addr-2",
-		name: "Склад",
-		type: "warehouse",
-		postalCode: "",
-		address: "г. Москва, ул. Складская, д. 1",
-		contactPerson: "",
-		phone: "",
-		isMain: false,
-	},
+	{ id: "addr-1", name: "Главный офис", address: "г. Москва, ул. Ленина, д. 15", phone: "", isMain: true },
+	{ id: "addr-2", name: "Склад", address: "г. Москва, ул. Складская, д. 1", phone: "", isMain: false },
 ];
 
 function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company {
 	return {
 		id,
 		name,
-		industry: "",
 		website: "",
 		description: "",
-		preferredPayment: "",
-		preferredDelivery: "",
 		additionalComments: "",
 		isMain: false,
 		employeeCount: 0,
@@ -355,6 +334,14 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await advance(user);
 	}
 
+	// «Ваш поставщик» downstream fields (payment / delivery) stay disabled until Название,
+	// ИНН and Цена are all filled. Tests that exercise those fields go through this helper.
+	async function unlockSupplierFields(user: ReturnType<typeof userEvent.setup>) {
+		await user.type(screen.getByLabelText("Название текущего поставщика"), "ACME");
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1");
+	}
+
 	test("renders the supplier fields", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -371,6 +358,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
+		await unlockSupplierFields(user);
 
 		expect(screen.queryByLabelText("Стоимость доставки")).not.toBeInTheDocument();
 
@@ -387,6 +375,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
+		await unlockSupplierFields(user);
 
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 
@@ -395,6 +384,27 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 
 		await user.click(screen.getByRole("button", { name: "Предоплата" }));
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
+	});
+
+	test("Оплата and Доставка stay disabled until Название, ИНН and Цена are all entered", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep2(user);
+
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeDisabled();
+		expect(screen.getByLabelText("Доставка")).toBeDisabled();
+
+		await user.type(screen.getByLabelText("Название текущего поставщика"), "ACME");
+		// Only name → still locked.
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeDisabled();
+
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		// Name + ИНН but no price → still locked.
+		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeDisabled();
+
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "100");
+		expect(screen.getByRole("button", { name: "Отсрочка" })).not.toBeDisabled();
+		expect(screen.getByLabelText("Доставка")).not.toBeDisabled();
 	});
 
 	test("invalid ИНН surfaces inline error on blur", async () => {
@@ -439,6 +449,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await reachStep2(user);
 
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
 		await user.type(screen.getByLabelText("ИНН"), "1234567890");
 		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
 		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
@@ -458,8 +469,8 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await reachStep2(user);
 
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
-		await user.type(screen.getByLabelText("ИНН"), "1234567890");
 		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
+		await user.type(screen.getByLabelText("ИНН"), "1234567890");
 		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
 		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
 

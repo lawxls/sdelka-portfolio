@@ -186,6 +186,7 @@ export function DataTable<T>({
 										columns={columns}
 										isPinned
 										selection={selection}
+										onRowClick={onRowClick}
 										className="bg-accent/60 hover:bg-accent/80"
 									/>
 								))}

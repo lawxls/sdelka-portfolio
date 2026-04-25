@@ -332,6 +332,7 @@ const SEARCH_IN_PROGRESS_BATCH = "Дождитесь завершения пои
 function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
 	const { data: itemDetail } = useItemDetail(itemId);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
+	const currentSupplier = itemDetail?.currentSupplier;
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -497,6 +498,8 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				isLoading={query.isLoading}
 				onRowClick={onSupplierClick}
 				searchBlocked={searchBlocked}
+				currentSupplierInn={currentSupplier?.inn}
+				currentSupplierName={currentSupplier?.companyName}
 				statusCounts={statusCounts}
 				search={search}
 				onSearchChange={setSearch}
@@ -587,23 +590,23 @@ function OffersTabPanel({
 	// company name when no INN is stored on `currentSupplier`.
 	const currentSupplierInn = currentSupplier?.inn;
 	const currentSupplierName = currentSupplier?.companyName;
-	const { suppliers, currentSupplierInList } = useMemo(() => {
+	const { suppliers, currentSupplierInList, currentSupplierRowId } = useMemo(() => {
 		const isCurrent = (s: { inn: string; companyName: string }) => {
 			if (currentSupplierInn) return s.inn === currentSupplierInn;
 			if (currentSupplierName) return s.companyName === currentSupplierName;
 			return false;
 		};
-		let foundCurrent = false;
+		let foundId: string | undefined;
 		const filtered = suppliersRaw.filter((s) => {
 			if (isCurrent(s)) {
-				foundCurrent = true;
+				foundId = s.id;
 				return false;
 			}
 			if (activePaymentTypes.length > 0 && !activePaymentTypes.includes(s.paymentType)) return false;
 			if (!matchesDeliveryFilter(s.deliveryCost, activeDeliveryFilters)) return false;
 			return true;
 		});
-		return { suppliers: filtered, currentSupplierInList: foundCurrent };
+		return { suppliers: filtered, currentSupplierInList: foundId != null, currentSupplierRowId: foundId };
 	}, [suppliersRaw, activePaymentTypes, activeDeliveryFilters, currentSupplierInn, currentSupplierName]);
 
 	const serverTotal = query.data?.pages[0]?.total ?? suppliers.length;
@@ -659,6 +662,7 @@ function OffersTabPanel({
 				totalCount={totalCount}
 				item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
 				currentSupplier={currentSupplier}
+				currentSupplierRowId={currentSupplierRowId}
 				isLoading={query.isLoading}
 				search={search}
 				onSearchChange={setSearch}

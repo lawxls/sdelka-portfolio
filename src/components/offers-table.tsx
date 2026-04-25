@@ -44,6 +44,9 @@ interface OffersTableProps {
 	totalCount: number;
 	item: Pick<ProcurementItem, "quantityPerDelivery">;
 	currentSupplier?: CurrentSupplier | null;
+	/** Real Supplier id of the «Ваш поставщик» row — used as the pinned card's click target.
+	 * When omitted, the pinned card stays un-clickable (legacy items without a seeded supplier). */
+	currentSupplierRowId?: string;
 	isLoading: boolean;
 	search: string;
 	onSearchChange: (query: string) => void;
@@ -71,11 +74,9 @@ const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
-const PINNED_ID = "__current__";
-
-function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
+function buildPinnedSupplier(currentSupplier: CurrentSupplier, rowId: string): Supplier {
 	return {
-		id: PINNED_ID,
+		id: rowId,
 		itemId: "",
 		companyName: currentSupplier.companyName,
 		status: "получено_кп",
@@ -91,7 +92,9 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 		address: "",
 		postalCode: "",
 		pricePerUnit: currentSupplier.pricePerUnit,
-		tco: null,
+		// «Ваш поставщик» has no real TCO — surface the buyer's per-unit price in that
+		// column so the row is comparable against quotes.
+		tco: currentSupplier.pricePerUnit,
 		rating: null,
 		deliveryCost: null,
 		paymentType: currentSupplier.paymentType ?? "prepayment",
@@ -109,6 +112,7 @@ export function OffersTable({
 	totalCount,
 	item,
 	currentSupplier,
+	currentSupplierRowId,
 	isLoading,
 	search,
 	onSearchChange,
@@ -323,7 +327,11 @@ export function OffersTable({
 		},
 	];
 
-	const pinnedRows = currentSupplier ? [buildPinnedSupplier(currentSupplier)] : undefined;
+	// Only pin when we have a real Supplier row backing the click target. Legacy items without
+	// a seeded «Ваш поставщик» (no INN, or imported pre-seed) skip the pinned card altogether
+	// rather than showing a card that looks interactive but isn't.
+	const pinnedRows =
+		currentSupplier && currentSupplierRowId ? [buildPinnedSupplier(currentSupplier, currentSupplierRowId)] : undefined;
 
 	const sentinel = (
 		<>
@@ -344,12 +352,12 @@ export function OffersTable({
 				type="button"
 				data-testid="supplier-card"
 				className={cn(
-					"w-full rounded-lg border p-4 text-left transition-[background-color,scale] duration-150 ease-out",
+					"w-full rounded-lg border p-4 text-left transition-[background-color,scale] duration-150 ease-out active:scale-[0.96] motion-reduce:active:scale-100",
 					ctx.isPinned
-						? "bg-accent/60"
-						: "bg-card hover:bg-muted/50 active:scale-[0.96] active:bg-muted motion-reduce:active:scale-100",
+						? "bg-accent/60 hover:bg-accent/80 active:bg-accent/80"
+						: "bg-card hover:bg-muted/50 active:bg-muted",
 				)}
-				onClick={ctx.isPinned ? undefined : () => onRowClick?.(s.id)}
+				onClick={() => onRowClick?.(s.id)}
 			>
 				<div className="mb-3 flex items-start justify-between gap-2">
 					<div className="min-w-0 flex-1">

@@ -1,5 +1,6 @@
-import { FileText, LoaderCircle, Paperclip, Pencil, X } from "lucide-react";
+import { FileText, Paperclip, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FolderSelect } from "@/components/ui/folder-select";
@@ -150,77 +151,6 @@ function initSupplierForm(item: ProcurementItem): SupplierFormState {
 		deliveryCostType: item.deliveryCostType ?? "",
 		deliveryCost: item.deliveryCost != null ? String(item.deliveryCost) : "",
 	};
-}
-
-function Section({
-	title,
-	editLabel,
-	editing,
-	onEdit,
-	onCancel,
-	onSave,
-	saveDisabled,
-	isPending,
-	children,
-}: {
-	title: string;
-	editLabel?: string;
-	editing?: boolean;
-	onEdit?: () => void;
-	onCancel?: () => void;
-	onSave?: () => void;
-	saveDisabled?: boolean;
-	isPending?: boolean;
-	children: React.ReactNode;
-}) {
-	return (
-		<section>
-			<div className="mb-3 flex items-center gap-1.5 border-b border-border/50 pb-2">
-				<h3 className="text-sm font-semibold text-foreground">{title}</h3>
-				{!editing && editLabel && onEdit && (
-					<button
-						type="button"
-						className="relative inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-[color,scale] duration-150 ease-out hover:text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 after:absolute after:inset-[-8px] after:content-['']"
-						onClick={onEdit}
-						aria-label={editLabel}
-					>
-						<Pencil className="size-3" aria-hidden="true" />
-					</button>
-				)}
-			</div>
-			{children}
-			{editing && onCancel && onSave && (
-				<div className="mt-3 flex justify-end gap-2">
-					<Button type="button" variant="outline" size="sm" onClick={onCancel}>
-						Отмена
-					</Button>
-					<Button type="button" size="sm" disabled={saveDisabled} onClick={onSave}>
-						{isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
-						Сохранить
-					</Button>
-				</div>
-			)}
-		</section>
-	);
-}
-
-function CardGrid({ children }: { children: React.ReactNode }) {
-	return <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
-}
-
-function FieldCard({ label, children, span }: { label: string; children: React.ReactNode; span?: "full" | "half" }) {
-	const spanClass = span === "full" ? "sm:col-span-2 lg:col-span-3" : span === "half" ? "lg:col-span-2" : "";
-	return (
-		<div className={`rounded-md border border-border/60 bg-muted/30 p-2 flex flex-col gap-0.5 ${spanClass}`}>
-			<span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-			{children}
-		</div>
-	);
-}
-
-function ValueText({ value }: { value: string }) {
-	const hasValue = value.length > 0;
-	return <span className={`text-sm ${hasValue ? "" : "text-muted-foreground/50"}`}>{hasValue ? value : "\u2014"}</span>;
 }
 
 function answerValueText(answer: GeneratedAnswer): string {
@@ -519,7 +449,10 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			(existing.pricePerUnit ?? null) !== nextSupplier.pricePerUnit;
 
 		if (supplierChanged) {
-			data.currentSupplier = companyName ? nextSupplier : undefined;
+			// Persist «Ваш поставщик» only when Название, ИНН and Цена are all present —
+			// the Поставщики/Предложения tabs match by ИНН and surface name + price together,
+			// so a partial record would render an unidentifiable row.
+			data.currentSupplier = companyName && inn && nextPrice !== undefined ? nextSupplier : undefined;
 		}
 
 		if (nextPrice !== undefined && nextPrice !== currentItem.currentPrice) {
@@ -605,6 +538,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const isEditingAdditional = editingSection === "additional" && additionalForm !== null;
 	const isEditingSupplier = editingSection === "currentSupplier" && supplierForm !== null;
 	const isEditingAnswers = editingSection === "answers" && answersForm !== null;
+
+	// «Ваш поставщик» is the buyer's anchor — it has no meaning without an identifiable
+	// counterparty (Название, ИНН) and a benchmark price. Lock downstream fields and skip
+	// persistence until all three are present.
+	const supplierBaseFilled =
+		supplierForm != null &&
+		supplierForm.companyName.trim() !== "" &&
+		supplierForm.inn.trim() !== "" &&
+		supplierForm.pricePerUnit.trim() !== "";
 
 	const folder = folders?.find((f) => f.id === item.folderId);
 	const addressesText =
@@ -995,7 +937,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				onEdit={handleEditSupplier}
 				onCancel={handleCancel}
 				onSave={handleSaveSupplier}
-				saveDisabled={!isSupplierDirty() || updateMutation.isPending}
+				saveDisabled={!isSupplierDirty() || !supplierBaseFilled || updateMutation.isPending}
 				isPending={updateMutation.isPending}
 			>
 				<CardGrid>
@@ -1021,6 +963,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								inputMode="numeric"
 								autoComplete="off"
 								spellCheck={false}
+								disabled={!supplierBaseFilled}
 							/>
 						) : (
 							<ValueText value={item.currentSupplier?.inn ?? ""} />
@@ -1053,6 +996,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								<Select
 									value={supplierForm.paymentType}
 									onValueChange={(v) => updateSupplier("paymentType", v as PaymentType)}
+									disabled={!supplierBaseFilled}
 								>
 									<SelectTrigger aria-label="Оплата" className="h-8">
 										<SelectValue />
@@ -1076,6 +1020,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 											onChange={(e) => updateSupplier("deferralDays", e.target.value)}
 											className="w-24"
 											autoComplete="off"
+											disabled={!supplierBaseFilled}
 										/>
 										<span className="text-xs text-muted-foreground">дней</span>
 									</div>
@@ -1092,18 +1037,21 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 											onChange={(e) => updateSupplier("prepaymentPercent", e.target.value)}
 											className="w-20 tabular-nums"
 											autoComplete="off"
+											disabled={!supplierBaseFilled}
 										/>
 										<span className="text-xs text-muted-foreground">%</span>
 									</div>
 								)}
 							</div>
-						) : (
+						) : item.currentSupplier ? (
 							<ValueText
-								value={formatPaymentType(item.currentSupplier?.paymentType ?? "prepayment", {
-									deferralDays: item.currentSupplier?.deferralDays ?? 0,
-									prepaymentPercent: item.currentSupplier?.prepaymentPercent,
+								value={formatPaymentType(item.currentSupplier.paymentType ?? "prepayment", {
+									deferralDays: item.currentSupplier.deferralDays ?? 0,
+									prepaymentPercent: item.currentSupplier.prepaymentPercent,
 								})}
 							/>
+						) : (
+							<ValueText value="" />
 						)}
 					</FieldCard>
 
@@ -1113,6 +1061,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 								<Select
 									value={supplierForm.deliveryCostType || undefined}
 									onValueChange={(v) => updateSupplier("deliveryCostType", v as DeliveryCostType)}
+									disabled={!supplierBaseFilled}
 								>
 									<SelectTrigger aria-label="Тип доставки" className="h-8">
 										<SelectValue placeholder="Не указан" />
@@ -1132,11 +1081,14 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 										value={supplierForm.deliveryCost}
 										onChange={(e) => updateSupplier("deliveryCost", e.target.value)}
 										autoComplete="off"
+										disabled={!supplierBaseFilled}
 									/>
 								)}
 							</div>
-						) : (
+						) : item.currentSupplier ? (
 							<ValueText value={formatDeliveryTypeWithCost(item.deliveryCostType, item.deliveryCost)} />
+						) : (
+							<ValueText value="" />
 						)}
 					</FieldCard>
 				</CardGrid>

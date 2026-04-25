@@ -323,6 +323,11 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 	const { step2, step2Errors, update2, blurInn } = form;
 	const deliveryCostVisible = step2.deliveryCostType === "paid";
+	// «Ваш поставщик» downstream fields stay locked until Название, ИНН and Цена are all
+	// filled — otherwise we'd persist a supplier record with no identifiable counterparty
+	// or price, which leaks into the Поставщики/Предложения tabs as an unnamed row.
+	const supplierBaseFilled =
+		step2.companyName.trim() !== "" && step2.inn.trim() !== "" && step2.pricePerUnit.trim() !== "";
 
 	return (
 		<div className="flex flex-col gap-4 pt-4">
@@ -382,6 +387,7 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 						labels={PAYMENT_TYPE_LABELS}
 						value={step2.paymentType}
 						onChange={(v) => update2("paymentType", v)}
+						disabled={!supplierBaseFilled}
 					/>
 					{step2.paymentType === "deferred" && (
 						<div className="flex items-center gap-1.5">
@@ -395,6 +401,7 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 								aria-label="Дней отсрочки"
 								autoComplete="off"
 								className="w-24"
+								disabled={!supplierBaseFilled}
 							/>
 							<span className="text-sm text-muted-foreground">дней</span>
 						</div>
@@ -411,6 +418,7 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 								aria-label="Размер предоплаты"
 								autoComplete="off"
 								className="w-20 tabular-nums"
+								disabled={!supplierBaseFilled}
 							/>
 							<span className="text-sm text-muted-foreground">%</span>
 						</div>
@@ -423,6 +431,7 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 					<Select
 						value={step2.deliveryCostType ?? undefined}
 						onValueChange={(v) => update2("deliveryCostType", v as typeof step2.deliveryCostType)}
+						disabled={!supplierBaseFilled}
 					>
 						<SelectTrigger aria-label="Доставка" className="w-44">
 							<SelectValue placeholder="Выберите тип" />
@@ -443,6 +452,7 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 								aria-label="Стоимость доставки"
 								autoComplete="off"
 								className="w-32"
+								disabled={!supplierBaseFilled}
 							/>
 							<span className="text-sm text-muted-foreground">₽</span>
 						</div>

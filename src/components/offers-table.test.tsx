@@ -67,11 +67,17 @@ const defaultSuppliers = [
 const itemWithQty = { quantityPerDelivery: 10 };
 
 function renderTable(props: Partial<React.ComponentProps<typeof OffersTable>> = {}) {
+	// Auto-supply a row id whenever a test passes a currentSupplier — the pinned card requires
+	// a real Supplier id backing the click target. Tests that need to omit pinning explicitly
+	// pass `currentSupplier: null`.
+	const autoRowId =
+		props.currentSupplier !== undefined && props.currentSupplier !== null ? "supplier-test-current" : undefined;
 	const defaultProps: React.ComponentProps<typeof OffersTable> = {
 		suppliers: defaultSuppliers,
 		totalCount: defaultSuppliers.length,
 		item: itemWithQty,
 		currentSupplier: null,
+		currentSupplierRowId: autoRowId,
 		isLoading: false,
 		search: "",
 		onSearchChange: vi.fn(),

@@ -5,19 +5,22 @@ export function SegmentedControl<T extends string>({
 	labels,
 	value,
 	onChange,
+	disabled,
 }: {
 	options: readonly T[];
 	labels: Record<T, string>;
 	value: T;
 	onChange: (v: T) => void;
+	disabled?: boolean;
 }) {
 	return (
-		<div className="flex w-fit rounded-lg border border-input">
+		<div className={cn("flex w-fit rounded-lg border border-input", disabled && "pointer-events-none opacity-50")}>
 			{options.map((opt) => (
 				<button
 					key={opt}
 					type="button"
 					aria-pressed={value === opt}
+					disabled={disabled}
 					className={`px-3 py-1.5 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg ${
 						value === opt
 							? "bg-primary text-primary-foreground"

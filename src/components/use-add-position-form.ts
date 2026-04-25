@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type {
 	CurrentSupplier,
 	DeliveryCostType,
@@ -114,26 +114,24 @@ function toNumber(value: string): number | undefined {
 }
 
 function buildCurrentSupplier(step2: Step2State): CurrentSupplier | undefined {
+	// «Ваш поставщик» needs Название, ИНН and Цена together — drop the record otherwise,
+	// even when downstream fields (payment, delivery) are present.
+	const companyName = step2.companyName.trim();
+	const inn = step2.inn.trim();
+	if (companyName === "" || inn === "" || step2.pricePerUnit.trim() === "") return undefined;
+
 	const prepaymentPercentNum = step2.paymentType === "prepayment" ? (toNumber(step2.prepaymentPercent) ?? 100) : 100;
-	const anyValue =
-		step2.companyName.trim() !== "" ||
-		step2.inn.trim() !== "" ||
-		step2.pricePerUnit !== "" ||
-		(step2.paymentType === "deferred" && step2.deferralDays !== "") ||
-		(step2.paymentType === "prepayment" && prepaymentPercentNum !== 100);
-	if (!anyValue) return undefined;
 
 	const supplier: CurrentSupplier = {
-		companyName: step2.companyName.trim(),
+		companyName,
+		inn,
 		paymentType: step2.paymentType,
 		deferralDays: step2.paymentType === "deferred" ? (toNumber(step2.deferralDays) ?? 0) : 0,
-		pricePerUnit: step2.pricePerUnit !== "" ? Number(step2.pricePerUnit) : null,
+		pricePerUnit: Number(step2.pricePerUnit),
 	};
 	if (step2.paymentType === "prepayment" && prepaymentPercentNum !== 100) {
 		supplier.prepaymentPercent = prepaymentPercentNum;
 	}
-	const inn = step2.inn.trim();
-	if (inn !== "") supplier.inn = inn;
 	return supplier;
 }
 
@@ -288,34 +286,31 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		setStep2Errors({});
 	}
 
-	const isDirty = useMemo(
-		() =>
-			step1.companyId !== "" ||
-			step1.folderId !== null ||
-			step1.name !== "" ||
-			step1.description !== "" ||
-			step1.unit !== "" ||
-			step1.quantityPerDelivery !== "" ||
-			step1.annualQuantity !== "" ||
-			step1.addressIds.length > 0 ||
-			step1.unloading !== null ||
-			step1.paymentMethod !== "bank_transfer" ||
-			step1.deferralRequired ||
-			step1.sampleRequired ||
-			step1.analoguesAllowed ||
-			step1.additionalInfo !== "" ||
-			step1.files.length > 0 ||
-			step2.companyName !== "" ||
-			step2.inn !== "" ||
-			step2.pricePerUnit !== "" ||
-			step2.paymentType !== "prepayment" ||
-			step2.deferralDays !== "" ||
-			step2.prepaymentPercent !== "100" ||
-			step2.deliveryCostType !== null ||
-			step2.deliveryCost !== "" ||
-			Object.values(step3.answers).some((a) => a.selectedOption || a.freeText),
-		[step1, step2, step3],
-	);
+	const isDirty =
+		step1.companyId !== "" ||
+		step1.folderId !== null ||
+		step1.name !== "" ||
+		step1.description !== "" ||
+		step1.unit !== "" ||
+		step1.quantityPerDelivery !== "" ||
+		step1.annualQuantity !== "" ||
+		step1.addressIds.length > 0 ||
+		step1.unloading !== null ||
+		step1.paymentMethod !== "bank_transfer" ||
+		step1.deferralRequired ||
+		step1.sampleRequired ||
+		step1.analoguesAllowed ||
+		step1.additionalInfo !== "" ||
+		step1.files.length > 0 ||
+		step2.companyName !== "" ||
+		step2.inn !== "" ||
+		step2.pricePerUnit !== "" ||
+		step2.paymentType !== "prepayment" ||
+		step2.deferralDays !== "" ||
+		step2.prepaymentPercent !== "100" ||
+		step2.deliveryCostType !== null ||
+		step2.deliveryCost !== "" ||
+		Object.values(step3.answers).some((a) => a.selectedOption || a.freeText);
 
 	function toPayload(): NewItemInput {
 		const addressStrings = resolveAddressStrings(step1.companyId, step1.addressIds);

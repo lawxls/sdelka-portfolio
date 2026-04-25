@@ -6,6 +6,7 @@ import { ITEM as ITEM_6 } from "./items/item-6";
 import { ITEM as ITEM_7 } from "./items/item-7";
 import { ITEM as ITEM_8 } from "./items/item-8";
 import { delay, nextId, paginate } from "./mock-utils";
+import { _addYourSupplier } from "./supplier-mock-data";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "./types";
 
@@ -283,6 +284,9 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 		return item;
 	});
 	itemsStore = [...created, ...itemsStore];
+	// Seed the «Ваш поставщик» Supplier row for each newly-created item so it surfaces in
+	// the Поставщики/Предложения tabs immediately. No-op when currentSupplier has no INN.
+	for (const item of created) _addYourSupplier(item.id);
 	return { items: created, isAsync: false };
 }
 

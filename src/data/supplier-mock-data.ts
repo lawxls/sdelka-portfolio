@@ -405,10 +405,68 @@ function getSuppliersForItem(itemId: string): Supplier[] {
 		}
 		const enriched = seed.map(enrichSeed).map(cloneSupplier);
 		const candidates = generateCandidates(itemId, computeCandidateCount(itemId, enriched.length));
-		suppliers = [...enriched, ...candidates];
+		const yours = makeYourSupplier(itemId);
+		suppliers = yours ? [yours, ...enriched, ...candidates] : [...enriched, ...candidates];
 		store.set(itemId, suppliers);
 	}
 	return suppliers;
+}
+
+/** Build a получено_кп Supplier row that mirrors the item's `currentSupplier` (the «Ваш поставщик»).
+ * INN/companyName come from currentSupplier verbatim; profile fields (region/revenue/etc.) are
+ * deterministically derived from the INN so the row looks like a real legal entity. Returns null
+ * when the item has no currentSupplier or no INN. */
+function makeYourSupplier(itemId: string): Supplier | null {
+	const item = _getItem(itemId);
+	const cs = item?.currentSupplier;
+	if (!cs?.inn) return null;
+	const identityHash = hash(cs.inn);
+	const profile = makeIdentityProfile(identityHash);
+	const perRowHash = hash(`${itemId}:current`);
+	const slug = `current-${itemId}`;
+	const domain = `${slug}.ru`;
+	return {
+		id: yourSupplierId(itemId),
+		itemId,
+		companyName: cs.companyName,
+		status: "получено_кп",
+		archived: false,
+		...profile,
+		// Override the hash-derived INN with the one the user actually entered.
+		inn: cs.inn,
+		companyType: inferCompanyType(cs.companyName),
+		email: `info@${domain}`,
+		website: `https://${domain}`,
+		pricePerUnit: cs.pricePerUnit,
+		tco: cs.pricePerUnit,
+		rating: 90,
+		deliveryCost: null,
+		paymentType: cs.paymentType ?? "prepayment",
+		deferralDays: cs.deferralDays,
+		prepaymentPercent: cs.prepaymentPercent,
+		leadTimeDays: null,
+		agentComment: "",
+		documents: [],
+		chatHistory: [],
+		quoteReceivedAt: makeQuoteReceivedAt(perRowHash),
+	};
+}
+
+function yourSupplierId(itemId: string): string {
+	// Format keeps the `supplier-<itemId>-<x>` shape that SUPPLIER_ID_RE expects so deep-link lookups
+	// via getSupplierById work without special-casing.
+	return `supplier-${itemId}-current`;
+}
+
+/** Add (or replace) the item's «Ваш поставщик» row. Called from createItemsBatchMock when a
+ * brand-new item carries a currentSupplier with INN; the lazy seed path uses makeYourSupplier
+ * directly. Idempotent: replacing keeps the existing user-entered ИНН as the stable identity. */
+export function _addYourSupplier(itemId: string): void {
+	const yours = makeYourSupplier(itemId);
+	if (!yours) return;
+	const existing = store.get(itemId) ?? [];
+	const filtered = existing.filter((s) => s.id !== yours.id);
+	store.set(itemId, [yours, ...filtered]);
 }
 
 export function _resetSupplierStore() {
@@ -419,7 +477,8 @@ export function _resetSupplierStore() {
 export function _setSuppliersForItem(itemId: string, seeds: readonly SupplierSeed[]) {
 	const enriched = seeds.map(enrichSeed).map(cloneSupplier);
 	const candidates = generateCandidates(itemId, computeCandidateCount(itemId, enriched.length));
-	store.set(itemId, [...enriched, ...candidates]);
+	const yours = makeYourSupplier(itemId);
+	store.set(itemId, yours ? [yours, ...enriched, ...candidates] : [...enriched, ...candidates]);
 }
 
 export function _setSendShouldFail(fail: boolean) {
@@ -552,7 +611,7 @@ export async function getSupplier(itemId: string, supplierId: string): Promise<S
 // `candidate-supplier-item-<N>-<X>` for generated candidates. Parsing keeps
 // `getSupplierById` from forcing candidate generation for every other item just
 // to satisfy a deep link.
-const SUPPLIER_ID_RE = /^(?:candidate-)?supplier-(item-\d+)-\d+$/;
+const SUPPLIER_ID_RE = /^(?:candidate-)?supplier-(item-\d+)-(?:\d+|current)$/;
 
 export async function getSupplierById(supplierId: string): Promise<Supplier | null> {
 	await simulateDelay();
