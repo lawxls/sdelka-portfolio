@@ -25,11 +25,8 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
-		industry: "",
 		website: "",
 		description: "",
-		preferredPayment: "",
-		preferredDelivery: "",
 		additionalComments: "",
 		isMain: false,
 		employeeCount: 1,
@@ -38,10 +35,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 			{
 				id: `addr-${id}-1`,
 				name: "Офис",
-				type: "office",
-				postalCode: "123456",
 				address: "г. Москва",
-				contactPerson: "Иванов",
 				phone: "+71234567890",
 				isMain: true,
 			},
@@ -56,14 +50,14 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 				role: "admin",
 				phone: "+71234567890",
 				email: "ivan@example.com",
-				isResponsible: true,
 				permissions: {
 					id: "perm-1",
 					employeeId: 1,
-					analytics: "edit",
 					procurement: "edit",
-					companies: "edit",
 					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
 				},
 			},
 		],
@@ -220,10 +214,7 @@ describe("useCreateCompany", () => {
 			name: "Новая компания",
 			address: {
 				name: "Офис",
-				type: "office",
-				postalCode: "123456",
 				address: "г. Москва, ул. Тестовая, д. 1",
-				contactPerson: "Иванов",
 				phone: "+71234567890",
 			},
 		});
@@ -252,10 +243,7 @@ describe("useCreateAddress", () => {
 
 		result.current.create.mutate({
 			name: "Новый офис",
-			type: "office",
-			postalCode: "111111",
 			address: "г. Москва, ул. Новая, д. 5",
-			contactPerson: "Петров",
 			phone: "+79001234567",
 		});
 
@@ -291,26 +279,8 @@ describe("useDeleteAddress", () => {
 		companiesMock._setCompanies([
 			makeStored("c1", {
 				addresses: [
-					{
-						id: "a1",
-						name: "Офис 1",
-						type: "office",
-						postalCode: "",
-						address: "",
-						contactPerson: "",
-						phone: "",
-						isMain: true,
-					},
-					{
-						id: "a2",
-						name: "Офис 2",
-						type: "office",
-						postalCode: "",
-						address: "",
-						contactPerson: "",
-						phone: "",
-						isMain: false,
-					},
+					{ id: "a1", name: "Офис 1", address: "", phone: "", isMain: true },
+					{ id: "a2", name: "Офис 2", address: "", phone: "", isMain: false },
 				],
 			}),
 		]);
@@ -354,12 +324,11 @@ describe("useCreateEmployee", () => {
 			role: "user",
 			phone: "+79001234567",
 			email: "petr@example.com",
-			isResponsible: false,
 		});
 
 		await waitFor(() => expect(result.current.create.isSuccess).toBe(true));
 		expect(companiesMock._getCompanies()[0].employees).toHaveLength(1);
-		expect(companiesMock._getCompanies()[0].employees[0].permissions.analytics).toBe("none");
+		expect(companiesMock._getCompanies()[0].employees[0].permissions.procurement).toBe("none");
 	});
 });
 
@@ -399,14 +368,14 @@ describe("useDeleteEmployee", () => {
 						role: "admin",
 						phone: "",
 						email: "",
-						isResponsible: true,
 						permissions: {
 							id: "p1",
 							employeeId: 1,
-							analytics: "edit",
 							procurement: "edit",
-							companies: "edit",
 							tasks: "edit",
+							companies: "edit",
+							employees: "edit",
+							emails: "edit",
 						},
 					},
 					{
@@ -418,14 +387,14 @@ describe("useDeleteEmployee", () => {
 						role: "user",
 						phone: "",
 						email: "",
-						isResponsible: false,
 						permissions: {
 							id: "p2",
 							employeeId: 2,
-							analytics: "none",
 							procurement: "none",
-							companies: "none",
 							tasks: "none",
+							companies: "none",
+							employees: "none",
+							emails: "none",
 						},
 					},
 				],
@@ -464,9 +433,9 @@ describe("useUpdateEmployeePermissions", () => {
 
 		await waitFor(() => expect(result.current.detail.data).toBeDefined());
 
-		result.current.updatePerms.mutate({ employeeId: empId, data: { analytics: "view" } });
+		result.current.updatePerms.mutate({ employeeId: empId, data: { employees: "view" } });
 
 		await waitFor(() => expect(result.current.updatePerms.isSuccess).toBe(true));
-		expect(companiesMock._getCompanies()[0].employees[0].permissions.analytics).toBe("view");
+		expect(companiesMock._getCompanies()[0].employees[0].permissions.employees).toBe("view");
 	});
 });

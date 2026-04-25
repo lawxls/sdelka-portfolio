@@ -18,14 +18,12 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "admin",
 		phone: "+71234567890",
 		email: "ivan@example.com",
-		isResponsible: true,
 		registeredAt: "2024-01-15T10:00:00Z",
 		companies: [
 			{
 				id: "c1",
 				name: "Компания А",
 				isMain: true,
-				responsibleEmployeeName: null,
 				addresses: [],
 				employeeCount: 3,
 				procurementItemCount: 5,
@@ -34,10 +32,11 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-1",
 			employeeId: 1,
-			analytics: "edit",
 			procurement: "edit",
-			companies: "edit",
 			tasks: "edit",
+			companies: "edit",
+			employees: "edit",
+			emails: "edit",
 		},
 	},
 	{
@@ -49,16 +48,16 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "+79876543210",
 		email: "maria@example.com",
-		isResponsible: false,
 		registeredAt: null,
 		companies: [],
 		permissions: {
 			id: "perm-2",
 			employeeId: 2,
-			analytics: "none",
 			procurement: "none",
-			companies: "none",
 			tasks: "none",
+			companies: "none",
+			employees: "none",
+			emails: "none",
 		},
 	},
 ];

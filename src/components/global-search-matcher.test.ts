@@ -17,7 +17,6 @@ function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): W
 		role: "user",
 		phone: "+79991234567",
 		email: `employee${id}@example.com`,
-		isResponsible: false,
 		registeredAt: "2024-01-15T10:00:00Z",
 		companies: [],
 		...overrides,

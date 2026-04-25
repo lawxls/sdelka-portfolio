@@ -22,11 +22,8 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
-		industry: "",
 		website: "",
 		description: "",
-		preferredPayment: "",
-		preferredDelivery: "",
 		additionalComments: "",
 		isMain: false,
 		employeeCount: 0,
@@ -35,10 +32,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 			{
 				id: `addr-${id}-1`,
 				name: "Офис",
-				type: "office",
-				postalCode: "101000",
 				address: "г. Москва",
-				contactPerson: "Иванов",
 				phone: "+71234567890",
 				isMain: true,
 			},
@@ -53,14 +47,14 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 				role: "admin",
 				phone: "+71234567890",
 				email: "ivan@example.com",
-				isResponsible: true,
 				permissions: {
 					id: "perm-1",
 					employeeId: 1,
-					analytics: "edit",
 					procurement: "edit",
-					companies: "edit",
 					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
 				},
 			},
 		],
@@ -116,14 +110,14 @@ describe("fetchCompaniesMock", () => {
 				role: "user" as const,
 				phone: "",
 				email: "",
-				isResponsible: i === 0,
 				permissions: {
 					id: `p${i}`,
 					employeeId: i + 1,
-					analytics: "none" as const,
 					procurement: "none" as const,
-					companies: "none" as const,
 					tasks: "none" as const,
+					companies: "none" as const,
+					employees: "none" as const,
+					emails: "none" as const,
 				},
 			}));
 		_setCompanies([
@@ -157,53 +151,17 @@ describe("fetchCompaniesMock", () => {
 		const result = await fetchCompaniesMock({});
 		const first = result.companies[0];
 		expect(first).not.toHaveProperty("employees");
-		expect(first).not.toHaveProperty("industry");
-		expect(first.addresses[0]).not.toHaveProperty("postalCode");
-	});
-
-	it("computes responsibleEmployeeName from employees", async () => {
-		_setCompanies([
-			makeStored("c1", {
-				employees: [
-					{
-						id: 1,
-						firstName: "Алексей",
-						lastName: "Петров",
-						patronymic: "Сергеевич",
-						position: "Директор",
-						role: "admin",
-						phone: "",
-						email: "",
-						isResponsible: true,
-						permissions: {
-							id: "p1",
-							employeeId: 1,
-							analytics: "edit",
-							procurement: "edit",
-							companies: "edit",
-							tasks: "edit",
-						},
-					},
-				],
-			}),
-		]);
-		const result = await fetchCompaniesMock({});
-		expect(result.companies[0].responsibleEmployeeName).toBe("Петров Алексей");
-	});
-
-	it("returns null responsibleEmployeeName when none responsible", async () => {
-		_setCompanies([makeStored("c1", { employees: [] })]);
-		const result = await fetchCompaniesMock({});
-		expect(result.companies[0].responsibleEmployeeName).toBeNull();
+		expect(first).not.toHaveProperty("description");
+		expect(first.addresses[0]).not.toHaveProperty("phone");
 	});
 });
 
 describe("fetchCompanyMock", () => {
 	it("returns full company by id", async () => {
-		_setCompanies([makeStored("c1", { name: "Альфа", industry: "Строительство" })]);
+		_setCompanies([makeStored("c1", { name: "Альфа", description: "Описание Альфы" })]);
 		const result = await fetchCompanyMock("c1");
 		expect(result.name).toBe("Альфа");
-		expect(result.industry).toBe("Строительство");
+		expect(result.description).toBe("Описание Альфы");
 		expect(result.addresses).toHaveLength(1);
 		expect(result.employees).toHaveLength(1);
 	});
@@ -219,19 +177,16 @@ describe("createCompanyMock", () => {
 		_setCompanies([]);
 		const created = await createCompanyMock({
 			name: "Новая",
-			industry: "IT",
+			website: "https://example.com",
 			address: {
 				name: "Главный офис",
-				type: "office",
-				postalCode: "123456",
 				address: "г. Москва, ул. Новая, 1",
-				contactPerson: "Петров",
 				phone: "+79991112233",
 			},
 		});
 		expect(created.id).toBeTruthy();
 		expect(created.name).toBe("Новая");
-		expect(created.industry).toBe("IT");
+		expect(created.website).toBe("https://example.com");
 		expect(created.addresses).toHaveLength(1);
 		expect(created.addresses[0].id).toBeTruthy();
 		expect(created.addresses[0].isMain).toBe(true);
@@ -243,9 +198,9 @@ describe("createCompanyMock", () => {
 describe("updateCompanyMock", () => {
 	it("patches fields", async () => {
 		_setCompanies([makeStored("c1", { name: "Old" })]);
-		const updated = await updateCompanyMock("c1", { name: "New", industry: "Финансы" });
+		const updated = await updateCompanyMock("c1", { name: "New", description: "Финансы" });
 		expect(updated.name).toBe("New");
-		expect(updated.industry).toBe("Финансы");
+		expect(updated.description).toBe("Финансы");
 		expect(_getCompanies()[0].name).toBe("New");
 	});
 
@@ -272,10 +227,7 @@ describe("createAddressMock", () => {
 		_setCompanies([makeStored("c1", { addresses: [] })]);
 		const created = await createAddressMock("c1", {
 			name: "Склад",
-			type: "warehouse",
-			postalCode: "111000",
 			address: "г. Подольск",
-			contactPerson: "Сидоров",
 			phone: "+79993334455",
 		});
 		expect(created.id).toBeTruthy();
@@ -304,26 +256,8 @@ describe("deleteAddressMock", () => {
 		_setCompanies([
 			makeStored("c1", {
 				addresses: [
-					{
-						id: "a1",
-						name: "A",
-						type: "office",
-						postalCode: "",
-						address: "",
-						contactPerson: "",
-						phone: "",
-						isMain: true,
-					},
-					{
-						id: "a2",
-						name: "B",
-						type: "warehouse",
-						postalCode: "",
-						address: "",
-						contactPerson: "",
-						phone: "",
-						isMain: false,
-					},
+					{ id: "a1", name: "A", address: "", phone: "", isMain: true },
+					{ id: "a2", name: "B", address: "", phone: "", isMain: false },
 				],
 			}),
 		]);
@@ -343,12 +277,12 @@ describe("createEmployeeMock", () => {
 			role: "user",
 			phone: "+79991234567",
 			email: "anna@example.com",
-			isResponsible: false,
 		});
 		expect(created.id).toBeGreaterThan(0);
 		expect(created.firstName).toBe("Анна");
 		expect(created.permissions.employeeId).toBe(created.id);
-		expect(created.permissions.analytics).toBe("none");
+		expect(created.permissions.procurement).toBe("none");
+		expect(created.permissions.emails).toBe("none");
 		expect(_getCompanies()[0].employees).toHaveLength(1);
 	});
 });
@@ -382,9 +316,9 @@ describe("updateEmployeePermissionsMock", () => {
 	it("patches permissions and returns the new permissions object", async () => {
 		_setCompanies([makeStored("c1")]);
 		const empId = _getCompanies()[0].employees[0].id;
-		const result = await updateEmployeePermissionsMock("c1", empId, { analytics: "view" });
-		expect(result.analytics).toBe("view");
-		expect(_getCompanies()[0].employees[0].permissions.analytics).toBe("view");
+		const result = await updateEmployeePermissionsMock("c1", empId, { employees: "view" });
+		expect(result.employees).toBe("view");
+		expect(_getCompanies()[0].employees[0].permissions.employees).toBe("view");
 	});
 
 	it("preserves untouched permissions", async () => {
@@ -392,7 +326,7 @@ describe("updateEmployeePermissionsMock", () => {
 		const empId = _getCompanies()[0].employees[0].id;
 		const result = await updateEmployeePermissionsMock("c1", empId, { tasks: "none" });
 		expect(result.tasks).toBe("none");
-		expect(result.analytics).toBe("edit");
+		expect(result.procurement).toBe("edit");
 	});
 });
 

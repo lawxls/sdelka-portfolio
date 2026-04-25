@@ -209,48 +209,46 @@ export function getOverpayment(item: ProcurementItem): number | null {
 
 // --- Companies ---
 
-export type AddressType = "warehouse" | "office" | "production";
-
-export const ADDRESS_TYPE_LABELS: Record<AddressType, string> = {
-	warehouse: "Склад",
-	office: "Офис",
-	production: "Производство",
-};
-
-export const ADDRESS_TYPES = Object.keys(ADDRESS_TYPE_LABELS) as AddressType[];
-
-export type EmployeeRole = "owner" | "admin" | "user";
+export type EmployeeRole = "admin" | "user";
 
 export const ROLE_LABELS: Record<EmployeeRole, string> = {
-	owner: "Владелец",
 	admin: "Администратор",
 	user: "Пользователь",
 };
 
-export const PRIVILEGED_ROLES: ReadonlySet<EmployeeRole> = new Set(["admin", "owner"]);
+export const PRIVILEGED_ROLES: ReadonlySet<EmployeeRole> = new Set(["admin"]);
 
 export const ASSIGNABLE_ROLES: EmployeeRole[] = ["admin", "user"];
 
 export interface Address {
 	id: string;
 	name: string;
-	type: AddressType;
-	postalCode: string;
 	address: string;
-	contactPerson: string;
 	phone: string;
 	isMain: boolean;
 }
 
 export type PermissionLevel = "none" | "view" | "edit";
 
+export const PERMISSION_MODULE_KEYS = ["procurement", "tasks", "companies", "employees", "emails"] as const;
+export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
+
+export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
+	procurement: "Закупки",
+	tasks: "Задачи",
+	companies: "Компании",
+	employees: "Сотрудники",
+	emails: "Почты",
+};
+
 export interface EmployeePermissions {
 	id: string;
 	employeeId: number;
-	analytics: PermissionLevel;
 	procurement: PermissionLevel;
-	companies: PermissionLevel;
 	tasks: PermissionLevel;
+	companies: PermissionLevel;
+	employees: PermissionLevel;
+	emails: PermissionLevel;
 }
 
 export interface Employee {
@@ -262,18 +260,14 @@ export interface Employee {
 	role: EmployeeRole;
 	phone: string;
 	email: string;
-	isResponsible: boolean;
 	registeredAt?: string | null;
 }
 
 export interface Company {
 	id: string;
 	name: string;
-	industry: string;
 	website: string;
 	description: string;
-	preferredPayment: string;
-	preferredDelivery: string;
 	additionalComments: string;
 	isMain: boolean;
 	employeeCount: number;
@@ -285,7 +279,6 @@ export interface Company {
 export interface AddressSummary {
 	id: string;
 	name: string;
-	type: AddressType;
 	address: string;
 	isMain: boolean;
 }
@@ -294,7 +287,6 @@ export interface CompanySummary {
 	id: string;
 	name: string;
 	isMain: boolean;
-	responsibleEmployeeName: string | null;
 	addresses: AddressSummary[];
 	employeeCount: number;
 	procurementItemCount: number;

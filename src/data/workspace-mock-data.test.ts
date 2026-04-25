@@ -23,7 +23,7 @@ beforeEach(() => {
 describe("me", () => {
 	it("returns seeded current user", async () => {
 		const me = await fetchMeMock();
-		expect(me).toEqual({ id: 1, role: "owner" });
+		expect(me).toEqual({ id: 1, role: "admin" });
 	});
 
 	it("reflects _setMe override", async () => {
@@ -104,7 +104,7 @@ describe("workspace employee detail", () => {
 		const detail = await fetchWorkspaceEmployeeMock(1);
 		expect(detail.id).toBe(1);
 		expect(detail.permissions).toBeDefined();
-		expect(detail.permissions.analytics).toBe("edit");
+		expect(detail.permissions.procurement).toBe("edit");
 	});
 
 	it("throws for unknown id", async () => {
@@ -123,7 +123,7 @@ describe("inviteEmployees", () => {
 		expect(added.registeredAt).toBeNull();
 
 		const detail = await fetchWorkspaceEmployeeMock(added.id);
-		expect(detail.permissions.analytics).toBe("none");
+		expect(detail.permissions.emails).toBe("none");
 		expect(detail.permissions.procurement).toBe("none");
 	});
 
@@ -152,7 +152,7 @@ describe("updateWorkspaceEmployeePermissions", () => {
 	it("patches only provided levels and persists", async () => {
 		const result = await updateWorkspaceEmployeePermissionsMock(3, { procurement: "none" });
 		expect(result.procurement).toBe("none");
-		expect(result.analytics).toBe("view"); // untouched
+		expect(result.tasks).toBe("edit"); // untouched
 		const detail = await fetchWorkspaceEmployeeMock(3);
 		expect(detail.permissions.procurement).toBe("none");
 	});
@@ -174,16 +174,16 @@ describe("_setWorkspaceEmployees", () => {
 				role: "user",
 				phone: "",
 				email: "test@x.com",
-				isResponsible: false,
 				registeredAt: null,
 				companies: [],
 				permissions: {
 					id: "perm-500",
 					employeeId: 500,
-					analytics: "edit",
 					procurement: "edit",
-					companies: "edit",
 					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
 				},
 			},
 		];

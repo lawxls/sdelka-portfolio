@@ -8,7 +8,7 @@ import { extractFormErrors, forgotPassword } from "@/data/auth-api";
 import type { UserSettings } from "@/data/settings-api";
 import { useSettings, useUpdateSettings } from "@/data/use-settings";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatDate, getInitials } from "@/lib/format";
+import { formatDate, formatFullName, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
@@ -77,7 +77,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 
 	const initials = getInitials(data.first_name, data.last_name);
 	const avatarColor = getAvatarColor(data.avatar_icon);
-	const fullName = [data.last_name, data.first_name, data.patronymic].filter(Boolean).join(" ");
+	const fullName = formatFullName(data.last_name, data.first_name, data.patronymic);
 	const joinDate = formatDate(data.date_joined);
 
 	return (

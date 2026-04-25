@@ -13,11 +13,8 @@ function makeCompanyDoc(id: string, name: string): Company {
 	return {
 		id,
 		name,
-		industry: "",
 		website: "",
 		description: "",
-		preferredPayment: "",
-		preferredDelivery: "",
 		additionalComments: "",
 		isMain: false,
 		employeeCount: 0,

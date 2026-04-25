@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useDeleteWorkspaceEmployees, useWorkspaceEmployees } from "@/data/use-workspace-employees";
 import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatFullName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
@@ -17,10 +18,6 @@ const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
 function formatRegistrationDate(registeredAt: string | null | undefined): string {
 	if (!registeredAt) return "Приглашение отправлено";
 	return dateFormatter.format(new Date(registeredAt));
-}
-
-function formatFullName(employee: WorkspaceEmployee): string {
-	return [employee.lastName, employee.firstName, employee.patronymic].filter(Boolean).join(" ");
 }
 
 export function EmployeesSettingsPage() {
@@ -105,7 +102,7 @@ export function EmployeesSettingsPage() {
 					<div className="flex flex-col gap-2 p-3">
 						{employees.map((employee) => {
 							const isSelected = selected.has(employee.id);
-							const fullName = formatFullName(employee);
+							const fullName = formatFullName(employee.lastName, employee.firstName, employee.patronymic);
 							return (
 								<article
 									key={employee.id}
@@ -184,12 +181,14 @@ export function EmployeesSettingsPage() {
 											<Checkbox
 												checked={isSelected}
 												onCheckedChange={() => toggleRow(employee.id)}
-												aria-label={`Выбрать ${formatFullName(employee)}`}
+												aria-label={`Выбрать ${formatFullName(employee.lastName, employee.firstName, employee.patronymic)}`}
 											/>
 										</td>
 										<td className="px-lg py-sm">
 											<div className="flex flex-col leading-tight">
-												<span className="font-medium text-foreground">{formatFullName(employee)}</span>
+												<span className="font-medium text-foreground">
+													{formatFullName(employee.lastName, employee.firstName, employee.patronymic)}
+												</span>
 												{employee.position && (
 													<span className="mt-0.5 text-xs text-muted-foreground">{employee.position}</span>
 												)}

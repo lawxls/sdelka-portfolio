@@ -21,30 +21,32 @@ interface InviteCard {
 	companies: string[];
 }
 
-function createEmptyCard(): InviteCard {
+function createEmptyCard(lockedCompanyId?: string): InviteCard {
 	return {
 		key: crypto.randomUUID(),
 		email: "",
 		position: "",
 		role: "user",
-		companies: [],
+		companies: lockedCompanyId ? [lockedCompanyId] : [],
 	};
 }
 
 interface InviteEmployeesDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	/** When set, the company picker is hidden and every invite is scoped to this id. */
+	lockedCompanyId?: string;
 }
 
-export function InviteEmployeesDrawer({ open, onOpenChange }: InviteEmployeesDrawerProps) {
-	const [cards, setCards] = useState<InviteCard[]>(() => [createEmptyCard()]);
+export function InviteEmployeesDrawer({ open, onOpenChange, lockedCompanyId }: InviteEmployeesDrawerProps) {
+	const [cards, setCards] = useState<InviteCard[]>(() => [createEmptyCard(lockedCompanyId)]);
 	const [validatedKeys, setValidatedKeys] = useState<Set<string>>(() => new Set());
 	const { data: allCompanies } = useProcurementCompanies();
 	const inviteMutation = useInviteEmployees();
 
 	function handleOpenChange(next: boolean) {
 		if (!next) {
-			setCards([createEmptyCard()]);
+			setCards([createEmptyCard(lockedCompanyId)]);
 			setValidatedKeys(new Set());
 			inviteMutation.reset();
 		}
@@ -61,7 +63,7 @@ export function InviteEmployeesDrawer({ open, onOpenChange }: InviteEmployeesDra
 			});
 			return;
 		}
-		setCards((prev) => [...prev, createEmptyCard()]);
+		setCards((prev) => [...prev, createEmptyCard(lockedCompanyId)]);
 	}
 
 	function removeCard(key: string) {
@@ -113,6 +115,7 @@ export function InviteEmployeesDrawer({ open, onOpenChange }: InviteEmployeesDra
 							canRemove={cards.length > 1}
 							emailError={validatedKeys.has(card.key) && card.email.trim() === ""}
 							allCompanies={allCompanies}
+							hideCompanyPicker={lockedCompanyId != null}
 							onUpdate={(patch) => updateCard(card.key, patch)}
 							onRemove={() => removeCard(card.key)}
 						/>
@@ -144,6 +147,7 @@ function InviteCardRow({
 	canRemove,
 	emailError,
 	allCompanies,
+	hideCompanyPicker,
 	onUpdate,
 	onRemove,
 }: {
@@ -152,6 +156,7 @@ function InviteCardRow({
 	canRemove: boolean;
 	emailError: boolean;
 	allCompanies: CompanySummary[];
+	hideCompanyPicker: boolean;
 	onUpdate: (patch: Partial<Omit<InviteCard, "key">>) => void;
 	onRemove: () => void;
 }) {
@@ -227,7 +232,7 @@ function InviteCardRow({
 					</Select>
 				</div>
 
-				{allCompanies.length > 0 && (
+				{!hideCompanyPicker && allCompanies.length > 0 && (
 					<div className="flex flex-col gap-1.5">
 						<span className="text-xs text-muted-foreground">Компании</span>
 						{allCompanies.map((company) => (

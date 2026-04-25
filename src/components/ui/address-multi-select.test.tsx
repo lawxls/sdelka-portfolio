@@ -5,20 +5,8 @@ import type { AddressSummary } from "@/data/types";
 import { AddressMultiSelect } from "./address-multi-select";
 
 const ADDRESSES: AddressSummary[] = [
-	{
-		id: "a1",
-		name: "Главный офис",
-		type: "office",
-		address: "г. Москва, ул. Ленина, д. 15",
-		isMain: true,
-	},
-	{
-		id: "a2",
-		name: "Склад",
-		type: "warehouse",
-		address: "г. Москва, ул. Складская, д. 1",
-		isMain: false,
-	},
+	{ id: "a1", name: "Главный офис", address: "г. Москва, ул. Ленина, д. 15", isMain: true },
+	{ id: "a2", name: "Склад", address: "г. Москва, ул. Складская, д. 1", isMain: false },
 ];
 
 function openPopover(user: ReturnType<typeof userEvent.setup>) {

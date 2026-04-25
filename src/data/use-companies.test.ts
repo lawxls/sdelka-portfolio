@@ -15,27 +15,13 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
-		industry: "",
 		website: "",
 		description: "",
-		preferredPayment: "",
-		preferredDelivery: "",
 		additionalComments: "",
 		isMain: false,
 		employeeCount: 0,
 		procurementItemCount: 0,
-		addresses: [
-			{
-				id: `addr-${id}`,
-				name: "Офис",
-				type: "office",
-				postalCode: "",
-				address: "г. Москва",
-				contactPerson: "",
-				phone: "",
-				isMain: true,
-			},
-		],
+		addresses: [{ id: `addr-${id}`, name: "Офис", address: "г. Москва", phone: "", isMain: true }],
 		employees: [],
 		...overrides,
 	};

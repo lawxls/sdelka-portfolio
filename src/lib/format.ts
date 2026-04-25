@@ -37,6 +37,31 @@ export function formatDeviation(value: number | null | undefined): { text: strin
 	return { text: `${triangle}${formatPercent(value)}`, className: signClassName(value) };
 }
 
+/** Russian phone display: stored as raw digits with optional `+7` prefix → `+7 (XXX) XXX-XX-XX`.
+ * Returns "" for empty input. Truncates at 10 subscriber digits. Recognises both `7` and `8` country prefixes. */
+export function formatPhone(raw: string): string {
+	const digits = raw.replace(/\D/g, "").replace(/^[78]/, "").slice(0, 10);
+	if (digits.length === 0) return "";
+	const a = digits.slice(0, 3);
+	const b = digits.slice(3, 6);
+	const c = digits.slice(6, 8);
+	const d = digits.slice(8, 10);
+	let out = "+7";
+	if (a) out += ` (${a}`;
+	if (a.length === 3) out += ")";
+	if (b) out += ` ${b}`;
+	if (c) out += `-${c}`;
+	if (d) out += `-${d}`;
+	return out;
+}
+
+/** Parse formatted phone back to raw digits prefixed with `+7`. Returns "" if no digits. */
+export function parsePhone(formatted: string): string {
+	const digits = formatted.replace(/\D/g, "").replace(/^[78]/, "").slice(0, 10);
+	if (digits.length === 0) return "";
+	return `+7${digits}`;
+}
+
 const integerFormatter = new Intl.NumberFormat("ru-RU");
 
 export function formatInteger(value: number): string {
@@ -148,6 +173,11 @@ export function stripProtocol(url: string): string {
 export function formatAssigneeName(assignee: { firstName: string; lastName: string } | null): string {
 	if (!assignee) return "Не назначен";
 	return `${assignee.lastName} ${assignee.firstName}`;
+}
+
+/** «Иванов Иван Иванович» — last/first/patronymic, omitting blanks. */
+export function formatFullName(lastName: string, firstName: string, patronymic?: string | null): string {
+	return [lastName, firstName, patronymic].filter(Boolean).join(" ");
 }
 
 export function isOverdue(iso: string): boolean {

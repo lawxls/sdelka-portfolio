@@ -4,7 +4,9 @@ import {
 	formatCurrency,
 	formatDeviation,
 	formatPercent,
+	formatPhone,
 	formatRussianPlural,
+	parsePhone,
 	signClassName,
 } from "./format";
 
@@ -222,5 +224,61 @@ describe("formatRussianPlural", () => {
 
 	it("101 uses one form", () => {
 		expect(formatRussianPlural(101, forms)).toMatch(/101\s+день/);
+	});
+});
+
+describe("formatPhone", () => {
+	it("returns empty for empty input", () => {
+		expect(formatPhone("")).toBe("");
+	});
+
+	it("returns empty when only non-digits", () => {
+		expect(formatPhone("+()-")).toBe("");
+	});
+
+	it("formats `+7XXXXXXXXXX`", () => {
+		expect(formatPhone("+79161234567")).toBe("+7 (916) 123-45-67");
+	});
+
+	it("formats raw 11 digits", () => {
+		expect(formatPhone("79161234567")).toBe("+7 (916) 123-45-67");
+	});
+
+	it("treats leading 8 as country prefix", () => {
+		expect(formatPhone("89161234567")).toBe("+7 (916) 123-45-67");
+	});
+
+	it("partial — three subscriber digits", () => {
+		expect(formatPhone("+7916")).toBe("+7 (916)");
+	});
+
+	it("partial — six subscriber digits", () => {
+		expect(formatPhone("+7916123")).toBe("+7 (916) 123");
+	});
+
+	it("partial — eight subscriber digits", () => {
+		expect(formatPhone("+791612345")).toBe("+7 (916) 123-45");
+	});
+
+	it("truncates over-long input to 10 subscriber digits", () => {
+		expect(formatPhone("+791612345670000")).toBe("+7 (916) 123-45-67");
+	});
+});
+
+describe("parsePhone", () => {
+	it("returns empty for empty input", () => {
+		expect(parsePhone("")).toBe("");
+	});
+
+	it("returns empty when only non-digits", () => {
+		expect(parsePhone("+7 () -")).toBe("");
+	});
+
+	it("strips formatting back to raw `+7XXXXXXXXXX`", () => {
+		expect(parsePhone("+7 (916) 123-45-67")).toBe("+79161234567");
+	});
+
+	it("preserves partial entries", () => {
+		expect(parsePhone("+7 (916) 12")).toBe("+791612");
 	});
 });

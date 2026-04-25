@@ -37,10 +37,11 @@ export interface InviteEmployeeData {
 }
 
 export interface UpdatePermissionsData {
-	analytics?: PermissionLevel;
 	procurement?: PermissionLevel;
-	companies?: PermissionLevel;
 	tasks?: PermissionLevel;
+	companies?: PermissionLevel;
+	employees?: PermissionLevel;
+	emails?: PermissionLevel;
 }
 
 export interface CurrentEmployee {
@@ -50,7 +51,7 @@ export interface CurrentEmployee {
 
 // --- Seed data ---
 
-const SEED_ME: CurrentEmployee = { id: 1, role: "owner" };
+const SEED_ME: CurrentEmployee = { id: 1, role: "admin" };
 
 const SEED_USER_SETTINGS: UserSettings = {
 	first_name: "Иван",
@@ -69,12 +70,10 @@ const MAIN_COMPANY_SUMMARY: CompanySummary = {
 	id: "company-1",
 	name: "ОРМАТЕК",
 	isMain: true,
-	responsibleEmployeeName: "Журавлёв Иван",
 	addresses: [
 		{
 			id: "addr-c1-office",
 			name: "Головной офис",
-			type: "office",
 			address: "г. Москва, Ленинградское шоссе, д. 16А, стр. 1",
 			isMain: true,
 		},
@@ -83,7 +82,7 @@ const MAIN_COMPANY_SUMMARY: CompanySummary = {
 	procurementItemCount: 8,
 };
 
-// Workspace employees seed — owner + 6 others, spanning roles and registration states.
+// Workspace employees seed — admin + 6 others, spanning roles and registration states.
 // IDs 1–4 overlap with the main tenant's company-1 employees so data stays coherent.
 const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
@@ -92,19 +91,19 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		lastName: "Журавлёв",
 		patronymic: "Сергеевич",
 		position: "Директор по закупкам",
-		role: "owner",
+		role: "admin",
 		phone: "+79161000001",
 		email: "ivan.zhuravlyov.58@mostholding.ru",
-		isResponsible: true,
 		registeredAt: "2024-01-15T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-1",
 			employeeId: 1,
-			analytics: "edit",
 			procurement: "edit",
-			companies: "edit",
 			tasks: "edit",
+			companies: "edit",
+			employees: "edit",
+			emails: "edit",
 		},
 	},
 	{
@@ -116,16 +115,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "admin",
 		phone: "+79161000002",
 		email: "o.sokolova@ormatek.com",
-		isResponsible: false,
 		registeredAt: "2024-02-01T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-2",
 			employeeId: 2,
-			analytics: "edit",
 			procurement: "edit",
-			companies: "edit",
 			tasks: "edit",
+			companies: "edit",
+			employees: "edit",
+			emails: "edit",
 		},
 	},
 	{
@@ -137,16 +136,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "+79161000003",
 		email: "d.orlov@ormatek.com",
-		isResponsible: false,
 		registeredAt: "2024-03-12T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-3",
 			employeeId: 3,
-			analytics: "view",
 			procurement: "edit",
-			companies: "view",
 			tasks: "edit",
+			companies: "view",
+			employees: "view",
+			emails: "view",
 		},
 	},
 	{
@@ -158,16 +157,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "+79161000004",
 		email: "e.belova@ormatek.com",
-		isResponsible: false,
 		registeredAt: "2024-05-20T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-4",
 			employeeId: 4,
-			analytics: "edit",
 			procurement: "view",
-			companies: "view",
 			tasks: "view",
+			companies: "view",
+			employees: "none",
+			emails: "none",
 		},
 	},
 	{
@@ -179,16 +178,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "+79161000005",
 		email: "n.fedorov@ormatek.com",
-		isResponsible: false,
 		registeredAt: "2024-08-03T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-5",
 			employeeId: 5,
-			analytics: "view",
 			procurement: "edit",
-			companies: "view",
 			tasks: "edit",
+			companies: "view",
+			employees: "none",
+			emails: "view",
 		},
 	},
 	{
@@ -200,16 +199,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "+79161000006",
 		email: "a.smirnova@ormatek.com",
-		isResponsible: false,
 		registeredAt: "2025-01-10T10:00:00Z",
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-6",
 			employeeId: 6,
-			analytics: "edit",
 			procurement: "view",
-			companies: "none",
 			tasks: "view",
+			companies: "none",
+			employees: "none",
+			emails: "none",
 		},
 	},
 	{
@@ -221,16 +220,16 @@ const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		role: "user",
 		phone: "",
 		email: "d.popov@ormatek.com",
-		isResponsible: false,
 		registeredAt: null,
 		companies: [],
 		permissions: {
 			id: "perm-w-7",
 			employeeId: 7,
-			analytics: "none",
 			procurement: "none",
-			companies: "none",
 			tasks: "none",
+			companies: "none",
+			employees: "none",
+			emails: "none",
 		},
 	},
 ];
@@ -350,16 +349,16 @@ export async function inviteEmployeesMock(invites: InviteEmployeeData[]): Promis
 			role: invite.role,
 			phone: "",
 			email: invite.email,
-			isResponsible: false,
 			registeredAt: null,
 			companies: _getCompanySummariesByIds(invite.companies),
 			permissions: {
 				id: nextId("perm-w"),
 				employeeId: id,
-				analytics: "none",
 				procurement: "none",
-				companies: "none",
 				tasks: "none",
+				companies: "none",
+				employees: "none",
+				emails: "none",
 			},
 		});
 	}

@@ -15,12 +15,9 @@ const SEED_COMPANIES: Company[] = [
 	{
 		id: "company-1",
 		name: "ОРМАТЕК",
-		industry: "Производство матрасов и мебели для сна",
 		website: "https://ormatek.com",
 		description:
 			"Крупнейший российский производитель матрасов, кроватей и мебели для сна. Собственное производство, федеральная сеть салонов.",
-		preferredPayment: "Безналичный расчёт, отсрочка 30 дней",
-		preferredDelivery: "Доставка до производства в Аксайском районе Ростовской обл.",
 		additionalComments: "Приоритет — первичка (без вторсырья), сертификаты соответствия.",
 		isMain: true,
 		employeeCount: 4,
@@ -29,20 +26,14 @@ const SEED_COMPANIES: Company[] = [
 			{
 				id: "addr-c1-office",
 				name: "Головной офис",
-				type: "office",
-				postalCode: "125171",
 				address: "г. Москва, Ленинградское шоссе, д. 16А, стр. 1",
-				contactPerson: "Журавлёв Иван",
 				phone: "+74957960707",
 				isMain: true,
 			},
 			{
 				id: "addr-c1-prod",
 				name: "Производство",
-				type: "production",
-				postalCode: "346720",
 				address: "Ростовская обл., Аксайский р-н, Грушевское с/п, Южная промзона",
-				contactPerson: "Королёв Сергей",
 				phone: "+78633200101",
 				isMain: false,
 			},
@@ -54,18 +45,18 @@ const SEED_COMPANIES: Company[] = [
 				lastName: "Журавлёв",
 				patronymic: "Сергеевич",
 				position: "Директор по закупкам",
-				role: "owner",
+				role: "admin",
 				phone: "+79161000001",
 				email: "ivan.zhuravlyov.58@mostholding.ru",
-				isResponsible: true,
 				registeredAt: "2024-01-15T10:00:00Z",
 				permissions: {
 					id: "perm-c1-1",
 					employeeId: 1,
-					analytics: "edit",
 					procurement: "edit",
-					companies: "edit",
 					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
 				},
 			},
 			{
@@ -77,15 +68,15 @@ const SEED_COMPANIES: Company[] = [
 				role: "admin",
 				phone: "+79161000002",
 				email: "o.sokolova@ormatek.com",
-				isResponsible: false,
 				registeredAt: "2024-02-01T10:00:00Z",
 				permissions: {
 					id: "perm-c1-2",
 					employeeId: 2,
-					analytics: "edit",
 					procurement: "edit",
-					companies: "edit",
 					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
 				},
 			},
 			{
@@ -97,15 +88,15 @@ const SEED_COMPANIES: Company[] = [
 				role: "user",
 				phone: "+79161000003",
 				email: "d.orlov@ormatek.com",
-				isResponsible: false,
 				registeredAt: "2024-03-12T10:00:00Z",
 				permissions: {
 					id: "perm-c1-3",
 					employeeId: 3,
-					analytics: "view",
 					procurement: "edit",
-					companies: "view",
 					tasks: "edit",
+					companies: "view",
+					employees: "view",
+					emails: "view",
 				},
 			},
 			{
@@ -117,15 +108,15 @@ const SEED_COMPANIES: Company[] = [
 				role: "user",
 				phone: "+79161000004",
 				email: "e.belova@ormatek.com",
-				isResponsible: false,
 				registeredAt: "2024-05-20T10:00:00Z",
 				permissions: {
 					id: "perm-c1-4",
 					employeeId: 4,
-					analytics: "edit",
 					procurement: "view",
-					companies: "view",
 					tasks: "view",
+					companies: "view",
+					employees: "none",
+					emails: "none",
 				},
 			},
 		],
@@ -180,13 +171,7 @@ function requireCompany(id: string): Company {
 }
 
 function toAddressSummary(a: Address): AddressSummary {
-	return { id: a.id, name: a.name, type: a.type, address: a.address, isMain: a.isMain };
-}
-
-function responsibleEmployeeName(employees: Company["employees"]): string | null {
-	const responsible = employees.find((e) => e.isResponsible);
-	if (!responsible) return null;
-	return `${responsible.lastName} ${responsible.firstName}`.trim();
+	return { id: a.id, name: a.name, address: a.address, isMain: a.isMain };
 }
 
 function toSummary(c: Company): CompanySummary {
@@ -194,7 +179,6 @@ function toSummary(c: Company): CompanySummary {
 		id: c.id,
 		name: c.name,
 		isMain: c.isMain,
-		responsibleEmployeeName: responsibleEmployeeName(c.employees),
 		addresses: c.addresses.map(toAddressSummary),
 		employeeCount: c.employees.length || c.employeeCount,
 		procurementItemCount: c.procurementItemCount,
@@ -257,11 +241,8 @@ export async function fetchCompanyMock(id: string): Promise<Company> {
 
 export interface UpdateCompanyData {
 	name?: string;
-	industry?: string;
 	website?: string;
 	description?: string;
-	preferredPayment?: string;
-	preferredDelivery?: string;
 	additionalComments?: string;
 }
 
@@ -280,21 +261,15 @@ export async function deleteCompanyMock(id: string): Promise<void> {
 
 export interface CreateAddressData {
 	name: string;
-	type: Address["type"];
-	postalCode: string;
 	address: string;
-	contactPerson: string;
 	phone: string;
 	isMain?: boolean;
 }
 
 export interface CreateCompanyPayload {
 	name: string;
-	industry?: string;
 	website?: string;
 	description?: string;
-	preferredPayment?: string;
-	preferredDelivery?: string;
 	additionalComments?: string;
 	address: CreateAddressData;
 }
@@ -304,11 +279,8 @@ export async function createCompanyMock(data: CreateCompanyPayload): Promise<Com
 	const newCompany: Company = {
 		id: nextId("company"),
 		name: data.name,
-		industry: data.industry ?? "",
 		website: data.website ?? "",
 		description: data.description ?? "",
-		preferredPayment: data.preferredPayment ?? "",
-		preferredDelivery: data.preferredDelivery ?? "",
 		additionalComments: data.additionalComments ?? "",
 		isMain: false,
 		employeeCount: 0,
@@ -317,10 +289,7 @@ export async function createCompanyMock(data: CreateCompanyPayload): Promise<Com
 			{
 				id: nextId("addr"),
 				name: data.address.name,
-				type: data.address.type,
-				postalCode: data.address.postalCode,
 				address: data.address.address,
-				contactPerson: data.address.contactPerson,
 				phone: data.address.phone,
 				isMain: data.address.isMain ?? true,
 			},
@@ -335,10 +304,7 @@ export async function createCompanyMock(data: CreateCompanyPayload): Promise<Com
 
 export interface UpdateAddressData {
 	name?: string;
-	type?: Address["type"];
-	postalCode?: string;
 	address?: string;
-	contactPerson?: string;
 	phone?: string;
 	isMain?: boolean;
 }
@@ -349,10 +315,7 @@ export async function createAddressMock(companyId: string, data: CreateAddressDa
 	const newAddress: Address = {
 		id: nextId("addr"),
 		name: data.name,
-		type: data.type,
-		postalCode: data.postalCode,
 		address: data.address,
-		contactPerson: data.contactPerson,
 		phone: data.phone,
 		isMain: data.isMain ?? false,
 	};
@@ -389,7 +352,6 @@ export interface CreateEmployeeData {
 	role: Employee["role"];
 	phone: string;
 	email: string;
-	isResponsible: boolean;
 }
 
 export interface UpdateEmployeeData {
@@ -399,15 +361,14 @@ export interface UpdateEmployeeData {
 	position?: string;
 	role?: Employee["role"];
 	phone?: string;
-	email?: string;
-	isResponsible?: boolean;
 }
 
 export interface UpdatePermissionsData {
-	analytics?: PermissionLevel;
 	procurement?: PermissionLevel;
-	companies?: PermissionLevel;
 	tasks?: PermissionLevel;
+	companies?: PermissionLevel;
+	employees?: PermissionLevel;
+	emails?: PermissionLevel;
 }
 
 let employeeIdCounter = 1000;
@@ -432,14 +393,14 @@ export async function createEmployeeMock(
 		role: data.role,
 		phone: data.phone,
 		email: data.email,
-		isResponsible: data.isResponsible,
 		permissions: {
 			id: nextId("perm"),
 			employeeId: id,
-			analytics: "none",
 			procurement: "none",
-			companies: "none",
 			tasks: "none",
+			companies: "none",
+			employees: "none",
+			emails: "none",
 		},
 	};
 	company.employees.push(employee);
