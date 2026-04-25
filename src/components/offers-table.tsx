@@ -85,6 +85,7 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier): Supplier {
 		region: "",
 		foundedYear: 0,
 		revenue: 0,
+		employeeCount: 0,
 		email: "",
 		website: "",
 		address: "",
@@ -142,7 +143,7 @@ export function OffersTable({
 		return map;
 	}, [suppliers]);
 
-	const rowsCount = totalCount + (currentSupplier ? 1 : 0);
+	const rowsCount = totalCount;
 
 	const toolbar = hasSelection ? (
 		<div className="mx-3 flex items-center gap-3 rounded-xl bg-muted px-3 py-2">

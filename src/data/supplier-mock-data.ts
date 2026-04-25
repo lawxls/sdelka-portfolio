@@ -88,6 +88,8 @@ const STREETS = [
 ];
 
 const REVENUE_TIERS = [10_000_000, 45_000_000, 120_000_000, 350_000_000, 900_000_000, 1_800_000_000, 5_000_000_000];
+// Headcount tiers roughly aligned with REVENUE_TIERS — small shops at ~15, mid-market at ~300, large at 2500+.
+const EMPLOYEE_COUNT_TIERS = [12, 28, 65, 140, 320, 780, 2100];
 
 function hash(s: string): number {
 	let h = 0;
@@ -143,6 +145,7 @@ function makeIdentityProfile(identityHash: number) {
 		postalCode: makePostalCode(region, identityHash),
 		foundedYear: 1992 + (identityHash % 30),
 		revenue: REVENUE_TIERS[identityHash % REVENUE_TIERS.length],
+		employeeCount: EMPLOYEE_COUNT_TIERS[identityHash % EMPLOYEE_COUNT_TIERS.length],
 		address: makeAddress(region, identityHash),
 	};
 }
@@ -545,6 +548,19 @@ export async function getSupplier(itemId: string, supplierId: string): Promise<S
 	return suppliers.find((s) => s.id === supplierId) ?? null;
 }
 
+// Supplier IDs embed their item: `supplier-item-<N>-<X>` for seeds,
+// `candidate-supplier-item-<N>-<X>` for generated candidates. Parsing keeps
+// `getSupplierById` from forcing candidate generation for every other item just
+// to satisfy a deep link.
+const SUPPLIER_ID_RE = /^(?:candidate-)?supplier-(item-\d+)-\d+$/;
+
+export async function getSupplierById(supplierId: string): Promise<Supplier | null> {
+	await simulateDelay();
+	const itemId = SUPPLIER_ID_RE.exec(supplierId)?.[1];
+	if (!itemId) return null;
+	return getSuppliersForItem(itemId).find((s) => s.id === supplierId) ?? null;
+}
+
 export async function getAllSuppliers(itemId: string): Promise<{ suppliers: Supplier[] }> {
 	await simulateDelay();
 	const suppliers = getSuppliersForItem(itemId);
@@ -641,6 +657,27 @@ export async function selectSupplier(itemId: string, supplierId: string): Promis
 			deferralDays: supplier.deferralDays,
 			pricePerUnit: supplier.pricePerUnit,
 		},
+	});
+}
+
+/** Promote the matching-INN supplier to the item's current supplier and snap
+ * `currentPrice` to its TCO so «ТЕКУЩЕЕ ТСО» refreshes. */
+export async function selectSupplierByInn(itemId: string, inn: string): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForItem(itemId);
+	const supplier = suppliers.find((s) => s.inn === inn && !s.archived);
+	if (!supplier) throw new Error("Supplier not found");
+	const tco = supplier.tco ?? supplier.pricePerUnit;
+	_patchItem(itemId, {
+		currentSupplier: {
+			companyName: supplier.companyName,
+			inn: supplier.inn,
+			paymentType: supplier.paymentType,
+			deferralDays: supplier.deferralDays,
+			prepaymentPercent: supplier.prepaymentPercent,
+			pricePerUnit: supplier.pricePerUnit,
+		},
+		...(tco != null ? { currentPrice: tco } : {}),
 	});
 }
 

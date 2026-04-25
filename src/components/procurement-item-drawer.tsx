@@ -40,6 +40,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
 	SUPPLIER_STATUSES,
 	type SupplierCompanyType,
+	type SupplierQuote,
 	type SupplierSortField,
 	type SupplierSortState,
 	type SupplierStatus,
@@ -53,7 +54,8 @@ import {
 	useInfiniteSuppliers,
 	useSelectSupplier,
 	useSendSupplierRequest,
-	useSupplier,
+	useSetCurrentSupplierFromQuote,
+	useSupplierById,
 	useSuppliers,
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
@@ -101,9 +103,28 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const taskId = searchParams.get("task");
 	const open = itemId != null;
 
-	const { data: supplier } = useSupplier(itemId ?? "", supplierId);
+	// Look up by id alone so `?supplier=…` deep links work without an `?item=…`.
+	const { data: supplier } = useSupplierById(supplierId);
 	const [selectingSupplier, setSelectingSupplier] = useState<{ id: string; companyName: string } | null>(null);
+	const [selectingQuote, setSelectingQuote] = useState<{
+		quote: SupplierQuote;
+		supplierCompanyName: string;
+	} | null>(null);
 	const selectMutation = useSelectSupplier();
+	const setCurrentSupplierFromQuote = useSetCurrentSupplierFromQuote();
+
+	function handleSelectSupplierForItem(quote: SupplierQuote) {
+		if (!supplier) return;
+		setSelectingQuote({ quote, supplierCompanyName: supplier.companyName });
+	}
+
+	function handleConfirmSelectSupplierForItem() {
+		if (!selectingQuote || !supplier?.inn) return;
+		setCurrentSupplierFromQuote.mutate(
+			{ itemId: selectingQuote.quote.itemId, inn: supplier.inn },
+			{ onSuccess: () => setSelectingQuote(null) },
+		);
+	}
 
 	function handleTabChange(tab: ItemDrawerTab) {
 		setSearchParams(
@@ -254,6 +275,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				activeTab={supplierTab}
 				onTabChange={handleSupplierTabChange}
 				onNavigateToItem={handleNavigateToItem}
+				onSelectSupplierForItem={handleSelectSupplierForItem}
 			/>
 			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 			<AlertDialog
@@ -272,6 +294,31 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 					<AlertDialogFooter>
 						<AlertDialogCancel>Отмена</AlertDialogCancel>
 						<AlertDialogAction onClick={handleConfirmSelect}>Подтвердить</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+			<AlertDialog
+				open={selectingQuote != null}
+				onOpenChange={(open) => {
+					if (!open) setSelectingQuote(null);
+				}}
+			>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>Выбрать текущим поставщиком</AlertDialogTitle>
+						<AlertDialogDescription>
+							Выбрать {selectingQuote?.supplierCompanyName} текущим поставщиком для позиции «
+							{selectingQuote?.quote.itemName}»? Данные по вашему поставщику перезапишутся.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleConfirmSelectSupplierForItem}
+							disabled={setCurrentSupplierFromQuote.isPending}
+						>
+							Выбрать
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
@@ -529,22 +576,42 @@ function OffersTabPanel({
 	);
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
+	const { data: itemDetail } = useItemDetail(itemId);
+	const currentSupplier = itemDetail?.currentSupplier;
 	// When no payment/delivery client-side filters are active, the server total matches.
 	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
 	// all pages just to produce a total isn't worth it for these local filters.
 	const suppliersRaw = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
-	const suppliers = useMemo(() => {
-		return suppliersRaw.filter((s) => {
+	// The pinned «Ваш поставщик» row already renders the current supplier at the top,
+	// so suppress the duplicate row in the main list. Match by INN, or fall back to
+	// company name when no INN is stored on `currentSupplier`.
+	const currentSupplierInn = currentSupplier?.inn;
+	const currentSupplierName = currentSupplier?.companyName;
+	const { suppliers, currentSupplierInList } = useMemo(() => {
+		const isCurrent = (s: { inn: string; companyName: string }) => {
+			if (currentSupplierInn) return s.inn === currentSupplierInn;
+			if (currentSupplierName) return s.companyName === currentSupplierName;
+			return false;
+		};
+		let foundCurrent = false;
+		const filtered = suppliersRaw.filter((s) => {
+			if (isCurrent(s)) {
+				foundCurrent = true;
+				return false;
+			}
 			if (activePaymentTypes.length > 0 && !activePaymentTypes.includes(s.paymentType)) return false;
 			if (!matchesDeliveryFilter(s.deliveryCost, activeDeliveryFilters)) return false;
 			return true;
 		});
-	}, [suppliersRaw, activePaymentTypes, activeDeliveryFilters]);
+		return { suppliers: filtered, currentSupplierInList: foundCurrent };
+	}, [suppliersRaw, activePaymentTypes, activeDeliveryFilters, currentSupplierInn, currentSupplierName]);
 
 	const serverTotal = query.data?.pages[0]?.total ?? suppliers.length;
 	const hasClientFilters = activePaymentTypes.length > 0 || activeDeliveryFilters.length > 0;
-	// With client-side filters active, the server total overstates the count; fall back to the loaded+filtered length.
-	const totalCount = hasClientFilters ? suppliers.length : serverTotal;
+	let totalCount: number;
+	if (hasClientFilters) totalCount = suppliers.length;
+	else if (currentSupplierInList) totalCount = Math.max(0, serverTotal - 1);
+	else totalCount = serverTotal;
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -584,9 +651,6 @@ function OffersTabPanel({
 		const ids = [...selectedIds].filter((id) => visible.has(id));
 		archiveMutation.mutate({ itemId, supplierIds: ids }, { onSuccess: () => setSelectedIds(new Set()) });
 	}
-
-	const { data: itemDetail } = useItemDetail(itemId);
-	const currentSupplier = itemDetail?.currentSupplier;
 
 	return (
 		<div data-testid="tab-panel-offers" className="h-full">

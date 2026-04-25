@@ -133,6 +133,7 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 		region: "Москва",
 		foundedYear: 2005,
 		revenue: 100_000_000,
+		employeeCount: 85,
 		email: "info@example.ru",
 		website: "https://example.ru",
 		address: "г. Москва, ул. Тестовая, д. 1",

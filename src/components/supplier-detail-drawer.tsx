@@ -3,6 +3,7 @@ import {
 	ArrowUpRight,
 	Bot,
 	CheckCircle2,
+	ChevronDown,
 	ClipboardList,
 	Download,
 	File,
@@ -16,9 +17,10 @@ import {
 	Paperclip,
 	Sparkles,
 	User,
+	UserCheck,
 	XCircle,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChatComposer } from "@/components/chat-composer";
 import { DeliveryValue } from "@/components/supplier-value-displays";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,7 @@ import {
 	formatCurrency,
 	formatDateTime,
 	formatFileSize,
+	formatInteger,
 	formatLeadTime,
 	formatPercent,
 	formatShortDate,
@@ -59,6 +62,10 @@ interface SupplierDetailDrawerProps {
 	onTabChange?: (tab: SupplierDrawerTab) => void;
 	/** Called when a quote card title is clicked — navigate to that item's drawer. */
 	onNavigateToItem?: (itemId: string) => void;
+	/** Called when the «Выбрать поставщика» button on a quote card is clicked.
+	 * The parent is responsible for wiring the mutation that writes the quote's
+	 * terms onto the target item's `currentSupplier`. */
+	onSelectSupplierForItem?: (quote: SupplierQuote) => void;
 }
 
 function DocIcon({ type }: { type: string }) {
@@ -79,6 +86,10 @@ function ProfileSection({ supplier }: { supplier: Supplier }) {
 		{ label: "Тип", value: SUPPLIER_COMPANY_TYPE_LABELS[supplier.companyType] },
 		{ label: "Регион", value: supplier.region },
 		{ label: "Выручка", value: <span className="tabular-nums">{formatCompactRuble(supplier.revenue)}</span> },
+		{
+			label: "Количество сотрудников",
+			value: <span className="tabular-nums">{formatInteger(supplier.employeeCount)}</span>,
+		},
 		{
 			label: "Год основания компании",
 			value: <span className="tabular-nums">{supplier.foundedYear}</span>,
@@ -206,12 +217,73 @@ function QuoteMetric({
 	);
 }
 
-function QuoteCard({ quote, onNavigateToItem }: { quote: SupplierQuote; onNavigateToItem?: (itemId: string) => void }) {
+function QuoteCard({
+	quote,
+	onNavigateToItem,
+	onSelectSupplierForItem,
+	isExpanded,
+	onToggleExpanded,
+}: {
+	quote: SupplierQuote;
+	onNavigateToItem?: (itemId: string) => void;
+	onSelectSupplierForItem?: (quote: SupplierQuote) => void;
+	isExpanded: boolean;
+	onToggleExpanded: () => void;
+}) {
 	const canNavigate = !!onNavigateToItem;
+	const canSelect = !!onSelectSupplierForItem;
 	const paymentText = formatQuotePaymentType(quote.paymentType, quote.deferralDays, quote.prepaymentPercent);
+	const bodyId = `offer-card-body-${quote.itemId}`;
+
+	const titleNode =
+		isExpanded && canNavigate ? (
+			<button
+				type="button"
+				data-testid={`offer-card-title-${quote.itemId}`}
+				onClick={() => onNavigateToItem?.(quote.itemId)}
+				className="group/title inline-flex max-w-full items-center gap-1.5 text-left focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+			>
+				<span className="truncate text-base font-semibold leading-snug text-foreground transition-colors group-hover/title:text-primary">
+					{quote.itemName}
+				</span>
+				<ArrowUpRight
+					aria-hidden="true"
+					className="size-3.5 shrink-0 text-muted-foreground transition-[transform,color] duration-200 ease-out group-hover/title:-translate-y-0.5 group-hover/title:translate-x-0.5 group-hover/title:text-primary motion-reduce:transition-none motion-reduce:group-hover/title:translate-x-0 motion-reduce:group-hover/title:translate-y-0"
+				/>
+			</button>
+		) : (
+			<span className="truncate text-base font-semibold leading-snug">{quote.itemName}</span>
+		);
+
+	const titleAndDate = (
+		<div className="min-w-0 flex-1">
+			<div className="flex min-w-0 items-center gap-1.5">
+				{titleNode}
+				{quote.isCurrentSupplier && (
+					<UserCheck
+						aria-label="Ваш поставщик"
+						data-testid={`offer-card-current-icon-${quote.itemId}`}
+						className="size-3.5 shrink-0 text-highlight-foreground"
+					/>
+				)}
+			</div>
+			{quote.quoteReceivedAt && (
+				<p className="mt-1 text-xs text-muted-foreground tabular-nums">
+					Получено <time dateTime={quote.quoteReceivedAt}>{formatShortDate(quote.quoteReceivedAt)}</time>
+				</p>
+			)}
+		</div>
+	);
+
+	const chevronClass = cn(
+		"size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none",
+		isExpanded && "rotate-180",
+	);
+
 	return (
 		<article
 			data-testid={`offer-card-${quote.itemId}`}
+			data-expanded={isExpanded ? "true" : "false"}
 			className={cn(
 				"group overflow-hidden rounded-xl border bg-card transition-[border-color,box-shadow] duration-200 ease-out",
 				quote.isCurrentSupplier
@@ -219,88 +291,113 @@ function QuoteCard({ quote, onNavigateToItem }: { quote: SupplierQuote; onNaviga
 					: "border-border hover:border-foreground/20 hover:shadow-[0_1px_2px_rgba(0,0,0,0.03),0_4px_12px_-6px_rgba(0,0,0,0.05)]",
 			)}
 		>
-			<div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
-				<div className="min-w-0 flex-1">
-					{canNavigate ? (
+			{isExpanded ? (
+				<div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+					{titleAndDate}
+					<div className="flex shrink-0 items-center gap-2">
 						<button
 							type="button"
-							data-testid={`offer-card-title-${quote.itemId}`}
-							onClick={() => onNavigateToItem?.(quote.itemId)}
-							className="group/title inline-flex max-w-full items-center gap-1.5 text-left focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+							data-testid={`offer-card-toggle-${quote.itemId}`}
+							onClick={onToggleExpanded}
+							aria-expanded={true}
+							aria-controls={bodyId}
+							aria-label="Свернуть"
+							className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						>
-							<span className="truncate text-base font-semibold leading-snug text-foreground transition-colors group-hover/title:text-primary">
-								{quote.itemName}
-							</span>
-							<ArrowUpRight
-								aria-hidden="true"
-								className="size-3.5 shrink-0 text-muted-foreground transition-[transform,color] duration-200 ease-out group-hover/title:-translate-y-0.5 group-hover/title:translate-x-0.5 group-hover/title:text-primary motion-reduce:transition-none motion-reduce:group-hover/title:translate-x-0 motion-reduce:group-hover/title:translate-y-0"
-							/>
+							<ChevronDown className={chevronClass} aria-hidden="true" />
 						</button>
-					) : (
-						<span className="block max-w-full truncate text-base font-semibold leading-snug">{quote.itemName}</span>
-					)}
-					{quote.quoteReceivedAt && (
-						<p className="mt-1 text-xs text-muted-foreground tabular-nums">
-							Получено <time dateTime={quote.quoteReceivedAt}>{formatShortDate(quote.quoteReceivedAt)}</time>
-						</p>
-					)}
-				</div>
-				{quote.isCurrentSupplier && (
-					<span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-foreground/15 bg-background px-2 py-0.5 text-[11px] font-medium text-foreground">
-						<span className="size-1.5 rounded-full bg-status-highlight" aria-hidden="true" />
-						Текущий
-					</span>
-				)}
-			</div>
-
-			<div className="flex items-end justify-between gap-6 px-5 pb-4">
-				<div className="min-w-0">
-					<div className="truncate font-heading text-2xl font-semibold leading-none tracking-tight tabular-nums text-foreground">
-						{formatCurrency(quote.tco)}
 					</div>
-					<div className={cn("mt-1.5", MICRO_LABEL)}>TCO / ед.</div>
 				</div>
-				<div className="min-w-0 text-right">
-					<div className="truncate font-heading text-lg font-medium leading-none tracking-tight tabular-nums text-foreground">
-						{formatCurrency(quote.pricePerUnit)}
+			) : (
+				<button
+					type="button"
+					data-testid={`offer-card-toggle-${quote.itemId}`}
+					onClick={onToggleExpanded}
+					aria-expanded={false}
+					aria-controls={bodyId}
+					className="flex w-full cursor-pointer items-start justify-between gap-3 px-5 pt-4 pb-3 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+				>
+					{titleAndDate}
+					<ChevronDown className={chevronClass} aria-hidden="true" />
+				</button>
+			)}
+
+			{isExpanded && (
+				<div id={bodyId}>
+					<div className="flex items-end justify-between gap-6 px-5 pb-4">
+						<div className="min-w-0">
+							<div className="truncate font-heading text-2xl font-semibold leading-none tracking-tight tabular-nums text-foreground">
+								{formatCurrency(quote.tco)}
+							</div>
+							<div className={cn("mt-1.5", MICRO_LABEL)}>TCO / ед.</div>
+						</div>
+						<div className="min-w-0 text-right">
+							<div className="truncate font-heading text-lg font-medium leading-none tracking-tight tabular-nums text-foreground">
+								{formatCurrency(quote.pricePerUnit)}
+							</div>
+							<div className={cn("mt-1.5", MICRO_LABEL)}>Цена / ед.</div>
+						</div>
 					</div>
-					<div className={cn("mt-1.5", MICRO_LABEL)}>Цена / ед.</div>
-				</div>
-			</div>
 
-			<dl className="grid grid-cols-3 gap-x-4 gap-y-3 border-t border-border/70 bg-muted/10 px-5 py-3">
-				<QuoteMetric label="Стоимость" valueClassName="tabular-nums">
-					{formatCurrency(quote.batchCost)}
-				</QuoteMetric>
-				<QuoteMetric label="Экономия %" valueClassName={cn("tabular-nums", savingsClassName(quote.savingsPct))}>
-					{formatPercent(quote.savingsPct)}
-				</QuoteMetric>
-				<QuoteMetric label="Экономия ₽" valueClassName={cn("tabular-nums", savingsClassName(quote.savingsRub))}>
-					{formatCurrency(quote.savingsRub)}
-				</QuoteMetric>
-				<QuoteMetric label="Доставка">
-					<DeliveryValue cost={quote.deliveryCost} />
-				</QuoteMetric>
-				<QuoteMetric label="Тип оплаты" valueClassName="whitespace-normal">
-					<span>{paymentText}</span>
-				</QuoteMetric>
-				<QuoteMetric label="Срок доставки" valueClassName="tabular-nums">
-					{formatLeadTime(quote.leadTimeDays)}
-				</QuoteMetric>
-			</dl>
+					<dl className="grid grid-cols-3 gap-x-4 gap-y-3 border-t border-border/70 bg-muted/10 px-5 py-3">
+						<QuoteMetric label="Стоимость" valueClassName="tabular-nums">
+							{formatCurrency(quote.batchCost)}
+						</QuoteMetric>
+						<QuoteMetric label="Экономия %" valueClassName={cn("tabular-nums", savingsClassName(quote.savingsPct))}>
+							{formatPercent(quote.savingsPct)}
+						</QuoteMetric>
+						<QuoteMetric label="Экономия ₽" valueClassName={cn("tabular-nums", savingsClassName(quote.savingsRub))}>
+							{formatCurrency(quote.savingsRub)}
+						</QuoteMetric>
+						<QuoteMetric label="Доставка">
+							<DeliveryValue cost={quote.deliveryCost} />
+						</QuoteMetric>
+						<QuoteMetric label="Тип оплаты" valueClassName="whitespace-normal">
+							<span>{paymentText}</span>
+						</QuoteMetric>
+						<QuoteMetric label="Срок доставки" valueClassName="tabular-nums">
+							{formatLeadTime(quote.leadTimeDays)}
+						</QuoteMetric>
+					</dl>
 
-			{quote.documents.length > 0 && (
-				<div className="flex flex-wrap gap-1.5 border-t border-border/70 px-5 py-3">
-					{quote.documents.map((doc) => (
-						<span
-							key={doc.name}
-							className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-background px-2 py-1 text-xs transition-colors hover:border-foreground/30"
-						>
-							<DocIcon type={doc.type} />
-							<span className="max-w-40 truncate">{doc.name}</span>
-							<span className="tabular-nums text-muted-foreground">{formatFileSize(doc.size)}</span>
-						</span>
-					))}
+					{quote.documents.length > 0 && (
+						<div className="flex flex-wrap gap-1.5 border-t border-border/70 px-5 py-3">
+							{quote.documents.map((doc) => (
+								<span
+									key={doc.name}
+									className="inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-background px-2 py-1 text-xs transition-colors hover:border-foreground/30"
+								>
+									<DocIcon type={doc.type} />
+									<span className="max-w-40 truncate">{doc.name}</span>
+									<span className="tabular-nums text-muted-foreground">{formatFileSize(doc.size)}</span>
+								</span>
+							))}
+						</div>
+					)}
+
+					{(quote.isCurrentSupplier || canSelect) && (
+						<div className="border-t border-border/70 px-5 py-3">
+							{quote.isCurrentSupplier ? (
+								<div
+									data-testid={`offer-card-current-status-${quote.itemId}`}
+									className="inline-flex items-center gap-1.5 text-sm font-medium text-highlight-foreground"
+								>
+									<UserCheck className="size-4" aria-hidden="true" />
+									Ваш поставщик
+								</div>
+							) : (
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									data-testid={`offer-card-select-${quote.itemId}`}
+									onClick={() => onSelectSupplierForItem?.(quote)}
+								>
+									Выбрать поставщика
+								</Button>
+							)}
+						</div>
+					)}
 				</div>
 			)}
 		</article>
@@ -310,9 +407,15 @@ function QuoteCard({ quote, onNavigateToItem }: { quote: SupplierQuote; onNaviga
 function OffersPanel({
 	supplier,
 	onNavigateToItem,
+	onSelectSupplierForItem,
+	isExpanded,
+	onToggleExpanded,
 }: {
 	supplier: Supplier;
 	onNavigateToItem?: (itemId: string) => void;
+	onSelectSupplierForItem?: (quote: SupplierQuote) => void;
+	isExpanded: (itemId: string) => boolean;
+	onToggleExpanded: (itemId: string) => void;
 }) {
 	const { data, isLoading } = useSupplierQuotes(supplier.inn, supplier.itemId);
 
@@ -336,7 +439,14 @@ function OffersPanel({
 	return (
 		<div className="flex flex-col gap-3 p-4" data-testid="offers-list">
 			{quotes.map((q) => (
-				<QuoteCard key={q.itemId} quote={q} onNavigateToItem={onNavigateToItem} />
+				<QuoteCard
+					key={q.itemId}
+					quote={q}
+					onNavigateToItem={onNavigateToItem}
+					onSelectSupplierForItem={onSelectSupplierForItem}
+					isExpanded={isExpanded(q.itemId)}
+					onToggleExpanded={() => onToggleExpanded(q.itemId)}
+				/>
 			))}
 		</div>
 	);
@@ -595,12 +705,14 @@ function SupplierDrawerContent({
 	activeTab,
 	onTabChange,
 	onNavigateToItem,
+	onSelectSupplierForItem,
 }: {
 	supplier: Supplier;
 	isMobile: boolean;
 	activeTab: SupplierDrawerTab;
 	onTabChange: (tab: SupplierDrawerTab) => void;
 	onNavigateToItem?: (itemId: string) => void;
+	onSelectSupplierForItem?: (quote: SupplierQuote) => void;
 }) {
 	const scrollToLatest = useCallback((el: HTMLElement | null) => {
 		el?.scrollIntoView({ block: "end" });
@@ -608,6 +720,27 @@ function SupplierDrawerContent({
 
 	// Desktop ignores the "chat" tab value (chat is always visible) — fall back to info.
 	const desktopActiveTab: "info" | "offers" = activeTab === "offers" ? "offers" : "info";
+
+	// Hold *deviations from the default* rather than absolute expand state, so the
+	// auto-expand for the current item kicks in whenever activeTab becomes "offers"
+	// — including after the user switches to the offers tab post-mount — without
+	// resetting toggles the user has made.
+	const [expansionOverrides, setExpansionOverrides] = useState<ReadonlySet<string>>(new Set());
+	const isQuoteExpanded = useCallback(
+		(itemId: string) => {
+			const defaultExpanded = activeTab === "offers" && itemId === supplier.itemId;
+			return defaultExpanded !== expansionOverrides.has(itemId);
+		},
+		[activeTab, supplier.itemId, expansionOverrides],
+	);
+	const toggleQuoteExpanded = useCallback((itemId: string) => {
+		setExpansionOverrides((prev) => {
+			const next = new Set(prev);
+			if (next.has(itemId)) next.delete(itemId);
+			else next.add(itemId);
+			return next;
+		});
+	}, []);
 
 	const desktopTabs = [INFO_TAB, OFFERS_TAB] as const;
 	const mobileTabs = [INFO_TAB, OFFERS_TAB, CHAT_TAB] as const;
@@ -624,7 +757,15 @@ function SupplierDrawerContent({
 					<TabStrip tabs={mobileTabs} activeTab={activeTab} onChange={onTabChange} />
 					<div className="min-h-0 flex-1 overflow-y-auto">
 						{activeTab === "info" && <InfoPanel supplier={supplier} />}
-						{activeTab === "offers" && <OffersPanel supplier={supplier} onNavigateToItem={onNavigateToItem} />}
+						{activeTab === "offers" && (
+							<OffersPanel
+								supplier={supplier}
+								onNavigateToItem={onNavigateToItem}
+								onSelectSupplierForItem={onSelectSupplierForItem}
+								isExpanded={isQuoteExpanded}
+								onToggleExpanded={toggleQuoteExpanded}
+							/>
+						)}
 						{activeTab === "chat" && <ChatPanel supplier={supplier} scrollToLatest={scrollToLatest} />}
 					</div>
 				</>
@@ -636,7 +777,13 @@ function SupplierDrawerContent({
 							{desktopActiveTab === "info" ? (
 								<InfoPanel supplier={supplier} />
 							) : (
-								<OffersPanel supplier={supplier} onNavigateToItem={onNavigateToItem} />
+								<OffersPanel
+									supplier={supplier}
+									onNavigateToItem={onNavigateToItem}
+									onSelectSupplierForItem={onSelectSupplierForItem}
+									isExpanded={isQuoteExpanded}
+									onToggleExpanded={toggleQuoteExpanded}
+								/>
 							)}
 						</div>
 					</div>
@@ -659,6 +806,7 @@ export function SupplierDetailDrawer({
 	activeTab = "info",
 	onTabChange,
 	onNavigateToItem,
+	onSelectSupplierForItem,
 }: SupplierDetailDrawerProps) {
 	const isMobile = useIsMobile();
 	const handleTabChange = onTabChange ?? (() => {});
@@ -679,6 +827,7 @@ export function SupplierDetailDrawer({
 						activeTab={activeTab}
 						onTabChange={handleTabChange}
 						onNavigateToItem={onNavigateToItem}
+						onSelectSupplierForItem={onSelectSupplierForItem}
 					/>
 				)}
 			</SheetContent>

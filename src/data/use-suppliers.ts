@@ -5,9 +5,11 @@ import {
 	fetchAllSuppliersMock,
 	getAllSuppliers,
 	getSupplier,
+	getSupplierById,
 	getSupplierQuotesByInn,
 	getSuppliers,
 	selectSupplier,
+	selectSupplierByInn,
 	sendSupplierMessage,
 	sendSupplierRequest,
 	unarchiveSuppliers,
@@ -45,6 +47,14 @@ export function useSupplier(itemId: string, supplierId: string | null) {
 	return useQuery({
 		queryKey: ["supplier", itemId, supplierId],
 		queryFn: () => getSupplier(itemId, supplierId as string),
+		enabled: supplierId !== null,
+	});
+}
+
+export function useSupplierById(supplierId: string | null) {
+	return useQuery({
+		queryKey: ["supplier-by-id", supplierId],
+		queryFn: () => getSupplierById(supplierId as string),
 		enabled: supplierId !== null,
 	});
 }
@@ -103,6 +113,19 @@ export function useSelectSupplier() {
 		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => selectSupplier(itemId, supplierId),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
+			invalidateSupplierLists(queryClient, itemId);
+		},
+	});
+}
+
+export function useSetCurrentSupplierFromQuote() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ itemId, inn }: { itemId: string; inn: string }) => selectSupplierByInn(itemId, inn),
+		onSuccess: (_data, { itemId }) => {
+			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
+			queryClient.invalidateQueries({ queryKey: ["items"] });
+			queryClient.invalidateQueries({ queryKey: ["totals"] });
 			invalidateSupplierLists(queryClient, itemId);
 		},
 	});

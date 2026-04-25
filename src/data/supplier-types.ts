@@ -116,6 +116,8 @@ export interface Supplier {
 	foundedYear: number;
 	/** Annual revenue in rubles. */
 	revenue: number;
+	/** Headcount. */
+	employeeCount: number;
 	email: string;
 	website: string;
 	address: string;
@@ -162,9 +164,9 @@ export interface SupplierQuote {
 }
 
 /** Shape for hand-authored Supplier seeds — identity/offer fields required;
- * profile fields (inn, companyType, region, postalCode, foundedYear, revenue) and
+ * profile fields (inn, companyType, region, postalCode, foundedYear, revenue, employeeCount) and
  * `quoteReceivedAt` are enriched deterministically at load time by the mock layer. */
 export type SupplierSeed = Omit<
 	Supplier,
-	"inn" | "companyType" | "region" | "postalCode" | "foundedYear" | "revenue" | "quoteReceivedAt"
+	"inn" | "companyType" | "region" | "postalCode" | "foundedYear" | "revenue" | "employeeCount" | "quoteReceivedAt"
 >;

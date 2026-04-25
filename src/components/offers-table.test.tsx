@@ -448,14 +448,14 @@ describe("OffersTable toolbar", () => {
 		expect(screen.getByText(/3\s*предложения/)).toBeInTheDocument();
 	});
 
-	test("total count includes pinned current supplier", () => {
+	test("total count excludes pinned current supplier", () => {
 		const currentSupplier: CurrentSupplier = {
 			companyName: "ООО Текущий",
 			deferralDays: 0,
 			pricePerUnit: 800,
 		};
 		renderTable({ currentSupplier });
-		expect(screen.getByText(/4\s*предложения/)).toBeInTheDocument();
+		expect(screen.getByText(/3\s*предложения/)).toBeInTheDocument();
 	});
 });
 
