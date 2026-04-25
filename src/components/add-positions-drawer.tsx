@@ -12,7 +12,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { OptionalSegmentedControl, SegmentedControl } from "@/components/ui/segmented-control";
@@ -52,35 +52,6 @@ const STEP_TITLES: Record<WizardStep, string> = {
 	2: "Заполните данные по текущему поставщику",
 	3: "Дополнительные вопросы",
 };
-
-function CheckboxBadge({
-	id,
-	checked,
-	onChange,
-	ariaLabel,
-	children,
-}: {
-	id: string;
-	checked: boolean;
-	onChange: (checked: boolean) => void;
-	ariaLabel: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<label
-			htmlFor={id}
-			className={cn(
-				"inline-flex w-fit cursor-pointer select-none items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors motion-reduce:transition-none focus-within:ring-3 focus-within:ring-ring/50",
-				checked
-					? "border-primary bg-primary/10 text-foreground"
-					: "border-border bg-background text-foreground hover:bg-muted",
-			)}
-		>
-			<Checkbox id={id} checked={checked} onCheckedChange={(c) => onChange(c === true)} aria-label={ariaLabel} />
-			<span>{children}</span>
-		</label>
-	);
-}
 
 function SectionGroupHeader({ title }: { title: string }) {
 	return <h3 className="mt-5 mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>;
