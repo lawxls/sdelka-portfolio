@@ -68,10 +68,10 @@ describe("matchGlobal", () => {
 
 	it("matches suppliers by name, email, website", () => {
 		const suppliers = [
-			makeSupplier("s1", { companyName: "GazPromSbyt" }),
-			makeSupplier("s2", { companyName: "Ромашка", email: "info@gazprom.ru" }),
-			makeSupplier("s3", { companyName: "Ромашка", website: "https://gaz-invest.ru" }),
-			makeSupplier("s4", { companyName: "Неподходящий", email: "x@x.ru", website: "https://x.ru" }),
+			makeSupplier("s1", { companyName: "GazPromSbyt", inn: "1111111111" }),
+			makeSupplier("s2", { companyName: "Ромашка", email: "info@gazprom.ru", inn: "2222222222" }),
+			makeSupplier("s3", { companyName: "Ромашка", website: "https://gaz-invest.ru", inn: "3333333333" }),
+			makeSupplier("s4", { companyName: "Неподходящий", email: "x@x.ru", website: "https://x.ru", inn: "4444444444" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "gaz", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
@@ -90,15 +90,48 @@ describe("matchGlobal", () => {
 
 	it("attaches supplier status to each supplier result", () => {
 		const suppliers = [
-			makeSupplier("s1", { companyName: "test A", status: "new" }),
-			makeSupplier("s2", { companyName: "test B", status: "переговоры" }),
-			makeSupplier("s3", { companyName: "test C", status: "получено_кп" }),
+			makeSupplier("s1", { companyName: "test A", status: "new", inn: "1111111111" }),
+			makeSupplier("s2", { companyName: "test B", status: "переговоры", inn: "2222222222" }),
+			makeSupplier("s3", { companyName: "test C", status: "получено_кп", inn: "3333333333" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "test", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
 		expect(sup?.results.find((r) => r.id === "s1")).toMatchObject({ status: "new" });
 		expect(sup?.results.find((r) => r.id === "s2")).toMatchObject({ status: "переговоры" });
 		expect(sup?.results.find((r) => r.id === "s3")).toMatchObject({ status: "получено_кп" });
+	});
+
+	it("collapses the same supplier across items into one result by INN", () => {
+		const suppliers = [
+			makeSupplier("s1", { companyName: "ТД Дубликат", itemId: "item-2", status: "кп_запрошено", inn: "7755443322" }),
+			makeSupplier("s2", { companyName: "ТД Дубликат", itemId: "item-3", status: "получено_кп", inn: "7755443322" }),
+			makeSupplier("s3", { companyName: "ТД Дубликат", itemId: "item-4", status: "отказ", inn: "7755443322" }),
+			makeSupplier("s4", { companyName: "Другой поставщик", itemId: "item-2", status: "new", inn: "9999999999" }),
+		];
+		const groups = matchGlobal({ ...EMPTY, query: "дубликат", suppliers });
+		const sup = groups.find((g) => g.group === "suppliers");
+		expect(sup?.results).toHaveLength(1);
+		// Prefers the получено_кп instance (s2), whose drawer shows all offers.
+		expect(sup?.results[0]).toMatchObject({ id: "s2", status: "получено_кп" });
+		// Opens the supplier drawer directly — no item= param, so the item drawer
+		// stays closed behind the supplier drawer.
+		expect(sup?.results[0].href).toBe("/procurement?supplier=s2&supplier_tab=offers");
+	});
+
+	it("supplier href opens the detail drawer without the item drawer for non-new statuses", () => {
+		const suppliers = [
+			makeSupplier("s1", { companyName: "Alphacorp", itemId: "item-2", status: "получено_кп", inn: "1111111111" }),
+			makeSupplier("s2", { companyName: "Alphabeta", itemId: "item-3", status: "переговоры", inn: "2222222222" }),
+			makeSupplier("s3", { companyName: "Alphagamma", itemId: "item-4", status: "new", inn: "3333333333" }),
+		];
+		const groups = matchGlobal({ ...EMPTY, query: "alpha", suppliers });
+		const byId = Object.fromEntries(
+			(groups.find((g) => g.group === "suppliers")?.results ?? []).map((r) => [r.id, r.href]),
+		);
+		expect(byId.s1).toBe("/procurement?supplier=s1&supplier_tab=offers");
+		expect(byId.s2).toBe("/procurement?supplier=s2&supplier_tab=info");
+		// "new" candidates lack a detail drawer — fall back to the item's suppliers tab.
+		expect(byId.s3).toBe("/procurement?item=item-4&tab=suppliers");
 	});
 
 	it("matches tasks by title", () => {

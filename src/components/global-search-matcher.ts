@@ -75,11 +75,39 @@ function collect<T, R extends SearchResult>(source: T[], match: (row: T) => bool
 }
 
 function supplierHref(s: Supplier): string {
-	const tab = s.status === "получено_кп" ? "offers" : "suppliers";
-	const base = `/procurement?item=${encodeURIComponent(s.itemId)}`;
-	// "new" suppliers don't have a detail drawer — open the Поставщики tab only.
-	if (s.status === "new") return `${base}&tab=${tab}`;
-	return `${base}&supplier=${encodeURIComponent(s.id)}${tab === "offers" ? "&tab=offers" : ""}`;
+	// "new" candidates have no standalone detail drawer — fall back to the item's
+	// Поставщики tab so the user still lands on something.
+	if (s.status === "new") {
+		return `/procurement?item=${encodeURIComponent(s.itemId)}&tab=suppliers`;
+	}
+	// Suppliers are workspace-level entities that may quote on many items.
+	// Open the detail drawer directly — no need to drag the item drawer along.
+	const tab = s.status === "получено_кп" ? "offers" : "info";
+	return `/procurement?supplier=${encodeURIComponent(s.id)}&supplier_tab=${tab}`;
+}
+
+// Lower number = higher priority when collapsing multi-item suppliers into a
+// single search result. Prefer instances whose drawer shows the most useful
+// context (offers > negotiation > quote requested > errors > refusals > bare
+// candidates that lack a drawer).
+const SUPPLIER_DEDUP_PRIORITY: Record<SupplierStatus, number> = {
+	получено_кп: 0,
+	переговоры: 1,
+	кп_запрошено: 2,
+	ошибка: 3,
+	отказ: 4,
+	new: 5,
+};
+
+function pickBestSupplierInstance(suppliers: Supplier[]): Supplier[] {
+	const byInn = new Map<string, Supplier>();
+	for (const s of suppliers) {
+		const existing = byInn.get(s.inn);
+		if (!existing || SUPPLIER_DEDUP_PRIORITY[s.status] < SUPPLIER_DEDUP_PRIORITY[existing.status]) {
+			byInn.set(s.inn, s);
+		}
+	}
+	return [...byInn.values()];
 }
 
 export function matchGlobal(input: MatchInput): GroupResult[] {
@@ -102,18 +130,20 @@ export function matchGlobal(input: MatchInput): GroupResult[] {
 	);
 	if (items.length > 0) groups.push({ group: "items", results: items });
 
-	const suppliers = collect<Supplier, SupplierResult>(
-		input.suppliers,
+	// Match first (across all item instances, since email/website can differ per
+	// item), then collapse by INN so the same company doesn't appear once per
+	// item in which it quoted.
+	const matchedSuppliers = input.suppliers.filter(
 		(s) => includesCI(s.companyName, q) || includesCI(s.email, q) || includesCI(s.website, q),
-		(s) => ({
-			group: "suppliers",
-			id: s.id,
-			name: s.companyName,
-			status: s.status,
-			meta: undefined,
-			href: supplierHref(s),
-		}),
 	);
+	const suppliers: SupplierResult[] = pickBestSupplierInstance(matchedSuppliers).map((s) => ({
+		group: "suppliers",
+		id: s.id,
+		name: s.companyName,
+		status: s.status,
+		meta: undefined,
+		href: supplierHref(s),
+	}));
 	if (suppliers.length > 0) groups.push({ group: "suppliers", results: suppliers });
 
 	const tasks = collect<Task, TaskResult>(
