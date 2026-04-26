@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, UserPlus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation, useOutletContext } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
@@ -93,53 +93,12 @@ export function SettingsLayout() {
 		);
 	}
 
-	function renderHeaderAction() {
-		switch (location.pathname) {
-			case "/settings/companies":
-				return (
-					<Button
-						type="button"
-						size="sm"
-						className="btn-cta rounded-full border-0"
-						onClick={() => setCompaniesCreateOpen(true)}
-					>
-						<Plus data-icon="inline-start" aria-hidden="true" />
-						<span>Добавить компанию</span>
-					</Button>
-				);
-			case "/settings/employees":
-				return (
-					<Button
-						type="button"
-						size="sm"
-						className="btn-cta rounded-full border-0"
-						onClick={() => setEmployeesInviteOpen(true)}
-					>
-						<UserPlus data-icon="inline-start" aria-hidden="true" />
-						<span>Отправить приглашения</span>
-					</Button>
-				);
-			case "/settings/emails":
-				return (
-					<Button
-						type="button"
-						size="sm"
-						className="btn-cta rounded-full border-0"
-						onClick={() => setEmailsCreateOpen(true)}
-					>
-						<Plus data-icon="inline-start" aria-hidden="true" />
-						<span>Добавить почту</span>
-					</Button>
-				);
-		}
-	}
-
 	return (
 		<div
 			className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground"
 			data-testid="settings-layout"
 		>
-			<PageToolbar left={renderBreadcrumb()} right={renderHeaderAction()} />
+			<PageToolbar left={renderBreadcrumb()} />
 			<div className="flex min-h-0 flex-1">
 				<SettingsSidebar />
 				<div className="flex min-w-0 flex-1 flex-col overflow-auto">

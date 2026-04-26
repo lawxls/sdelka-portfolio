@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _resetWorkspaceStore, _setWorkspaceEmployees, type WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
@@ -67,13 +68,15 @@ let queryClient: QueryClient;
 function renderPage(initialPath = "/settings/employees") {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[initialPath]}>
-				<Routes>
-					<Route element={<SettingsLayout />}>
-						<Route path="*" element={<EmployeesSettingsPage />} />
-					</Route>
-				</Routes>
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={[initialPath]}>
+					<Routes>
+						<Route element={<SettingsLayout />}>
+							<Route path="*" element={<EmployeesSettingsPage />} />
+						</Route>
+					</Routes>
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -86,19 +89,21 @@ function SearchParamSpy() {
 function renderPageWithSpy(initialPath = "/settings/employees") {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[initialPath]}>
-				<Routes>
-					<Route
-						path="*"
-						element={
-							<>
-								<EmployeesSettingsPage />
-								<SearchParamSpy />
-							</>
-						}
-					/>
-				</Routes>
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={[initialPath]}>
+					<Routes>
+						<Route
+							path="*"
+							element={
+								<>
+									<EmployeesSettingsPage />
+									<SearchParamSpy />
+								</>
+							}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -128,11 +133,14 @@ describe("EmployeesSettingsPage table", () => {
 		expect(screen.getByText("maria@example.com")).toBeInTheDocument();
 	});
 
-	test("renders Компании column with company names", async () => {
+	test("renders Роль column with role labels", async () => {
 		renderPage();
 		await waitFor(() => {
-			expect(screen.getByText("Компания А")).toBeInTheDocument();
+			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
 		});
+		const rows = screen.getAllByRole("row");
+		expect(rows[1].querySelectorAll("td")[3].textContent).toBe("Администратор");
+		expect(rows[2].querySelectorAll("td")[3].textContent).toBe("Пользователь");
 	});
 
 	test("shows formatted date for registered employee", async () => {
@@ -197,9 +205,9 @@ describe("EmployeesSettingsPage multi-select", () => {
 	});
 });
 
-describe("EmployeesSettingsPage header", () => {
-	test("renders Отправить приглашения button", async () => {
+describe("EmployeesSettingsPage toolbar", () => {
+	test("renders Добавить сотрудника button in the toolbar", async () => {
 		renderPage();
-		expect(screen.getByRole("button", { name: /Отправить приглашения/i })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить сотрудника/i })).toBeInTheDocument();
 	});
 });

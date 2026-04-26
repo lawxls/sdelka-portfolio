@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	type AddEmailPayload,
 	addEmailMock as addEmail,
 	deleteEmailsMock as deleteEmails,
 	disableEmailsMock as disableEmails,
@@ -25,7 +26,7 @@ export function useEmails(options?: { enabled?: boolean }) {
 export function useAddEmail() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (email: string) => addEmail(email),
+		mutationFn: (payload: AddEmailPayload) => addEmail(payload),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: EMAILS_KEY });
 		},

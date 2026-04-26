@@ -24,7 +24,7 @@ function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): W
 }
 
 function makeInbox(id: string, email: string): WorkspaceEmail {
-	return { id, email, status: "active", sentCount: 0 };
+	return { id, email, status: "active", type: "corporate", sentCount: 0 };
 }
 
 const EMPTY = {

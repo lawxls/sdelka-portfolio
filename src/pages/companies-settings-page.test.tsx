@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { _setCompanies } from "@/data/companies-mock-data";
 import type { Company } from "@/data/types";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
@@ -84,13 +85,15 @@ let queryClient: QueryClient;
 function renderPage(initialPath = "/settings/companies") {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[initialPath]}>
-				<Routes>
-					<Route element={<SettingsLayout />}>
-						<Route path="*" element={<CompaniesSettingsPage />} />
-					</Route>
-				</Routes>
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={[initialPath]}>
+					<Routes>
+						<Route element={<SettingsLayout />}>
+							<Route path="*" element={<CompaniesSettingsPage />} />
+						</Route>
+					</Routes>
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -103,19 +106,21 @@ function SearchParamSpy() {
 function renderPageWithSpy(initialPath = "/settings/companies") {
 	return render(
 		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={[initialPath]}>
-				<Routes>
-					<Route
-						path="*"
-						element={
-							<>
-								<CompaniesSettingsPage />
-								<SearchParamSpy />
-							</>
-						}
-					/>
-				</Routes>
-			</MemoryRouter>
+			<TooltipProvider>
+				<MemoryRouter initialEntries={[initialPath]}>
+					<Routes>
+						<Route
+							path="*"
+							element={
+								<>
+									<CompaniesSettingsPage />
+									<SearchParamSpy />
+								</>
+							}
+						/>
+					</Routes>
+				</MemoryRouter>
+			</TooltipProvider>
 		</QueryClientProvider>,
 	);
 }
@@ -161,13 +166,13 @@ describe("CompaniesSettingsPage table", () => {
 		expect(screen.getByRole("checkbox", { name: "Выбрать СтройМастер" })).toBeInTheDocument();
 	});
 
-	test("selecting a row shows bulk actions bar with Удалить", async () => {
+	test("selecting a row shows toolbar selection state with Удалить", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByText("Сделка")).toBeInTheDocument();
 		});
 		await userEvent.setup().click(screen.getByRole("checkbox", { name: "Выбрать Сделка" }));
-		expect(screen.getByTestId("bulk-actions-bar")).toBeInTheDocument();
+		expect(screen.getByTestId("toolbar-selected-count")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Удалить/ })).toBeInTheDocument();
 	});
 

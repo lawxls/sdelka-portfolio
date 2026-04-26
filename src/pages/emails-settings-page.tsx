@@ -1,13 +1,23 @@
-import { Power, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Archive, Plus, Power, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddEmailSheet } from "@/components/add-email-sheet";
-import { BulkActionsBar } from "@/components/bulk-actions-bar";
+import { includesCI } from "@/components/global-search-matcher";
 import { useSettingsOutletContext } from "@/components/settings-layout";
+import { SettingsTableToolbar } from "@/components/settings-table-toolbar";
+import { TableEmptyState } from "@/components/table-empty-state";
+import { ToolbarFilterPopover } from "@/components/toolbar-filter-popover";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { WorkspaceEmail } from "@/data/emails-mock-data";
+import {
+	type AddEmailPayload,
+	EMAIL_TYPE_LABELS,
+	type EmailStatus,
+	type EmailType,
+	type WorkspaceEmail,
+} from "@/data/emails-mock-data";
 import { useAddEmail, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
-import { formatInteger } from "@/lib/format";
+import { formatInteger, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function StatusLabel({ status }: { status: WorkspaceEmail["status"] }) {
@@ -31,8 +41,24 @@ export function EmailsSettingsPage() {
 	const disableMutation = useDisableEmails();
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [search, setSearch] = useState("");
+	const [searchExpanded, setSearchExpanded] = useState(false);
+	const [archiveActive, setArchiveActive] = useState(false);
+	const [statusFilter, setStatusFilter] = useState<EmailStatus | null>(null);
+	const [typeFilter, setTypeFilter] = useState<EmailType | null>(null);
 
-	const allSelected = emails.length > 0 && selected.size === emails.length;
+	const visibleEmails = useMemo(() => {
+		if (archiveActive) return [];
+		const needle = search.toLowerCase();
+		return emails.filter(
+			(e) =>
+				(!needle || includesCI(e.email, needle)) &&
+				(statusFilter == null || e.status === statusFilter) &&
+				(typeFilter == null || e.type === typeFilter),
+		);
+	}, [emails, search, archiveActive, statusFilter, typeFilter]);
+
+	const allSelected = visibleEmails.length > 0 && visibleEmails.every((e) => selected.has(e.id));
 	const someSelected = selected.size > 0;
 
 	function toggleRow(id: string) {
@@ -45,7 +71,19 @@ export function EmailsSettingsPage() {
 	}
 
 	function toggleAll() {
-		setSelected(allSelected ? new Set() : new Set(emails.map((e) => e.id)));
+		if (allSelected) {
+			setSelected((prev) => {
+				const next = new Set(prev);
+				for (const e of visibleEmails) next.delete(e.id);
+				return next;
+			});
+		} else {
+			setSelected((prev) => {
+				const next = new Set(prev);
+				for (const e of visibleEmails) next.add(e.id);
+				return next;
+			});
+		}
 	}
 
 	function clearSelection() {
@@ -78,8 +116,14 @@ export function EmailsSettingsPage() {
 		});
 	}
 
-	function handleAdd(email: string) {
-		addMutation.mutate(email, {
+	function handleArchive() {
+		const count = selected.size;
+		clearSelection();
+		toast.success(`Архивировано ${formatRussianPlural(count, ["почта", "почты", "почт"])}`);
+	}
+
+	function handleAdd(payload: AddEmailPayload) {
+		addMutation.mutate(payload, {
 			onSuccess: () => {
 				setEmailsCreateOpen(false);
 				toast.success("Почта добавлена");
@@ -96,17 +140,71 @@ export function EmailsSettingsPage() {
 	return (
 		<>
 			<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50 overflow-auto">
-				<BulkActionsBar
-					count={selected.size}
-					onClear={clearSelection}
-					forms={["почта", "почты", "почт"]}
-					actions={[
+				<SettingsTableToolbar
+					totalCount={emails.length}
+					totalForms={["почта", "почты", "почт"]}
+					primaryAction={
+						<Button
+							type="button"
+							size="sm"
+							className="btn-cta rounded-full border-0"
+							onClick={() => setEmailsCreateOpen(true)}
+						>
+							<Plus data-icon="inline-start" aria-hidden="true" />
+							<span>Добавить почту</span>
+						</Button>
+					}
+					search={{
+						value: search,
+						onChange: setSearch,
+						expanded: searchExpanded,
+						onExpandedChange: setSearchExpanded,
+						ariaLabel: "Поиск почт",
+						placeholder: "Адрес почты…",
+					}}
+					filter={
+						<ToolbarFilterPopover
+							ariaLabel="Фильтр почт"
+							tooltip="Фильтры"
+							sections={[
+								{
+									title: "Статус",
+									options: (["active", "disabled"] as const).map((v) => ({
+										value: v,
+										label: v === "active" ? "Активна" : "Отключена",
+										isActive: statusFilter === v,
+										onSelect: () => setStatusFilter(statusFilter === v ? null : v),
+									})),
+								},
+								{
+									title: "Тип",
+									options: (["service", "corporate"] as const).map((v) => ({
+										value: v,
+										label: EMAIL_TYPE_LABELS[v],
+										isActive: typeFilter === v,
+										onSelect: () => setTypeFilter(typeFilter === v ? null : v),
+									})),
+								},
+							]}
+						/>
+					}
+					archiveActive={archiveActive}
+					onToggleArchive={() => setArchiveActive((v) => !v)}
+					selectedCount={selected.size}
+					onClearSelection={clearSelection}
+					bulkForms={["почта", "почты", "почт"]}
+					bulkActions={[
 						{
 							label: "Отключить",
 							icon: <Power data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
 							onClick: handleDisable,
 							disabled: Boolean(disableDisabledReason),
 							disabledReason: disableDisabledReason,
+						},
+						{
+							label: "Архивировать",
+							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+							onClick: handleArchive,
 						},
 						{
 							label: "Удалить",
@@ -116,58 +214,66 @@ export function EmailsSettingsPage() {
 						},
 					]}
 				/>
-				<table className="w-full text-sm">
-					<thead className="sticky top-0 z-10 bg-background border-b border-border">
-						<tr className="text-left text-muted-foreground">
-							<th className="w-10 px-lg py-sm">
-								<Checkbox
-									checked={allSelected}
-									onCheckedChange={toggleAll}
-									aria-label="Выбрать все почты"
-									disabled={emails.length === 0}
-								/>
-							</th>
-							<th className="px-lg py-sm font-medium">Почта</th>
-							<th className="px-lg py-sm font-medium">Статус</th>
-							<th className="px-lg py-sm font-medium tabular-nums">Писем отправлено</th>
-						</tr>
-					</thead>
-					<tbody>
-						{emails.map((email) => {
-							const isSelected = selected.has(email.id);
-							return (
-								<tr
-									key={email.id}
-									className={cn(
-										"border-b border-border transition-colors",
-										isSelected ? "bg-accent/40" : "bg-background hover:bg-muted/50",
-										email.status === "disabled" && !isSelected && "opacity-70",
-									)}
-								>
-									<td className="px-lg py-sm">
-										<Checkbox
-											checked={isSelected}
-											onCheckedChange={() => toggleRow(email.id)}
-											aria-label={`Выбрать ${email.email}`}
-										/>
-									</td>
-									<td className="px-lg py-sm font-medium">{email.email}</td>
-									<td className="px-lg py-sm">
-										<StatusLabel status={email.status} />
-									</td>
-									<td className="px-lg py-sm tabular-nums text-muted-foreground">{formatInteger(email.sentCount)}</td>
-								</tr>
-							);
-						})}
-						{!isLoading && emails.length === 0 && (
-							<tr>
-								<td colSpan={4} className="px-lg py-10 text-center text-muted-foreground">
-									Пока нет добавленных почт
-								</td>
+				{archiveActive ? (
+					<TableEmptyState message="В архиве пусто" />
+				) : (
+					<table className="w-full text-sm">
+						<thead className="sticky top-0 z-10 bg-background border-b border-border">
+							<tr className="text-muted-foreground">
+								<th className="w-10 px-lg py-sm text-left">
+									<Checkbox
+										checked={allSelected}
+										onCheckedChange={toggleAll}
+										aria-label="Выбрать все почты"
+										disabled={visibleEmails.length === 0}
+									/>
+								</th>
+								<th className="px-lg py-sm font-medium text-left">Почта</th>
+								<th className="px-lg py-sm font-medium text-right">Тип</th>
+								<th className="px-lg py-sm font-medium text-right">Статус</th>
+								<th className="px-lg py-sm font-medium tabular-nums text-right">Писем отправлено</th>
 							</tr>
-						)}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{visibleEmails.map((email) => {
+								const isSelected = selected.has(email.id);
+								return (
+									<tr
+										key={email.id}
+										className={cn(
+											"border-b border-border transition-colors",
+											isSelected ? "bg-accent/40" : "bg-background hover:bg-muted/50",
+											email.status === "disabled" && !isSelected && "opacity-70",
+										)}
+									>
+										<td className="px-lg py-sm">
+											<Checkbox
+												checked={isSelected}
+												onCheckedChange={() => toggleRow(email.id)}
+												aria-label={`Выбрать ${email.email}`}
+											/>
+										</td>
+										<td className="px-lg py-sm font-medium">{email.email}</td>
+										<td className="px-lg py-sm text-right text-muted-foreground">{EMAIL_TYPE_LABELS[email.type]}</td>
+										<td className="px-lg py-sm text-right">
+											<StatusLabel status={email.status} />
+										</td>
+										<td className="px-lg py-sm tabular-nums text-right text-muted-foreground">
+											{formatInteger(email.sentCount)}
+										</td>
+									</tr>
+								);
+							})}
+							{!isLoading && visibleEmails.length === 0 && (
+								<tr>
+									<td colSpan={5} className="px-lg py-10 text-center text-muted-foreground">
+										{search ? "Ничего не нашли" : "Пока нет добавленных почт"}
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				)}
 			</main>
 
 			<AddEmailSheet

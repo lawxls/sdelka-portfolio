@@ -62,7 +62,7 @@ export interface MatchInput {
 	isPrivileged: boolean;
 }
 
-function includesCI(haystack: string | undefined | null, needleLower: string): boolean {
+export function includesCI(haystack: string | undefined | null, needleLower: string): boolean {
 	return haystack ? haystack.toLowerCase().includes(needleLower) : false;
 }
 

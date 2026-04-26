@@ -169,9 +169,9 @@ describe("Routing", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("settings-layout")).toBeInTheDocument();
 		});
-		// No action buttons like "Добавить компанию" or "Отправить приглашения"
+		// No action buttons like "Добавить компанию" or "Добавить сотрудника"
 		expect(screen.queryByRole("button", { name: /Добавить компанию/ })).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /Отправить приглашения/ })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /Добавить сотрудника/ })).not.toBeInTheDocument();
 	});
 
 	test("URL query params preserved under /procurement", async () => {
