@@ -110,7 +110,17 @@ describe("useInviteEmployees", () => {
 			wrapper: createQueryWrapper(queryClient),
 		});
 
-		const invites = [{ email: "new@example.com", position: "Менеджер", role: "user" as const, companies: ["c1"] }];
+		const invites = [
+			{
+				email: "new@example.com",
+				firstName: "",
+				lastName: "",
+				patronymic: "",
+				position: "Менеджер",
+				role: "user" as const,
+				companies: ["c1"],
+			},
+		];
 
 		await act(async () => {
 			await result.current.mutateAsync(invites);

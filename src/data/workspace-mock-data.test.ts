@@ -115,7 +115,17 @@ describe("workspace employee detail", () => {
 describe("inviteEmployees", () => {
 	it("appends invitees to the list with default permissions none", async () => {
 		const before = await fetchWorkspaceEmployeesMock();
-		await inviteEmployeesMock([{ email: "new@example.com", position: "Тестер", role: "user", companies: [] }]);
+		await inviteEmployeesMock([
+			{
+				email: "new@example.com",
+				firstName: "",
+				lastName: "",
+				patronymic: "",
+				position: "Тестер",
+				role: "user",
+				companies: [],
+			},
+		]);
 		const after = await fetchWorkspaceEmployeesMock();
 		expect(after.length).toBe(before.length + 1);
 		const added = after.find((e) => e.email === "new@example.com");
@@ -129,8 +139,16 @@ describe("inviteEmployees", () => {
 
 	it("supports bulk invite", async () => {
 		await inviteEmployeesMock([
-			{ email: "a@x.com", position: "A", role: "user", companies: [] },
-			{ email: "b@x.com", position: "B", role: "admin", companies: ["c1"] },
+			{ email: "a@x.com", firstName: "", lastName: "", patronymic: "", position: "A", role: "user", companies: [] },
+			{
+				email: "b@x.com",
+				firstName: "",
+				lastName: "",
+				patronymic: "",
+				position: "B",
+				role: "admin",
+				companies: ["c1"],
+			},
 		]);
 		const list = await fetchWorkspaceEmployeesMock();
 		expect(list.find((e) => e.email === "a@x.com")).toBeDefined();
@@ -139,7 +157,15 @@ describe("inviteEmployees", () => {
 
 	it("persists selected companies on the invitee", async () => {
 		await inviteEmployeesMock([
-			{ email: "newhire@x.com", position: "Менеджер", role: "user", companies: ["company-1"] },
+			{
+				email: "newhire@x.com",
+				firstName: "",
+				lastName: "",
+				patronymic: "",
+				position: "Менеджер",
+				role: "user",
+				companies: ["company-1"],
+			},
 		]);
 		const list = await fetchWorkspaceEmployeesMock();
 		const added = list.find((e) => e.email === "newhire@x.com");

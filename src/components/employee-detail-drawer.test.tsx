@@ -148,8 +148,6 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 
 		const user = userEvent.setup();
 		await user.click(screen.getByTestId("employee-tab-permissions"));
-
-		await user.click(screen.getByRole("button", { name: "Редактировать права доступа" }));
 		await user.click(screen.getByTestId("perm-procurement-edit"));
 
 		await waitFor(async () => {

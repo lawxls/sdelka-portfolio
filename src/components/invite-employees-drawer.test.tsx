@@ -64,12 +64,14 @@ describe("InviteEmployeesDrawer default state", () => {
 });
 
 describe("InviteEmployeesDrawer add card", () => {
-	test("+ Добавить appends a new invite card when email is filled", async () => {
+	test("+ Добавить appends a new invite card when required fields are filled", async () => {
 		renderDrawer();
 		await waitFor(() => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
 		const user = userEvent.setup();
+		await user.type(screen.getByRole("textbox", { name: /Фамилия/i }), "Иванов");
+		await user.type(screen.getByRole("textbox", { name: /^Имя$/i }), "Иван");
 		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "a@b.com");
 		await user.click(screen.getByRole("button", { name: /Добавить/i }));
 		expect(screen.getByText("Сотрудник 2")).toBeInTheDocument();
@@ -94,6 +96,8 @@ describe("InviteEmployeesDrawer remove card", () => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
 		const user = userEvent.setup();
+		await user.type(screen.getByRole("textbox", { name: /Фамилия/i }), "Иванов");
+		await user.type(screen.getByRole("textbox", { name: /^Имя$/i }), "Иван");
 		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "a@b.com");
 		await user.click(screen.getByRole("button", { name: /Добавить/i }));
 		expect(screen.getByText("Сотрудник 2")).toBeInTheDocument();
@@ -120,6 +124,8 @@ describe("InviteEmployeesDrawer submit", () => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
 		});
 		const user = userEvent.setup();
+		await user.type(screen.getByRole("textbox", { name: /Фамилия/i }), "Иванов");
+		await user.type(screen.getByRole("textbox", { name: /^Имя$/i }), "Иван");
 		await user.type(screen.getByRole("textbox", { name: /Электронная почта/i }), "test@example.com");
 		await user.click(screen.getByRole("button", { name: /Отправить/i }));
 

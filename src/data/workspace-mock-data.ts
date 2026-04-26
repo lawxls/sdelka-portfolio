@@ -31,9 +31,21 @@ export type WorkspaceEmployeeDetail = WorkspaceEmployee & { permissions: Employe
 
 export interface InviteEmployeeData {
 	email: string;
+	firstName: string;
+	lastName: string;
+	patronymic: string;
 	position: string;
 	role: EmployeeRole;
 	companies: string[];
+}
+
+export interface UpdateWorkspaceEmployeeData {
+	firstName?: string;
+	lastName?: string;
+	patronymic?: string;
+	position?: string;
+	role?: EmployeeRole;
+	phone?: string;
 }
 
 export interface UpdatePermissionsData {
@@ -342,9 +354,9 @@ export async function inviteEmployeesMock(invites: InviteEmployeeData[]): Promis
 		const id = nextWorkspaceEmployeeId();
 		workspaceEmployeesStore.push({
 			id,
-			firstName: "",
-			lastName: "",
-			patronymic: "",
+			firstName: invite.firstName,
+			lastName: invite.lastName,
+			patronymic: invite.patronymic,
 			position: invite.position,
 			role: invite.role,
 			phone: "",
@@ -362,6 +374,17 @@ export async function inviteEmployeesMock(invites: InviteEmployeeData[]): Promis
 			},
 		});
 	}
+}
+
+export async function updateWorkspaceEmployeeMock(
+	id: number,
+	data: UpdateWorkspaceEmployeeData,
+): Promise<WorkspaceEmployeeDetail> {
+	await delay();
+	const idx = workspaceEmployeesStore.findIndex((e) => e.id === id);
+	if (idx === -1) throw new Error(`Workspace employee ${id} not found`);
+	workspaceEmployeesStore[idx] = { ...workspaceEmployeesStore[idx], ...data };
+	return cloneEmployee(workspaceEmployeesStore[idx]);
 }
 
 export async function deleteWorkspaceEmployeesMock(ids: number[]): Promise<void> {

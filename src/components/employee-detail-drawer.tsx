@@ -1,13 +1,22 @@
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { PermissionsMatrix } from "@/components/permissions-matrix";
-import { Separator } from "@/components/ui/separator";
+import { PhoneInput } from "@/components/phone-input";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { PermissionLevel, PermissionModuleKey } from "@/data/types";
-import { useUpdateWorkspaceEmployeePermissions, useWorkspaceEmployeeDetail } from "@/data/use-workspace-employees";
+import type { EmployeeRole, PermissionLevel, PermissionModuleKey } from "@/data/types";
+import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
+import { useMe } from "@/data/use-me";
+import {
+	useUpdateWorkspaceEmployee,
+	useUpdateWorkspaceEmployeePermissions,
+	useWorkspaceEmployeeDetail,
+} from "@/data/use-workspace-employees";
 import type { WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
-import { formatFullName } from "@/lib/format";
+import { formatFullName, formatPhone } from "@/lib/format";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
 
@@ -53,6 +62,8 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 	const [activeTab, setActiveTab] = useState<DrawerTab>("info");
 	const { employee, isLoading, error } = useWorkspaceEmployeeDetail(employeeId);
 	const updatePermsMutation = useUpdateWorkspaceEmployeePermissions();
+	const { data: me } = useMe();
+	const canEdit = me?.role === "admin";
 
 	if (isLoading) {
 		return (
@@ -76,13 +87,14 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 	const fullName = formatFullName(employee.lastName, employee.firstName, employee.patronymic);
 
 	function handlePermissionChange(module: PermissionModuleKey, level: PermissionLevel) {
+		if (!canEdit) return;
 		updatePermsMutation.mutate({ id: employeeId, data: { [module]: level } });
 	}
 
 	return (
 		<>
 			<SheetHeader>
-				<SheetTitle data-testid="employee-drawer-title">{fullName}</SheetTitle>
+				<SheetTitle data-testid="employee-drawer-title">{fullName || "Без имени"}</SheetTitle>
 				<SheetDescription className="sr-only">Детали сотрудника</SheetDescription>
 			</SheetHeader>
 
@@ -107,11 +119,11 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 			</div>
 
 			<div className="flex-1 overflow-y-auto px-4 py-4">
-				{activeTab === "info" && <InfoTab employee={employee} />}
+				{activeTab === "info" && <InfoTab employee={employee} canEdit={canEdit} />}
 				{activeTab === "permissions" && (
 					<div className="flex flex-col gap-2" data-testid="employee-permissions-tab">
 						<h4 className="text-xs font-medium text-muted-foreground">Права доступа</h4>
-						<PermissionsMatrix permissions={employee.permissions} onChange={handlePermissionChange} />
+						<PermissionsMatrix permissions={employee.permissions} onChange={handlePermissionChange} mode="edit" />
 					</div>
 				)}
 			</div>
@@ -119,33 +131,167 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 	);
 }
 
-function InfoTab({ employee }: { employee: WorkspaceEmployeeDetail }) {
+interface InfoFormState {
+	firstName: string;
+	lastName: string;
+	patronymic: string;
+	position: string;
+	role: EmployeeRole;
+	phone: string;
+}
+
+function InfoTab({ employee, canEdit }: { employee: WorkspaceEmployeeDetail; canEdit: boolean }) {
+	const [editing, setEditing] = useState(false);
+	const [form, setForm] = useState<InfoFormState>(() => formStateFor(employee));
+	const updateMutation = useUpdateWorkspaceEmployee();
+
+	function startEdit() {
+		setForm(formStateFor(employee));
+		setEditing(true);
+	}
+
+	function cancelEdit() {
+		setEditing(false);
+	}
+
+	const dirty = (Object.keys(form) as (keyof InfoFormState)[]).some((k) => form[k] !== employee[k]);
+
+	function handleSave() {
+		if (!dirty) {
+			setEditing(false);
+			return;
+		}
+		const data: Partial<InfoFormState> = {};
+		for (const key of Object.keys(form) as (keyof InfoFormState)[]) {
+			if (form[key] !== employee[key]) (data as Record<string, unknown>)[key] = form[key];
+		}
+		updateMutation.mutate({ id: employee.id, data }, { onSuccess: () => setEditing(false) });
+	}
+
+	const companiesText = employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "";
+	const registrationText = employee.registeredAt
+		? dateFormatter.format(new Date(employee.registeredAt))
+		: "Приглашение отправлено";
+
 	return (
-		<div className="flex flex-col gap-4" data-testid="employee-info-tab">
-			<InfoRow label="ФИО" value={formatFullName(employee.lastName, employee.firstName, employee.patronymic)} />
-			<Separator />
-			<InfoRow label="Должность" value={employee.position} />
-			<Separator />
-			<InfoRow label="Почта" value={employee.email} />
-			<Separator />
-			<InfoRow
-				label="Компании"
-				value={employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "—"}
-			/>
-			<Separator />
-			<InfoRow
-				label="Дата регистрации"
-				value={employee.registeredAt ? dateFormatter.format(new Date(employee.registeredAt)) : "Приглашение отправлено"}
-			/>
+		<div data-testid="employee-info-tab">
+			<Section
+				title="Информация о сотруднике"
+				editLabel={canEdit ? "Редактировать информацию" : undefined}
+				editing={editing}
+				onEdit={canEdit ? startEdit : undefined}
+				onCancel={cancelEdit}
+				onSave={handleSave}
+				saveDisabled={!dirty || updateMutation.isPending}
+				isPending={updateMutation.isPending}
+			>
+				<CardGrid>
+					<FieldCard label="Фамилия">
+						{editing ? (
+							<Input
+								aria-label="Фамилия"
+								value={form.lastName}
+								onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+								autoComplete="family-name"
+								spellCheck={false}
+							/>
+						) : (
+							<ValueText value={employee.lastName} />
+						)}
+					</FieldCard>
+					<FieldCard label="Имя">
+						{editing ? (
+							<Input
+								aria-label="Имя"
+								value={form.firstName}
+								onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+								autoComplete="given-name"
+								spellCheck={false}
+							/>
+						) : (
+							<ValueText value={employee.firstName} />
+						)}
+					</FieldCard>
+					<FieldCard label="Отчество">
+						{editing ? (
+							<Input
+								aria-label="Отчество"
+								value={form.patronymic}
+								onChange={(e) => setForm((p) => ({ ...p, patronymic: e.target.value }))}
+								autoComplete="off"
+								spellCheck={false}
+							/>
+						) : (
+							<ValueText value={employee.patronymic} />
+						)}
+					</FieldCard>
+
+					<FieldCard label="Должность" span="full">
+						{editing ? (
+							<Input
+								aria-label="Должность"
+								value={form.position}
+								onChange={(e) => setForm((p) => ({ ...p, position: e.target.value }))}
+								autoComplete="off"
+								spellCheck={false}
+							/>
+						) : (
+							<ValueText value={employee.position} />
+						)}
+					</FieldCard>
+
+					<FieldCard label="Роль">
+						{editing ? (
+							<Select value={form.role} onValueChange={(v) => setForm((p) => ({ ...p, role: v as EmployeeRole }))}>
+								<SelectTrigger aria-label="Роль">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{ASSIGNABLE_ROLES.map((r) => (
+										<SelectItem key={r} value={r}>
+											{ROLE_LABELS[r]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						) : (
+							<ValueText value={ROLE_LABELS[employee.role]} />
+						)}
+					</FieldCard>
+					<FieldCard label="Телефон" span="half">
+						{editing ? (
+							<PhoneInput
+								value={form.phone}
+								onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
+								aria-label="Телефон"
+							/>
+						) : (
+							<ValueText value={formatPhone(employee.phone)} />
+						)}
+					</FieldCard>
+
+					<FieldCard label="Электронная почта" span="full">
+						<ValueText value={employee.email} />
+					</FieldCard>
+					<FieldCard label="Компании" span="full">
+						<ValueText value={companiesText} />
+					</FieldCard>
+					<FieldCard label="Дата регистрации">
+						<ValueText value={registrationText} />
+					</FieldCard>
+				</CardGrid>
+			</Section>
 		</div>
 	);
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="flex flex-col gap-0.5">
-			<span className="text-xs text-muted-foreground">{label}</span>
-			<span className="text-sm">{value}</span>
-		</div>
-	);
+function formStateFor(employee: WorkspaceEmployeeDetail): InfoFormState {
+	return {
+		firstName: employee.firstName,
+		lastName: employee.lastName,
+		patronymic: employee.patronymic,
+		position: employee.position,
+		role: employee.role,
+		phone: employee.phone,
+	};
 }

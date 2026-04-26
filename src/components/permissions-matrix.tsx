@@ -1,6 +1,4 @@
-import { Building2, Layers, ListTodo, type LucideIcon, Mail, Pencil, Users } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Building2, Layers, ListTodo, type LucideIcon, Mail, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { EmployeePermissions, PermissionLevel, PermissionModuleKey } from "@/data/types";
 import { PERMISSION_MODULE_LABELS } from "@/data/types";
@@ -41,20 +39,13 @@ const DOT_FILL: Record<PermissionLevel, string> = {
 export function PermissionsMatrix({
 	permissions,
 	onChange,
-	readOnly = false,
 	mode,
 }: {
 	permissions: EmployeePermissions;
 	onChange: (module: PermissionModuleKey, level: PermissionLevel) => void;
-	readOnly?: boolean;
-	/** When set, the matrix is fully controlled — no internal pencil/Готово affordance. */
-	mode?: "view" | "edit";
+	mode: "view" | "edit";
 }) {
-	const [internalEditing, setInternalEditing] = useState(false);
-	const editing = mode != null ? mode === "edit" : internalEditing;
-	const controlled = mode != null;
-
-	if (!editing) {
+	if (mode === "view") {
 		return (
 			<div className="flex items-center gap-2" data-testid="permissions-matrix">
 				{PERMISSION_MODULES.map((mod) => {
@@ -73,16 +64,6 @@ export function PermissionsMatrix({
 						</Tooltip>
 					);
 				})}
-				{!readOnly && !controlled && (
-					<button
-						type="button"
-						className="ml-0.5 inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
-						onClick={() => setInternalEditing(true)}
-						aria-label="Редактировать права доступа"
-					>
-						<Pencil className="size-3" aria-hidden="true" />
-					</button>
-				)}
 			</div>
 		);
 	}
@@ -162,14 +143,6 @@ export function PermissionsMatrix({
 					</div>
 				);
 			})}
-
-			{!controlled && (
-				<div className="mt-1.5 flex justify-end">
-					<Button type="button" variant="outline" size="sm" onClick={() => setInternalEditing(false)}>
-						Готово
-					</Button>
-				</div>
-			)}
 		</div>
 	);
 }

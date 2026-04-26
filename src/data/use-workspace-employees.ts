@@ -6,6 +6,8 @@ import {
 	type InviteEmployeeData,
 	inviteEmployeesMock as inviteEmployees,
 	type UpdatePermissionsData,
+	type UpdateWorkspaceEmployeeData,
+	updateWorkspaceEmployeeMock as updateWorkspaceEmployee,
 	updateWorkspaceEmployeePermissionsMock as updateWorkspaceEmployeePermissions,
 } from "./workspace-mock-data";
 
@@ -54,6 +56,18 @@ export function useDeleteWorkspaceEmployees() {
 	return useMutation({
 		mutationFn: (ids: number[]) => deleteWorkspaceEmployees(ids),
 		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
+		},
+	});
+}
+
+export function useUpdateWorkspaceEmployee() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, data }: { id: number; data: UpdateWorkspaceEmployeeData }) => updateWorkspaceEmployee(id, data),
+		onSettled: (_data, _error, variables) => {
+			queryClient.invalidateQueries({ queryKey: ["workspace-employee", variables.id] });
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
 		},
 	});
