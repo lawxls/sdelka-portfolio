@@ -9,7 +9,6 @@ import type {
 import { ConflictError, NetworkError, NotFoundError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
-import { _resetWorkspaceStore, _setWorkspaceEmployees } from "../workspace-mock-data";
 import type { WorkspaceEmployeesClient } from "./workspace-employees-client";
 import { createHttpWorkspaceEmployeesClient } from "./workspace-employees-http";
 import { createInMemoryWorkspaceEmployeesClient } from "./workspace-employees-in-memory";
@@ -117,11 +116,7 @@ interface Adapter {
 function memoryAdapter(): Adapter {
 	return {
 		name: "memory",
-		build: () => {
-			_resetWorkspaceStore();
-			_setWorkspaceEmployees(SEED.map((e) => structuredClone(e)));
-			return createInMemoryWorkspaceEmployeesClient();
-		},
+		build: () => createInMemoryWorkspaceEmployeesClient({ seed: SEED.map((e) => structuredClone(e)) }),
 	};
 }
 

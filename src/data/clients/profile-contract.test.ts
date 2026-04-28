@@ -3,7 +3,6 @@ import type { CurrentEmployee, UserSettings } from "../domains/profile";
 import { ConflictError, NetworkError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
-import { _resetWorkspaceStore, _setMe, _setUserSettings } from "../workspace-mock-data";
 import type { ProfileClient } from "./profile-client";
 import { createHttpProfileClient } from "./profile-http";
 import { createInMemoryProfileClient } from "./profile-in-memory";
@@ -39,12 +38,7 @@ interface Adapter {
 function memoryAdapter(): Adapter {
 	return {
 		name: "memory",
-		build: () => {
-			_resetWorkspaceStore();
-			_setMe({ ...SEED_ME });
-			_setUserSettings({ ...SEED_SETTINGS });
-			return createInMemoryProfileClient();
-		},
+		build: () => createInMemoryProfileClient({ me: { ...SEED_ME }, settings: { ...SEED_SETTINGS } }),
 	};
 }
 

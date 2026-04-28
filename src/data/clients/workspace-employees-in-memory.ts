@@ -1,4 +1,4 @@
-import type { EmployeePermissions } from "../domains/companies";
+import { _getCompanySummariesByIds } from "../companies-mock-data";
 import type {
 	InviteEmployeeData,
 	UpdatePermissionsData,
@@ -7,73 +7,117 @@ import type {
 	WorkspaceEmployeeDetail,
 } from "../domains/workspace-employees";
 import { NotFoundError } from "../errors";
-import {
-	_setWorkspaceEmployees,
-	deleteWorkspaceEmployeesMock,
-	fetchWorkspaceEmployeeMock,
-	fetchWorkspaceEmployeesMock,
-	inviteEmployeesMock,
-	updateWorkspaceEmployeeMock,
-	updateWorkspaceEmployeePermissionsMock,
-} from "../workspace-mock-data";
+import { delay, nextId } from "../mock-utils";
+import { SEED_WORKSPACE_EMPLOYEES } from "../seeds/workspace-employees";
+import type { EmployeePermissions } from "../types";
 import type { WorkspaceEmployeesClient } from "./workspace-employees-client";
 
-// The legacy mocks throw a generic Error("Workspace employee X not found") for
-// unknown ids. Translate to NotFoundError so the in-memory and HTTP adapters
-// surface the same typed error.
-async function translateNotFound<T>(promise: Promise<T>, id: number): Promise<T> {
-	try {
-		return await promise;
-	} catch (err) {
-		if (err instanceof Error && err.message.includes(`${id} not found`)) {
-			throw new NotFoundError({ detail: err.message });
-		}
-		throw err;
-	}
+function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
+	return {
+		...e,
+		companies: e.companies.map((c) => ({ ...c, addresses: c.addresses.map((a) => ({ ...a })) })),
+		permissions: { ...e.permissions },
+	};
 }
 
 export interface InMemoryWorkspaceEmployeesOptions {
-	/** Replace the module-level mock store at construction time. Tests pass this
-	 * to land on a known roster without reaching into `_setWorkspaceEmployees`
-	 * directly. */
+	/** Replace the seeded roster. Tests pass this to land on a known starting
+	 * roster (e.g. just one admin) without mutating shared state. */
 	seed?: WorkspaceEmployeeDetail[];
 }
 
 /**
- * Build an in-memory workspace-employees adapter wrapping the module-level
- * workspace mock store. Singleton-wrapping (rather than closure isolation) is
- * the right shape here because `workspace-mock-data` is shared with the
- * profile / invitations / company-info domains until #250 dissolves it. Once
- * those splits land, this can become closure-isolated.
+ * Build a closure-isolated in-memory workspace-employees adapter. State
+ * (the roster + the id counter for invitees) lives in the closure — every
+ * call to the factory produces an independent store.
+ *
+ * Cross-domain note: invite() looks up `CompanySummary[]` by company id via
+ * `_getCompanySummariesByIds` from the companies mock store, so an invitee's
+ * `companies` array stays coherent with the companies adapter. This is the
+ * only cross-store reach-in left in this domain; lifting it out would require
+ * passing a `CompaniesClient` (or a slim `getSummaries` port) into the
+ * factory.
  */
 export function createInMemoryWorkspaceEmployeesClient(
 	options?: InMemoryWorkspaceEmployeesOptions,
 ): WorkspaceEmployeesClient {
-	if (options?.seed !== undefined) _setWorkspaceEmployees(options.seed);
+	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
+	let idCounter = 1000;
+	function nextEmployeeId(): number {
+		idCounter += 1;
+		return idCounter;
+	}
+
+	function requireIndex(id: number): number {
+		const idx = store.findIndex((e) => e.id === id);
+		if (idx === -1) throw new NotFoundError({ detail: `Workspace employee ${id} not found` });
+		return idx;
+	}
 
 	return {
 		async list(): Promise<WorkspaceEmployee[]> {
-			return fetchWorkspaceEmployeesMock();
+			await delay();
+			return store.map(({ permissions: _permissions, ...rest }) => ({
+				...rest,
+				companies: rest.companies.map((c) => ({ ...c, addresses: c.addresses.map((a) => ({ ...a })) })),
+			}));
 		},
 
 		async get(id: number): Promise<WorkspaceEmployeeDetail> {
-			return translateNotFound(fetchWorkspaceEmployeeMock(id), id);
+			await delay();
+			return cloneEmployee(store[requireIndex(id)]);
 		},
 
 		async invite(invites: InviteEmployeeData[]): Promise<void> {
-			return inviteEmployeesMock(invites);
+			await delay();
+			for (const invite of invites) {
+				const id = nextEmployeeId();
+				store.push({
+					id,
+					firstName: invite.firstName,
+					lastName: invite.lastName,
+					patronymic: invite.patronymic,
+					position: invite.position,
+					role: invite.role,
+					phone: "",
+					email: invite.email,
+					registeredAt: null,
+					companies: _getCompanySummariesByIds(invite.companies),
+					permissions: {
+						id: nextId("perm-w"),
+						employeeId: id,
+						procurement: "none",
+						tasks: "none",
+						companies: "none",
+						employees: "none",
+						emails: "none",
+					},
+				});
+			}
 		},
 
 		async update(id: number, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail> {
-			return translateNotFound(updateWorkspaceEmployeeMock(id, data), id);
+			await delay();
+			const idx = requireIndex(id);
+			store[idx] = { ...store[idx], ...data };
+			return cloneEmployee(store[idx]);
 		},
 
 		async delete(ids: number[]): Promise<void> {
-			return deleteWorkspaceEmployeesMock(ids);
+			await delay();
+			const toRemove = new Set(ids);
+			store = store.filter((e) => {
+				if (!toRemove.has(e.id)) return true;
+				return e.role !== "user";
+			});
 		},
 
 		async updatePermissions(id: number, data: UpdatePermissionsData): Promise<EmployeePermissions> {
-			return translateNotFound(updateWorkspaceEmployeePermissionsMock(id, data), id);
+			await delay();
+			const idx = requireIndex(id);
+			const updated = { ...store[idx].permissions, ...data };
+			store[idx] = { ...store[idx], permissions: updated };
+			return { ...updated };
 		},
 	};
 }

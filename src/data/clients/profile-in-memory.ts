@@ -1,51 +1,58 @@
 import type { ChangePasswordResponse, CurrentEmployee, SettingsPatch, UserSettings } from "../domains/profile";
-import {
-	_setMe,
-	_setUserSettings,
-	changePasswordMock,
-	fetchMeMock,
-	fetchSettingsMock,
-	patchSettingsMock,
-} from "../workspace-mock-data";
+import { delay } from "../mock-utils";
 import type { ProfileClient } from "./profile-client";
 
+const DEFAULT_ME: CurrentEmployee = { id: 1, role: "admin" };
+
+const DEFAULT_SETTINGS: UserSettings = {
+	first_name: "Иван",
+	last_name: "Журавлёв",
+	patronymic: "Сергеевич",
+	email: "ivan.zhuravlyov.58@mostholding.ru",
+	phone: "+79161000001",
+	avatar_icon: "blue",
+	date_joined: "2024-01-15T10:00:00Z",
+	mailing_allowed: true,
+};
+
 export interface InMemoryProfileOptions {
-	/** Replace the module-level mock store at construction time. Pass to seed
-	 * the active session's identity record deterministically (e.g. a non-admin
-	 * user for permission-aware tests). */
+	/** Replace the seeded current-user identity. Tests pass this to land on a
+	 * known starting record (e.g. a non-admin user for permission-aware tests). */
 	me?: CurrentEmployee;
-	/** Replace the user's settings record at construction time. Tests pass this
-	 * to land on a known starting profile without reaching into
-	 * `_setUserSettings` directly. */
+	/** Replace the seeded user settings. */
 	settings?: UserSettings;
 }
 
 /**
- * Build an in-memory profile adapter wrapping the module-level workspace mock
- * store. Singleton-wrapping (rather than closure isolation) is the right shape
- * here because `workspace-mock-data` is shared with the workspace-employees /
- * invitations / company-info domains until #250 dissolves it. Once those
- * splits land, this can become closure-isolated.
+ * Build a closure-isolated in-memory profile adapter. State (current-user
+ * identity + settings) lives in the closure — every call to the factory
+ * produces an independent store, so tests don't need to reset shared module
+ * state.
  */
 export function createInMemoryProfileClient(options?: InMemoryProfileOptions): ProfileClient {
-	if (options?.me !== undefined) _setMe(options.me);
-	if (options?.settings !== undefined) _setUserSettings(options.settings);
+	const me: CurrentEmployee = { ...(options?.me ?? DEFAULT_ME) };
+	let settings: UserSettings = { ...(options?.settings ?? DEFAULT_SETTINGS) };
 
 	return {
 		async me(): Promise<CurrentEmployee> {
-			return fetchMeMock();
+			await delay();
+			return { ...me };
 		},
 
 		async settings(): Promise<UserSettings> {
-			return fetchSettingsMock();
+			await delay();
+			return { ...settings };
 		},
 
 		async update(patch: SettingsPatch): Promise<UserSettings> {
-			return patchSettingsMock(patch);
+			await delay();
+			settings = { ...settings, ...patch };
+			return { ...settings };
 		},
 
-		async changePassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> {
-			return changePasswordMock(currentPassword, newPassword);
+		async changePassword(_currentPassword: string, _newPassword: string): Promise<ChangePasswordResponse> {
+			await delay();
+			return { detail: "Пароль успешно изменён" };
 		},
 	};
 }

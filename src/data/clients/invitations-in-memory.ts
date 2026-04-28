@@ -11,10 +11,8 @@ export interface InMemoryInvitationsOptions {
 
 /**
  * Build a closure-isolated in-memory invitations adapter. The verify rule is
- * a pure function — there's no underlying invitation roster in
- * `workspace-mock-data` to wrap (the legacy `verifyInvitationCodeMock` was
- * always-valid), so this adapter doesn't share any state with the
- * still-pending workspace splits.
+ * a pure function — there's no underlying invitation roster to wrap, so this
+ * adapter doesn't share any state with other domains.
  */
 export function createInMemoryInvitationsClient(options: InMemoryInvitationsOptions = {}): InvitationsClient {
 	const isValid = options.isValid ?? (() => true);

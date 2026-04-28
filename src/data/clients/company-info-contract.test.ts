@@ -3,7 +3,6 @@ import type { CompanyInfo } from "../domains/company-info";
 import { NetworkError, NotFoundError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
-import { _resetWorkspaceStore, _setCompanyInfo } from "../workspace-mock-data";
 import type { CompanyInfoClient } from "./company-info-client";
 import { createHttpCompanyInfoClient } from "./company-info-http";
 import { createInMemoryCompanyInfoClient } from "./company-info-in-memory";
@@ -28,11 +27,7 @@ interface Adapter {
 function memoryAdapter(): Adapter {
 	return {
 		name: "memory",
-		build: () => {
-			_resetWorkspaceStore();
-			_setCompanyInfo({ ...SEED_INFO });
-			return createInMemoryCompanyInfoClient();
-		},
+		build: () => createInMemoryCompanyInfoClient({ info: { ...SEED_INFO } }),
 	};
 }
 

@@ -73,20 +73,22 @@ it when the codebase makes it self-evident.
   `createInMemoryProfileClient({ me, settings })`,
   `createInMemoryWorkspaceEmployeesClient({ seed })`,
   `createInMemoryInvitationsClient({ isValid })`,
-  `createInMemoryCompanyInfoClient({ info })`. Companies', emails', and
-  invitations' adapters are closure-isolated (no cross-entity callers). Items',
-  suppliers', tasks', folders', notifications', profile's,
-  workspace-employees', and company-info's adapters wrap the module-level
-  singletons (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
-  `folders-mock-data`, `notifications-mock-data`, `workspace-mock-data`)
-  so cross-entity callers see the same store the hook sees — folders'
-  delete reaches into items via `_unassignItemsFromFolder`, and stats
-  pulls counts from the items singleton; profile, workspace-employees,
-  and company-info share `workspace-mock-data` until #250 dissolves it.
-  Passing seed options to the factory resets the singleton without
-  reaching into the underscore helpers directly. Singleton wrapping
-  disappears once cross-entity rules move to the procurement-operations
-  module (#251) and once #250 deletes `workspace-mock-data`.
+  `createInMemoryCompanyInfoClient({ info })`. Companies', emails',
+  invitations', profile's, company-info's, and workspace-employees' adapters
+  are closure-isolated — every call to the factory produces an independent
+  store with its own seed. Items', suppliers', tasks', folders', and
+  notifications' adapters wrap the module-level singletons
+  (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
+  `folders-mock-data`, `notifications-mock-data`) so cross-entity callers see
+  the same store the hook sees — folders' delete reaches into items via
+  `_unassignItemsFromFolder`, and stats pulls counts from the items
+  singleton. Workspace-employees still reaches into `companies-mock-data`
+  via `_getCompanySummariesByIds` at invite time so an invitee's `companies`
+  array stays coherent with the companies adapter; lifting it would require
+  a `getSummaries` port. Passing seed options to the factory resets the
+  store without reaching into underscore helpers directly. Remaining
+  singleton wrapping disappears once cross-entity rules move to the
+  procurement-operations module (#251).
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
