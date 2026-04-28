@@ -58,6 +58,12 @@
 			"sourceType": "github",
 			"computedHash": "ad055544599481182d0079c4198e85da26677cb408a677be2da04915375f0427"
 		},
+		"to-prd": {
+			"source": "mattpocock/skills",
+			"sourceType": "github",
+			"skillPath": "skills/engineering/to-prd/SKILL.md",
+			"computedHash": "31344e082653b1f0b1ed632f0257cb0fd3c02f1b78569fd878159daf348a1a3a"
+		},
 		"write-a-prd": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",
