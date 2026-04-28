@@ -23,7 +23,6 @@ it when the codebase makes it self-evident.
 - **Task** — work assigned to a teammate, scoped to a procurement item.
 - **Folder** — a category that groups procurement items. Flat list (parent
   ids), not a tree.
-- **Invitation** — an outstanding invite to join the workspace.
 - **Notification** — a notification surfaced in the bell icon dropdown.
 - **Email** — an SMTP/IMAP account configured in workspace settings.
 - **Profile** — current user identity and preferences. Single-row domain
@@ -43,6 +42,14 @@ it when the codebase makes it self-evident.
   company aggregate.
 - **CompanyInfo** — the active workspace's company-level metadata (name,
   branding, plan). Distinct from `Company` (an arbitrary org record).
+- **Invitation** — an outstanding invite to join the workspace. Two halves:
+  *creation* (an admin invites a new employee) lives on
+  `WorkspaceEmployeesClient.invite()` — a row with `registeredAt: null` is a
+  pending invitation in the workspace-employees list. *Acceptance* (a recipient
+  registers with the code) lives on the auth adapter (out of scope per PRD).
+  The seam in between — looking up an invitation by code to confirm it's
+  still valid before showing the registration form — is `InvitationsClient`.
+  Backs `useVerifyInvitationCode`.
 
 ## Architectural primitives
 
@@ -58,8 +65,9 @@ it when the codebase makes it self-evident.
   `createInMemoryNotificationsClient({ seed, readIds })`,
   `createInMemoryEmailsClient(seed)`,
   `createInMemoryProfileClient({ me, settings })`,
-  `createInMemoryWorkspaceEmployeesClient({ seed })`. Companies' and emails'
-  adapters are closure-isolated (no cross-entity callers). Items',
+  `createInMemoryWorkspaceEmployeesClient({ seed })`,
+  `createInMemoryInvitationsClient({ isValid })`. Companies', emails', and
+  invitations' adapters are closure-isolated (no cross-entity callers). Items',
   suppliers', tasks', folders', notifications', profile's, and
   workspace-employees' adapters wrap the module-level singletons
   (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
@@ -79,7 +87,8 @@ it when the codebase makes it self-evident.
   `createHttpSuppliersClient(http?)`, `createHttpTasksClient(http?)`,
   `createHttpFoldersClient(http?)`, `createHttpNotificationsClient(http?)`,
   `createHttpEmailsClient(http?)`, `createHttpProfileClient(http?)`,
-  `createHttpWorkspaceEmployeesClient(http?)`.
+  `createHttpWorkspaceEmployeesClient(http?)`,
+  `createHttpInvitationsClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
   JSON, maps status codes to typed errors. No retries (React Query handles
   that). Single instance per app build.
@@ -91,8 +100,8 @@ it when the codebase makes it self-evident.
   `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()`,
   `useTasksClient()`, `useFoldersClient()`, `useNotificationsClient()`,
   `useEmailsClient()`, `useProfileClient()`,
-  `useWorkspaceEmployeesClient()` (and future friends) read from it.
-  Missing client throws `"<name> client not provided"`.
+  `useWorkspaceEmployeesClient()`, `useInvitationsClient()` (and future
+  friends) read from it. Missing client throws `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
   entity's client based on `VITE_DATA_<ENTITY>` env vars. Default is
   `memory`. Tests pass their own client map directly to the provider.
@@ -108,7 +117,8 @@ it when the codebase makes it self-evident.
   roster is a small bounded list; workspace-employees' list is a flat
   `WorkspaceEmployee[]` (similarly small and bounded); profile is a
   single-row domain (no list shape at all — `me`, `settings`, `update`,
-  `changePassword`).
+  `changePassword`); invitations is also a no-list domain — only
+  `verify(code)` returning `{ valid: boolean }`.
 - **Query-keys factory** — `keys` exported from `src/data/query-keys.ts`. The
   single source of truth for every cache namespace the app reads or writes.
   Hooks construct keys via these factories; no inline string arrays remain in
@@ -156,7 +166,8 @@ The data layer has three distinct test layers; tests live in exactly one.
   `src/data/clients/notifications-contract.test.ts`,
   `src/data/clients/emails-contract.test.ts`,
   `src/data/clients/profile-contract.test.ts`,
-  `src/data/clients/workspace-employees-contract.test.ts`.
+  `src/data/clients/workspace-employees-contract.test.ts`,
+  `src/data/clients/invitations-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header
   building, JSON parsing, status-code-to-error mapping. File:
   `src/data/http-client.test.ts`.

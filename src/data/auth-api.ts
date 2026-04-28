@@ -6,7 +6,6 @@ import {
 	logoutMock,
 	registerMock,
 	resetPasswordMock,
-	verifyInvitationCodeMock,
 } from "./auth-mock-data";
 
 export interface LoginResponse {
@@ -17,14 +16,6 @@ export interface LoginResponse {
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
 	return loginMock(email, password);
-}
-
-export interface VerifyInvitationCodeResponse {
-	valid: boolean;
-}
-
-export async function verifyInvitationCode(code: string): Promise<VerifyInvitationCodeResponse> {
-	return verifyInvitationCodeMock(code);
 }
 
 export interface CheckEmailResponse {

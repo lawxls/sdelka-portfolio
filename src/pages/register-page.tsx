@@ -1,19 +1,18 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { clearInvitationCode, getInvitationCode, setInvitationCode } from "@/data/auth";
-import { checkEmail, extractFormErrors, register, verifyInvitationCode } from "@/data/auth-api";
+import { checkEmail, extractFormErrors, register } from "@/data/auth-api";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
+import { useVerifyInvitationCode } from "@/data/use-invitations";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 
 type Stage = "email" | "details" | "confirmation";
 
 export function RegisterPage() {
-	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const [stage, setStage] = useState<Stage>("email");
-	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 
 	// Form state
@@ -27,38 +26,20 @@ export function RegisterPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-	// Validate invitation code on mount
+	// Sync URL ?code= into localStorage on mount so reloads keep working.
 	useMountEffect(() => {
-		let cancelled = false;
-
-		async function validate() {
-			const urlCode = searchParams.get("code");
-			if (urlCode) setInvitationCode(urlCode);
-
-			const code = urlCode ?? getInvitationCode();
-			if (!code) {
-				navigate("/login", { replace: true });
-				return;
-			}
-
-			try {
-				const result = await verifyInvitationCode(code);
-				if (cancelled) return;
-				if (!result.valid) {
-					navigate("/login", { replace: true });
-					return;
-				}
-				setLoading(false);
-			} catch {
-				if (!cancelled) navigate("/login", { replace: true });
-			}
-		}
-
-		validate();
-		return () => {
-			cancelled = true;
-		};
+		const urlCode = searchParams.get("code");
+		if (urlCode) setInvitationCode(urlCode);
+		return undefined;
 	});
+
+	const code = searchParams.get("code") ?? getInvitationCode();
+	const verify = useVerifyInvitationCode(code);
+
+	if (!code) return <Navigate to="/login" replace />;
+	if (verify.isError) return <Navigate to="/login" replace />;
+	if (verify.isSuccess && !verify.data.valid) return <Navigate to="/login" replace />;
+	if (!verify.isSuccess) return null;
 
 	async function handleEmailSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -111,8 +92,6 @@ export function RegisterPage() {
 			setSubmitting(false);
 		}
 	}
-
-	if (loading) return null;
 
 	if (stage === "confirmation") {
 		return (

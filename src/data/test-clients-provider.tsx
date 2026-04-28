@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
+import type { InvitationsClient } from "./clients/invitations-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
@@ -195,6 +196,19 @@ export function fakeWorkspaceEmployeesClient(
 		update: notImplemented("update"),
 		delete: notImplemented("delete"),
 		updatePermissions: notImplemented("updatePermissions"),
+		...overrides,
+	};
+}
+
+/** Build a fake `InvitationsClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails
+ * loudly. */
+export function fakeInvitationsClient(overrides: Partial<InvitationsClient> = {}): InvitationsClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeInvitationsClient.${method} not stubbed`);
+	};
+	return {
+		verify: notImplemented("verify"),
 		...overrides,
 	};
 }

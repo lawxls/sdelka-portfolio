@@ -1,9 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
+import { createInMemoryInvitationsClient } from "@/data/clients/invitations-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { mockHostname } from "@/test-utils";
 import { RegisterPage } from "./register-page";
 
@@ -11,7 +13,7 @@ let queryClient: QueryClient;
 
 function renderRegister(initialEntries = ["/register?code=ABC12"]) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ invitations: createInMemoryInvitationsClient() }}>
 			<MemoryRouter initialEntries={initialEntries}>
 				<Routes>
 					<Route element={<AuthLayout />}>
@@ -20,7 +22,7 @@ function renderRegister(initialEntries = ["/register?code=ABC12"]) {
 					<Route path="/login" element={<div>Login Page</div>} />
 				</Routes>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 

@@ -1,14 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import {
-	checkEmail,
-	confirmEmail,
-	forgotPassword,
-	login,
-	logout,
-	register,
-	resetPassword,
-	verifyInvitationCode,
-} from "./auth-api";
+import { checkEmail, confirmEmail, forgotPassword, login, logout, register, resetPassword } from "./auth-api";
 import { _resetIdCounter, _resetMockDelay, _setMockDelay } from "./mock-utils";
 
 beforeEach(() => {
@@ -38,13 +29,6 @@ describe("login", () => {
 describe("logout", () => {
 	test("resolves without throwing", async () => {
 		await expect(logout()).resolves.toBeUndefined();
-	});
-});
-
-describe("verifyInvitationCode", () => {
-	test("always returns valid: true so registration proceeds", async () => {
-		expect(await verifyInvitationCode("ABC12")).toEqual({ valid: true });
-		expect(await verifyInvitationCode("anything")).toEqual({ valid: true });
 	});
 });
 

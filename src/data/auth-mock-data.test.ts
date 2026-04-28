@@ -7,7 +7,6 @@ import {
 	logoutMock,
 	registerMock,
 	resetPasswordMock,
-	verifyInvitationCodeMock,
 } from "./auth-mock-data";
 import { _resetIdCounter, _resetMockDelay, _setMockDelay } from "./mock-utils";
 
@@ -57,13 +56,6 @@ describe("registerMock", () => {
 describe("checkEmailMock", () => {
 	test("always returns exists: false so registration proceeds", async () => {
 		expect(await checkEmailMock("anyone@example.com")).toEqual({ exists: false });
-	});
-});
-
-describe("verifyInvitationCodeMock", () => {
-	test("always returns valid: true", async () => {
-		expect(await verifyInvitationCodeMock("CODE1")).toEqual({ valid: true });
-		expect(await verifyInvitationCodeMock("")).toEqual({ valid: true });
 	});
 });
 
