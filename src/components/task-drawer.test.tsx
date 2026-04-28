@@ -1,10 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import * as tasksMock from "@/data/tasks-mock-data";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
 
@@ -63,11 +64,11 @@ function renderDrawer(taskId: string | null, onClose = vi.fn()) {
 	return {
 		onClose,
 		...render(
-			<QueryClientProvider client={queryClient}>
+			<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
 				<TooltipProvider>
 					<TaskDrawer taskId={taskId} onClose={onClose} />
 				</TooltipProvider>
-			</QueryClientProvider>,
+			</TestClientsProvider>,
 		),
 	};
 }
@@ -182,11 +183,11 @@ describe("TaskDrawer", () => {
 
 	it("renders as full-screen bottom sheet when isMobile", async () => {
 		render(
-			<QueryClientProvider client={queryClient}>
+			<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
 				<TooltipProvider>
 					<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
 				</TooltipProvider>
-			</QueryClientProvider>,
+			</TestClientsProvider>,
 		);
 
 		await waitFor(() => {

@@ -8,6 +8,7 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
@@ -82,7 +83,10 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 	const companiesClient = createInMemoryCompaniesClient(TEST_COMPANIES);
 	const itemsClient = opts.items ?? createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient, items: itemsClient }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ companies: companiesClient, items: itemsClient, suppliers: createInMemorySuppliersClient() }}
+		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<App />

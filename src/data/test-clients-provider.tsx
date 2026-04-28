@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
 import type { ItemsClient } from "./clients/items-client";
+import type { SuppliersClient } from "./clients/suppliers-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
 /**
@@ -65,6 +66,30 @@ export function fakeItemsClient(overrides: Partial<ItemsClient> = {}): ItemsClie
 		delete: notImplemented("delete"),
 		archive: notImplemented("archive"),
 		export: notImplemented("export"),
+		...overrides,
+	};
+}
+
+/** Build a fake `SuppliersClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeSuppliersClient(overrides: Partial<SuppliersClient> = {}): SuppliersClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeSuppliersClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		listForItem: notImplemented("listForItem"),
+		listAll: notImplemented("listAll"),
+		get: notImplemented("get"),
+		getById: notImplemented("getById"),
+		quotesByInn: notImplemented("quotesByInn"),
+		archive: notImplemented("archive"),
+		unarchive: notImplemented("unarchive"),
+		delete: notImplemented("delete"),
+		sendRequest: notImplemented("sendRequest"),
+		selectSupplier: notImplemented("selectSupplier"),
+		selectSupplierByInn: notImplemented("selectSupplierByInn"),
+		sendMessage: notImplemented("sendMessage"),
 		...overrides,
 	};
 }

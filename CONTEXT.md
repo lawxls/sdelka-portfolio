@@ -40,16 +40,18 @@ it when the codebase makes it self-evident.
   implementations without changing the call site. Entry point for hooks.
 - **In-memory adapter** — implements a `DataClient` against a mock store.
   Used in tests, demos, offline development. Factories:
-  `createInMemoryCompaniesClient(seed)`, `createInMemoryItemsClient({ seed })`.
-  Companies' adapter is closure-isolated. Items' adapter wraps the
-  module-level `items-mock-data` singleton so cross-entity callers
-  (`supplier-mock-data`, `folders-mock-data`) see the same store the hook sees;
-  passing `seed` to the factory resets the singleton without reaching into
-  `_setItems` directly. The singleton wrapping disappears for items when
-  cross-entity rules move to the procurement-operations module.
+  `createInMemoryCompaniesClient(seed)`, `createInMemoryItemsClient({ seed })`,
+  `createInMemorySuppliersClient({ seedByItemId })`. Companies' adapter is
+  closure-isolated. Items' and suppliers' adapters wrap the module-level
+  singletons (`items-mock-data`, `supplier-mock-data`) so cross-entity callers
+  see the same store the hook sees; passing seed options to the factory
+  resets the singleton without reaching into the underscore helpers directly.
+  Singleton wrapping disappears once cross-entity rules move to the
+  procurement-operations module (#251).
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
-  `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`.
+  `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
+  `createHttpSuppliersClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
   JSON, maps status codes to typed errors. No retries (React Query handles
   that). Single instance per app build.
@@ -58,8 +60,9 @@ it when the codebase makes it self-evident.
   `ValidationError` (with `fieldErrors`). Both adapters throw these types so
   hook tests can branch on error class without caring about the adapter.
 - **DataClientsProvider** — React context that holds the `DataClients` map.
-  `useCompaniesClient()`, `useItemsClient()` (and future friends) read from
-  it. Missing client throws `"<name> client not provided"`.
+  `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()` (and
+  future friends) read from it. Missing client throws
+  `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
   entity's client based on `VITE_DATA_<ENTITY>` env vars. Default is
   `memory`. Tests pass their own client map directly to the provider.
@@ -96,7 +99,8 @@ The data layer has three distinct test layers; tests live in exactly one.
   in-memory adapter and the HTTP adapter (with `fetch` stubbed). Asserts
   identical observable behavior. Files:
   `src/data/clients/companies-contract.test.ts`,
-  `src/data/clients/items-contract.test.ts`.
+  `src/data/clients/items-contract.test.ts`,
+  `src/data/clients/suppliers-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header
   building, JSON parsing, status-code-to-error mapping. File:
   `src/data/http-client.test.ts`.

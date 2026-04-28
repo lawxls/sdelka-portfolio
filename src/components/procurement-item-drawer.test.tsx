@@ -11,8 +11,9 @@ vi.mock("sonner", () => ({
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
-import { _resetSupplierStore, _setSupplierMockDelay, _setSuppliersForItem } from "@/data/supplier-mock-data";
+import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
 import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
@@ -73,6 +74,7 @@ function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 			clients={{
 				companies: createInMemoryCompaniesClient(),
 				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
+				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
 			}}
 		>
 			<TooltipProvider>
@@ -102,9 +104,7 @@ beforeEach(() => {
 	});
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
-	_setSuppliersForItem("item-1", TEST_SUPPLIERS);
 	_setMockDelay(0, 0);
 	_setTasks(ALL_TASKS);
 	vi.clearAllMocks();
@@ -112,7 +112,6 @@ beforeEach(() => {
 
 afterEach(() => {
 	localStorage.clear();
-	_resetSupplierStore();
 	_resetTasksStore();
 });
 
