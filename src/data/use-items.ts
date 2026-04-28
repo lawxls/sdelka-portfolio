@@ -3,6 +3,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { toast } from "sonner";
 import { useItemsClient } from "./clients-context";
 import type { ExportItemsParams, ListItemsParams } from "./domains/items";
+import { invalidateAfterItemListChange } from "./invalidation-policies";
+import { keys } from "./query-keys";
 import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
 
 interface ItemQueryParams {
@@ -30,7 +32,7 @@ export function useItems(params: ItemQueryParams) {
 	const filterParams = buildFilterParams(params);
 
 	const query = useInfiniteQuery({
-		queryKey: ["items", filterParams],
+		queryKey: keys.items.list(filterParams),
 		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -52,7 +54,7 @@ export function useItems(params: ItemQueryParams) {
 export function useAllItems(options?: { enabled?: boolean }) {
 	const client = useItemsClient();
 	return useQuery({
-		queryKey: ["items-global"],
+		queryKey: keys.items.listAll(),
 		queryFn: () => client.listAll(),
 		enabled: options?.enabled ?? true,
 	});
@@ -60,10 +62,10 @@ export function useAllItems(options?: { enabled?: boolean }) {
 
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	const client = useItemsClient();
-	const { sort: _sort, ...filterParams } = buildFilterParams({ ...params, sort: null });
+	const { sort: _sort, dir: _dir, ...filterParams } = buildFilterParams({ ...params, sort: null });
 
 	return useQuery({
-		queryKey: ["totals", filterParams],
+		queryKey: keys.items.totals(filterParams),
 		queryFn: () => client.totals(filterParams),
 	});
 }
@@ -101,22 +103,15 @@ function removeItemFromPages(cache: ItemsCache, id: string): ItemsCache {
 	};
 }
 
-function invalidateItemQueries(queryClient: ReturnType<typeof useQueryClient>) {
-	queryClient.invalidateQueries({ queryKey: ["items"] });
-	queryClient.invalidateQueries({ queryKey: ["items-global"] });
-	queryClient.invalidateQueries({ queryKey: ["totals"] });
-	queryClient.invalidateQueries({ queryKey: ["folderStats"] });
-}
-
 /** Snapshot all items query caches, apply an updater, and return snapshots for rollback. */
 async function optimisticItemUpdate(
 	queryClient: ReturnType<typeof useQueryClient>,
 	updater: (key: QueryKey, data: ItemsCache) => ItemsCache,
 ): Promise<{ snapshots: Snapshots }> {
-	await queryClient.cancelQueries({ queryKey: ["items"] });
+	await queryClient.cancelQueries({ queryKey: keys.items.all() });
 	const snapshots: Snapshots = [];
 
-	for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+	for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
 		if (data) {
 			snapshots.push([key, data]);
 			queryClient.setQueryData<ItemsCache>(key, updater(key, data));
@@ -144,7 +139,7 @@ export function useCreateItems() {
 
 	return useMutation({
 		mutationFn: (items: NewItemInput[]) => client.create(items),
-		onSuccess: () => invalidateItemQueries(queryClient),
+		onSuccess: () => invalidateAfterItemListChange(queryClient),
 		onError: () => {
 			toast.error("Не удалось создать закупки");
 		},
@@ -162,7 +157,7 @@ export function useUpdateItem() {
 				updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
 			),
 		onSuccess: (serverItem) => {
-			for (const [key] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+			for (const [key] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
 				queryClient.setQueryData<ItemsCache>(key, (old) =>
 					old ? updateItemInPages(old, serverItem.id, () => serverItem) : old,
 				);
@@ -179,7 +174,7 @@ export function useUpdateItem() {
 		/** mutate with synchronous cache update so the old name never flashes. */
 		mutate(vars: { id: string; name?: string; folderId?: string | null }) {
 			const { id, ...updates } = vars;
-			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: ["items"] })) {
+			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
 				if (data) {
 					queryClient.setQueryData<ItemsCache>(
 						key,
@@ -203,7 +198,7 @@ export function useDeleteItem() {
 			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось удалить закупку");
 		},
-		onSettled: () => invalidateItemQueries(queryClient),
+		onSettled: () => invalidateAfterItemListChange(queryClient),
 	});
 }
 
@@ -218,7 +213,7 @@ export function useArchiveItem() {
 			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось переместить закупку");
 		},
-		onSettled: () => invalidateItemQueries(queryClient),
+		onSettled: () => invalidateAfterItemListChange(queryClient),
 	});
 }
 
@@ -264,6 +259,6 @@ export function useAssignFolder() {
 			rollbackSnapshots(queryClient, context);
 			toast.error("Не удалось переместить закупку");
 		},
-		onSettled: () => invalidateItemQueries(queryClient),
+		onSettled: () => invalidateAfterItemListChange(queryClient),
 	});
 }

@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCompaniesClient } from "./clients-context";
+import { keys } from "./query-keys";
 import type { CompanySortState } from "./types";
 
 interface CompanyQueryParams {
@@ -20,7 +21,7 @@ export function useCompanies(params: CompanyQueryParams) {
 	const filterParams = buildCompanyFilterParams(params);
 
 	const query = useInfiniteQuery({
-		queryKey: ["companies", filterParams],
+		queryKey: keys.companies.list(filterParams),
 		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -42,7 +43,7 @@ export function useCompanies(params: CompanyQueryParams) {
 export function useAllCompanies(options?: { enabled?: boolean }) {
 	const client = useCompaniesClient();
 	return useQuery({
-		queryKey: ["companies-global"],
+		queryKey: keys.companies.listAll(),
 		queryFn: () => client.listAll(),
 		enabled: options?.enabled ?? true,
 	});
@@ -51,7 +52,7 @@ export function useAllCompanies(options?: { enabled?: boolean }) {
 export function useProcurementCompanies() {
 	const client = useCompaniesClient();
 	const query = useInfiniteQuery({
-		queryKey: ["procurementCompanies"],
+		queryKey: keys.companies.procurement(),
 		queryFn: ({ pageParam }) => client.list({ cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

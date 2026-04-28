@@ -66,6 +66,17 @@ it when the codebase makes it self-evident.
 - **CursorPage<T>** — shared list shape `{ items, nextCursor }` for cursor-
   paginated endpoints. Domains with materially different list shapes (board
   columns, flat tree) return their own typed responses.
+- **Query-keys factory** — `keys` exported from `src/data/query-keys.ts`. The
+  single source of truth for every cache namespace the app reads or writes.
+  Hooks construct keys via these factories; no inline string arrays remain in
+  migrated hook files. Currently covers companies, items, and folder stats
+  (added incrementally as domains migrate).
+- **Invalidation policy** — a named function in
+  `src/data/invalidation-policies.ts` that knows the *full* set of cache keys
+  affected by one mutation event (e.g.
+  `invalidateAfterItemListChange(qc)` — items list namespace + listAll +
+  totals + folder stats). Mutations call policies by name; they never list
+  keys directly. Cross-domain effects live here, not at the call site.
 - **Procurement operation** — the seam for cross-entity rules (e.g. "selecting
   a supplier updates the item's current supplier"). Lives in
   `procurement-operations` once created; not yet in tree.

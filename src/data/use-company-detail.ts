@@ -9,12 +9,14 @@ import type {
 	UpdateEmployeeData,
 	UpdatePermissionsData,
 } from "./domains/companies";
+import { invalidateAfterCompanyChange, invalidateAfterEmployeePermissionsChange } from "./invalidation-policies";
+import { keys } from "./query-keys";
 import type { Company } from "./types";
 
 export function useCompanyDetail(id: string | null) {
 	const client = useCompaniesClient();
 	return useQuery({
-		queryKey: ["company", id],
+		queryKey: keys.companies.detail(id),
 		queryFn: () => client.get(id as string),
 		enabled: id != null,
 	});
@@ -27,23 +29,19 @@ export function useUpdateCompany(id: string) {
 	return useMutation({
 		mutationFn: (data: UpdateCompanyData) => client.update(id, data),
 		onMutate: async (newData) => {
-			await queryClient.cancelQueries({ queryKey: ["company", id] });
-			const previous = queryClient.getQueryData<Company>(["company", id]);
+			await queryClient.cancelQueries({ queryKey: keys.companies.detail(id) });
+			const previous = queryClient.getQueryData<Company>(keys.companies.detail(id));
 			if (previous) {
-				queryClient.setQueryData<Company>(["company", id], { ...previous, ...newData });
+				queryClient.setQueryData<Company>(keys.companies.detail(id), { ...previous, ...newData });
 			}
 			return { previous };
 		},
 		onError: (_err, _newData, context) => {
 			if (context?.previous) {
-				queryClient.setQueryData(["company", id], context.previous);
+				queryClient.setQueryData(keys.companies.detail(id), context.previous);
 			}
 		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", id] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId: id }),
 	});
 }
 
@@ -53,10 +51,7 @@ export function useDeleteCompany() {
 
 	return useMutation({
 		mutationFn: (id: string) => client.delete(id),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient),
 	});
 }
 
@@ -66,10 +61,7 @@ export function useCreateCompany() {
 
 	return useMutation({
 		mutationFn: (data: CreateCompanyPayload) => client.create(data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient),
 	});
 }
 
@@ -79,11 +71,7 @@ export function useCreateAddress(companyId: string) {
 
 	return useMutation({
 		mutationFn: (data: CreateAddressData) => client.createAddress(companyId, data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -94,11 +82,7 @@ export function useUpdateAddress(companyId: string) {
 	return useMutation({
 		mutationFn: ({ addressId, data }: { addressId: string; data: UpdateAddressData }) =>
 			client.updateAddress(companyId, addressId, data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -108,11 +92,7 @@ export function useDeleteAddress(companyId: string) {
 
 	return useMutation({
 		mutationFn: (addressId: string) => client.deleteAddress(companyId, addressId),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -122,11 +102,7 @@ export function useCreateEmployee(companyId: string) {
 
 	return useMutation({
 		mutationFn: (data: CreateEmployeeData) => client.createEmployee(companyId, data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -137,11 +113,7 @@ export function useUpdateEmployee(companyId: string) {
 	return useMutation({
 		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdateEmployeeData }) =>
 			client.updateEmployee(companyId, employeeId, data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -151,11 +123,7 @@ export function useDeleteEmployee(companyId: string) {
 
 	return useMutation({
 		mutationFn: (employeeId: number) => client.deleteEmployee(companyId, employeeId),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-			queryClient.invalidateQueries({ queryKey: ["companies"] });
-			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
-		},
+		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
 
@@ -166,8 +134,6 @@ export function useUpdateEmployeePermissions(companyId: string) {
 	return useMutation({
 		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdatePermissionsData }) =>
 			client.updateEmployeePermissions(companyId, employeeId, data),
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
-		},
+		onSettled: () => invalidateAfterEmployeePermissionsChange(queryClient, { companyId }),
 	});
 }
