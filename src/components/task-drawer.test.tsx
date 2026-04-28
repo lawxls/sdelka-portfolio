@@ -4,7 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
-import * as tasksMock from "@/data/tasks-mock-data";
+import type { TasksClient } from "@/data/clients/tasks-client";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import type { Task } from "@/data/task-types";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TaskDrawer } from "./task-drawer";
@@ -52,7 +54,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	tasksMock._setTasks([unansweredTask, completedTask]);
 });
 
 afterEach(() => {
@@ -60,11 +61,32 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-function renderDrawer(taskId: string | null, onClose = vi.fn()) {
+/**
+ * Build a tasks client wrapping the in-memory adapter and exposing a
+ * `vi.fn`-wrapped `changeStatus` so the test can assert on call args without
+ * reaching into mock-store internals.
+ */
+function buildTasksClient(seed: Task[]): { client: TasksClient; changeStatusSpy: ReturnType<typeof vi.fn> } {
+	const inMemory = createInMemoryTasksClient({ seed });
+	const changeStatusSpy = vi.fn(inMemory.changeStatus.bind(inMemory));
+	return {
+		client: { ...inMemory, changeStatus: changeStatusSpy },
+		changeStatusSpy,
+	};
+}
+
+function renderDrawer(taskId: string | null, opts: { onClose?: () => void; seed?: Task[] } = {}) {
+	const onClose = opts.onClose ?? vi.fn();
+	const seed = opts.seed ?? [unansweredTask, completedTask];
+	const { client, changeStatusSpy } = buildTasksClient(seed);
 	return {
 		onClose,
+		changeStatusSpy,
 		...render(
-			<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
+			<TestClientsProvider
+				queryClient={queryClient}
+				clients={{ suppliers: createInMemorySuppliersClient(), tasks: client }}
+			>
 				<TooltipProvider>
 					<TaskDrawer taskId={taskId} onClose={onClose} />
 				</TooltipProvider>
@@ -104,7 +126,7 @@ describe("TaskDrawer", () => {
 
 	it("submitting a message closes the drawer", async () => {
 		const onClose = vi.fn();
-		renderDrawer("task-1", onClose);
+		renderDrawer("task-1", { onClose });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -140,9 +162,8 @@ describe("TaskDrawer", () => {
 	});
 
 	it("archives the task via the overflow menu", async () => {
-		const spy = vi.spyOn(tasksMock, "changeTaskStatusMock");
 		const onClose = vi.fn();
-		renderDrawer("task-1", onClose);
+		const { changeStatusSpy } = renderDrawer("task-1", { onClose });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -153,7 +174,7 @@ describe("TaskDrawer", () => {
 		await user.click(await screen.findByRole("menuitem", { name: /В архив/ }));
 
 		await waitFor(() => {
-			expect(spy).toHaveBeenCalledWith("task-1", expect.objectContaining({ status: "archived" }));
+			expect(changeStatusSpy).toHaveBeenCalledWith("task-1", expect.objectContaining({ status: "archived" }));
 		});
 	});
 
@@ -163,10 +184,7 @@ describe("TaskDrawer", () => {
 			status: "archived",
 			statusBeforeArchive: "in_progress",
 		});
-		tasksMock._setTasks([archivedTask]);
-
-		const spy = vi.spyOn(tasksMock, "changeTaskStatusMock");
-		renderDrawer("task-archived");
+		const { changeStatusSpy } = renderDrawer("task-archived", { seed: [archivedTask] });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -177,13 +195,17 @@ describe("TaskDrawer", () => {
 		await user.click(await screen.findByRole("menuitem", { name: /Разархивировать/ }));
 
 		await waitFor(() => {
-			expect(spy).toHaveBeenCalledWith("task-archived", expect.objectContaining({ status: "in_progress" }));
+			expect(changeStatusSpy).toHaveBeenCalledWith("task-archived", expect.objectContaining({ status: "in_progress" }));
 		});
 	});
 
 	it("renders as full-screen bottom sheet when isMobile", async () => {
+		const { client } = buildTasksClient([unansweredTask, completedTask]);
 		render(
-			<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
+			<TestClientsProvider
+				queryClient={queryClient}
+				clients={{ suppliers: createInMemorySuppliersClient(), tasks: client }}
+			>
 				<TooltipProvider>
 					<TaskDrawer taskId="task-1" onClose={vi.fn()} isMobile />
 				</TooltipProvider>

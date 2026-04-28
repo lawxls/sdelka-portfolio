@@ -9,9 +9,9 @@ import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memor
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
-import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
@@ -72,7 +72,6 @@ const TEST_COMPANIES: Company[] = [
 
 function setupHandlers() {
 	_setFolders(TEST_FOLDERS);
-	_setTasks([]);
 }
 
 // --- Render helpers ---
@@ -85,7 +84,12 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
-			clients={{ companies: companiesClient, items: itemsClient, suppliers: createInMemorySuppliersClient() }}
+			clients={{
+				companies: companiesClient,
+				items: itemsClient,
+				suppliers: createInMemorySuppliersClient(),
+				tasks: createInMemoryTasksClient({ seed: [] }),
+			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
@@ -110,7 +114,6 @@ beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access");
 	_resetFoldersStore();
-	_resetTasksStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

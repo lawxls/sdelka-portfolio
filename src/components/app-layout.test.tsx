@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
@@ -27,6 +28,7 @@ function renderLayout(initialEntry = "/procurement") {
 				companies: createInMemoryCompaniesClient([]),
 				items: createInMemoryItemsClient({ seed: [] }),
 				suppliers: createInMemorySuppliersClient(),
+				tasks: createInMemoryTasksClient({ seed: [] }),
 			}}
 		>
 			<TooltipWrapper>

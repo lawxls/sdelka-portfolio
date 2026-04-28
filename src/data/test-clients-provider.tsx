@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
+import type { TasksClient } from "./clients/tasks-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
 /**
@@ -90,6 +91,24 @@ export function fakeSuppliersClient(overrides: Partial<SuppliersClient> = {}): S
 		selectSupplier: notImplemented("selectSupplier"),
 		selectSupplierByInn: notImplemented("selectSupplierByInn"),
 		sendMessage: notImplemented("sendMessage"),
+		...overrides,
+	};
+}
+
+/** Build a fake `TasksClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeTasksClient(overrides: Partial<TasksClient> = {}): TasksClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeTasksClient.${method} not stubbed`);
+	};
+	return {
+		listAll: notImplemented("listAll"),
+		list: notImplemented("list"),
+		board: notImplemented("board"),
+		get: notImplemented("get"),
+		changeStatus: notImplemented("changeStatus"),
+		uploadAttachments: notImplemented("uploadAttachments"),
+		deleteAttachment: notImplemented("deleteAttachment"),
 		...overrides,
 	};
 }

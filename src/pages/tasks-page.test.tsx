@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
-import * as tasksMock from "@/data/tasks-mock-data";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
@@ -39,7 +39,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	tasksMock._setTasks(allTasks);
 });
 
 afterEach(() => {
@@ -49,7 +48,13 @@ afterEach(() => {
 
 function renderPage(initialEntries?: string[]) {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				suppliers: createInMemorySuppliersClient(),
+				tasks: createInMemoryTasksClient({ seed: allTasks }),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries ?? ["/tasks"]}>
 					<TasksPage />
