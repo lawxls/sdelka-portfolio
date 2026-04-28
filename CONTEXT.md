@@ -41,7 +41,13 @@ it when the codebase makes it self-evident.
   `CompaniesClient.{create,update,delete}Employee`, which scope to one
   company aggregate.
 - **CompanyInfo** — the active workspace's company-level metadata (name,
-  branding, plan). Distinct from `Company` (an arbitrary org record).
+  branding, plan). Distinct from `Company` (an arbitrary org record): the
+  companies client (`CompaniesClient`) lists/edits *Company aggregates* — any
+  number of customer-side organizations, with employees and addresses;
+  `CompanyInfoClient` is read-only over a single workspace-scoped record
+  (the current tenant's identity). Backs `useCompanyInfo` only. Surface is a
+  single `get()` returning `{ name }` today; branding/plan fields are a
+  forward extension on the same client.
 - **Invitation** — an outstanding invite to join the workspace. Two halves:
   *creation* (an admin invites a new employee) lives on
   `WorkspaceEmployeesClient.invite()` — a row with `registeredAt: null` is a
@@ -66,21 +72,21 @@ it when the codebase makes it self-evident.
   `createInMemoryEmailsClient(seed)`,
   `createInMemoryProfileClient({ me, settings })`,
   `createInMemoryWorkspaceEmployeesClient({ seed })`,
-  `createInMemoryInvitationsClient({ isValid })`. Companies', emails', and
+  `createInMemoryInvitationsClient({ isValid })`,
+  `createInMemoryCompanyInfoClient({ info })`. Companies', emails', and
   invitations' adapters are closure-isolated (no cross-entity callers). Items',
-  suppliers', tasks', folders', notifications', profile's, and
-  workspace-employees' adapters wrap the module-level singletons
-  (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
+  suppliers', tasks', folders', notifications', profile's,
+  workspace-employees', and company-info's adapters wrap the module-level
+  singletons (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
   `folders-mock-data`, `notifications-mock-data`, `workspace-mock-data`)
   so cross-entity callers see the same store the hook sees — folders'
   delete reaches into items via `_unassignItemsFromFolder`, and stats
-  pulls counts from the items singleton; profile and workspace-employees
-  share `workspace-mock-data` with the still-pending invitations /
-  company-info splits until #250 dissolves it. Passing seed options to
-  the factory resets the singleton without reaching into the underscore
-  helpers directly. Singleton wrapping disappears once cross-entity
-  rules move to the procurement-operations module (#251) and once the
-  workspace splits land (#247–#250).
+  pulls counts from the items singleton; profile, workspace-employees,
+  and company-info share `workspace-mock-data` until #250 dissolves it.
+  Passing seed options to the factory resets the singleton without
+  reaching into the underscore helpers directly. Singleton wrapping
+  disappears once cross-entity rules move to the procurement-operations
+  module (#251) and once #250 deletes `workspace-mock-data`.
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
@@ -88,7 +94,8 @@ it when the codebase makes it self-evident.
   `createHttpFoldersClient(http?)`, `createHttpNotificationsClient(http?)`,
   `createHttpEmailsClient(http?)`, `createHttpProfileClient(http?)`,
   `createHttpWorkspaceEmployeesClient(http?)`,
-  `createHttpInvitationsClient(http?)`.
+  `createHttpInvitationsClient(http?)`,
+  `createHttpCompanyInfoClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
   JSON, maps status codes to typed errors. No retries (React Query handles
   that). Single instance per app build.
@@ -100,8 +107,9 @@ it when the codebase makes it self-evident.
   `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()`,
   `useTasksClient()`, `useFoldersClient()`, `useNotificationsClient()`,
   `useEmailsClient()`, `useProfileClient()`,
-  `useWorkspaceEmployeesClient()`, `useInvitationsClient()` (and future
-  friends) read from it. Missing client throws `"<name> client not provided"`.
+  `useWorkspaceEmployeesClient()`, `useInvitationsClient()`,
+  `useCompanyInfoClient()` (and future friends) read from it. Missing
+  client throws `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
   entity's client based on `VITE_DATA_<ENTITY>` env vars. Default is
   `memory`. Tests pass their own client map directly to the provider.
@@ -118,7 +126,9 @@ it when the codebase makes it self-evident.
   `WorkspaceEmployee[]` (similarly small and bounded); profile is a
   single-row domain (no list shape at all — `me`, `settings`, `update`,
   `changePassword`); invitations is also a no-list domain — only
-  `verify(code)` returning `{ valid: boolean }`.
+  `verify(code)` returning `{ valid: boolean }`; company-info is the
+  third no-list domain — only `get()` returning the active workspace's
+  identity record `{ name }`.
 - **Query-keys factory** — `keys` exported from `src/data/query-keys.ts`. The
   single source of truth for every cache namespace the app reads or writes.
   Hooks construct keys via these factories; no inline string arrays remain in
@@ -167,7 +177,8 @@ The data layer has three distinct test layers; tests live in exactly one.
   `src/data/clients/emails-contract.test.ts`,
   `src/data/clients/profile-contract.test.ts`,
   `src/data/clients/workspace-employees-contract.test.ts`,
-  `src/data/clients/invitations-contract.test.ts`.
+  `src/data/clients/invitations-contract.test.ts`,
+  `src/data/clients/company-info-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header
   building, JSON parsing, status-code-to-error mapping. File:
   `src/data/http-client.test.ts`.

@@ -1,5 +1,7 @@
 import { createHttpCompaniesClient } from "./clients/companies-http";
 import { createInMemoryCompaniesClient } from "./clients/companies-in-memory";
+import { createHttpCompanyInfoClient } from "./clients/company-info-http";
+import { createInMemoryCompanyInfoClient } from "./clients/company-info-in-memory";
 import { createHttpEmailsClient } from "./clients/emails-http";
 import { createInMemoryEmailsClient } from "./clients/emails-in-memory";
 import { createHttpFoldersClient } from "./clients/folders-http";
@@ -33,6 +35,7 @@ interface AdapterConfig {
 	profile: AdapterMode;
 	workspaceEmployees: AdapterMode;
 	invitations: AdapterMode;
+	companyInfo: AdapterMode;
 }
 
 /**
@@ -56,6 +59,7 @@ function resolveConfig(): AdapterConfig {
 		profile: read("VITE_DATA_PROFILE"),
 		workspaceEmployees: read("VITE_DATA_WORKSPACE_EMPLOYEES"),
 		invitations: read("VITE_DATA_INVITATIONS"),
+		companyInfo: read("VITE_DATA_COMPANY_INFO"),
 	};
 }
 
@@ -81,5 +85,6 @@ export function buildDataClients(): DataClients {
 				? createHttpWorkspaceEmployeesClient()
 				: createInMemoryWorkspaceEmployeesClient(),
 		invitations: config.invitations === "http" ? createHttpInvitationsClient() : createInMemoryInvitationsClient(),
+		companyInfo: config.companyInfo === "http" ? createHttpCompanyInfoClient() : createInMemoryCompanyInfoClient(),
 	};
 }

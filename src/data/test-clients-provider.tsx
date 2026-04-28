@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
+import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { InvitationsClient } from "./clients/invitations-client";
@@ -209,6 +210,19 @@ export function fakeInvitationsClient(overrides: Partial<InvitationsClient> = {}
 	};
 	return {
 		verify: notImplemented("verify"),
+		...overrides,
+	};
+}
+
+/** Build a fake `CompanyInfoClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails
+ * loudly. */
+export function fakeCompanyInfoClient(overrides: Partial<CompanyInfoClient> = {}): CompanyInfoClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeCompanyInfoClient.${method} not stubbed`);
+	};
+	return {
+		get: notImplemented("get"),
 		...overrides,
 	};
 }

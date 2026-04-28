@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,10 +18,6 @@ export function createTestQueryClient() {
 	return new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
-}
-
-export function createQueryWrapper(queryClient: QueryClient) {
-	return ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children });
 }
 
 export function TooltipWrapper({ children }: { children: ReactNode }) {
