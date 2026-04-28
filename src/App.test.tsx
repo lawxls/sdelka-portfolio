@@ -9,6 +9,7 @@ import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memor
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import * as mockParser from "@/data/mock-file-parser";
@@ -86,6 +87,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
+				notifications: createInMemoryNotificationsClient({ seed: [] }),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>

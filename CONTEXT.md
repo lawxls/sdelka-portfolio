@@ -43,12 +43,14 @@ it when the codebase makes it self-evident.
   `createInMemoryCompaniesClient(seed)`, `createInMemoryItemsClient({ seed })`,
   `createInMemorySuppliersClient({ seedByItemId })`,
   `createInMemoryTasksClient({ seed })`,
-  `createInMemoryFoldersClient({ seed })`. Companies' adapter is
-  closure-isolated. Items', suppliers', tasks', and folders' adapters wrap
-  the module-level singletons (`items-mock-data`, `supplier-mock-data`,
-  `tasks-mock-data`, `folders-mock-data`) so cross-entity callers see the
-  same store the hook sees — folders' delete reaches into items via
-  `_unassignItemsFromFolder`, and stats pulls counts from the items
+  `createInMemoryFoldersClient({ seed })`,
+  `createInMemoryNotificationsClient({ seed, readIds })`. Companies' adapter
+  is closure-isolated. Items', suppliers', tasks', folders', and
+  notifications' adapters wrap the module-level singletons
+  (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
+  `folders-mock-data`, `notifications-mock-data`) so cross-entity callers
+  see the same store the hook sees — folders' delete reaches into items
+  via `_unassignItemsFromFolder`, and stats pulls counts from the items
   singleton. Passing seed options to the factory resets the singleton
   without reaching into the underscore helpers directly. Singleton wrapping
   disappears once cross-entity rules move to the procurement-operations
@@ -57,7 +59,7 @@ it when the codebase makes it self-evident.
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
   `createHttpSuppliersClient(http?)`, `createHttpTasksClient(http?)`,
-  `createHttpFoldersClient(http?)`.
+  `createHttpFoldersClient(http?)`, `createHttpNotificationsClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
   JSON, maps status codes to typed errors. No retries (React Query handles
   that). Single instance per app build.
@@ -67,8 +69,9 @@ it when the codebase makes it self-evident.
   hook tests can branch on error class without caring about the adapter.
 - **DataClientsProvider** — React context that holds the `DataClients` map.
   `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()`,
-  `useTasksClient()`, `useFoldersClient()` (and future friends) read from
-  it. Missing client throws `"<name> client not provided"`.
+  `useTasksClient()`, `useFoldersClient()`, `useNotificationsClient()` (and
+  future friends) read from it. Missing client throws
+  `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
   entity's client based on `VITE_DATA_<ENTITY>` env vars. Default is
   `memory`. Tests pass their own client map directly to the provider.
@@ -78,7 +81,8 @@ it when the codebase makes it self-evident.
   keyed object (one column per status) and tasks' `TaskListResponse` is a
   page-based shape (`{ count, results, next, previous }`); folders' list
   is a flat `Folder[]` and folders' `FolderStatsResponse` is a flat
-  snapshot keyed by folder id with an `archiveCount`.
+  snapshot keyed by folder id with an `archiveCount`; notifications'
+  `NotificationsResponse` is a flat snapshot plus a per-user read-id set.
 - **Query-keys factory** — `keys` exported from `src/data/query-keys.ts`. The
   single source of truth for every cache namespace the app reads or writes.
   Hooks construct keys via these factories; no inline string arrays remain in
@@ -122,7 +126,8 @@ The data layer has three distinct test layers; tests live in exactly one.
   `src/data/clients/items-contract.test.ts`,
   `src/data/clients/suppliers-contract.test.ts`,
   `src/data/clients/tasks-contract.test.ts`,
-  `src/data/clients/folders-contract.test.ts`.
+  `src/data/clients/folders-contract.test.ts`,
+  `src/data/clients/notifications-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header
   building, JSON parsing, status-code-to-error mapping. File:
   `src/data/http-client.test.ts`.

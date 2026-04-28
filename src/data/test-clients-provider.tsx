@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
+import type { NotificationsClient } from "./clients/notifications-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
@@ -126,6 +127,21 @@ export function fakeFoldersClient(overrides: Partial<FoldersClient> = {}): Folde
 		create: notImplemented("create"),
 		update: notImplemented("update"),
 		delete: notImplemented("delete"),
+		...overrides,
+	};
+}
+
+/** Build a fake `NotificationsClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails
+ * loudly. */
+export function fakeNotificationsClient(overrides: Partial<NotificationsClient> = {}): NotificationsClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeNotificationsClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		markAsRead: notImplemented("markAsRead"),
+		markAllAsRead: notImplemented("markAllAsRead"),
 		...overrides,
 	};
 }
