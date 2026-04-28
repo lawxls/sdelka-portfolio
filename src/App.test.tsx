@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
@@ -88,6 +89,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
+				emails: createInMemoryEmailsClient([]),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>

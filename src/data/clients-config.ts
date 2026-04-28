@@ -1,5 +1,7 @@
 import { createHttpCompaniesClient } from "./clients/companies-http";
 import { createInMemoryCompaniesClient } from "./clients/companies-in-memory";
+import { createHttpEmailsClient } from "./clients/emails-http";
+import { createInMemoryEmailsClient } from "./clients/emails-in-memory";
 import { createHttpFoldersClient } from "./clients/folders-http";
 import { createInMemoryFoldersClient } from "./clients/folders-in-memory";
 import { createHttpItemsClient } from "./clients/items-http";
@@ -21,6 +23,7 @@ interface AdapterConfig {
 	tasks: AdapterMode;
 	folders: AdapterMode;
 	notifications: AdapterMode;
+	emails: AdapterMode;
 }
 
 /**
@@ -40,6 +43,7 @@ function resolveConfig(): AdapterConfig {
 		tasks: read("VITE_DATA_TASKS"),
 		folders: read("VITE_DATA_FOLDERS"),
 		notifications: read("VITE_DATA_NOTIFICATIONS"),
+		emails: read("VITE_DATA_EMAILS"),
 	};
 }
 
@@ -58,5 +62,6 @@ export function buildDataClients(): DataClients {
 		folders: config.folders === "http" ? createHttpFoldersClient() : createInMemoryFoldersClient(),
 		notifications:
 			config.notifications === "http" ? createHttpNotificationsClient() : createInMemoryNotificationsClient(),
+		emails: config.emails === "http" ? createHttpEmailsClient() : createInMemoryEmailsClient(),
 	};
 }

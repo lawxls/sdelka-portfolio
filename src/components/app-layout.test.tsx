@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
@@ -31,6 +32,7 @@ function renderLayout(initialEntry = "/procurement") {
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
+				emails: createInMemoryEmailsClient([]),
 			}}
 		>
 			<TooltipWrapper>
