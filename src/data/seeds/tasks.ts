@@ -1,5 +1,5 @@
-import { ORMATEK_SUPPLIERS } from "../suppliers-ormatek";
 import type { Task } from "../task-types";
+import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 
 const assigneeIvan = {
 	id: "user-1",

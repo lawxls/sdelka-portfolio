@@ -96,6 +96,21 @@ it when the codebase makes it self-evident.
   `tasks-mock-data.ts` is now a barrel re-exporting the public surface, and
   the seed roster lives at `seeds/tasks.ts` (mirrors `seeds/items.ts` /
   `seeds/companies.ts` / `seeds/emails.ts` / `seeds/workspace-employees.ts`).
+  The suppliers singleton's internals follow the same layout:
+  `suppliers-mock/enrichment.ts` (REGIONS / region meta / hash / INN +
+  postal + address + identity profile + quote-anchor timestamps + chat
+  history + the candidate-pool builder + `generateCandidates`),
+  `suppliers-mock/store.ts` (mutable per-item map + lazy
+  `getSuppliersForItem` + `makeYourSupplier` + `_addYourSupplier` +
+  `_resetSupplierStore` + `_setSuppliersForItem` + `_setSendShouldFail` +
+  `_setSupplierMockDelay` + `simulateDelay`),
+  `suppliers-mock/queries.ts` (filter + sort + the five fetch fns plus
+  `getSupplierQuotesByInn`), and `suppliers-mock/mutations.ts`
+  (delete / archive / unarchive / `sendSupplierRequest` /
+  `sendSupplierMessage`); `supplier-mock-data.ts` is now a barrel
+  re-exporting the public surface and the Ormatek seed roster (the
+  hand-authored 7000-line dataset for item-1) lives at
+  `seeds/suppliers-ormatek.ts` (joins the other `seeds/` files).
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,

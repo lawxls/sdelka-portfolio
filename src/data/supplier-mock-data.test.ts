@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { _resetItemsStore } from "./items-mock-data";
+import { ORMATEK_SUPPLIERS } from "./seeds/suppliers-ormatek";
 import {
 	_resetSupplierStore,
 	_setSendShouldFail,
@@ -10,7 +11,6 @@ import {
 	sendSupplierMessage,
 } from "./supplier-mock-data";
 import { SUPPLIER_STATUSES } from "./supplier-types";
-import { ORMATEK_SUPPLIERS } from "./suppliers-ormatek";
 
 beforeEach(() => {
 	_resetSupplierStore();

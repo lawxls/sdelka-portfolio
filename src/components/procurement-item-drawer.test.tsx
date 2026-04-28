@@ -15,9 +15,9 @@ import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
+import { ORMATEK_SUPPLIERS } from "@/data/seeds/suppliers-ormatek";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
-import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import type { ProcurementItem } from "@/data/types";

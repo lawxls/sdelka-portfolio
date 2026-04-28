@@ -1,4 +1,4 @@
-import type { SupplierSeed } from "./supplier-types";
+import type { SupplierSeed } from "../supplier-types";
 
 export const ORMATEK_SUPPLIERS: SupplierSeed[] = [
 	{
