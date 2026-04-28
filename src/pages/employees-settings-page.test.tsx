@@ -6,8 +6,9 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { _resetWorkspaceStore, _setWorkspaceEmployees, type WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
 import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
 
@@ -71,7 +72,10 @@ function renderPage(initialPath = "/settings/employees") {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
-			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+			clients={{
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
+			}}
 		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
@@ -95,7 +99,10 @@ function renderPageWithSpy(initialPath = "/settings/employees") {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
-			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+			clients={{
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
+			}}
 		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
@@ -120,12 +127,10 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_setWorkspaceEmployees(MOCK_EMPLOYEES);
 });
 
 afterEach(() => {
 	localStorage.clear();
-	_resetWorkspaceStore();
 });
 
 describe("EmployeesSettingsPage table", () => {

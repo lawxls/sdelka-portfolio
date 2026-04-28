@@ -7,6 +7,7 @@ import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
+import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 
 /**
  * Map of all data clients available to the app. As more domains migrate to the
@@ -22,6 +23,7 @@ export interface DataClients {
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
 	profile?: ProfileClient;
+	workspaceEmployees?: WorkspaceEmployeesClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -88,4 +90,10 @@ export function useProfileClient(): ProfileClient {
 	const { profile } = useClients();
 	if (!profile) throw new Error("profile client not provided");
 	return profile;
+}
+
+export function useWorkspaceEmployeesClient(): WorkspaceEmployeesClient {
+	const { workspaceEmployees } = useClients();
+	if (!workspaceEmployees) throw new Error("workspace-employees client not provided");
+	return workspaceEmployees;
 }

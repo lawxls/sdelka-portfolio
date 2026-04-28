@@ -7,6 +7,7 @@ import { PhoneInput } from "@/components/phone-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import type { EmployeeRole, PermissionLevel, PermissionModuleKey } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useMe } from "@/data/use-me";
@@ -15,7 +16,6 @@ import {
 	useUpdateWorkspaceEmployeePermissions,
 	useWorkspaceEmployeeDetail,
 } from "@/data/use-workspace-employees";
-import type { WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
 import { formatFullName, formatPhone } from "@/lib/format";
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });

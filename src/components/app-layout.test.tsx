@@ -9,6 +9,7 @@ import { createInMemoryNotificationsClient } from "@/data/clients/notifications-
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppLayout } from "./app-layout";
@@ -26,6 +27,7 @@ function renderLayout(initialEntry = "/procurement") {
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 			}}
 		>
 			<TooltipWrapper>

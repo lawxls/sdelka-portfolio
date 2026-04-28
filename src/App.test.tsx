@@ -14,6 +14,7 @@ import { createInMemoryNotificationsClient } from "@/data/clients/notifications-
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
@@ -92,6 +93,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient(),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>

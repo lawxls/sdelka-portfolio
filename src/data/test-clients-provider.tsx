@@ -9,6 +9,7 @@ import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
+import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
 /**
@@ -174,6 +175,26 @@ export function fakeProfileClient(overrides: Partial<ProfileClient> = {}): Profi
 		settings: notImplemented("settings"),
 		update: notImplemented("update"),
 		changePassword: notImplemented("changePassword"),
+		...overrides,
+	};
+}
+
+/** Build a fake `WorkspaceEmployeesClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails
+ * loudly. */
+export function fakeWorkspaceEmployeesClient(
+	overrides: Partial<WorkspaceEmployeesClient> = {},
+): WorkspaceEmployeesClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeWorkspaceEmployeesClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		get: notImplemented("get"),
+		invite: notImplemented("invite"),
+		update: notImplemented("update"),
+		delete: notImplemented("delete"),
+		updatePermissions: notImplemented("updatePermissions"),
 		...overrides,
 	};
 }

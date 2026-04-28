@@ -14,6 +14,8 @@ import { createHttpSuppliersClient } from "./clients/suppliers-http";
 import { createInMemorySuppliersClient } from "./clients/suppliers-in-memory";
 import { createHttpTasksClient } from "./clients/tasks-http";
 import { createInMemoryTasksClient } from "./clients/tasks-in-memory";
+import { createHttpWorkspaceEmployeesClient } from "./clients/workspace-employees-http";
+import { createInMemoryWorkspaceEmployeesClient } from "./clients/workspace-employees-in-memory";
 import type { DataClients } from "./clients-context";
 
 type AdapterMode = "memory" | "http";
@@ -27,6 +29,7 @@ interface AdapterConfig {
 	notifications: AdapterMode;
 	emails: AdapterMode;
 	profile: AdapterMode;
+	workspaceEmployees: AdapterMode;
 }
 
 /**
@@ -48,6 +51,7 @@ function resolveConfig(): AdapterConfig {
 		notifications: read("VITE_DATA_NOTIFICATIONS"),
 		emails: read("VITE_DATA_EMAILS"),
 		profile: read("VITE_DATA_PROFILE"),
+		workspaceEmployees: read("VITE_DATA_WORKSPACE_EMPLOYEES"),
 	};
 }
 
@@ -68,5 +72,9 @@ export function buildDataClients(): DataClients {
 			config.notifications === "http" ? createHttpNotificationsClient() : createInMemoryNotificationsClient(),
 		emails: config.emails === "http" ? createHttpEmailsClient() : createInMemoryEmailsClient(),
 		profile: config.profile === "http" ? createHttpProfileClient() : createInMemoryProfileClient(),
+		workspaceEmployees:
+			config.workspaceEmployees === "http"
+				? createHttpWorkspaceEmployeesClient()
+				: createInMemoryWorkspaceEmployeesClient(),
 	};
 }
