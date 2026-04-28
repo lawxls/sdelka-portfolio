@@ -9,7 +9,6 @@ import { fakeSuppliersClient, TestClientsProvider } from "./test-clients-provide
 import {
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
-	useSelectSupplier,
 	useSendSupplierMessage,
 	useSendSupplierRequest,
 	useSupplier,
@@ -140,22 +139,6 @@ describe("useSendSupplierRequest", () => {
 		expect(queryClient.getQueryState(["items", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals", {}])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["itemDetail", "item-1"])?.isInvalidated).toBe(true);
-	});
-});
-
-describe("useSelectSupplier", () => {
-	it("invalidates itemDetail + supplier lists on success", async () => {
-		const selectSupplier = vi.fn().mockResolvedValue(undefined);
-		const client = fakeSuppliersClient({ selectSupplier });
-		queryClient.setQueryData(["itemDetail", "item-1"], { id: "item-1" });
-		queryClient.setQueryData(["suppliers", "item-1", {}], { suppliers: [], nextCursor: null, total: 0 });
-
-		const { result } = renderHook(() => useSelectSupplier(), { wrapper: wrapperFactory(client) });
-		await result.current.mutateAsync({ itemId: "item-1", supplierId: "s1" });
-
-		expect(selectSupplier).toHaveBeenCalledWith("item-1", "s1");
-		expect(queryClient.getQueryState(["itemDetail", "item-1"])?.isInvalidated).toBe(true);
-		expect(queryClient.getQueryState(["suppliers", "item-1", {}])?.isInvalidated).toBe(true);
 	});
 });
 

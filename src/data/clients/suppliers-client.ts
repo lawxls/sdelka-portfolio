@@ -12,9 +12,9 @@ import type {
  * or HTTP. Hooks pull this through context, so swapping adapters is a one-line
  * change in the composition root.
  *
- * Cross-entity rules (selectSupplier / selectSupplierByInn touching the procurement
- * item's currentSupplier) live on the in-memory adapter for now — their extraction
- * into a procurement-operations module is issue #251.
+ * The suppliers client speaks only about its own entity: cross-entity rules
+ * (e.g. "selecting a supplier writes the procurement item's currentSupplier")
+ * live in `src/data/operations/procurement-operations.ts`.
  */
 export interface SuppliersClient {
 	/** Paginated list for one item. Default sort puts получено_кп first then ranks by TCO. */
@@ -34,9 +34,5 @@ export interface SuppliersClient {
 
 	/** Transition matching status="new" rows to "кп_запрошено". Returns the ids actually flipped. */
 	sendRequest(itemId: string, supplierIds: string[]): Promise<string[]>;
-	/** Cross-entity: write the chosen supplier onto the item's currentSupplier (no INN, no price snap). */
-	selectSupplier(itemId: string, supplierId: string): Promise<void>;
-	/** Cross-entity: same, plus INN, prepayment %, and snap currentPrice to the supplier's TCO. */
-	selectSupplierByInn(itemId: string, inn: string): Promise<void>;
 	sendMessage(itemId: string, supplierId: string, body: string, files?: File[]): Promise<SupplierChatMessage>;
 }

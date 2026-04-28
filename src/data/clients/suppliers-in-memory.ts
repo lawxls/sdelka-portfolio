@@ -18,8 +18,6 @@ import {
 	getSupplierById,
 	getSupplierQuotesByInn,
 	getSuppliers,
-	selectSupplier,
-	selectSupplierByInn,
 	sendSupplierMessage,
 	sendSupplierRequest,
 	unarchiveSuppliers,
@@ -35,9 +33,14 @@ export interface InMemorySuppliersOptions {
 /**
  * Build an in-memory suppliers adapter wrapping the module-level mock store
  * (`supplier-mock-data`). All clients share that singleton, so cross-entity
- * callers (items-mock-data via _addYourSupplier, the supplier-side _patchItem
- * calls) keep seeing the same state the hook sees. Closure isolation lands
- * once the cross-entity rules migrate out via #251 (procurement-operations).
+ * callers (items-mock-data via `_addYourSupplier` at item creation time, plus
+ * read-only enrichment from item rows) keep seeing the same state the hook
+ * sees. The supplier-mock-side write rules into items (selectSupplier /
+ * selectSupplierByInn) have moved to `src/data/operations/procurement-operations.ts`;
+ * the remaining write that this adapter still triggers is the searching →
+ * negotiating item-status flip on the first request burst (`sendSupplierRequest`),
+ * documented as out-of-scope here in CONTEXT.md and likely a server-side rule
+ * once the backend ships.
  */
 export function createInMemorySuppliersClient(options?: InMemorySuppliersOptions): SuppliersClient {
 	if (options?.seedByItemId) {
@@ -86,14 +89,6 @@ export function createInMemorySuppliersClient(options?: InMemorySuppliersOptions
 
 		async sendRequest(itemId: string, supplierIds: string[]): Promise<string[]> {
 			return sendSupplierRequest(itemId, supplierIds);
-		},
-
-		async selectSupplier(itemId: string, supplierId: string): Promise<void> {
-			return selectSupplier(itemId, supplierId);
-		},
-
-		async selectSupplierByInn(itemId: string, inn: string): Promise<void> {
-			return selectSupplierByInn(itemId, inn);
 		},
 
 		async sendMessage(itemId: string, supplierId: string, body: string, files?: File[]): Promise<SupplierChatMessage> {

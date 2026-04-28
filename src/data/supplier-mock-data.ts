@@ -704,42 +704,6 @@ export async function sendSupplierRequest(itemId: string, supplierIds: string[])
 	return transitioned;
 }
 
-export async function selectSupplier(itemId: string, supplierId: string): Promise<void> {
-	await simulateDelay();
-	const suppliers = getSuppliersForItem(itemId);
-	const supplier = suppliers.find((s) => s.id === supplierId);
-	if (!supplier) throw new Error("Supplier not found");
-	_patchItem(itemId, {
-		currentSupplier: {
-			companyName: supplier.companyName,
-			paymentType: supplier.paymentType,
-			deferralDays: supplier.deferralDays,
-			pricePerUnit: supplier.pricePerUnit,
-		},
-	});
-}
-
-/** Promote the matching-INN supplier to the item's current supplier and snap
- * `currentPrice` to its TCO so «ТЕКУЩЕЕ ТСО» refreshes. */
-export async function selectSupplierByInn(itemId: string, inn: string): Promise<void> {
-	await simulateDelay();
-	const suppliers = getSuppliersForItem(itemId);
-	const supplier = suppliers.find((s) => s.inn === inn && !s.archived);
-	if (!supplier) throw new Error("Supplier not found");
-	const tco = supplier.tco ?? supplier.pricePerUnit;
-	_patchItem(itemId, {
-		currentSupplier: {
-			companyName: supplier.companyName,
-			inn: supplier.inn,
-			paymentType: supplier.paymentType,
-			deferralDays: supplier.deferralDays,
-			prepaymentPercent: supplier.prepaymentPercent,
-			pricePerUnit: supplier.pricePerUnit,
-		},
-		...(tco != null ? { currentPrice: tco } : {}),
-	});
-}
-
 export async function sendSupplierMessage(
 	itemId: string,
 	supplierId: string,

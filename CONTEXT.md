@@ -142,9 +142,28 @@ it when the codebase makes it self-evident.
   `invalidateAfterItemListChange(qc)` — items list namespace + listAll +
   totals + folder stats). Mutations call policies by name; they never list
   keys directly. Cross-domain effects live here, not at the call site.
-- **Procurement operation** — the seam for cross-entity rules (e.g. "selecting
-  a supplier updates the item's current supplier"). Lives in
-  `procurement-operations` once created; not yet in tree.
+- **Procurement operation** — the seam for cross-entity domain rules. Lives in
+  `src/data/operations/procurement-operations.ts` (operations) and
+  `src/data/operations/use-procurement-operations.ts` (hooks). Inhabitants
+  today: `selectSupplierForItem(itemId, supplierId, { items, suppliers })` —
+  reads the supplier and writes the item's `currentSupplier`; and
+  `setCurrentSupplierFromQuote(itemId, inn, { items, suppliers })` — finds
+  the matching-INN supplier in the per-item list, writes the item's
+  `currentSupplier` (with INN + prepayment %), and snaps `currentPrice` to
+  the supplier's TCO. Hooks `useSelectSupplierForItem` and
+  `useSetCurrentSupplierFromQuote` resolve `ItemsClient` + `SuppliersClient`
+  from context and invoke the operation; the suppliers client itself
+  exposes no cross-entity methods. When the real backend ships, this
+  module is the one place that decides "one server call or two"; today
+  both operations issue two (read supplier, then write item).
+  Out-of-scope cross-entity rules still living in mocks:
+  `sendSupplierRequest`'s "first-burst flips item from
+  searching+searchCompleted to negotiating" item-status side effect (a
+  server-driven status transition once the backend models the RFQ
+  lifecycle); and `_addYourSupplier` at item creation time (a fixture
+  that seeds a placeholder «Ваш поставщик» row, materialized server-side
+  on item creation when the backend ships). Both stay on the suppliers
+  in-memory adapter for now and migrate when their hooks need them.
 - **Optimistic-update orchestrator** — `applyOptimistic` / `rollbackOptimistic`
   / `applyToCache` in `src/data/optimistic.ts`. Accepts a set of targets
   (`{ queryKey, prefix?, update }`), snapshots all atomically, applies

@@ -95,8 +95,6 @@ export function fakeSuppliersClient(overrides: Partial<SuppliersClient> = {}): S
 		unarchive: notImplemented("unarchive"),
 		delete: notImplemented("delete"),
 		sendRequest: notImplemented("sendRequest"),
-		selectSupplier: notImplemented("selectSupplier"),
-		selectSupplierByInn: notImplemented("selectSupplierByInn"),
 		sendMessage: notImplemented("sendMessage"),
 		...overrides,
 	};

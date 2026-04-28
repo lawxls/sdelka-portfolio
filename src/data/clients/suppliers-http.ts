@@ -46,12 +46,6 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 		sendRequest: (itemId, supplierIds) =>
 			http.post<string[]>(`/api/items/${enc(itemId)}/suppliers/send-request`, { body: { supplierIds } }),
 
-		selectSupplier: (itemId, supplierId) =>
-			http.post<void>(`/api/items/${enc(itemId)}/suppliers/${enc(supplierId)}/select`),
-
-		selectSupplierByInn: (itemId, inn) =>
-			http.post<void>(`/api/items/${enc(itemId)}/suppliers/select-by-inn`, { body: { inn } }),
-
 		sendMessage: (itemId, supplierId, body, files) => {
 			const attachments = files && files.length > 0 ? filesToAttachments(files) : undefined;
 			return http.post<SupplierChatMessage>(`/api/items/${enc(itemId)}/suppliers/${enc(supplierId)}/messages`, {

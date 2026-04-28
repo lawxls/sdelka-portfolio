@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcurementItem } from "../domains/items";
 import type { Supplier, SupplierSeed } from "../domains/suppliers";
-import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { ConflictError, NotFoundError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetItemsStore, _setItems } from "../items-mock-data";
 import { _resetSupplierStore, _setSendShouldFail, _setSupplierMockDelay } from "../supplier-mock-data";
@@ -174,25 +174,6 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/([^/]+)/select$`),
-			respond: ({ url }) => {
-				const match = new URL(url, "http://test").pathname.match(/\/suppliers\/([^/]+)\/select$/);
-				const id = decodeURIComponent(match?.[1] ?? "");
-				if (!store.has(id)) return { status: 404 };
-				return { status: 204 };
-			},
-		},
-		{
-			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/select-by-inn$`),
-			respond: ({ init }) => {
-				const data = JSON.parse(init?.body as string) as { inn: string };
-				if (!data.inn) return { status: 400, body: { fieldErrors: { inn: ["required"] } } };
-				return { status: 204 };
-			},
-		},
-		{
-			method: "POST",
 			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/([^/]+)/messages$`),
 			respond: ({ url, init }) => {
 				const match = new URL(url, "http://test").pathname.match(/\/suppliers\/([^/]+)\/messages$/);
@@ -321,18 +302,6 @@ describe("HTTP-only error branches", () => {
 		_setItems([ITEM], []);
 		_resetSupplierStore();
 		_setSendShouldFail(false);
-	});
-
-	it("selectSupplierByInn with empty inn throws ValidationError with fieldErrors", async () => {
-		const harness = httpAdapter();
-		const client = harness.build();
-		try {
-			await client.selectSupplierByInn(ITEM_ID, "");
-			throw new Error("expected throw");
-		} catch (err) {
-			expect(err).toBeInstanceOf(ValidationError);
-			expect((err as ValidationError).fieldErrors).toEqual({ inn: ["required"] });
-		}
 	});
 
 	it("sendMessage with conflict body throws ConflictError", async () => {

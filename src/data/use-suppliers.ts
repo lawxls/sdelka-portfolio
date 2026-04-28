@@ -102,33 +102,6 @@ export function useSendSupplierRequest() {
 	});
 }
 
-export function useSelectSupplier() {
-	const client = useSuppliersClient();
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) =>
-			client.selectSupplier(itemId, supplierId),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			invalidateSupplierLists(queryClient, itemId);
-		},
-	});
-}
-
-export function useSetCurrentSupplierFromQuote() {
-	const client = useSuppliersClient();
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ itemId, inn }: { itemId: string; inn: string }) => client.selectSupplierByInn(itemId, inn),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["items"] });
-			queryClient.invalidateQueries({ queryKey: ["totals"] });
-			invalidateSupplierLists(queryClient, itemId);
-		},
-	});
-}
-
 export function useDeleteSuppliers() {
 	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
