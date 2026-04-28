@@ -10,6 +10,7 @@ vi.mock("sonner", () => ({
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
@@ -76,6 +77,7 @@ function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
 				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
 				tasks: createInMemoryTasksClient({ seed: ALL_TASKS }),
+				folders: createInMemoryFoldersClient(),
 			}}
 		>
 			<TooltipProvider>

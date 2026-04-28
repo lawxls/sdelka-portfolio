@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
 import { SEED_ITEMS } from "@/data/seeds/items";
@@ -19,6 +20,7 @@ function renderPanel(itemId = "item-1") {
 			clients={{
 				companies: createInMemoryCompaniesClient(),
 				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
+				folders: createInMemoryFoldersClient(),
 			}}
 		>
 			<DetailsTabPanel itemId={itemId} />

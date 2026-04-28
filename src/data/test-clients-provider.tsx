@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
+import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
@@ -109,6 +110,22 @@ export function fakeTasksClient(overrides: Partial<TasksClient> = {}): TasksClie
 		changeStatus: notImplemented("changeStatus"),
 		uploadAttachments: notImplemented("uploadAttachments"),
 		deleteAttachment: notImplemented("deleteAttachment"),
+		...overrides,
+	};
+}
+
+/** Build a fake `FoldersClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeFoldersClient(overrides: Partial<FoldersClient> = {}): FoldersClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeFoldersClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		stats: notImplemented("stats"),
+		create: notImplemented("create"),
+		update: notImplemented("update"),
+		delete: notImplemented("delete"),
 		...overrides,
 	};
 }

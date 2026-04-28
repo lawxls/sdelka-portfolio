@@ -1,5 +1,7 @@
 import { createHttpCompaniesClient } from "./clients/companies-http";
 import { createInMemoryCompaniesClient } from "./clients/companies-in-memory";
+import { createHttpFoldersClient } from "./clients/folders-http";
+import { createInMemoryFoldersClient } from "./clients/folders-in-memory";
 import { createHttpItemsClient } from "./clients/items-http";
 import { createInMemoryItemsClient } from "./clients/items-in-memory";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
@@ -15,6 +17,7 @@ interface AdapterConfig {
 	items: AdapterMode;
 	suppliers: AdapterMode;
 	tasks: AdapterMode;
+	folders: AdapterMode;
 }
 
 /**
@@ -32,6 +35,7 @@ function resolveConfig(): AdapterConfig {
 		items: read("VITE_DATA_ITEMS"),
 		suppliers: read("VITE_DATA_SUPPLIERS"),
 		tasks: read("VITE_DATA_TASKS"),
+		folders: read("VITE_DATA_FOLDERS"),
 	};
 }
 
@@ -47,5 +51,6 @@ export function buildDataClients(): DataClients {
 		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
 		tasks: config.tasks === "http" ? createHttpTasksClient() : createInMemoryTasksClient(),
+		folders: config.folders === "http" ? createHttpFoldersClient() : createInMemoryFoldersClient(),
 	};
 }

@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
-import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
@@ -70,10 +70,6 @@ const TEST_COMPANIES: Company[] = [
 	},
 ];
 
-function setupHandlers() {
-	_setFolders(TEST_FOLDERS);
-}
-
 // --- Render helpers ---
 
 let queryClient: QueryClient;
@@ -89,6 +85,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
@@ -113,11 +110,9 @@ async function renderAppReady(initialEntries?: string[], opts?: { items?: ItemsC
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access");
-	_resetFoldersStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
-	setupHandlers();
 });
 
 afterEach(() => {

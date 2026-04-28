@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
+import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
@@ -14,6 +15,7 @@ export interface DataClients {
 	items?: ItemsClient;
 	suppliers?: SuppliersClient;
 	tasks?: TasksClient;
+	folders?: FoldersClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -56,4 +58,10 @@ export function useTasksClient(): TasksClient {
 	const { tasks } = useClients();
 	if (!tasks) throw new Error("tasks client not provided");
 	return tasks;
+}
+
+export function useFoldersClient(): FoldersClient {
+	const { folders } = useClients();
+	if (!folders) throw new Error("folders client not provided");
+	return folders;
 }

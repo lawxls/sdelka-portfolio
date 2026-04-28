@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import type { Address, Company, NewItemInput } from "@/data/types";
+import type { Address, Company, Folder, NewItemInput } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
 import { AddPositionsDrawer } from "./add-positions-drawer";
 
@@ -49,13 +49,13 @@ const MULTI_COMPANY: Company[] = [
 
 let companies: Company[];
 
+const FOLDERS_SEED: Folder[] = [
+	{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
+	{ id: "folder-build", name: "Стройматериалы", color: "green" },
+];
+
 beforeEach(() => {
 	companies = SINGLE_COMPANY;
-	_resetFoldersStore();
-	_setFolders([
-		{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
-		{ id: "folder-build", name: "Стройматериалы", color: "green" },
-	]);
 	vi.mocked(toast.success).mockClear();
 });
 
@@ -73,8 +73,9 @@ function renderDrawer(
 	};
 	const queryClient = createTestQueryClient();
 	const companiesClient = createInMemoryCompaniesClient(companies);
+	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient }}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient, folders: foldersClient }}>
 			{children}
 		</TestClientsProvider>
 	);
