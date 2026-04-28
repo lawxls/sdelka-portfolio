@@ -6,6 +6,12 @@
 			"sourceType": "github",
 			"computedHash": "9dcf7342a0a051445137a279855f6ed9b1fb342e46291b799c344ac20e34d409"
 		},
+		"diagnose": {
+			"source": "mattpocock/skills",
+			"sourceType": "github",
+			"skillPath": "skills/engineering/diagnose/SKILL.md",
+			"computedHash": "15939a26f86edec2d4862042b8564e5a062cb81d04e047a0cea6305c8830b5f5"
+		},
 		"dogfood": {
 			"source": "vercel-labs/agent-browser",
 			"sourceType": "github",
@@ -20,6 +26,12 @@
 			"source": "dexhorthy/slopfiles",
 			"sourceType": "github",
 			"computedHash": "a93226f53ffa6a2599c89fb983f3aed00c843c04071a7aa59ee3365141619d25"
+		},
+		"improve-codebase-architecture": {
+			"source": "mattpocock/skills",
+			"sourceType": "github",
+			"skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
+			"computedHash": "c77b86b4332919499608f9af1880074e1fec65a59b95c70c27a9f39cd137865e"
 		},
 		"make-interfaces-feel-better": {
 			"source": "jakubkrehel/make-interfaces-feel-better",
