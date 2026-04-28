@@ -87,9 +87,19 @@ it when the codebase makes it self-evident.
 - **Procurement operation** — the seam for cross-entity rules (e.g. "selecting
   a supplier updates the item's current supplier"). Lives in
   `procurement-operations` once created; not yet in tree.
-- **Optimistic-update orchestrator** — multi-key snapshot/apply/rollback
-  helper with shape adapters for `infinitePages`, `boardColumns`, `flatList`,
-  `detail`. Not yet in tree.
+- **Optimistic-update orchestrator** — `applyOptimistic` / `rollbackOptimistic`
+  / `applyToCache` in `src/data/optimistic.ts`. Accepts a set of targets
+  (`{ queryKey, prefix?, update }`), snapshots all atomically, applies
+  shape-aware updaters, and rolls all back on failure. Prefix mode walks
+  every cache matching a key prefix in one pass — the canonical case is
+  the items list namespace with a dozen filter/sort variants in cache.
+  Shape adapters in `src/data/shape-adapters.ts` (`detail`, `flatList`,
+  `flatListIn`, `infinitePages`, `boardColumns`) expose intent-level verbs
+  (`patchById`, `removeById`, `patchOrRemoveById`, `moveBetween`) so call
+  sites stop writing page traversal / column lookup / array index math.
+  Bespoke cache shapes pass a hand-rolled `Updater<T>` directly — adapters
+  are convenience, not a wall. Items mutations and `useUpdateCompany`
+  migrated as proof; other domains adopt as they migrate.
 
 ## Test layers
 

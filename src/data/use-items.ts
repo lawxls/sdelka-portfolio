@@ -1,10 +1,11 @@
-import type { QueryKey } from "@tanstack/react-query";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useItemsClient } from "./clients-context";
 import type { ExportItemsParams, ListItemsParams } from "./domains/items";
 import { invalidateAfterItemListChange } from "./invalidation-policies";
+import { applyOptimistic, applyToCache, rollbackOptimistic } from "./optimistic";
 import { keys } from "./query-keys";
+import { infinitePages } from "./shape-adapters";
 import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
 
 interface ItemQueryParams {
@@ -70,68 +71,12 @@ export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	});
 }
 
-// --- Optimistic helpers ---
-
-type ItemsCache = {
-	pages: Array<{ items: ProcurementItem[]; nextCursor: string | null }>;
-	pageParams: Array<string | undefined>;
-};
-
-type Snapshots = Array<[QueryKey, ItemsCache]>;
-
-function updateItemInPages(
-	cache: ItemsCache,
-	id: string,
-	updater: (item: ProcurementItem) => ProcurementItem,
-): ItemsCache {
-	return {
-		...cache,
-		pages: cache.pages.map((page) => ({
-			...page,
-			items: page.items.map((item) => (item.id === id ? updater(item) : item)),
-		})),
-	};
-}
-
-function removeItemFromPages(cache: ItemsCache, id: string): ItemsCache {
-	return {
-		...cache,
-		pages: cache.pages.map((page) => ({
-			...page,
-			items: page.items.filter((item) => item.id !== id),
-		})),
-	};
-}
-
-/** Snapshot all items query caches, apply an updater, and return snapshots for rollback. */
-async function optimisticItemUpdate(
-	queryClient: ReturnType<typeof useQueryClient>,
-	updater: (key: QueryKey, data: ItemsCache) => ItemsCache,
-): Promise<{ snapshots: Snapshots }> {
-	await queryClient.cancelQueries({ queryKey: keys.items.all() });
-	const snapshots: Snapshots = [];
-
-	for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
-		if (data) {
-			snapshots.push([key, data]);
-			queryClient.setQueryData<ItemsCache>(key, updater(key, data));
-		}
-	}
-
-	return { snapshots };
-}
-
-function rollbackSnapshots(
-	queryClient: ReturnType<typeof useQueryClient>,
-	context: { snapshots: Snapshots } | undefined,
-) {
-	if (!context?.snapshots) return;
-	for (const [key, data] of context.snapshots) {
-		queryClient.setQueryData(key, data);
-	}
-}
-
 // --- Mutation hooks ---
+
+const itemsListPages = infinitePages<{ items: ProcurementItem[]; nextCursor: string | null }, ProcurementItem>({
+	get: (page) => page.items,
+	set: (page, items) => ({ ...page, items }),
+});
 
 export function useCreateItems() {
 	const client = useItemsClient();
@@ -152,19 +97,25 @@ export function useUpdateItem() {
 
 	const mutation = useMutation({
 		mutationFn: ({ id, ...data }: { id: string; name?: string }) => client.update(id, data),
-		onMutate: async ({ id, ...updates }) =>
-			optimisticItemUpdate(queryClient, (_key, data) =>
-				updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
-			),
+		onMutate: ({ id, ...updates }) =>
+			applyOptimistic(queryClient, [
+				{
+					queryKey: keys.items.all(),
+					prefix: true,
+					update: itemsListPages.patchById(id, (item) => ({ ...item, ...updates })),
+				},
+			]),
 		onSuccess: (serverItem) => {
-			for (const [key] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
-				queryClient.setQueryData<ItemsCache>(key, (old) =>
-					old ? updateItemInPages(old, serverItem.id, () => serverItem) : old,
-				);
-			}
+			applyToCache(queryClient, [
+				{
+					queryKey: keys.items.all(),
+					prefix: true,
+					update: itemsListPages.patchById(serverItem.id, () => serverItem),
+				},
+			]);
 		},
 		onError: (_err, _vars, context) => {
-			rollbackSnapshots(queryClient, context);
+			rollbackOptimistic(queryClient, context);
 			toast.error("Не удалось обновить закупку");
 		},
 	});
@@ -174,14 +125,13 @@ export function useUpdateItem() {
 		/** mutate with synchronous cache update so the old name never flashes. */
 		mutate(vars: { id: string; name?: string; folderId?: string | null }) {
 			const { id, ...updates } = vars;
-			for (const [key, data] of queryClient.getQueriesData<ItemsCache>({ queryKey: keys.items.all() })) {
-				if (data) {
-					queryClient.setQueryData<ItemsCache>(
-						key,
-						updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
-					);
-				}
-			}
+			applyToCache(queryClient, [
+				{
+					queryKey: keys.items.all(),
+					prefix: true,
+					update: itemsListPages.patchById(id, (item) => ({ ...item, ...updates })),
+				},
+			]);
 			mutation.mutate(vars);
 		},
 	};
@@ -193,9 +143,12 @@ export function useDeleteItem() {
 
 	return useMutation({
 		mutationFn: (id: string) => client.delete(id),
-		onMutate: async (id) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
+		onMutate: (id) =>
+			applyOptimistic(queryClient, [
+				{ queryKey: keys.items.all(), prefix: true, update: itemsListPages.removeById(id) },
+			]),
 		onError: (_err, _vars, context) => {
-			rollbackSnapshots(queryClient, context);
+			rollbackOptimistic(queryClient, context);
 			toast.error("Не удалось удалить закупку");
 		},
 		onSettled: () => invalidateAfterItemListChange(queryClient),
@@ -208,9 +161,12 @@ export function useArchiveItem() {
 
 	return useMutation({
 		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => client.archive(id, isArchived),
-		onMutate: async ({ id }) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
+		onMutate: ({ id }) =>
+			applyOptimistic(queryClient, [
+				{ queryKey: keys.items.all(), prefix: true, update: itemsListPages.removeById(id) },
+			]),
 		onError: (_err, _vars, context) => {
-			rollbackSnapshots(queryClient, context);
+			rollbackOptimistic(queryClient, context);
 			toast.error("Не удалось переместить закупку");
 		},
 		onSettled: () => invalidateAfterItemListChange(queryClient),
@@ -246,17 +202,23 @@ export function useAssignFolder() {
 			}
 			return client.update(id, { folderId });
 		},
-		onMutate: async ({ id, folderId }) =>
-			optimisticItemUpdate(queryClient, (key, data) => {
-				const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;
-				if (cacheFolder !== undefined) {
-					const matches = cacheFolder === "none" ? folderId === null : cacheFolder === folderId;
-					if (!matches) return removeItemFromPages(data, id);
-				}
-				return updateItemInPages(data, id, (item) => ({ ...item, folderId }));
-			}),
+		onMutate: ({ id, folderId }) =>
+			applyOptimistic(queryClient, [
+				{
+					queryKey: keys.items.all(),
+					prefix: true,
+					update: itemsListPages.patchOrRemoveById(id, (item, key) => {
+						const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;
+						if (cacheFolder !== undefined) {
+							const matches = cacheFolder === "none" ? folderId === null : cacheFolder === folderId;
+							if (!matches) return null;
+						}
+						return { ...item, folderId };
+					}),
+				},
+			]),
 		onError: (_err, _vars, context) => {
-			rollbackSnapshots(queryClient, context);
+			rollbackOptimistic(queryClient, context);
 			toast.error("Не удалось переместить закупку");
 		},
 		onSettled: () => invalidateAfterItemListChange(queryClient),

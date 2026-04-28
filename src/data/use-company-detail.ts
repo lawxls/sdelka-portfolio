@@ -10,7 +10,9 @@ import type {
 	UpdatePermissionsData,
 } from "./domains/companies";
 import { invalidateAfterCompanyChange, invalidateAfterEmployeePermissionsChange } from "./invalidation-policies";
+import { applyOptimistic, rollbackOptimistic } from "./optimistic";
 import { keys } from "./query-keys";
+import { detail } from "./shape-adapters";
 import type { Company } from "./types";
 
 export function useCompanyDetail(id: string | null) {
@@ -28,19 +30,14 @@ export function useUpdateCompany(id: string) {
 
 	return useMutation({
 		mutationFn: (data: UpdateCompanyData) => client.update(id, data),
-		onMutate: async (newData) => {
-			await queryClient.cancelQueries({ queryKey: keys.companies.detail(id) });
-			const previous = queryClient.getQueryData<Company>(keys.companies.detail(id));
-			if (previous) {
-				queryClient.setQueryData<Company>(keys.companies.detail(id), { ...previous, ...newData });
-			}
-			return { previous };
-		},
-		onError: (_err, _newData, context) => {
-			if (context?.previous) {
-				queryClient.setQueryData(keys.companies.detail(id), context.previous);
-			}
-		},
+		onMutate: (newData) =>
+			applyOptimistic(queryClient, [
+				{
+					queryKey: keys.companies.detail(id),
+					update: detail<Company>((company) => ({ ...company, ...newData })),
+				},
+			]),
+		onError: (_err, _newData, context) => rollbackOptimistic(queryClient, context),
 		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId: id }),
 	});
 }
