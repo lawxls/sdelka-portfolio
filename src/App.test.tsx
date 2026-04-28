@@ -6,12 +6,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import type { ItemsClient } from "@/data/clients/items-client";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
-import * as itemsMock from "@/data/items-mock-data";
-import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
 import App from "./App";
@@ -71,7 +71,6 @@ const TEST_COMPANIES: Company[] = [
 
 function setupHandlers() {
 	_setFolders(TEST_FOLDERS);
-	_setItems(ITEMS_PAGE_1);
 	_setTasks([]);
 }
 
@@ -79,10 +78,11 @@ function setupHandlers() {
 
 let queryClient: QueryClient;
 
-function renderApp(initialEntries?: string[]) {
+function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}) {
 	const companiesClient = createInMemoryCompaniesClient(TEST_COMPANIES);
+	const itemsClient = opts.items ?? createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient }}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient, items: itemsClient }}>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<App />
@@ -93,8 +93,8 @@ function renderApp(initialEntries?: string[]) {
 }
 
 /** Render and wait for items to load */
-async function renderAppReady(initialEntries?: string[]) {
-	const result = renderApp(initialEntries);
+async function renderAppReady(initialEntries?: string[], opts?: { items?: ItemsClient }) {
+	const result = renderApp(initialEntries, opts);
 	await waitFor(() => {
 		expect(screen.queryAllByTestId("skeleton-row")).toHaveLength(0);
 		expect(screen.getByRole("table")).toBeInTheDocument();
@@ -105,7 +105,6 @@ async function renderAppReady(initialEntries?: string[]) {
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access");
-	_resetItemsStore();
 	_resetFoldersStore();
 	_resetTasksStore();
 	queryClient = new QueryClient({
@@ -376,9 +375,8 @@ describe("ProcurementPage", () => {
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
-		vi.spyOn(itemsMock, "fetchItemsMock").mockRejectedValue(new Error("boom"));
-
-		renderApp();
+		const items = fakeItemsClient({ list: () => Promise.reject(new Error("boom")) });
+		renderApp(undefined, { items });
 
 		await waitFor(() => {
 			expect(screen.getByTestId("items-error")).toBeInTheDocument();
@@ -389,13 +387,13 @@ describe("ProcurementPage", () => {
 
 	test("retry button refetches items after error", async () => {
 		let callCount = 0;
-		vi.spyOn(itemsMock, "fetchItemsMock").mockImplementation(async () => {
+		const list = vi.fn(async () => {
 			callCount++;
 			if (callCount === 1) throw new Error("transient");
 			return { items: ITEMS_PAGE_1, nextCursor: null };
 		});
-
-		renderApp();
+		const items = fakeItemsClient({ list });
+		renderApp(undefined, { items });
 
 		await waitFor(() => {
 			expect(screen.getByText("Повторить")).toBeInTheDocument();
@@ -491,9 +489,13 @@ describe("ProcurementPage", () => {
 	});
 
 	test("drawer submit shows toast for async batch response", async () => {
-		vi.spyOn(itemsMock, "createItemsBatchMock").mockResolvedValueOnce({ isAsync: true, taskId: "task-123" });
+		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
+		const items: ItemsClient = {
+			...baseItems,
+			create: vi.fn().mockResolvedValueOnce({ isAsync: true, taskId: "task-123" }),
+		};
 
-		await renderAppReady();
+		await renderAppReady(undefined, { items });
 		const user = userEvent.setup();
 
 		await completeWizard(user, "Большая партия");
@@ -504,9 +506,13 @@ describe("ProcurementPage", () => {
 	});
 
 	test("drawer submit shows error toast on 400 validation failure", async () => {
-		vi.spyOn(itemsMock, "createItemsBatchMock").mockRejectedValueOnce(new Error("validation"));
+		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
+		const items: ItemsClient = {
+			...baseItems,
+			create: vi.fn().mockRejectedValueOnce(new Error("validation")),
+		};
 
-		await renderAppReady();
+		await renderAppReady(undefined, { items });
 		const user = userEvent.setup();
 
 		await completeWizard(user, "Test");

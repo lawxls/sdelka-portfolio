@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
-import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem } from "@/test-utils";
@@ -40,13 +40,18 @@ let companies: Company[];
 
 function setupHandlers(companyList: Company[]) {
 	_setFolders(MOCK_FOLDERS);
-	_setItems(ALL_ITEMS);
 	companies = companyList;
 }
 
 function renderPage(initialEntries?: string[]) {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient(companies) }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(companies),
+				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
+			}}
+		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<ProcurementPage />
@@ -65,7 +70,6 @@ async function waitForToolbar() {
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access");
-	_resetItemsStore();
 	_resetFoldersStore();
 	companies = SINGLE_COMPANY;
 	queryClient = new QueryClient({

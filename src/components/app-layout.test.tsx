@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
@@ -19,7 +20,10 @@ afterEach(() => {
 function renderLayout(initialEntry = "/procurement") {
 	const queryClient = createTestQueryClient();
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient([]) }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ companies: createInMemoryCompaniesClient([]), items: createInMemoryItemsClient({ seed: [] }) }}
+		>
 			<TooltipWrapper>
 				<MemoryRouter initialEntries={[initialEntry]}>
 					<Routes>

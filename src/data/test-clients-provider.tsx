@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
+import type { ItemsClient } from "./clients/items-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
 /**
@@ -44,6 +45,26 @@ export function fakeCompaniesClient(overrides: Partial<CompaniesClient> = {}): C
 		updateEmployee: notImplemented("updateEmployee"),
 		deleteEmployee: notImplemented("deleteEmployee"),
 		updateEmployeePermissions: notImplemented("updateEmployeePermissions"),
+		...overrides,
+	};
+}
+
+/** Build a fake `ItemsClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeItemsClient(overrides: Partial<ItemsClient> = {}): ItemsClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeItemsClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		listAll: notImplemented("listAll"),
+		totals: notImplemented("totals"),
+		get: notImplemented("get"),
+		create: notImplemented("create"),
+		update: notImplemented("update"),
+		delete: notImplemented("delete"),
+		archive: notImplemented("archive"),
+		export: notImplemented("export"),
 		...overrides,
 	};
 }

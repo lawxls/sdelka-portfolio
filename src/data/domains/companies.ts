@@ -18,11 +18,7 @@ export type {
 
 import type { CompanySortState, Employee, EmployeePermissions, PermissionLevel } from "../types";
 
-/** Cursor-paginated list shape shared by list endpoints (PRD slice 1, "CRUD shape"). */
-export interface CursorPage<T> {
-	items: T[];
-	nextCursor: string | null;
-}
+export type { CursorPage } from "./shared";
 
 export interface ListCompaniesParams {
 	q?: string;

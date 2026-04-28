@@ -1,62 +1,8 @@
-import { ITEM as ITEM_2 } from "./items/item-2";
-import { ITEM as ITEM_3 } from "./items/item-3";
-import { ITEM as ITEM_4 } from "./items/item-4";
-import { ITEM as ITEM_5 } from "./items/item-5";
-import { ITEM as ITEM_6 } from "./items/item-6";
-import { ITEM as ITEM_7 } from "./items/item-7";
-import { ITEM as ITEM_8 } from "./items/item-8";
 import { delay, nextId, paginate } from "./mock-utils";
+import { SEED_ARCHIVED, SEED_ITEMS } from "./seeds/items";
 import { _addYourSupplier } from "./supplier-mock-data";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "./types";
-
-// --- Seed data ---
-
-const SEED_ITEMS: ProcurementItem[] = [
-	{
-		id: "item-1",
-		name: "Полотно ПВД 2600 мм",
-		status: "completed",
-		annualQuantity: 180_000,
-		currentPrice: 1776,
-		// Computed from ORMATEK_SUPPLIERS получено_кп TCOs (50 offers): min 1485, mean 2256.
-		bestPrice: 1485,
-		averagePrice: 2256,
-		folderId: "folder-packaging",
-		companyId: "company-1",
-		unit: "м",
-		taskCount: 16,
-		quantityPerDelivery: 15_000,
-		paymentType: "prepayment",
-		paymentMethod: "bank_transfer",
-		deliveryCostType: "paid",
-		deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-		unloading: "supplier",
-		analoguesAllowed: true,
-		additionalInfo: "Полотно ПВД первичка (без вторсырья), ширина 2600 мм, прозрачное.",
-		currentSupplier: {
-			companyName: "ПолимерПром",
-			inn: "6164012345",
-			paymentType: "prepayment",
-			deferralDays: 0,
-			pricePerUnit: 1776,
-		},
-		generatedAnswers: [
-			{ questionId: "material-grade", selectedOption: "Первичка без вторсырья" },
-			{ questionId: "certificates", selectedOption: "Паспорт качества", freeText: "На каждую партию" },
-		],
-		attachedFiles: [{ name: "specification-pvd-2600.pdf", size: 204_800 }],
-	},
-	ITEM_2,
-	ITEM_3,
-	ITEM_4,
-	ITEM_5,
-	ITEM_6,
-	ITEM_7,
-	ITEM_8,
-];
-
-const SEED_ARCHIVED: ProcurementItem[] = [];
 
 // --- Mutable store ---
 
@@ -65,8 +11,7 @@ let archivedIds: Set<string> = new Set();
 
 function seedStore() {
 	itemsStore = SEED_ITEMS.map((item) => ({ ...item }));
-	archivedIds = new Set(SEED_ARCHIVED.map((item) => item.id));
-	for (const item of SEED_ARCHIVED) itemsStore.push({ ...item });
+	archivedIds = new Set(SEED_ARCHIVED);
 }
 
 seedStore();
@@ -179,11 +124,6 @@ function sortItems(items: ProcurementItem[], field: SortField, dir: SortDirectio
 }
 
 // --- Mock API functions ---
-
-export async function fetchAllItemsMock(): Promise<ProcurementItem[]> {
-	await delay();
-	return itemsStore.filter((i) => !archivedIds.has(i.id)).map((i) => ({ ...i }));
-}
 
 export async function fetchItemsMock(params: FilterParams): Promise<{
 	items: ProcurementItem[];

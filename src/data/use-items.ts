@@ -1,23 +1,9 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-	deleteItemMock as apiDeleteItem,
-	updateItemMock as apiUpdateItem,
-	createItemsBatchMock as createItemsBatch,
-	exportItemsMock as exportItems,
-	type FilterParams as FetchItemsParams,
-	fetchAllItemsMock,
-	fetchItemsMock as fetchItems,
-	fetchTotalsMock as fetchTotals,
-} from "./items-mock-data";
+import { useItemsClient } from "./clients-context";
+import type { ExportItemsParams, ListItemsParams } from "./domains/items";
 import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
-
-type BatchCreateResult = {
-	items?: ProcurementItem[];
-	isAsync: boolean;
-	taskId?: string;
-};
 
 interface ItemQueryParams {
 	search: string;
@@ -27,7 +13,7 @@ interface ItemQueryParams {
 	company?: string;
 }
 
-export function buildFilterParams({ search, filters, folder, sort, company }: ItemQueryParams) {
+export function buildFilterParams({ search, filters, folder, sort, company }: ItemQueryParams): ListItemsParams {
 	return {
 		q: search || undefined,
 		status: filters.status !== "all" ? filters.status : undefined,
@@ -40,11 +26,12 @@ export function buildFilterParams({ search, filters, folder, sort, company }: It
 }
 
 export function useItems(params: ItemQueryParams) {
+	const client = useItemsClient();
 	const filterParams = buildFilterParams(params);
 
 	const query = useInfiniteQuery({
 		queryKey: ["items", filterParams],
-		queryFn: ({ pageParam }) => fetchItems({ ...filterParams, cursor: pageParam }),
+		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
@@ -63,19 +50,21 @@ export function useItems(params: ItemQueryParams) {
 }
 
 export function useAllItems(options?: { enabled?: boolean }) {
+	const client = useItemsClient();
 	return useQuery({
 		queryKey: ["items-global"],
-		queryFn: fetchAllItemsMock,
+		queryFn: () => client.listAll(),
 		enabled: options?.enabled ?? true,
 	});
 }
 
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
+	const client = useItemsClient();
 	const { sort: _sort, ...filterParams } = buildFilterParams({ ...params, sort: null });
 
 	return useQuery({
 		queryKey: ["totals", filterParams],
-		queryFn: () => fetchTotals(filterParams),
+		queryFn: () => client.totals(filterParams),
 	});
 }
 
@@ -150,10 +139,11 @@ function rollbackSnapshots(
 // --- Mutation hooks ---
 
 export function useCreateItems() {
+	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
-	return useMutation<BatchCreateResult, Error, NewItemInput[]>({
-		mutationFn: (items) => createItemsBatch(items),
+	return useMutation({
+		mutationFn: (items: NewItemInput[]) => client.create(items),
 		onSuccess: () => invalidateItemQueries(queryClient),
 		onError: () => {
 			toast.error("Не удалось создать закупки");
@@ -162,10 +152,11 @@ export function useCreateItems() {
 }
 
 export function useUpdateItem() {
+	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: ({ id, ...data }: { id: string; name?: string }) => apiUpdateItem(id, data),
+		mutationFn: ({ id, ...data }: { id: string; name?: string }) => client.update(id, data),
 		onMutate: async ({ id, ...updates }) =>
 			optimisticItemUpdate(queryClient, (_key, data) =>
 				updateItemInPages(data, id, (item) => ({ ...item, ...updates })),
@@ -202,10 +193,11 @@ export function useUpdateItem() {
 }
 
 export function useDeleteItem() {
+	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: string) => apiDeleteItem(id),
+		mutationFn: (id: string) => client.delete(id),
 		onMutate: async (id) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
 		onError: (_err, _vars, context) => {
 			rollbackSnapshots(queryClient, context);
@@ -216,10 +208,11 @@ export function useDeleteItem() {
 }
 
 export function useArchiveItem() {
+	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => apiUpdateItem(id, { isArchived }),
+		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => client.archive(id, isArchived),
 		onMutate: async ({ id }) => optimisticItemUpdate(queryClient, (_key, data) => removeItemFromPages(data, id)),
 		onError: (_err, _vars, context) => {
 			rollbackSnapshots(queryClient, context);
@@ -230,8 +223,9 @@ export function useArchiveItem() {
 }
 
 export function useExportItems() {
+	const client = useItemsClient();
 	return useMutation({
-		mutationFn: (params: Omit<FetchItemsParams, "cursor" | "limit">) => exportItems(params),
+		mutationFn: (params: ExportItemsParams) => client.export(params),
 		onSuccess: ({ blob, filename }) => {
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
@@ -247,11 +241,16 @@ export function useExportItems() {
 }
 
 export function useAssignFolder() {
+	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, folderId, isArchived }: { id: string; folderId: string | null; isArchived?: boolean }) =>
-			apiUpdateItem(id, { folderId, ...(isArchived !== undefined && { isArchived }) }),
+		mutationFn: ({ id, folderId, isArchived }: { id: string; folderId: string | null; isArchived?: boolean }) => {
+			if (isArchived !== undefined) {
+				return client.archive(id, isArchived).then(() => client.update(id, { folderId }));
+			}
+			return client.update(id, { folderId });
+		},
 		onMutate: async ({ id, folderId }) =>
 			optimisticItemUpdate(queryClient, (key, data) => {
 				const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;

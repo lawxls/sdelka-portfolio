@@ -1,11 +1,14 @@
 import { createHttpCompaniesClient } from "./clients/companies-http";
 import { createInMemoryCompaniesClient } from "./clients/companies-in-memory";
+import { createHttpItemsClient } from "./clients/items-http";
+import { createInMemoryItemsClient } from "./clients/items-in-memory";
 import type { DataClients } from "./clients-context";
 
 type AdapterMode = "memory" | "http";
 
 interface AdapterConfig {
 	companies: AdapterMode;
+	items: AdapterMode;
 }
 
 /**
@@ -20,6 +23,7 @@ function resolveConfig(): AdapterConfig {
 	}
 	return {
 		companies: read("VITE_DATA_COMPANIES"),
+		items: read("VITE_DATA_ITEMS"),
 	};
 }
 
@@ -32,5 +36,6 @@ export function buildDataClients(): DataClients {
 	const config = resolveConfig();
 	return {
 		companies: config.companies === "http" ? createHttpCompaniesClient() : createInMemoryCompaniesClient(),
+		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 	};
 }

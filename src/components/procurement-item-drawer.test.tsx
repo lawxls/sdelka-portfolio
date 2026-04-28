@@ -10,7 +10,8 @@ vi.mock("sonner", () => ({
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { _setMockDelay } from "@/data/mock-utils";
 import { _resetSupplierStore, _setSupplierMockDelay, _setSuppliersForItem } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
 import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
@@ -42,13 +43,20 @@ import { ProcurementItemDrawer } from "./procurement-item-drawer";
 const TEST_ITEM: ProcurementItem = {
 	id: "item-1",
 	name: "Полотно ПВД 2600 мм",
-	status: "searching",
+	status: "completed",
 	annualQuantity: 180_000,
 	currentPrice: 1776,
 	bestPrice: null,
 	averagePrice: null,
 	folderId: "folder-packaging",
 	companyId: "company-1",
+	currentSupplier: {
+		companyName: "ПолимерПром",
+		inn: "6164012345",
+		paymentType: "prepayment",
+		deferralDays: 0,
+		pricePerUnit: 1776,
+	},
 };
 
 let queryClient: QueryClient;
@@ -60,7 +68,13 @@ function UrlSpy() {
 
 function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient() }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(),
+				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries}>
 					<ProcurementItemDrawer item={TEST_ITEM} />
@@ -91,8 +105,7 @@ beforeEach(() => {
 	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
 	_setSuppliersForItem("item-1", TEST_SUPPLIERS);
-	_resetItemDetailStore();
-	_setItemDetailMockDelay(0, 0);
+	_setMockDelay(0, 0);
 	_setTasks(ALL_TASKS);
 	vi.clearAllMocks();
 });
@@ -100,7 +113,6 @@ beforeEach(() => {
 afterEach(() => {
 	localStorage.clear();
 	_resetSupplierStore();
-	_resetItemDetailStore();
 	_resetTasksStore();
 });
 

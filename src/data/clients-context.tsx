@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
+import type { ItemsClient } from "./clients/items-client";
 
 /**
  * Map of all data clients available to the app. As more domains migrate to the
@@ -8,6 +9,7 @@ import type { CompaniesClient } from "./clients/companies-client";
  */
 export interface DataClients {
 	companies?: CompaniesClient;
+	items?: ItemsClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -32,4 +34,10 @@ export function useCompaniesClient(): CompaniesClient {
 	const { companies } = useClients();
 	if (!companies) throw new Error("companies client not provided");
 	return companies;
+}
+
+export function useItemsClient(): ItemsClient {
+	const { items } = useClients();
+	if (!items) throw new Error("items client not provided");
+	return items;
 }
