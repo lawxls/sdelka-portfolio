@@ -88,7 +88,14 @@ it when the codebase makes it self-evident.
   a `getSummaries` port. Passing seed options to the factory resets the
   store without reaching into underscore helpers directly. Remaining
   singleton wrapping disappears once cross-entity rules move to the
-  procurement-operations module (#251).
+  procurement-operations module (#251). The tasks singleton's internals are
+  decomposed into `tasks-mock/store.ts` (mutable array + clone +
+  reset/set/get helpers + index lookup), `tasks-mock/queries.ts` (board /
+  list / detail with filter+sort+paginate helpers), and
+  `tasks-mock/mutations.ts` (status change + attachment upload/delete);
+  `tasks-mock-data.ts` is now a barrel re-exporting the public surface, and
+  the seed roster lives at `seeds/tasks.ts` (mirrors `seeds/items.ts` /
+  `seeds/companies.ts` / `seeds/emails.ts` / `seeds/workspace-employees.ts`).
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
