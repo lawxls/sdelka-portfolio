@@ -1,39 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	type CreateAddressData,
-	type CreateCompanyPayload,
-	type CreateEmployeeData,
-	createAddressMock as createAddress,
-	createCompanyMock as createCompany,
-	createEmployeeMock as createEmployee,
-	deleteAddressMock as deleteAddress,
-	deleteCompanyMock as deleteCompany,
-	deleteEmployeeMock as deleteEmployee,
-	fetchCompanyMock as fetchCompany,
-	type UpdateAddressData,
-	type UpdateCompanyData,
-	type UpdateEmployeeData,
-	type UpdatePermissionsData,
-	updateAddressMock as updateAddress,
-	updateCompanyMock as updateCompany,
-	updateEmployeeMock as updateEmployee,
-	updateEmployeePermissionsMock as updateEmployeePermissions,
-} from "./companies-mock-data";
+import { useCompaniesClient } from "./clients-context";
+import type {
+	CreateAddressData,
+	CreateCompanyPayload,
+	CreateEmployeeData,
+	UpdateAddressData,
+	UpdateCompanyData,
+	UpdateEmployeeData,
+	UpdatePermissionsData,
+} from "./domains/companies";
 import type { Company } from "./types";
 
 export function useCompanyDetail(id: string | null) {
+	const client = useCompaniesClient();
 	return useQuery({
 		queryKey: ["company", id],
-		queryFn: () => fetchCompany(id as string),
+		queryFn: () => client.get(id as string),
 		enabled: id != null,
 	});
 }
 
 export function useUpdateCompany(id: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: UpdateCompanyData) => updateCompany(id, data),
+		mutationFn: (data: UpdateCompanyData) => client.update(id, data),
 		onMutate: async (newData) => {
 			await queryClient.cancelQueries({ queryKey: ["company", id] });
 			const previous = queryClient.getQueryData<Company>(["company", id]);
@@ -56,10 +48,11 @@ export function useUpdateCompany(id: string) {
 }
 
 export function useDeleteCompany() {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (id: string) => deleteCompany(id),
+		mutationFn: (id: string) => client.delete(id),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
 			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
@@ -68,10 +61,11 @@ export function useDeleteCompany() {
 }
 
 export function useCreateCompany() {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateCompanyPayload) => createCompany(data),
+		mutationFn: (data: CreateCompanyPayload) => client.create(data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
 			queryClient.invalidateQueries({ queryKey: ["companies-global"] });
@@ -80,10 +74,11 @@ export function useCreateCompany() {
 }
 
 export function useCreateAddress(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateAddressData) => createAddress(companyId, data),
+		mutationFn: (data: CreateAddressData) => client.createAddress(companyId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -93,11 +88,12 @@ export function useCreateAddress(companyId: string) {
 }
 
 export function useUpdateAddress(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: ({ addressId, data }: { addressId: string; data: UpdateAddressData }) =>
-			updateAddress(companyId, addressId, data),
+			client.updateAddress(companyId, addressId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -107,10 +103,11 @@ export function useUpdateAddress(companyId: string) {
 }
 
 export function useDeleteAddress(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (addressId: string) => deleteAddress(companyId, addressId),
+		mutationFn: (addressId: string) => client.deleteAddress(companyId, addressId),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -120,10 +117,11 @@ export function useDeleteAddress(companyId: string) {
 }
 
 export function useCreateEmployee(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (data: CreateEmployeeData) => createEmployee(companyId, data),
+		mutationFn: (data: CreateEmployeeData) => client.createEmployee(companyId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -133,11 +131,12 @@ export function useCreateEmployee(companyId: string) {
 }
 
 export function useUpdateEmployee(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdateEmployeeData }) =>
-			updateEmployee(companyId, employeeId, data),
+			client.updateEmployee(companyId, employeeId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -147,10 +146,11 @@ export function useUpdateEmployee(companyId: string) {
 }
 
 export function useDeleteEmployee(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (employeeId: number) => deleteEmployee(companyId, employeeId),
+		mutationFn: (employeeId: number) => client.deleteEmployee(companyId, employeeId),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 			queryClient.invalidateQueries({ queryKey: ["companies"] });
@@ -160,11 +160,12 @@ export function useDeleteEmployee(companyId: string) {
 }
 
 export function useUpdateEmployeePermissions(companyId: string) {
+	const client = useCompaniesClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: ({ employeeId, data }: { employeeId: number; data: UpdatePermissionsData }) =>
-			updateEmployeePermissions(companyId, employeeId, data),
+			client.updateEmployeePermissions(companyId, employeeId, data),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["company", companyId] });
 		},

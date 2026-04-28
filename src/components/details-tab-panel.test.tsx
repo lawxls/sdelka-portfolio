@@ -1,8 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import { DetailsTabPanel } from "./details-tab-panel";
 
@@ -10,9 +12,9 @@ let queryClient: QueryClient;
 
 function renderPanel(itemId = "item-1") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient() }}>
 			<DetailsTabPanel itemId={itemId} />
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 

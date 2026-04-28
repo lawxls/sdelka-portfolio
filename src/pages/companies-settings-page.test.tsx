@@ -1,11 +1,12 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _setCompanies } from "@/data/companies-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { CompaniesSettingsPage } from "./companies-settings-page";
@@ -81,10 +82,11 @@ const MOCK_COMPANIES: Company[] = [
 ];
 
 let queryClient: QueryClient;
+let companies: Company[];
 
 function renderPage(initialPath = "/settings/companies") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient(companies) }}>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -94,7 +96,7 @@ function renderPage(initialPath = "/settings/companies") {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -105,7 +107,7 @@ function SearchParamSpy() {
 
 function renderPageWithSpy(initialPath = "/settings/companies") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient(companies) }}>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -121,7 +123,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -129,7 +131,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_setCompanies(MOCK_COMPANIES);
+	companies = MOCK_COMPANIES;
 });
 
 afterEach(() => {
@@ -204,7 +206,7 @@ describe("CompaniesSettingsPage row click", () => {
 describe("CompaniesSettingsPage pagination", () => {
 	test("auto-loads all pages when hasNextPage is true", async () => {
 		const filler = Array.from({ length: 32 }, (_, i) => makeStored(`fill-${i}`, { name: `Filler ${i}` }));
-		_setCompanies([...filler, makeStored("company-last", { name: "ТретьяКомпания" })]);
+		companies = [...filler, makeStored("company-last", { name: "ТретьяКомпания" })];
 
 		renderPage();
 		await waitFor(() => {

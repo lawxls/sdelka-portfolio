@@ -1,17 +1,18 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
-import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
 import * as itemsMock from "@/data/items-mock-data";
 import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
-import type { Folder } from "@/data/types";
+import { TestClientsProvider } from "@/data/test-clients-provider";
+import type { Company, Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
 import App from "./App";
 
@@ -33,43 +34,44 @@ const TEST_FOLDERS: Folder[] = [
 	{ id: "folder-4", name: "Электрика", color: "purple" },
 ];
 
+const TEST_COMPANIES: Company[] = [
+	{
+		id: "company-1",
+		name: "Тестовая компания",
+		website: "",
+		description: "",
+		additionalComments: "",
+		isMain: true,
+		employeeCount: 1,
+		procurementItemCount: 0,
+		addresses: [{ id: "addr-1", name: "Офис", address: "г. Москва, ул. Тестовая, д. 1", phone: "", isMain: true }],
+		employees: [
+			{
+				id: 1,
+				firstName: "Иван",
+				lastName: "Иванов",
+				patronymic: "",
+				position: "",
+				role: "admin",
+				phone: "",
+				email: "",
+				permissions: {
+					id: "p1",
+					employeeId: 1,
+					procurement: "edit",
+					tasks: "edit",
+					companies: "edit",
+					employees: "edit",
+					emails: "edit",
+				},
+			},
+		],
+	},
+];
+
 function setupHandlers() {
 	_setFolders(TEST_FOLDERS);
 	_setItems(ITEMS_PAGE_1);
-	_setCompanies([
-		{
-			id: "company-1",
-			name: "Тестовая компания",
-			website: "",
-			description: "",
-			additionalComments: "",
-			isMain: true,
-			employeeCount: 1,
-			procurementItemCount: 0,
-			addresses: [{ id: "addr-1", name: "Офис", address: "г. Москва, ул. Тестовая, д. 1", phone: "", isMain: true }],
-			employees: [
-				{
-					id: 1,
-					firstName: "Иван",
-					lastName: "Иванов",
-					patronymic: "",
-					position: "",
-					role: "admin",
-					phone: "",
-					email: "",
-					permissions: {
-						id: "p1",
-						employeeId: 1,
-						procurement: "edit",
-						tasks: "edit",
-						companies: "edit",
-						employees: "edit",
-						emails: "edit",
-					},
-				},
-			],
-		},
-	]);
 	_setTasks([]);
 }
 
@@ -78,14 +80,15 @@ function setupHandlers() {
 let queryClient: QueryClient;
 
 function renderApp(initialEntries?: string[]) {
+	const companiesClient = createInMemoryCompaniesClient(TEST_COMPANIES);
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient }}>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<App />
 				</TooltipProvider>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -104,7 +107,6 @@ beforeEach(() => {
 	setTokens("test-access");
 	_resetItemsStore();
 	_resetFoldersStore();
-	_resetCompaniesStore();
 	_resetTasksStore();
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -1,9 +1,10 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _setCompanies } from "@/data/companies-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
 import * as workspaceMock from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
@@ -31,11 +32,14 @@ let queryClient: QueryClient;
 function renderDrawer(open = true) {
 	const onOpenChange = vi.fn();
 	render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ companies: createInMemoryCompaniesClient(MOCK_COMPANIES) }}
+		>
 			<MemoryRouter>
 				<InviteEmployeesDrawer open={open} onOpenChange={onOpenChange} />
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 	return { onOpenChange };
 }
@@ -44,7 +48,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_setCompanies(MOCK_COMPANIES);
 	workspaceMock._resetWorkspaceStore();
 });
 

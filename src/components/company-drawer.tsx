@@ -13,20 +13,18 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
-	CreateAddressData,
-	UpdateCompanyData,
-	UpdateEmployeeData,
-	UpdatePermissionsData,
-} from "@/data/companies-mock-data";
-import type {
 	Address,
 	Company,
+	CreateAddressData,
 	Employee,
 	EmployeePermissions,
 	EmployeeRole,
 	PermissionLevel,
 	PermissionModuleKey,
-} from "@/data/types";
+	UpdateCompanyData,
+	UpdateEmployeeData,
+	UpdatePermissionsData,
+} from "@/data/domains/companies";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import {
 	useCompanyDetail,

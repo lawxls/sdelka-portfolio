@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
@@ -9,11 +9,13 @@ vi.mock("sonner", () => ({
 }));
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
 import { _resetSupplierStore, _setSupplierMockDelay, _setSuppliersForItem } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
 import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
 import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import type { ProcurementItem } from "@/data/types";
 import { makeTask, mockHostname } from "@/test-utils";
@@ -58,14 +60,14 @@ function UrlSpy() {
 
 function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient() }}>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries}>
 					<ProcurementItemDrawer item={TEST_ITEM} />
 					<UrlSpy />
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
