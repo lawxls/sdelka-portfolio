@@ -1,13 +1,7 @@
-import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useItemsClient, useSuppliersClient } from "../clients-context";
+import { invalidateSupplierLists } from "../use-suppliers";
 import { selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
-
-function invalidateSupplierLists(queryClient: QueryClient, itemId: string) {
-	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
-}
 
 export function useSelectSupplierForItem() {
 	const items = useItemsClient();

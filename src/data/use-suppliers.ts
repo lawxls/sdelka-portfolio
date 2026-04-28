@@ -1,7 +1,14 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSuppliersClient } from "./clients-context";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
+
+export function invalidateSupplierLists(queryClient: QueryClient, itemId: string) {
+	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
+}
 
 export function useSuppliers(itemId: string | null) {
 	const client = useSuppliersClient();
@@ -57,13 +64,6 @@ export function useSupplierQuotes(inn: string | null, contextItemId: string) {
 		queryFn: () => client.quotesByInn(inn as string, contextItemId),
 		enabled: inn !== null && inn.length > 0,
 	});
-}
-
-function invalidateSupplierLists(queryClient: ReturnType<typeof useQueryClient>, itemId: string) {
-	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
 }
 
 export function useArchiveSuppliers() {
