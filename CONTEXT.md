@@ -26,7 +26,11 @@ it when the codebase makes it self-evident.
 - **Invitation** — an outstanding invite to join the workspace.
 - **Notification** — a notification surfaced in the bell icon dropdown.
 - **Email** — an SMTP/IMAP account configured in workspace settings.
-- **Profile** — current user identity and preferences (covers `useMe`).
+- **Profile** — current user identity and preferences. Single-row domain
+  (one record per active session) — backs `useMe`, `useSettings`,
+  `useUpdateSettings`, and `useChangePassword`. Distinct from `WorkspaceEmployee`
+  (a person enumerated across the workspace) and from `Employee` (a person
+  inside one company).
 - **WorkspaceEmployee** — a person enumerated across the entire workspace,
   with their company memberships. Distinct from `Employee` on a single
   company.
@@ -45,23 +49,27 @@ it when the codebase makes it self-evident.
   `createInMemoryTasksClient({ seed })`,
   `createInMemoryFoldersClient({ seed })`,
   `createInMemoryNotificationsClient({ seed, readIds })`,
-  `createInMemoryEmailsClient(seed)`. Companies' and emails' adapters are
-  closure-isolated (no cross-entity callers). Items', suppliers', tasks',
-  folders', and notifications' adapters wrap the module-level singletons
-  (`items-mock-data`, `supplier-mock-data`, `tasks-mock-data`,
-  `folders-mock-data`, `notifications-mock-data`) so cross-entity callers
-  see the same store the hook sees — folders' delete reaches into items
-  via `_unassignItemsFromFolder`, and stats pulls counts from the items
-  singleton. Passing seed options to the factory resets the singleton
-  without reaching into the underscore helpers directly. Singleton wrapping
+  `createInMemoryEmailsClient(seed)`,
+  `createInMemoryProfileClient({ me, settings })`. Companies' and emails'
+  adapters are closure-isolated (no cross-entity callers). Items',
+  suppliers', tasks', folders', notifications', and profile's adapters
+  wrap the module-level singletons (`items-mock-data`, `supplier-mock-data`,
+  `tasks-mock-data`, `folders-mock-data`, `notifications-mock-data`,
+  `workspace-mock-data`) so cross-entity callers see the same store the
+  hook sees — folders' delete reaches into items via
+  `_unassignItemsFromFolder`, and stats pulls counts from the items
+  singleton; profile shares its store with workspace-employees /
+  invitations / company-info until #250 dissolves `workspace-mock-data`.
+  Passing seed options to the factory resets the singleton without
+  reaching into the underscore helpers directly. Singleton wrapping
   disappears once cross-entity rules move to the procurement-operations
-  module (#251).
+  module (#251) and once the workspace splits land (#247–#250).
 - **HTTP adapter** — implements a `DataClient` against the `httpClient`
   utility. Selected per-entity at boot via env vars. Factories:
   `createHttpCompaniesClient(http?)`, `createHttpItemsClient(http?)`,
   `createHttpSuppliersClient(http?)`, `createHttpTasksClient(http?)`,
   `createHttpFoldersClient(http?)`, `createHttpNotificationsClient(http?)`,
-  `createHttpEmailsClient(http?)`.
+  `createHttpEmailsClient(http?)`, `createHttpProfileClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
   JSON, maps status codes to typed errors. No retries (React Query handles
   that). Single instance per app build.
@@ -72,8 +80,8 @@ it when the codebase makes it self-evident.
 - **DataClientsProvider** — React context that holds the `DataClients` map.
   `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()`,
   `useTasksClient()`, `useFoldersClient()`, `useNotificationsClient()`,
-  `useEmailsClient()` (and future friends) read from it. Missing client
-  throws `"<name> client not provided"`.
+  `useEmailsClient()`, `useProfileClient()` (and future friends) read from
+  it. Missing client throws `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
   entity's client based on `VITE_DATA_<ENTITY>` env vars. Default is
   `memory`. Tests pass their own client map directly to the provider.
@@ -86,7 +94,8 @@ it when the codebase makes it self-evident.
   snapshot keyed by folder id with an `archiveCount`; notifications'
   `NotificationsResponse` is a flat snapshot plus a per-user read-id set;
   emails' list is a flat `WorkspaceEmail[]` since the workspace inbox
-  roster is a small bounded list.
+  roster is a small bounded list; profile is a single-row domain (no list
+  shape at all — `me`, `settings`, `update`, `changePassword`).
 - **Query-keys factory** — `keys` exported from `src/data/query-keys.ts`. The
   single source of truth for every cache namespace the app reads or writes.
   Hooks construct keys via these factories; no inline string arrays remain in
@@ -132,7 +141,8 @@ The data layer has three distinct test layers; tests live in exactly one.
   `src/data/clients/tasks-contract.test.ts`,
   `src/data/clients/folders-contract.test.ts`,
   `src/data/clients/notifications-contract.test.ts`,
-  `src/data/clients/emails-contract.test.ts`.
+  `src/data/clients/emails-contract.test.ts`,
+  `src/data/clients/profile-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header
   building, JSON parsing, status-code-to-error mapping. File:
   `src/data/http-client.test.ts`.

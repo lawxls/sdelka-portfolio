@@ -4,6 +4,7 @@ import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
+import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 
@@ -20,6 +21,7 @@ export interface DataClients {
 	folders?: FoldersClient;
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
+	profile?: ProfileClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -80,4 +82,10 @@ export function useEmailsClient(): EmailsClient {
 	const { emails } = useClients();
 	if (!emails) throw new Error("emails client not provided");
 	return emails;
+}
+
+export function useProfileClient(): ProfileClient {
+	const { profile } = useClients();
+	if (!profile) throw new Error("profile client not provided");
+	return profile;
 }

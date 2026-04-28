@@ -1,12 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
-import * as settingsApi from "@/data/settings-api";
-import { _resetWorkspaceStore, _setUserSettings, fetchSettingsMock } from "@/data/workspace-mock-data";
+import type { ProfileClient } from "@/data/clients/profile-client";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { fakeProfileClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { makeSettings, mockHostname } from "@/test-utils";
 import { ProfilePage } from "./profile-page";
 
@@ -17,21 +18,23 @@ vi.mock("sonner", () => ({
 const MOCK_SETTINGS = makeSettings();
 
 let queryClient: QueryClient;
+let profileClient: ProfileClient;
 
 function LoginStub() {
 	return <div data-testid="login-page">Login</div>;
 }
 
-function renderProfile(initialEntries = ["/profile"]) {
+function renderProfile(opts: { initialEntries?: string[]; profile?: ProfileClient } = {}) {
+	profileClient = opts.profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
 	return render(
-		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={initialEntries}>
+		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient }}>
+			<MemoryRouter initialEntries={opts.initialEntries ?? ["/profile"]}>
 				<Routes>
 					<Route path="/profile" element={<ProfilePage />} />
 					<Route path="/login" element={<LoginStub />} />
 				</Routes>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -43,19 +46,19 @@ beforeEach(() => {
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	vi.spyOn(console, "error").mockImplementation(() => {});
-	_setUserSettings(MOCK_SETTINGS);
 });
 
 afterEach(() => {
-	_resetWorkspaceStore();
 	vi.restoreAllMocks();
 });
 
 describe("ProfilePage", () => {
 	test("shows loading skeleton while fetching", () => {
-		vi.spyOn(settingsApi, "fetchSettings").mockReturnValueOnce(new Promise(() => {}));
-
-		renderProfile();
+		renderProfile({
+			profile: fakeProfileClient({
+				settings: () => new Promise(() => {}),
+			}),
+		});
 
 		expect(screen.getByTestId("profile-skeleton")).toBeInTheDocument();
 	});
@@ -100,7 +103,7 @@ describe("ProfilePage", () => {
 	});
 
 	test("switches to Настройки tab via URL param", async () => {
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"] });
 
 		await waitFor(() => {
 			expect(screen.getByRole("tab", { name: "Настройки" })).toHaveAttribute("aria-selected", "true");
@@ -124,10 +127,11 @@ describe("ProfilePage", () => {
 	});
 
 	test("shows error state with retry button on fetch failure", async () => {
-		const spy = vi.spyOn(settingsApi, "fetchSettings");
-		spy.mockRejectedValueOnce(new Error("boom"));
+		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+		const original = profile.settings;
+		profile.settings = vi.fn().mockRejectedValueOnce(new Error("boom")).mockImplementation(original);
 
-		renderProfile();
+		renderProfile({ profile });
 
 		await waitFor(() => {
 			expect(screen.getByText("Не удалось загрузить профиль")).toBeInTheDocument();
@@ -142,7 +146,7 @@ describe("ProfilePage", () => {
 	});
 
 	test("Настройки tab shows password form", async () => {
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"] });
 
 		await waitFor(() => {
 			expect(screen.getByText("Безопасность")).toBeInTheDocument();
@@ -190,7 +194,7 @@ describe("ProfilePage", () => {
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(async () => {
-			const current = await fetchSettingsMock();
+			const current = await profileClient.settings();
 			expect(current.first_name).toBe("Пётр");
 		});
 
@@ -215,9 +219,10 @@ describe("ProfilePage", () => {
 	});
 
 	test("save failure surfaces generic toast", async () => {
-		vi.spyOn(settingsApi, "patchSettings").mockRejectedValueOnce(new Error("boom"));
+		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+		profile.update = vi.fn().mockRejectedValueOnce(new Error("boom"));
 
-		renderProfile();
+		renderProfile({ profile });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -246,7 +251,7 @@ describe("ProfilePage", () => {
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(async () => {
-			const current = await fetchSettingsMock();
+			const current = await profileClient.settings();
 			expect(current.phone).toBe("+71112223344");
 		});
 	});
@@ -265,7 +270,7 @@ describe("ProfilePage", () => {
 	});
 
 	test("settings tab renders password form with three fields", async () => {
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"] });
 
 		await waitFor(() => {
 			expect(screen.getByText("Безопасность")).toBeInTheDocument();
@@ -278,7 +283,7 @@ describe("ProfilePage", () => {
 	});
 
 	test("password mismatch shows client-side error on submit", async () => {
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"] });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -294,7 +299,7 @@ describe("ProfilePage", () => {
 	});
 
 	test("successful password change shows toast and redirects to /login", async () => {
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"] });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -316,9 +321,10 @@ describe("ProfilePage", () => {
 	});
 
 	test("submit button shows loading state during request", async () => {
-		vi.spyOn(settingsApi, "changePassword").mockReturnValueOnce(new Promise(() => {}));
+		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+		profile.changePassword = () => new Promise(() => {});
 
-		renderProfile(["/profile?tab=settings"]);
+		renderProfile({ initialEntries: ["/profile?tab=settings"], profile });
 		const user = userEvent.setup();
 
 		await waitFor(() => {

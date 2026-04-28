@@ -8,6 +8,8 @@ import { createHttpItemsClient } from "./clients/items-http";
 import { createInMemoryItemsClient } from "./clients/items-in-memory";
 import { createHttpNotificationsClient } from "./clients/notifications-http";
 import { createInMemoryNotificationsClient } from "./clients/notifications-in-memory";
+import { createHttpProfileClient } from "./clients/profile-http";
+import { createInMemoryProfileClient } from "./clients/profile-in-memory";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
 import { createInMemorySuppliersClient } from "./clients/suppliers-in-memory";
 import { createHttpTasksClient } from "./clients/tasks-http";
@@ -24,6 +26,7 @@ interface AdapterConfig {
 	folders: AdapterMode;
 	notifications: AdapterMode;
 	emails: AdapterMode;
+	profile: AdapterMode;
 }
 
 /**
@@ -44,6 +47,7 @@ function resolveConfig(): AdapterConfig {
 		folders: read("VITE_DATA_FOLDERS"),
 		notifications: read("VITE_DATA_NOTIFICATIONS"),
 		emails: read("VITE_DATA_EMAILS"),
+		profile: read("VITE_DATA_PROFILE"),
 	};
 }
 
@@ -63,5 +67,6 @@ export function buildDataClients(): DataClients {
 		notifications:
 			config.notifications === "http" ? createHttpNotificationsClient() : createInMemoryNotificationsClient(),
 		emails: config.emails === "http" ? createHttpEmailsClient() : createInMemoryEmailsClient(),
+		profile: config.profile === "http" ? createHttpProfileClient() : createInMemoryProfileClient(),
 	};
 }

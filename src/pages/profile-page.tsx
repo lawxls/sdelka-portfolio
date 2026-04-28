@@ -7,7 +7,7 @@ import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { extractFormErrors } from "@/data/auth-api";
-import type { UserSettings } from "@/data/settings-api";
+import type { UserSettings } from "@/data/domains/profile";
 import { useChangePassword, useSettings, useUpdateSettings } from "@/data/use-settings";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { formatDate, getInitials } from "@/lib/format";

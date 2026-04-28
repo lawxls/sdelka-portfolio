@@ -6,9 +6,10 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
-import { createTestQueryClient, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
 import { CompaniesSettingsPage } from "./companies-settings-page";
 
 function makeStored(id: string, overrides: Partial<Company> = {}): Company {
@@ -86,7 +87,13 @@ let companies: Company[];
 
 function renderPage(initialPath = "/settings/companies") {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient(companies) }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(companies),
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -107,7 +114,13 @@ function SearchParamSpy() {
 
 function renderPageWithSpy(initialPath = "/settings/companies") {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: createInMemoryCompaniesClient(companies) }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(companies),
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>

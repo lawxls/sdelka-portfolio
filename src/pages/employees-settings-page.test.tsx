@@ -1,12 +1,14 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { _resetWorkspaceStore, _setWorkspaceEmployees, type WorkspaceEmployeeDetail } from "@/data/workspace-mock-data";
-import { createTestQueryClient, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
 
 const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
@@ -67,7 +69,10 @@ let queryClient: QueryClient;
 
 function renderPage(initialPath = "/settings/employees") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -77,7 +82,7 @@ function renderPage(initialPath = "/settings/employees") {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -88,7 +93,10 @@ function SearchParamSpy() {
 
 function renderPageWithSpy(initialPath = "/settings/employees") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -104,7 +112,7 @@ function renderPageWithSpy(initialPath = "/settings/employees") {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 

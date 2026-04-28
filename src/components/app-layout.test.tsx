@@ -1,25 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppLayout } from "./app-layout";
-
-beforeEach(() => {
-	_setUserSettings(makeSettings());
-});
-
-afterEach(() => {
-	_resetWorkspaceStore();
-});
 
 function renderLayout(initialEntry = "/procurement") {
 	const queryClient = createTestQueryClient();
@@ -33,6 +25,7 @@ function renderLayout(initialEntry = "/procurement") {
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
 			}}
 		>
 			<TooltipWrapper>

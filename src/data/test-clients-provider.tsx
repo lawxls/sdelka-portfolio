@@ -6,6 +6,7 @@ import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
+import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
@@ -158,6 +159,21 @@ export function fakeEmailsClient(overrides: Partial<EmailsClient> = {}): EmailsC
 		add: notImplemented("add"),
 		delete: notImplemented("delete"),
 		disable: notImplemented("disable"),
+		...overrides,
+	};
+}
+
+/** Build a fake `ProfileClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeProfileClient(overrides: Partial<ProfileClient> = {}): ProfileClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeProfileClient.${method} not stubbed`);
+	};
+	return {
+		me: notImplemented("me"),
+		settings: notImplemented("settings"),
+		update: notImplemented("update"),
+		changePassword: notImplemented("changePassword"),
 		...overrides,
 	};
 }

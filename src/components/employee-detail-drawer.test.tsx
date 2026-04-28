@@ -1,16 +1,18 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import {
 	_resetWorkspaceStore,
 	_setWorkspaceEmployees,
 	fetchWorkspaceEmployeeMock,
 	type WorkspaceEmployeeDetail,
 } from "@/data/workspace-mock-data";
-import { createTestQueryClient, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 
 const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
@@ -70,7 +72,10 @@ let queryClient: QueryClient;
 
 function renderWithUrl(initialPath: string) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -78,7 +83,7 @@ function renderWithUrl(initialPath: string) {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
