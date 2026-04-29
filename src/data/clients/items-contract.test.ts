@@ -160,7 +160,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		const method = init?.method ?? "GET";
 		const path = new URL(url, "http://test").pathname + new URL(url, "http://test").search;
 		if (method === "GET" && exportRoute.test(path)) {
-			return new Response(new Blob(["xlsx-bytes"]), {
+			return new Response("xlsx-bytes", {
 				status: 200,
 				headers: {
 					"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
