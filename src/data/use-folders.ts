@@ -1,12 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-	createFolderMock as apiCreateFolder,
-	deleteFolderMock as apiDeleteFolder,
-	updateFolderMock as apiUpdateFolder,
-	fetchFolderStatsMock as fetchFolderStats,
-	fetchFoldersMock as fetchFolders,
-} from "./folders-mock-data";
+import { useFoldersClient } from "./clients-context";
 import type { Folder } from "./types";
 import { FOLDER_COLORS } from "./types";
 
@@ -21,17 +15,18 @@ export function nextUnusedColor(folders: Folder[]): string {
 // --- Query hooks ---
 
 export function useFolders(company?: string) {
+	const client = useFoldersClient();
 	return useQuery({
 		queryKey: ["folders", { company }],
-		queryFn: () => fetchFolders(),
-		select: (data) => data.folders,
+		queryFn: () => client.list(),
 	});
 }
 
 export function useFolderStats(company?: string) {
+	const client = useFoldersClient();
 	return useQuery({
 		queryKey: ["folderStats", { company }],
-		queryFn: () => fetchFolderStats({ company }),
+		queryFn: () => client.stats({ company }),
 		select: (data) => {
 			const counts: Record<string, number> = {};
 			let total = 0;
@@ -54,22 +49,26 @@ export function useFolderStats(company?: string) {
 
 export function useCreateFolder() {
 	const queryClient = useQueryClient();
+	const client = useFoldersClient();
 
 	return useMutation({
-		mutationFn: (data: { name: string; color: string }) => apiCreateFolder(data),
+		mutationFn: (data: { name: string; color: string }) => client.create(data),
 		onMutate: async (newFolder) => {
 			await queryClient.cancelQueries({ queryKey: ["folders"] });
-			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			const previous = queryClient.getQueriesData<Folder[]>({ queryKey: ["folders"] });
 
-			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
-				folders: [...(old?.folders ?? []), { id: `temp-${Date.now()}`, ...newFolder }],
-			}));
+			queryClient.setQueriesData<Folder[]>({ queryKey: ["folders"] }, (old) => [
+				...(old ?? []),
+				{ id: `temp-${Date.now()}`, ...newFolder },
+			]);
 
 			return { previous };
 		},
 		onError: (_err, _vars, context) => {
 			if (context?.previous) {
-				queryClient.setQueryData(["folders"], context.previous);
+				for (const [key, value] of context.previous) {
+					queryClient.setQueryData(key, value);
+				}
 			}
 			toast.error("Не удалось создать раздел");
 		},
@@ -82,22 +81,25 @@ export function useCreateFolder() {
 
 export function useUpdateFolder() {
 	const queryClient = useQueryClient();
+	const client = useFoldersClient();
 
 	return useMutation({
-		mutationFn: ({ id, ...data }: { id: string; name?: string; color?: string }) => apiUpdateFolder(id, data),
+		mutationFn: ({ id, ...data }: { id: string; name?: string; color?: string }) => client.update(id, data),
 		onMutate: async ({ id, ...updates }) => {
 			await queryClient.cancelQueries({ queryKey: ["folders"] });
-			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			const previous = queryClient.getQueriesData<Folder[]>({ queryKey: ["folders"] });
 
-			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
-				folders: (old?.folders ?? []).map((f) => (f.id === id ? { ...f, ...updates } : f)),
-			}));
+			queryClient.setQueriesData<Folder[]>({ queryKey: ["folders"] }, (old) =>
+				(old ?? []).map((f) => (f.id === id ? { ...f, ...updates } : f)),
+			);
 
 			return { previous };
 		},
 		onError: (_err, _vars, context) => {
 			if (context?.previous) {
-				queryClient.setQueryData(["folders"], context.previous);
+				for (const [key, value] of context.previous) {
+					queryClient.setQueryData(key, value);
+				}
 			}
 			toast.error("Не удалось обновить раздел");
 		},
@@ -110,22 +112,23 @@ export function useUpdateFolder() {
 
 export function useDeleteFolder() {
 	const queryClient = useQueryClient();
+	const client = useFoldersClient();
 
 	return useMutation({
-		mutationFn: (id: string) => apiDeleteFolder(id),
+		mutationFn: (id: string) => client.delete(id),
 		onMutate: async (id) => {
 			await queryClient.cancelQueries({ queryKey: ["folders"] });
-			const previous = queryClient.getQueryData<{ folders: Folder[] }>(["folders"]);
+			const previous = queryClient.getQueriesData<Folder[]>({ queryKey: ["folders"] });
 
-			queryClient.setQueryData<{ folders: Folder[] }>(["folders"], (old) => ({
-				folders: (old?.folders ?? []).filter((f) => f.id !== id),
-			}));
+			queryClient.setQueriesData<Folder[]>({ queryKey: ["folders"] }, (old) => (old ?? []).filter((f) => f.id !== id));
 
 			return { previous };
 		},
 		onError: (_err, _vars, context) => {
 			if (context?.previous) {
-				queryClient.setQueryData(["folders"], context.previous);
+				for (const [key, value] of context.previous) {
+					queryClient.setQueryData(key, value);
+				}
 			}
 			toast.error("Не удалось удалить раздел");
 		},

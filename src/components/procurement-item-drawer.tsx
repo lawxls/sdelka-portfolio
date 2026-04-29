@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSelectSupplierForItem, useSetCurrentSupplierFromQuote } from "@/data/operations/use-procurement-operations";
 import {
 	SUPPLIER_STATUSES,
 	type SupplierCompanyType,
@@ -52,9 +53,7 @@ import { useItemDetail } from "@/data/use-item-detail";
 import {
 	useArchiveSuppliers,
 	useInfiniteSuppliers,
-	useSelectSupplier,
 	useSendSupplierRequest,
-	useSetCurrentSupplierFromQuote,
 	useSupplierById,
 	useSuppliers,
 	useUnarchiveSuppliers,
@@ -110,7 +109,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		quote: SupplierQuote;
 		supplierCompanyName: string;
 	} | null>(null);
-	const selectMutation = useSelectSupplier();
+	const selectMutation = useSelectSupplierForItem();
 	const setCurrentSupplierFromQuote = useSetCurrentSupplierFromQuote();
 
 	function handleSelectSupplierForItem(quote: SupplierQuote) {

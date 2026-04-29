@@ -1,4 +1,5 @@
 import { delay, nextId, paginate } from "./mock-utils";
+import { SEED_COMPANIES } from "./seeds/companies";
 import type {
 	Address,
 	AddressSummary,
@@ -8,120 +9,6 @@ import type {
 	EmployeePermissions,
 	PermissionLevel,
 } from "./types";
-
-// --- Seed data ---
-
-const SEED_COMPANIES: Company[] = [
-	{
-		id: "company-1",
-		name: "ОРМАТЕК",
-		website: "https://ormatek.com",
-		description:
-			"Крупнейший российский производитель матрасов, кроватей и мебели для сна. Собственное производство, федеральная сеть салонов.",
-		additionalComments: "Приоритет — первичка (без вторсырья), сертификаты соответствия.",
-		isMain: true,
-		employeeCount: 4,
-		procurementItemCount: 8,
-		addresses: [
-			{
-				id: "addr-c1-office",
-				name: "Головной офис",
-				address: "г. Москва, Ленинградское шоссе, д. 16А, стр. 1",
-				phone: "+74957960707",
-				isMain: true,
-			},
-			{
-				id: "addr-c1-prod",
-				name: "Производство",
-				address: "Ростовская обл., Аксайский р-н, Грушевское с/п, Южная промзона",
-				phone: "+78633200101",
-				isMain: false,
-			},
-		],
-		employees: [
-			{
-				id: 1,
-				firstName: "Иван",
-				lastName: "Журавлёв",
-				patronymic: "Сергеевич",
-				position: "Директор по закупкам",
-				role: "admin",
-				phone: "+79161000001",
-				email: "ivan.zhuravlyov.58@mostholding.ru",
-				registeredAt: "2024-01-15T10:00:00Z",
-				permissions: {
-					id: "perm-c1-1",
-					employeeId: 1,
-					procurement: "edit",
-					tasks: "edit",
-					companies: "edit",
-					employees: "edit",
-					emails: "edit",
-				},
-			},
-			{
-				id: 2,
-				firstName: "Ольга",
-				lastName: "Соколова",
-				patronymic: "Андреевна",
-				position: "Руководитель отдела закупок",
-				role: "admin",
-				phone: "+79161000002",
-				email: "o.sokolova@ormatek.com",
-				registeredAt: "2024-02-01T10:00:00Z",
-				permissions: {
-					id: "perm-c1-2",
-					employeeId: 2,
-					procurement: "edit",
-					tasks: "edit",
-					companies: "edit",
-					employees: "edit",
-					emails: "edit",
-				},
-			},
-			{
-				id: 3,
-				firstName: "Дмитрий",
-				lastName: "Орлов",
-				patronymic: "Михайлович",
-				position: "Менеджер по закупкам",
-				role: "user",
-				phone: "+79161000003",
-				email: "d.orlov@ormatek.com",
-				registeredAt: "2024-03-12T10:00:00Z",
-				permissions: {
-					id: "perm-c1-3",
-					employeeId: 3,
-					procurement: "edit",
-					tasks: "edit",
-					companies: "view",
-					employees: "view",
-					emails: "view",
-				},
-			},
-			{
-				id: 4,
-				firstName: "Екатерина",
-				lastName: "Белова",
-				patronymic: "Игоревна",
-				position: "Аналитик отдела закупок",
-				role: "user",
-				phone: "+79161000004",
-				email: "e.belova@ormatek.com",
-				registeredAt: "2024-05-20T10:00:00Z",
-				permissions: {
-					id: "perm-c1-4",
-					employeeId: 4,
-					procurement: "view",
-					tasks: "view",
-					companies: "view",
-					employees: "none",
-					emails: "none",
-				},
-			},
-		],
-	},
-];
 
 // --- Mutable store ---
 
@@ -151,11 +38,6 @@ export function _setCompanies(companies: Company[]): void {
 
 export function _getCompanies(): Company[] {
 	return companiesStore.map(cloneCompany);
-}
-
-export function _getCompanySummariesByIds(ids: string[]): CompanySummary[] {
-	const set = new Set(ids);
-	return companiesStore.filter((c) => set.has(c.id)).map(toSummary);
 }
 
 // --- Internal helpers ---
@@ -205,11 +87,6 @@ export interface FetchCompaniesParams {
 	dir?: string;
 	cursor?: string;
 	limit?: number;
-}
-
-export async function fetchAllCompaniesMock(): Promise<CompanySummary[]> {
-	await delay();
-	return companiesStore.map(toSummary);
 }
 
 export async function fetchCompaniesMock(params: FetchCompaniesParams): Promise<{

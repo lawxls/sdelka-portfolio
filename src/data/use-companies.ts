@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { fetchAllCompaniesMock, fetchCompaniesMock as fetchCompanies } from "./companies-mock-data";
+import { useCompaniesClient } from "./clients-context";
+import { keys } from "./query-keys";
 import type { CompanySortState } from "./types";
 
 interface CompanyQueryParams {
@@ -16,16 +17,17 @@ function buildCompanyFilterParams({ search, sort }: CompanyQueryParams) {
 }
 
 export function useCompanies(params: CompanyQueryParams) {
+	const client = useCompaniesClient();
 	const filterParams = buildCompanyFilterParams(params);
 
 	const query = useInfiniteQuery({
-		queryKey: ["companies", filterParams],
-		queryFn: ({ pageParam }) => fetchCompanies({ ...filterParams, cursor: pageParam }),
+		queryKey: keys.companies.list(filterParams),
+		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
 
-	const companies = query.data?.pages.flatMap((page) => page.companies) ?? [];
+	const companies = query.data?.pages.flatMap((page) => page.items) ?? [];
 
 	return {
 		companies,
@@ -39,27 +41,28 @@ export function useCompanies(params: CompanyQueryParams) {
 }
 
 export function useAllCompanies(options?: { enabled?: boolean }) {
+	const client = useCompaniesClient();
 	return useQuery({
-		queryKey: ["companies-global"],
-		queryFn: fetchAllCompaniesMock,
+		queryKey: keys.companies.listAll(),
+		queryFn: () => client.listAll(),
 		enabled: options?.enabled ?? true,
 	});
 }
 
 export function useProcurementCompanies() {
+	const client = useCompaniesClient();
 	const query = useInfiniteQuery({
-		queryKey: ["procurementCompanies"],
-		queryFn: ({ pageParam }) => fetchCompanies({ cursor: pageParam }),
+		queryKey: keys.companies.procurement(),
+		queryFn: ({ pageParam }) => client.list({ cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});
 
-	// Auto-fetch all pages for complete sidebar navigation
 	if (query.hasNextPage && !query.isFetchingNextPage) {
 		query.fetchNextPage();
 	}
 
-	const companies = query.data?.pages.flatMap((page) => page.companies) ?? [];
+	const companies = query.data?.pages.flatMap((page) => page.items) ?? [];
 
 	return {
 		data: companies,

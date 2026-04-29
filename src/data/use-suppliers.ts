@@ -1,42 +1,38 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	archiveSuppliers,
-	deleteSuppliers,
-	fetchAllSuppliersMock,
-	getAllSuppliers,
-	getSupplier,
-	getSupplierById,
-	getSupplierQuotesByInn,
-	getSuppliers,
-	selectSupplier,
-	selectSupplierByInn,
-	sendSupplierMessage,
-	sendSupplierRequest,
-	unarchiveSuppliers,
-} from "./supplier-mock-data";
+import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSuppliersClient } from "./clients-context";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
 
+export function invalidateSupplierLists(queryClient: QueryClient, itemId: string) {
+	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
+	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
+}
+
 export function useSuppliers(itemId: string | null) {
+	const client = useSuppliersClient();
 	return useQuery({
 		queryKey: ["suppliers-all", itemId],
-		queryFn: () => getAllSuppliers(itemId as string),
+		queryFn: () => client.listForItem(itemId as string),
 		enabled: itemId !== null,
 	});
 }
 
 export function useAllSuppliers(options?: { enabled?: boolean }) {
+	const client = useSuppliersClient();
 	return useQuery({
 		queryKey: ["suppliers-global"],
-		queryFn: fetchAllSuppliersMock,
+		queryFn: () => client.listAll(),
 		enabled: options?.enabled ?? true,
 	});
 }
 
 export function useInfiniteSuppliers(itemId: string | null, params?: Omit<SupplierFilterParams, "cursor">) {
+	const client = useSuppliersClient();
 	return useInfiniteQuery({
 		queryKey: ["suppliers", itemId, params ?? {}],
-		queryFn: ({ pageParam }) => getSuppliers(itemId as string, { ...params, cursor: pageParam }),
+		queryFn: ({ pageParam }) => client.list(itemId as string, { ...params, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 		enabled: itemId !== null,
@@ -44,59 +40,58 @@ export function useInfiniteSuppliers(itemId: string | null, params?: Omit<Suppli
 }
 
 export function useSupplier(itemId: string, supplierId: string | null) {
+	const client = useSuppliersClient();
 	return useQuery({
 		queryKey: ["supplier", itemId, supplierId],
-		queryFn: () => getSupplier(itemId, supplierId as string),
+		queryFn: () => client.get(itemId, supplierId as string),
 		enabled: supplierId !== null,
 	});
 }
 
 export function useSupplierById(supplierId: string | null) {
+	const client = useSuppliersClient();
 	return useQuery({
 		queryKey: ["supplier-by-id", supplierId],
-		queryFn: () => getSupplierById(supplierId as string),
+		queryFn: () => client.getById(supplierId as string),
 		enabled: supplierId !== null,
 	});
 }
 
 export function useSupplierQuotes(inn: string | null, contextItemId: string) {
+	const client = useSuppliersClient();
 	return useQuery({
 		queryKey: ["supplier-quotes", inn, contextItemId],
-		queryFn: () => getSupplierQuotesByInn(inn as string, contextItemId),
+		queryFn: () => client.quotesByInn(inn as string, contextItemId),
 		enabled: inn !== null && inn.length > 0,
 	});
 }
 
-function invalidateSupplierLists(queryClient: ReturnType<typeof useQueryClient>, itemId: string) {
-	queryClient.invalidateQueries({ queryKey: ["suppliers", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-all", itemId] });
-	queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-	queryClient.invalidateQueries({ queryKey: ["supplier-quotes"] });
-}
-
 export function useArchiveSuppliers() {
+	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
-			archiveSuppliers(itemId, supplierIds),
+			client.archive(itemId, supplierIds),
 		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
 	});
 }
 
 export function useUnarchiveSuppliers() {
+	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
-			unarchiveSuppliers(itemId, supplierIds),
+			client.unarchive(itemId, supplierIds),
 		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
 	});
 }
 
 export function useSendSupplierRequest() {
+	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
-			sendSupplierRequest(itemId, supplierIds),
+			client.sendRequest(itemId, supplierIds),
 		onSuccess: (_data, { itemId }) => {
 			invalidateSupplierLists(queryClient, itemId);
 			// The item may have flipped to "negotiating" — refresh the item list/detail queries.
@@ -107,35 +102,12 @@ export function useSendSupplierRequest() {
 	});
 }
 
-export function useSelectSupplier() {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) => selectSupplier(itemId, supplierId),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			invalidateSupplierLists(queryClient, itemId);
-		},
-	});
-}
-
-export function useSetCurrentSupplierFromQuote() {
-	const queryClient = useQueryClient();
-	return useMutation({
-		mutationFn: ({ itemId, inn }: { itemId: string; inn: string }) => selectSupplierByInn(itemId, inn),
-		onSuccess: (_data, { itemId }) => {
-			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["items"] });
-			queryClient.invalidateQueries({ queryKey: ["totals"] });
-			invalidateSupplierLists(queryClient, itemId);
-		},
-	});
-}
-
 export function useDeleteSuppliers() {
+	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierIds }: { itemId: string; supplierIds: string[] }) =>
-			deleteSuppliers(itemId, supplierIds),
+			client.delete(itemId, supplierIds),
 		onSuccess: (_data, { itemId }) => invalidateSupplierLists(queryClient, itemId),
 	});
 }
@@ -146,11 +118,12 @@ interface SendMessagePayload {
 }
 
 export function useSendSupplierMessage(itemId: string, supplierId: string) {
+	const client = useSuppliersClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: ({ body, files }: SendMessagePayload) =>
-			sendSupplierMessage(itemId, supplierId, body, files.length > 0 ? files : undefined),
+			client.sendMessage(itemId, supplierId, body, files.length > 0 ? files : undefined),
 		onMutate: async ({ body, files }) => {
 			const queryKey = ["supplier", itemId, supplierId];
 			await queryClient.cancelQueries({ queryKey });

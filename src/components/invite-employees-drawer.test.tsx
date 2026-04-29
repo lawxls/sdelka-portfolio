@@ -1,11 +1,13 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _setCompanies } from "@/data/companies-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import type { WorkspaceEmployeesClient } from "@/data/clients/workspace-employees-client";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
-import * as workspaceMock from "@/data/workspace-mock-data";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
 import { InviteEmployeesDrawer } from "./invite-employees-drawer";
 
@@ -27,15 +29,22 @@ function makeCompanyDoc(id: string, name: string): Company {
 const MOCK_COMPANIES: Company[] = [makeCompanyDoc("c1", "Компания А"), makeCompanyDoc("c2", "Компания Б")];
 
 let queryClient: QueryClient;
+let workspaceEmployees: WorkspaceEmployeesClient;
 
 function renderDrawer(open = true) {
 	const onOpenChange = vi.fn();
 	render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(MOCK_COMPANIES),
+				workspaceEmployees,
+			}}
+		>
 			<MemoryRouter>
 				<InviteEmployeesDrawer open={open} onOpenChange={onOpenChange} />
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 	return { onOpenChange };
 }
@@ -44,8 +53,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_setCompanies(MOCK_COMPANIES);
-	workspaceMock._resetWorkspaceStore();
+	workspaceEmployees = createInMemoryWorkspaceEmployeesClient({ seed: [] });
 });
 
 afterEach(() => {
@@ -118,7 +126,6 @@ describe("InviteEmployeesDrawer remove card", () => {
 
 describe("InviteEmployeesDrawer submit", () => {
 	test("submit appends the invitee to the workspace store", async () => {
-		workspaceMock._setWorkspaceEmployees([]);
 		renderDrawer();
 		await waitFor(() => {
 			expect(screen.getByText("Сотрудник 1")).toBeInTheDocument();
@@ -130,7 +137,7 @@ describe("InviteEmployeesDrawer submit", () => {
 		await user.click(screen.getByRole("button", { name: /Отправить/i }));
 
 		await waitFor(async () => {
-			const list = await workspaceMock.fetchWorkspaceEmployeesMock();
+			const list = await workspaceEmployees.list();
 			expect(list.some((e) => e.email === "test@example.com")).toBe(true);
 		});
 	});

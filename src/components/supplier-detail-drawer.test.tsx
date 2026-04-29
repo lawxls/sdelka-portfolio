@@ -1,9 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _resetSupplierStore, _setSupplierMockDelay, getAllSuppliers } from "@/data/supplier-mock-data";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { makeSupplier } from "@/test-utils";
 
 const mockIsMobile = vi.hoisted(() => ({ value: false }));
@@ -19,12 +21,7 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
-	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
-});
-
-afterEach(() => {
-	_resetSupplierStore();
 });
 
 function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailDrawer>> = {}) {
@@ -66,11 +63,11 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 		onTabChange: vi.fn(),
 	};
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
 			<TooltipProvider>
 				<SupplierDetailDrawer {...defaultProps} {...props} />
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -215,8 +212,8 @@ describe("SupplierDetailDrawer", () => {
 			const user = userEvent.setup();
 			const onNavigateToItem = vi.fn();
 			// Use a real enriched supplier so its INN lines up with the seed join in
-			// getSupplierQuotesByInn — hand-rolling an INN would miss the hash scheme.
-			const { suppliers } = await getAllSuppliers("item-1");
+			// quotesByInn — hand-rolling an INN would miss the hash scheme.
+			const { suppliers } = await createInMemorySuppliersClient().listForItem("item-1");
 			const kp = suppliers.find((s) => s.status === "получено_кп" && !s.archived);
 			if (!kp) throw new Error("Expected at least one получено_кп supplier on item-1");
 			renderDrawer({ supplier: kp, activeTab: "offers", onNavigateToItem });
@@ -264,7 +261,7 @@ describe("SupplierDetailDrawer", () => {
 
 			// Simulate the URL-driven rerender with the new tab
 			rerender(
-				<QueryClientProvider client={queryClient}>
+				<TestClientsProvider queryClient={queryClient} clients={{ suppliers: createInMemorySuppliersClient() }}>
 					<TooltipProvider>
 						<SupplierDetailDrawer
 							supplier={makeSupplier("s1", {
@@ -279,7 +276,7 @@ describe("SupplierDetailDrawer", () => {
 							onTabChange={onTabChange}
 						/>
 					</TooltipProvider>
-				</QueryClientProvider>,
+				</TestClientsProvider>,
 			);
 			expect(screen.getByText("Добрый день")).toBeInTheDocument();
 		});

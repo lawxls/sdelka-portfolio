@@ -1,10 +1,10 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import * as settingsApi from "@/data/settings-api";
-import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
+import type { ProfileClient } from "@/data/clients/profile-client";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { fakeProfileClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeSettings } from "@/test-utils";
 import { UserAvatarMenu } from "./user-avatar-menu";
 
@@ -12,20 +12,19 @@ const MOCK_SETTINGS = makeSettings({ first_name: "Станислав", last_name
 
 beforeEach(() => {
 	localStorage.clear();
-	_setUserSettings(MOCK_SETTINGS);
 	vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
-	_resetWorkspaceStore();
 	vi.restoreAllMocks();
 });
 
-function renderMenu(initialEntries = ["/"]) {
+function renderMenu(opts: { initialEntries?: string[]; profile?: ProfileClient } = {}) {
 	const queryClient = createTestQueryClient();
+	const profile = opts.profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
 	return render(
-		<QueryClientProvider client={queryClient}>
-			<MemoryRouter initialEntries={initialEntries}>
+		<TestClientsProvider queryClient={queryClient} clients={{ profile }}>
+			<MemoryRouter initialEntries={opts.initialEntries ?? ["/"]}>
 				<Routes>
 					<Route
 						path="*"
@@ -40,7 +39,7 @@ function renderMenu(initialEntries = ["/"]) {
 					/>
 				</Routes>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -58,8 +57,11 @@ describe("UserAvatarMenu trigger", () => {
 	});
 
 	test("name renders as '<First> <Last>' when last name is present", async () => {
-		_setUserSettings(makeSettings({ first_name: "Станислав", last_name: "Чмелев" }));
-		renderMenu();
+		renderMenu({
+			profile: createInMemoryProfileClient({
+				settings: makeSettings({ first_name: "Станислав", last_name: "Чмелев" }),
+			}),
+		});
 
 		await waitFor(() => {
 			expect(screen.getByText("Станислав Чмелев")).toBeInTheDocument();
@@ -67,8 +69,11 @@ describe("UserAvatarMenu trigger", () => {
 	});
 
 	test("name renders as '<First>' when last name is missing", async () => {
-		_setUserSettings(makeSettings({ first_name: "Станислав", last_name: "" }));
-		renderMenu();
+		renderMenu({
+			profile: createInMemoryProfileClient({
+				settings: makeSettings({ first_name: "Станислав", last_name: "" }),
+			}),
+		});
 
 		await waitFor(() => {
 			expect(screen.getByText("Станислав")).toBeInTheDocument();
@@ -77,9 +82,10 @@ describe("UserAvatarMenu trigger", () => {
 	});
 
 	test("shows profile icon (no name) before settings load", () => {
-		vi.spyOn(settingsApi, "fetchSettings").mockReturnValueOnce(new Promise(() => {}));
-
-		renderMenu();
+		const profile = fakeProfileClient({
+			settings: () => new Promise(() => {}),
+		});
+		renderMenu({ profile });
 
 		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
 		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();

@@ -1,8 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
+import { beforeEach, describe, expect, test } from "vitest";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { _setMockDelay } from "@/data/mock-utils";
+import { SEED_ITEMS } from "@/data/seeds/items";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import { DetailsTabPanel } from "./details-tab-panel";
 
@@ -10,9 +15,16 @@ let queryClient: QueryClient;
 
 function renderPanel(itemId = "item-1") {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(),
+				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
+				folders: createInMemoryFoldersClient(),
+			}}
+		>
 			<DetailsTabPanel itemId={itemId} />
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -20,12 +32,7 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
-	_resetItemDetailStore();
-	_setItemDetailMockDelay(0, 0);
-});
-
-afterEach(() => {
-	_resetItemDetailStore();
+	_setMockDelay(0, 0);
 });
 
 describe("DetailsTabPanel", () => {
@@ -80,7 +87,7 @@ describe("DetailsTabPanel", () => {
 	});
 
 	test("shows loading skeleton while fetching", () => {
-		_setItemDetailMockDelay(10000, 10000);
+		_setMockDelay(10000, 10000);
 		renderPanel();
 		expect(screen.getByTestId("details-loading")).toBeInTheDocument();
 	});

@@ -1,17 +1,9 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { fetchItemsMock as fetchItems } from "./items-mock-data";
+import { useItemsClient, useTasksClient } from "./clients-context";
+import type { TaskBoardResponse } from "./domains/tasks";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { TASK_STATUSES } from "./task-types";
-import {
-	changeTaskStatusMock as changeTaskStatus,
-	fetchAllTasksMock,
-	fetchTaskMock as fetchTask,
-	fetchTaskBoardMock as fetchTaskBoard,
-	fetchTasksMock as fetchTasks,
-	type TaskBoardResponse,
-	uploadTaskAttachmentsMock as uploadTaskAttachments,
-} from "./tasks-mock-data";
 
 type TasksCache = {
 	pages: Array<{ tasks: Task[]; nextCursor: string | null }>;
@@ -37,9 +29,10 @@ function addTaskToCache(cache: TasksCache, task: Task): TasksCache {
 }
 
 export function useAllTasks(options?: { enabled?: boolean }) {
+	const tasks = useTasksClient();
 	return useQuery({
 		queryKey: ["tasks-global"],
-		queryFn: fetchAllTasksMock,
+		queryFn: () => tasks.listAll(),
 		enabled: options?.enabled ?? true,
 	});
 }
@@ -47,11 +40,12 @@ export function useAllTasks(options?: { enabled?: boolean }) {
 export function useTaskColumns(params?: TaskFilterParams) {
 	const queryParams = params ?? {};
 	const queryClient = useQueryClient();
+	const tasks = useTasksClient();
 
 	const boardQuery = useQuery({
 		queryKey: ["tasks-board", queryParams],
 		queryFn: () =>
-			fetchTaskBoard({
+			tasks.board({
 				q: queryParams.q,
 				item: queryParams.item,
 				company: queryParams.company,
@@ -65,15 +59,16 @@ export function useTaskColumns(params?: TaskFilterParams) {
 		const cursor = current?.[status]?.next;
 		if (!cursor) return;
 
-		fetchTaskBoard({
-			q: queryParams.q,
-			item: queryParams.item,
-			company: queryParams.company,
-			sort: queryParams.sort,
-			dir: queryParams.dir,
-			column: status,
-			cursor,
-		})
+		tasks
+			.board({
+				q: queryParams.q,
+				item: queryParams.item,
+				company: queryParams.company,
+				sort: queryParams.sort,
+				dir: queryParams.dir,
+				column: status,
+				cursor,
+			})
 			.then((page) => {
 				queryClient.setQueryData<TaskBoardResponse>(["tasks-board", queryParams], (old) => {
 					const col = old?.[status];
@@ -115,10 +110,11 @@ export interface TasksListParams extends TaskFilterParams {
 
 export function useTasksList(params?: TasksListParams) {
 	const queryParams = params ?? {};
+	const tasks = useTasksClient();
 	const query = useInfiniteQuery({
 		queryKey: ["tasks", "list", queryParams],
 		queryFn: ({ pageParam }) =>
-			fetchTasks({
+			tasks.list({
 				page: pageParam,
 				page_size: 25,
 				q: queryParams.q,
@@ -144,10 +140,11 @@ export function useTasksList(params?: TasksListParams) {
 
 export function useTasksCount(params?: TasksListParams) {
 	const queryParams = params ?? {};
+	const tasks = useTasksClient();
 	const query = useQuery({
 		queryKey: ["tasks", "count", queryParams],
 		queryFn: () =>
-			fetchTasks({
+			tasks.list({
 				page: 1,
 				page_size: 1,
 				q: queryParams.q,
@@ -160,9 +157,10 @@ export function useTasksCount(params?: TasksListParams) {
 }
 
 export function useTask(id: string | null) {
+	const tasks = useTasksClient();
 	return useQuery({
 		queryKey: ["task", id],
-		queryFn: () => fetchTask(id as string),
+		queryFn: () => tasks.get(id as string),
 		enabled: id !== null,
 	});
 }
@@ -224,10 +222,11 @@ function rollbackTaskSnapshots(queryClient: ReturnType<typeof useQueryClient>, c
 
 export function useUpdateTaskStatus() {
 	const queryClient = useQueryClient();
+	const tasks = useTasksClient();
 	const findTask = findTaskInCaches(queryClient);
 
 	return useMutation({
-		mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => changeTaskStatus(id, { status }),
+		mutationFn: ({ id, status }: { id: string; status: TaskStatus }) => tasks.changeStatus(id, { status }),
 		onMutate: async ({ id, status: newStatus }) => {
 			await cancelAllTaskQueries(queryClient);
 
@@ -282,14 +281,15 @@ export function useUpdateTaskStatus() {
 
 export function useSubmitAnswer() {
 	const queryClient = useQueryClient();
+	const tasks = useTasksClient();
 	const findTask = findTaskInCaches(queryClient);
 
 	return useMutation({
 		mutationFn: async ({ id, answer, files }: { id: string; answer: string; files?: File[] }) => {
 			if (files && files.length > 0) {
-				await uploadTaskAttachments(id, files);
+				await tasks.uploadAttachments(id, files);
 			}
-			return changeTaskStatus(id, { status: "completed", completedResponse: answer });
+			return tasks.changeStatus(id, { status: "completed", completedResponse: answer });
 		},
 		onMutate: async ({ id, answer }) => {
 			await cancelAllTaskQueries(queryClient);
@@ -354,9 +354,10 @@ export function useSubmitAnswer() {
 }
 
 export function useItemSearch(query: string) {
+	const items = useItemsClient();
 	const result = useQuery({
 		queryKey: ["items", "search", query],
-		queryFn: () => fetchItems({ q: query }),
+		queryFn: () => items.list({ q: query }),
 		enabled: query.length > 0,
 	});
 

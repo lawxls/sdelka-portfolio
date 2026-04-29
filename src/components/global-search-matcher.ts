@@ -1,8 +1,8 @@
+import type { WorkspaceEmployee } from "@/data/domains/workspace-employees";
 import type { WorkspaceEmail } from "@/data/emails-mock-data";
 import type { Supplier, SupplierStatus } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { CompanySummary, ProcurementItem } from "@/data/types";
-import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
 
 export const MIN_QUERY_LENGTH = 3;
 

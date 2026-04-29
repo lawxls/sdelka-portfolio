@@ -1,13 +1,16 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
-import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
-import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
-import { _resetItemsStore, _setItems } from "@/data/items-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
@@ -35,22 +38,30 @@ const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150"
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
 
 let queryClient: QueryClient;
+let companies: Company[];
 
 function setupHandlers(companyList: Company[]) {
-	_setFolders(MOCK_FOLDERS);
-	_setItems(ALL_ITEMS);
-	_setCompanies(companyList);
+	companies = companyList;
 }
 
 function renderPage(initialEntries?: string[]) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(companies),
+				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
+				suppliers: createInMemorySuppliersClient(),
+				tasks: createInMemoryTasksClient({ seed: [] }),
+				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
+			}}
+		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
 				<TooltipProvider>
 					<ProcurementPage />
 				</TooltipProvider>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -63,9 +74,7 @@ async function waitForToolbar() {
 beforeEach(() => {
 	localStorage.clear();
 	setTokens("test-access");
-	_resetItemsStore();
-	_resetFoldersStore();
-	_resetCompaniesStore();
+	companies = SINGLE_COMPANY;
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});

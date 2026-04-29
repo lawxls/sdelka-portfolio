@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import type { CreateCompanyPayload } from "@/data/companies-mock-data";
+import type { CreateCompanyPayload } from "@/data/domains/companies";
 import { cn } from "@/lib/utils";
 
 interface AddressFormState {

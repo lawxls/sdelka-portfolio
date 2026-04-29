@@ -37,11 +37,6 @@ export async function checkEmailMock(_email: string): Promise<{ exists: boolean 
 	return { exists: false };
 }
 
-export async function verifyInvitationCodeMock(_code: string): Promise<{ valid: boolean }> {
-	await delay();
-	return { valid: true };
-}
-
 export async function confirmEmailMock(_token: string): Promise<{ message: string }> {
 	await delay();
 	return { message: "Email confirmed successfully" };

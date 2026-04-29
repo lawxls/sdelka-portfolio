@@ -1,16 +1,15 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-	_resetWorkspaceStore,
-	_setWorkspaceEmployees,
-	fetchWorkspaceEmployeeMock,
-	type WorkspaceEmployeeDetail,
-} from "@/data/workspace-mock-data";
-import { createTestQueryClient, mockHostname } from "@/test-utils";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import type { WorkspaceEmployeesClient } from "@/data/clients/workspace-employees-client";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
+import { TestClientsProvider } from "@/data/test-clients-provider";
+import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 
 const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
@@ -67,10 +66,17 @@ const MOCK_EMPLOYEE_PENDING: WorkspaceEmployeeDetail = {
 };
 
 let queryClient: QueryClient;
+let workspaceEmployees: WorkspaceEmployeesClient;
 
 function renderWithUrl(initialPath: string) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				workspaceEmployees,
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -78,7 +84,7 @@ function renderWithUrl(initialPath: string) {
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -86,12 +92,13 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_setWorkspaceEmployees([MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING]);
+	workspaceEmployees = createInMemoryWorkspaceEmployeesClient({
+		seed: [MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING],
+	});
 });
 
 afterEach(() => {
 	localStorage.clear();
-	_resetWorkspaceStore();
 });
 
 describe("EmployeeDetailDrawer — Информация tab", () => {
@@ -151,7 +158,7 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 		await user.click(screen.getByTestId("perm-procurement-edit"));
 
 		await waitFor(async () => {
-			const detail = await fetchWorkspaceEmployeeMock(1);
+			const detail = await workspaceEmployees.get(1);
 			expect(detail.permissions.procurement).toBe("edit");
 		});
 	});

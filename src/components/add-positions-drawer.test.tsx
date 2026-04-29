@@ -1,11 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { _resetCompaniesStore, _setCompanies } from "@/data/companies-mock-data";
-import { _resetFoldersStore, _setFolders } from "@/data/folders-mock-data";
-import type { Address, Company, NewItemInput } from "@/data/types";
-import { createQueryWrapper, createTestQueryClient } from "@/test-utils";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
+import type { Address, Company, Folder, NewItemInput } from "@/data/types";
+import { createTestQueryClient } from "@/test-utils";
 import { AddPositionsDrawer } from "./add-positions-drawer";
 
 vi.mock("sonner", async () => {
@@ -45,14 +47,15 @@ const MULTI_COMPANY: Company[] = [
 	makeCompanyDoc("company-2", "Вторая компания", TEST_ADDRESSES),
 ];
 
+let companies: Company[];
+
+const FOLDERS_SEED: Folder[] = [
+	{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
+	{ id: "folder-build", name: "Стройматериалы", color: "green" },
+];
+
 beforeEach(() => {
-	_resetCompaniesStore();
-	_setCompanies(SINGLE_COMPANY);
-	_resetFoldersStore();
-	_setFolders([
-		{ id: "folder-metal", name: "Металлопрокат", color: "blue" },
-		{ id: "folder-build", name: "Стройматериалы", color: "green" },
-	]);
+	companies = SINGLE_COMPANY;
 	vi.mocked(toast.success).mockClear();
 });
 
@@ -68,8 +71,16 @@ function renderDrawer(
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
 		onSubmit: overrides.onSubmit ?? vi.fn(),
 	};
+	const queryClient = createTestQueryClient();
+	const companiesClient = createInMemoryCompaniesClient(companies);
+	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
+	const Wrapper = ({ children }: { children: ReactNode }) => (
+		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient, folders: foldersClient }}>
+			{children}
+		</TestClientsProvider>
+	);
 	return {
-		...render(<AddPositionsDrawer {...props} />, { wrapper: createQueryWrapper(createTestQueryClient()) }),
+		...render(<AddPositionsDrawer {...props} />, { wrapper: Wrapper }),
 		...props,
 	};
 }
@@ -171,7 +182,7 @@ describe("AddPositionsDrawer — wizard chrome", () => {
 
 describe("AddPositionsDrawer — Step 1 validation", () => {
 	test("Далее with empty name + multiple companies unselected shows both errors", async () => {
-		_setCompanies(MULTI_COMPANY);
+		companies = MULTI_COMPANY;
 		renderDrawer();
 		const user = userEvent.setup();
 		await advance(user);
@@ -182,7 +193,7 @@ describe("AddPositionsDrawer — Step 1 validation", () => {
 	});
 
 	test("Далее with only name filled and no company shows company error", async () => {
-		_setCompanies(MULTI_COMPANY);
+		companies = MULTI_COMPANY;
 		renderDrawer();
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Название"), "Цемент");
@@ -249,7 +260,7 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 	});
 
 	test("multi-company mode requires manual pick and then pre-selects main address", async () => {
-		_setCompanies(MULTI_COMPANY);
+		companies = MULTI_COMPANY;
 		renderDrawer();
 		const user = userEvent.setup();
 
@@ -553,7 +564,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 	});
 
 	test("dirty detection fires when only Step 2 fields touched", async () => {
-		_setCompanies(MULTI_COMPANY);
+		companies = MULTI_COMPANY;
 		const onOpenChange = vi.fn();
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();

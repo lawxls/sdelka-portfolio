@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { WorkspaceEmployee } from "@/data/domains/workspace-employees";
 import type { WorkspaceEmail } from "@/data/emails-mock-data";
 import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { CompanySummary, ProcurementItem } from "@/data/types";
-import type { WorkspaceEmployee } from "@/data/workspace-mock-data";
 import { makeCompany, makeItem, makeSupplier, makeTask } from "@/test-utils";
 import { matchGlobal } from "./global-search-matcher";
 

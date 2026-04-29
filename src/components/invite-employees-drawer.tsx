@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type { InviteEmployeeData } from "@/data/domains/workspace-employees";
 import type { CompanySummary, EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useInviteEmployees } from "@/data/use-workspace-employees";
-import type { InviteEmployeeData } from "@/data/workspace-mock-data";
 import { cn } from "@/lib/utils";
 
 interface InviteCard {

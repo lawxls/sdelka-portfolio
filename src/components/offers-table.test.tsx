@@ -3,7 +3,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _resetSupplierStore, _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { CurrentSupplier } from "@/data/types";
 import * as useIsMobileModule from "@/hooks/use-is-mobile";
 import { makeSupplier } from "@/test-utils";
@@ -16,12 +15,6 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
-	_resetSupplierStore();
-	_setSupplierMockDelay(0, 0);
-});
-
-afterEach(() => {
-	_resetSupplierStore();
 });
 
 const defaultSuppliers = [

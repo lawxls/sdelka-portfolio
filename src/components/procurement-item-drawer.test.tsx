@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router";
@@ -9,11 +9,16 @@ vi.mock("sonner", () => ({
 }));
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { _resetItemDetailStore, _setItemDetailMockDelay } from "@/data/item-detail-mock-data";
-import { _resetSupplierStore, _setSupplierMockDelay, _setSuppliersForItem } from "@/data/supplier-mock-data";
+import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { _setMockDelay } from "@/data/mock-utils";
+import { ORMATEK_SUPPLIERS } from "@/data/seeds/suppliers-ormatek";
+import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
-import { ORMATEK_SUPPLIERS } from "@/data/suppliers-ormatek";
-import { _resetTasksStore, _setTasks } from "@/data/tasks-mock-data";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import type { ProcurementItem } from "@/data/types";
 import { makeTask, mockHostname } from "@/test-utils";
@@ -40,13 +45,20 @@ import { ProcurementItemDrawer } from "./procurement-item-drawer";
 const TEST_ITEM: ProcurementItem = {
 	id: "item-1",
 	name: "Полотно ПВД 2600 мм",
-	status: "searching",
+	status: "completed",
 	annualQuantity: 180_000,
 	currentPrice: 1776,
 	bestPrice: null,
 	averagePrice: null,
 	folderId: "folder-packaging",
 	companyId: "company-1",
+	currentSupplier: {
+		companyName: "ПолимерПром",
+		inn: "6164012345",
+		paymentType: "prepayment",
+		deferralDays: 0,
+		pricePerUnit: 1776,
+	},
 };
 
 let queryClient: QueryClient;
@@ -58,14 +70,23 @@ function UrlSpy() {
 
 function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: createInMemoryCompaniesClient(),
+				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
+				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
+				tasks: createInMemoryTasksClient({ seed: ALL_TASKS }),
+				folders: createInMemoryFoldersClient(),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries}>
 					<ProcurementItemDrawer item={TEST_ITEM} />
 					<UrlSpy />
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -86,20 +107,13 @@ beforeEach(() => {
 	});
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	_resetSupplierStore();
 	_setSupplierMockDelay(0, 0);
-	_setSuppliersForItem("item-1", TEST_SUPPLIERS);
-	_resetItemDetailStore();
-	_setItemDetailMockDelay(0, 0);
-	_setTasks(ALL_TASKS);
+	_setMockDelay(0, 0);
 	vi.clearAllMocks();
 });
 
 afterEach(() => {
 	localStorage.clear();
-	_resetSupplierStore();
-	_resetItemDetailStore();
-	_resetTasksStore();
 });
 
 describe("ProcurementItemDrawer — open/close", () => {

@@ -1,24 +1,19 @@
-import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { _resetWorkspaceStore, _setUserSettings } from "@/data/workspace-mock-data";
+import { describe, expect, test } from "vitest";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppRail } from "./app-rail";
-
-beforeEach(() => {
-	_setUserSettings(makeSettings());
-});
-
-afterEach(() => {
-	_resetWorkspaceStore();
-});
 
 function renderRail(initialPath = "/procurement") {
 	const queryClient = createTestQueryClient();
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+		>
 			<TooltipWrapper>
 				<MemoryRouter initialEntries={[initialPath]}>
 					<Routes>
@@ -26,7 +21,7 @@ function renderRail(initialPath = "/procurement") {
 					</Routes>
 				</MemoryRouter>
 			</TooltipWrapper>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -124,7 +119,10 @@ describe("AppRail navigation", () => {
 	test("clicking an item navigates", async () => {
 		const queryClient = createTestQueryClient();
 		render(
-			<QueryClientProvider client={queryClient}>
+			<TestClientsProvider
+				queryClient={queryClient}
+				clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+			>
 				<TooltipWrapper>
 					<MemoryRouter initialEntries={["/procurement"]}>
 						<AppRail />
@@ -134,7 +132,7 @@ describe("AppRail navigation", () => {
 						</Routes>
 					</MemoryRouter>
 				</TooltipWrapper>
-			</QueryClientProvider>,
+			</TestClientsProvider>,
 		);
 		await userEvent.setup().click(screen.getByRole("link", { name: "Задачи" }));
 		expect(screen.getByText("tasks-page")).toBeInTheDocument();

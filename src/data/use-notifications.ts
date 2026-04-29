@@ -1,18 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import {
-	fetchNotificationsMock,
-	markAllNotificationsAsReadMock,
-	markNotificationAsReadMock,
-	type NotificationsPage,
-} from "./notifications-mock-data";
+import { useNotificationsClient } from "./clients-context";
+import type { NotificationsResponse } from "./domains/notifications";
 
 const QUERY_KEY = ["notifications"] as const;
 
 export function useNotifications() {
+	const client = useNotificationsClient();
 	const query = useQuery({
 		queryKey: QUERY_KEY,
-		queryFn: fetchNotificationsMock,
+		queryFn: () => client.list(),
 	});
 
 	const notifications = query.data?.notifications ?? [];
@@ -30,7 +27,7 @@ export function useNotifications() {
 }
 
 function optimisticallyAddReadIds(queryClient: ReturnType<typeof useQueryClient>, ids: string[]) {
-	queryClient.setQueryData<NotificationsPage>(QUERY_KEY, (prev) => {
+	queryClient.setQueryData<NotificationsResponse>(QUERY_KEY, (prev) => {
 		if (!prev) return prev;
 		const next = new Set(prev.readIds);
 		for (const id of ids) next.add(id);
@@ -39,9 +36,10 @@ function optimisticallyAddReadIds(queryClient: ReturnType<typeof useQueryClient>
 }
 
 export function useMarkNotificationAsRead() {
+	const client = useNotificationsClient();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (id: string) => markNotificationAsReadMock(id),
+		mutationFn: (id: string) => client.markAsRead(id),
 		onMutate: (id) => {
 			optimisticallyAddReadIds(queryClient, [id]);
 		},
@@ -50,11 +48,12 @@ export function useMarkNotificationAsRead() {
 }
 
 export function useMarkAllNotificationsAsRead() {
+	const client = useNotificationsClient();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: () => markAllNotificationsAsReadMock(),
+		mutationFn: () => client.markAllAsRead(),
 		onMutate: () => {
-			const current = queryClient.getQueryData<NotificationsPage>(QUERY_KEY);
+			const current = queryClient.getQueryData<NotificationsResponse>(QUERY_KEY);
 			if (current)
 				optimisticallyAddReadIds(
 					queryClient,

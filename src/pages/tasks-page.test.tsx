@@ -1,11 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import * as tasksMock from "@/data/tasks-mock-data";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { TestClientsProvider } from "@/data/test-clients-provider";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
@@ -38,7 +39,6 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	localStorage.setItem("auth-access-token", "test-token");
-	tasksMock._setTasks(allTasks);
 });
 
 afterEach(() => {
@@ -48,13 +48,19 @@ afterEach(() => {
 
 function renderPage(initialEntries?: string[]) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				suppliers: createInMemorySuppliersClient(),
+				tasks: createInMemoryTasksClient({ seed: allTasks }),
+			}}
+		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries ?? ["/tasks"]}>
 					<TasksPage />
 				</MemoryRouter>
 			</TooltipProvider>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
