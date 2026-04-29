@@ -279,7 +279,10 @@ describe.each(adapters.map((make) => [make().name, make]))("ItemsClient contract
 
 	it("export returns a blob with a filename", async () => {
 		const result = await client.export({});
-		expect(result.blob).toBeInstanceOf(Blob);
+		// Duck-type check: undici and jsdom expose different Blob constructors so
+		// `toBeInstanceOf(Blob)` is unreliable across environments.
+		expect(typeof result.blob.size).toBe("number");
+		expect(typeof result.blob.text).toBe("function");
 		expect(result.filename).toMatch(/\.xlsx$/);
 	});
 });
