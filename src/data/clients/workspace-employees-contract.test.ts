@@ -356,6 +356,52 @@ describe.each(
 	});
 });
 
+describe("in-memory adapter — getCompanySummaries port", () => {
+	beforeEach(() => {
+		_setMockDelay(0, 0);
+	});
+
+	afterEach(() => {
+		_resetMockDelay();
+	});
+
+	it("invokes the injected port with the requested company ids", async () => {
+		const getCompanySummaries = vi.fn(async (ids: string[]) =>
+			ids.map((id) => ({
+				id,
+				name: `Company ${id}`,
+				isMain: false,
+				addresses: [],
+				employeeCount: 0,
+				procurementItemCount: 0,
+			})),
+		);
+		const client = createInMemoryWorkspaceEmployeesClient({
+			seed: SEED.map((e) => structuredClone(e)),
+			getCompanySummaries,
+		});
+
+		await client.invite([{ ...VALID_INVITE, email: "z@x.com", companies: ["c1", "c2"] }]);
+
+		expect(getCompanySummaries).toHaveBeenCalledWith(["c1", "c2"]);
+		const list = await client.list();
+		const added = list.find((e) => e.email === "z@x.com");
+		expect(added?.companies.map((c) => c.id)).toEqual(["c1", "c2"]);
+	});
+
+	it("skips the port when invite has no companies", async () => {
+		const getCompanySummaries = vi.fn(async () => []);
+		const client = createInMemoryWorkspaceEmployeesClient({
+			seed: SEED.map((e) => structuredClone(e)),
+			getCompanySummaries,
+		});
+
+		await client.invite([VALID_INVITE]);
+
+		expect(getCompanySummaries).not.toHaveBeenCalled();
+	});
+});
+
 /**
  * HTTP-only error branches. The in-memory adapter doesn't surface validation /
  * conflict errors so they're tested only against the HTTP adapter.

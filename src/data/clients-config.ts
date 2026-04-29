@@ -67,11 +67,16 @@ function resolveConfig(): AdapterConfig {
  * Build the production composition root: one client per migrated entity, picked
  * by adapter mode. Tests bypass this and pass their own `DataClients` map to
  * the provider.
+ *
+ * The companies client is constructed first so the workspace-employees adapter
+ * can read company summaries from the same active source on invite, keeping
+ * cross-domain state coherent regardless of which adapter mode each entity uses.
  */
 export function buildDataClients(): DataClients {
 	const config = resolveConfig();
+	const companies = config.companies === "http" ? createHttpCompaniesClient() : createInMemoryCompaniesClient();
 	return {
-		companies: config.companies === "http" ? createHttpCompaniesClient() : createInMemoryCompaniesClient(),
+		companies,
 		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
 		tasks: config.tasks === "http" ? createHttpTasksClient() : createInMemoryTasksClient(),
@@ -83,7 +88,14 @@ export function buildDataClients(): DataClients {
 		workspaceEmployees:
 			config.workspaceEmployees === "http"
 				? createHttpWorkspaceEmployeesClient()
-				: createInMemoryWorkspaceEmployeesClient(),
+				: createInMemoryWorkspaceEmployeesClient({
+						getCompanySummaries: async (ids) => {
+							if (ids.length === 0) return [];
+							const all = await companies.listAll();
+							const set = new Set(ids);
+							return all.filter((c) => set.has(c.id));
+						},
+					}),
 		invitations: config.invitations === "http" ? createHttpInvitationsClient() : createInMemoryInvitationsClient(),
 		companyInfo: config.companyInfo === "http" ? createHttpCompanyInfoClient() : createInMemoryCompanyInfoClient(),
 	};

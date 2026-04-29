@@ -20,11 +20,19 @@ interface BodyOptions extends RequestOptions {
 	body?: unknown;
 }
 
+export interface BinaryDownload {
+	blob: Blob;
+	filename: string;
+}
+
 export interface HttpClient {
 	get<T>(path: string, opts?: RequestOptions): Promise<T>;
 	post<T>(path: string, opts?: BodyOptions): Promise<T>;
 	patch<T>(path: string, opts?: BodyOptions): Promise<T>;
 	delete<T>(path: string, opts?: RequestOptions): Promise<T>;
+	/** GET a binary payload (e.g. xlsx export). Filename is taken from the
+	 * `Content-Disposition` header when present, otherwise the URL path tail. */
+	getBinary(path: string, opts?: RequestOptions & { fallbackFilename?: string }): Promise<BinaryDownload>;
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -62,12 +70,49 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		throw await mapStatusToError(res);
 	}
 
+	async function requestBinary(
+		path: string,
+		opts: RequestOptions & { fallbackFilename?: string } = {},
+	): Promise<BinaryDownload> {
+		const url = baseUrl ? `${baseUrl}${path}` : path;
+		const headers = new Headers();
+		const token = tokenSource();
+		if (token) headers.set("Authorization", `Bearer ${token}`);
+
+		let res: Response;
+		try {
+			res = await fetchImpl(url, { method: "GET", headers, signal: opts.signal });
+		} catch (cause) {
+			throw new NetworkError(cause);
+		}
+
+		if (!res.ok) throw await mapStatusToError(res);
+		const blob = await res.blob();
+		const filename = filenameFrom(res.headers.get("content-disposition"), path, opts.fallbackFilename);
+		return { blob, filename };
+	}
+
 	return {
 		get: (path, opts) => request("GET", path, opts),
 		post: (path, opts) => request("POST", path, opts),
 		patch: (path, opts) => request("PATCH", path, opts),
 		delete: (path, opts) => request("DELETE", path, opts),
+		getBinary: (path, opts) => requestBinary(path, opts),
 	};
+}
+
+function filenameFrom(contentDisposition: string | null, path: string, fallback?: string): string {
+	if (contentDisposition) {
+		const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+		if (utf8) return decodeURIComponent(utf8[1].trim());
+		const quoted = /filename\s*=\s*"([^"]+)"/i.exec(contentDisposition);
+		if (quoted) return quoted[1];
+		const bare = /filename\s*=\s*([^;]+)/i.exec(contentDisposition);
+		if (bare) return bare[1].trim();
+	}
+	if (fallback) return fallback;
+	const tail = path.split("?")[0].split("/").filter(Boolean).pop();
+	return tail || "download";
 }
 
 async function parseBody<T>(res: Response): Promise<T> {

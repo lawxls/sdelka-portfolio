@@ -43,11 +43,7 @@ export function createHttpItemsClient(http: HttpClient = defaultHttpClient): Ite
 		archive: (id, isArchived) =>
 			http.post<ProcurementItem>(`/api/items/${enc(id)}/${isArchived ? "archive" : "unarchive"}`),
 
-		export: async (_params: ExportItemsParams) => {
-			// Items export returns a binary xlsx that the shared httpClient (JSON-only)
-			// can't surface. The HTTP backend doesn't expose this endpoint yet either —
-			// production composition root falls back to the in-memory adapter for export.
-			throw new Error("HTTP export not implemented yet");
-		},
+		export: (params: ExportItemsParams) =>
+			http.getBinary(`/api/items/export${buildListQuery(params)}`, { fallbackFilename: "items.xlsx" }),
 	};
 }

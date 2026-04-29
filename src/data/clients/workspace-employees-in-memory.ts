@@ -1,4 +1,4 @@
-import { _getCompanySummariesByIds } from "../companies-mock-data";
+import type { CompanySummary } from "../domains/companies";
 import type {
 	InviteEmployeeData,
 	UpdatePermissionsData,
@@ -20,10 +20,20 @@ function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
 	};
 }
 
+/**
+ * Slim port for resolving company summaries by id. Production wires this to the
+ * active companies client so an invitee's `companies` array stays coherent
+ * with whatever adapter is selected; tests can inject a stub or default to []. */
+export type GetCompanySummariesByIds = (ids: string[]) => Promise<CompanySummary[]>;
+
 export interface InMemoryWorkspaceEmployeesOptions {
 	/** Replace the seeded roster. Tests pass this to land on a known starting
 	 * roster (e.g. just one admin) without mutating shared state. */
 	seed?: WorkspaceEmployeeDetail[];
+	/** Resolves the invitee's `CompanySummary[]` from the active companies source.
+	 * Defaults to a no-op `() => []` so tests don't need to wire it. Production
+	 * wires this to the active CompaniesClient via `clients-config.ts`. */
+	getCompanySummaries?: GetCompanySummariesByIds;
 }
 
 /**
@@ -31,18 +41,17 @@ export interface InMemoryWorkspaceEmployeesOptions {
  * (the roster + the id counter for invitees) lives in the closure — every
  * call to the factory produces an independent store.
  *
- * Cross-domain note: invite() looks up `CompanySummary[]` by company id via
- * `_getCompanySummariesByIds` from the companies mock store, so an invitee's
- * `companies` array stays coherent with the companies adapter. This is the
- * only cross-store reach-in left in this domain; lifting it out would require
- * passing a `CompaniesClient` (or a slim `getSummaries` port) into the
- * factory.
+ * Cross-domain note: invite() resolves `CompanySummary[]` for the invitee via
+ * the injected `getCompanySummaries` port. The composition root binds it to
+ * the active companies adapter so company creates/updates done through the
+ * app are reflected in invitee assignments.
  */
 export function createInMemoryWorkspaceEmployeesClient(
 	options?: InMemoryWorkspaceEmployeesOptions,
 ): WorkspaceEmployeesClient {
 	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
 	let idCounter = 1000;
+	const getCompanySummaries: GetCompanySummariesByIds = options?.getCompanySummaries ?? (async () => []);
 	function nextEmployeeId(): number {
 		idCounter += 1;
 		return idCounter;
@@ -72,6 +81,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 			await delay();
 			for (const invite of invites) {
 				const id = nextEmployeeId();
+				const companies = invite.companies.length > 0 ? await getCompanySummaries(invite.companies) : [];
 				store.push({
 					id,
 					firstName: invite.firstName,
@@ -82,7 +92,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 					phone: "",
 					email: invite.email,
 					registeredAt: null,
-					companies: _getCompanySummariesByIds(invite.companies),
+					companies,
 					permissions: {
 						id: nextId("perm-w"),
 						employeeId: id,

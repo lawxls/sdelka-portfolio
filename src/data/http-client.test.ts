@@ -185,3 +185,73 @@ describe("httpClient — network failures", () => {
 		await expect(http.get("/foo")).rejects.toBeInstanceOf(NotFoundError);
 	});
 });
+
+describe("httpClient — getBinary", () => {
+	it("returns blob and filename from Content-Disposition header", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(
+			new Response("bytes", {
+				status: 200,
+				headers: {
+					"content-type": "application/octet-stream",
+					"content-disposition": 'attachment; filename="report.xlsx"',
+				},
+			}),
+		);
+		const http = setup(fetchSpy);
+
+		const result = await http.getBinary("/api/items/export?company=c1");
+
+		expect(result.filename).toBe("report.xlsx");
+		expect(await result.blob.text()).toBe("bytes");
+	});
+
+	it("decodes RFC 5987 filename* parameter", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(
+			new Response("x", {
+				status: 200,
+				headers: {
+					"content-type": "application/octet-stream",
+					"content-disposition": "attachment; filename*=UTF-8''items%20%D1%82%D0%B5%D1%81%D1%82.xlsx",
+				},
+			}),
+		);
+		const http = setup(fetchSpy);
+
+		const result = await http.getBinary("/api/items/export");
+
+		expect(result.filename).toBe("items тест.xlsx");
+	});
+
+	it("falls back to fallbackFilename when no Content-Disposition", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
+		const http = setup(fetchSpy);
+
+		const result = await http.getBinary("/api/items/export?a=1", { fallbackFilename: "items.xlsx" });
+
+		expect(result.filename).toBe("items.xlsx");
+	});
+
+	it("attaches Bearer token", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
+		const http = setup(fetchSpy, { token: "abc" });
+
+		await http.getBinary("/api/items/export");
+
+		const init = fetchSpy.mock.calls[0][1] as RequestInit;
+		expect((init.headers as Headers).get("Authorization")).toBe("Bearer abc");
+	});
+
+	it("non-2xx status maps to typed error", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
+		const http = setup(fetchSpy);
+
+		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NotFoundError);
+	});
+
+	it("fetch rejection → NetworkError", async () => {
+		const fetchSpy = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+		const http = setup(fetchSpy);
+
+		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NetworkError);
+	});
+});

@@ -153,10 +153,21 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 	];
 
+	const exportRoute = /^\/api\/items\/export(\?|$)/;
+
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = input;
 		const method = init?.method ?? "GET";
 		const path = new URL(url, "http://test").pathname + new URL(url, "http://test").search;
+		if (method === "GET" && exportRoute.test(path)) {
+			return new Response(new Blob(["xlsx-bytes"]), {
+				status: 200,
+				headers: {
+					"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					"content-disposition": 'attachment; filename="items.xlsx"',
+				},
+			});
+		}
 		const route = routes.find((r) => r.method === method && r.path.test(path));
 		if (!route) throw new Error(`Unmatched ${method} ${url}`);
 		const result = await route.respond({ url, init });
@@ -264,6 +275,12 @@ describe.each(adapters.map((make) => [make().name, make]))("ItemsClient contract
 			totalSavings: expect.any(Number),
 			totalDeviation: expect.any(Number),
 		});
+	});
+
+	it("export returns a blob with a filename", async () => {
+		const result = await client.export({});
+		expect(result.blob).toBeInstanceOf(Blob);
+		expect(result.filename).toMatch(/\.xlsx$/);
 	});
 });
 
