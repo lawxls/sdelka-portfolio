@@ -12,16 +12,21 @@ import type {
 
 export type WizardStep = 1 | 2 | 3;
 
-type AdvanceResult = { advanced: boolean; focus?: "company" | "name" };
+type AdvanceResult = { advanced: boolean; focus?: "company" | "name"; positionIndex?: number };
 
-interface Step1State {
-	companyId: string;
-	folderId: string | null;
+export interface PositionDraft {
 	name: string;
 	description: string;
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
+	pricePerUnit: string;
+}
+
+interface Step1State {
+	companyId: string;
+	folderId: string | null;
+	positions: PositionDraft[];
 	addressIds: string[];
 	unloading: UnloadingType | null;
 	paymentMethod: PaymentMethod;
@@ -35,7 +40,6 @@ interface Step1State {
 interface Step2State {
 	companyName: string;
 	inn: string;
-	pricePerUnit: string;
 	paymentType: PaymentType;
 	deferralDays: string;
 	prepaymentPercent: string;
@@ -52,24 +56,35 @@ interface Step3State {
 	answers: Record<string, Step3Answer>;
 }
 
+interface PositionErrors {
+	name?: string;
+}
+
 interface Step1Errors {
 	company?: string;
-	name?: string;
+	positions: PositionErrors[];
 }
 
 interface Step2Errors {
 	inn?: string;
 }
 
-function defaultStep1(): Step1State {
+function defaultPosition(): PositionDraft {
 	return {
-		companyId: "",
-		folderId: null,
 		name: "",
 		description: "",
 		unit: "",
 		quantityPerDelivery: "",
 		annualQuantity: "",
+		pricePerUnit: "",
+	};
+}
+
+function defaultStep1(): Step1State {
+	return {
+		companyId: "",
+		folderId: null,
+		positions: [defaultPosition()],
 		addressIds: [],
 		unloading: null,
 		paymentMethod: "bank_transfer",
@@ -85,7 +100,6 @@ function defaultStep2(): Step2State {
 	return {
 		companyName: "",
 		inn: "",
-		pricePerUnit: "",
 		paymentType: "prepayment",
 		deferralDays: "",
 		prepaymentPercent: "100",
@@ -96,6 +110,10 @@ function defaultStep2(): Step2State {
 
 function defaultStep3(): Step3State {
 	return { answers: {} };
+}
+
+function defaultStep1Errors(): Step1Errors {
+	return { positions: [{}] };
 }
 
 const INN_PATTERN = /^\d{10}$|^\d{12}$/;
@@ -113,12 +131,13 @@ function toNumber(value: string): number | undefined {
 	return Number.isFinite(n) ? n : undefined;
 }
 
-function buildCurrentSupplier(step2: Step2State): CurrentSupplier | undefined {
-	// «Ваш поставщик» needs Название, ИНН and Цена together — drop the record otherwise,
-	// even when downstream fields (payment, delivery) are present.
+function buildCurrentSupplier(step2: Step2State, position: PositionDraft): CurrentSupplier | undefined {
+	// Drop the supplier when any of {company name, ИНН, this position's price} is missing
+	// — downstream surfaces (Поставщики / Предложения) treat a present record as fully
+	// identifiable, so a partial one would render as an unnamed or zero-priced row.
 	const companyName = step2.companyName.trim();
 	const inn = step2.inn.trim();
-	if (companyName === "" || inn === "" || step2.pricePerUnit.trim() === "") return undefined;
+	if (companyName === "" || inn === "" || position.pricePerUnit.trim() === "") return undefined;
 
 	const prepaymentPercentNum = step2.paymentType === "prepayment" ? (toNumber(step2.prepaymentPercent) ?? 100) : 100;
 
@@ -127,7 +146,7 @@ function buildCurrentSupplier(step2: Step2State): CurrentSupplier | undefined {
 		inn,
 		paymentType: step2.paymentType,
 		deferralDays: step2.paymentType === "deferred" ? (toNumber(step2.deferralDays) ?? 0) : 0,
-		pricePerUnit: Number(step2.pricePerUnit),
+		pricePerUnit: Number(position.pricePerUnit),
 	};
 	if (step2.paymentType === "prepayment" && prepaymentPercentNum !== 100) {
 		supplier.prepaymentPercent = prepaymentPercentNum;
@@ -150,29 +169,33 @@ function buildGeneratedAnswers(step3: Step3State): GeneratedAnswer[] | undefined
 }
 
 function buildNewItemInput(
+	position: PositionDraft,
 	step1: Step1State,
 	step2: Step2State,
 	step3: Step3State,
 	addressStrings: string[],
 ): NewItemInput {
 	const payload: NewItemInput = {
-		name: step1.name.trim(),
+		name: position.name.trim(),
 		paymentType: step1.deferralRequired ? "deferred" : "prepayment",
 		paymentMethod: step1.paymentMethod,
 	};
 
 	if (step1.folderId !== null) payload.folderId = step1.folderId;
 
-	const description = step1.description.trim();
+	const description = position.description.trim();
 	if (description) payload.description = description;
 
-	if (step1.unit !== "") payload.unit = step1.unit;
+	if (position.unit !== "") payload.unit = position.unit;
 
-	const annual = toNumber(step1.annualQuantity);
+	const annual = toNumber(position.annualQuantity);
 	if (annual !== undefined) payload.annualQuantity = annual;
 
-	const perDelivery = toNumber(step1.quantityPerDelivery);
+	const perDelivery = toNumber(position.quantityPerDelivery);
 	if (perDelivery !== undefined) payload.quantityPerDelivery = perDelivery;
+
+	const price = toNumber(position.pricePerUnit);
+	if (price !== undefined) payload.currentPrice = price;
 
 	if (addressStrings.length > 0) payload.deliveryAddresses = addressStrings;
 
@@ -192,7 +215,7 @@ function buildNewItemInput(
 	const info = step1.additionalInfo.trim();
 	if (info) payload.additionalInfo = info;
 
-	const supplier = buildCurrentSupplier(step2);
+	const supplier = buildCurrentSupplier(step2, position);
 	if (supplier) payload.currentSupplier = supplier;
 
 	const answers = buildGeneratedAnswers(step3);
@@ -209,18 +232,53 @@ export interface UseAddPositionFormArgs {
 	resolveAddressStrings: (companyId: string, addressIds: string[]) => string[];
 }
 
+type SharedStep1Key = Exclude<keyof Step1State, "positions">;
+
 export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionFormArgs) {
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(defaultStep1);
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
 	const [step3, setStep3] = useState<Step3State>(defaultStep3);
-	const [step1Errors, setStep1Errors] = useState<Step1Errors>({});
+	const [step1Errors, setStep1Errors] = useState<Step1Errors>(defaultStep1Errors);
 	const [step2Errors, setStep2Errors] = useState<Step2Errors>({});
 
-	function update1<K extends keyof Step1State>(key: K, value: Step1State[K]) {
+	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
-		if (key === "name") setStep1Errors((prev) => (prev.name ? { ...prev, name: undefined } : prev));
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
+	}
+
+	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
+		setStep1((prev) => {
+			const current = prev.positions[index];
+			if (!current || current[key] === value) return prev;
+			const positions = prev.positions.slice();
+			positions[index] = { ...current, [key]: value };
+			return { ...prev, positions };
+		});
+		if (key === "name") {
+			setStep1Errors((prev) => {
+				if (!prev.positions[index]?.name) return prev;
+				const positions = prev.positions.slice();
+				positions[index] = { ...positions[index], name: undefined };
+				return { ...prev, positions };
+			});
+		}
+	}
+
+	function addPosition() {
+		setStep1((prev) => ({ ...prev, positions: [...prev.positions, defaultPosition()] }));
+		setStep1Errors((prev) => ({ ...prev, positions: [...prev.positions, {}] }));
+	}
+
+	function removePosition(index: number) {
+		setStep1((prev) => {
+			if (prev.positions.length <= 1) return prev;
+			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
+		});
+		setStep1Errors((prev) => {
+			if (prev.positions.length <= 1) return prev;
+			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
+		});
 	}
 
 	function update2<K extends keyof Step2State>(key: K, value: Step2State[K]) {
@@ -241,9 +299,11 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	}
 
 	function validateStep1(): Step1Errors {
-		const errors: Step1Errors = {};
+		const positionErrors: PositionErrors[] = step1.positions.map((p) =>
+			p.name.trim() ? {} : { name: "Укажите название позиции" },
+		);
+		const errors: Step1Errors = { positions: positionErrors };
 		if (!step1.companyId) errors.company = "Выберите компанию";
-		if (!step1.name.trim()) errors.name = "Укажите название позиции";
 		return errors;
 	}
 
@@ -255,11 +315,13 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	function advance(): AdvanceResult {
 		if (step === 1) {
 			const errors = validateStep1();
-			if (errors.company || errors.name) {
+			const firstNameErrorIndex = errors.positions.findIndex((e) => e.name);
+			if (errors.company || firstNameErrorIndex >= 0) {
 				setStep1Errors(errors);
-				return { advanced: false, focus: errors.company ? "company" : "name" };
+				if (errors.company) return { advanced: false, focus: "company" };
+				return { advanced: false, focus: "name", positionIndex: firstNameErrorIndex };
 			}
-			setStep1Errors({});
+			setStep1Errors({ positions: step1.positions.map(() => ({})) });
 			setStep(2);
 			return { advanced: true };
 		}
@@ -282,18 +344,26 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		setStep1(defaultStep1());
 		setStep2(defaultStep2());
 		setStep3(defaultStep3());
-		setStep1Errors({});
+		setStep1Errors(defaultStep1Errors());
 		setStep2Errors({});
+	}
+
+	function isPositionDirty(p: PositionDraft) {
+		return (
+			p.name !== "" ||
+			p.description !== "" ||
+			p.unit !== "" ||
+			p.quantityPerDelivery !== "" ||
+			p.annualQuantity !== "" ||
+			p.pricePerUnit !== ""
+		);
 	}
 
 	const isDirty =
 		step1.companyId !== "" ||
 		step1.folderId !== null ||
-		step1.name !== "" ||
-		step1.description !== "" ||
-		step1.unit !== "" ||
-		step1.quantityPerDelivery !== "" ||
-		step1.annualQuantity !== "" ||
+		step1.positions.length > 1 ||
+		step1.positions.some(isPositionDirty) ||
 		step1.addressIds.length > 0 ||
 		step1.unloading !== null ||
 		step1.paymentMethod !== "bank_transfer" ||
@@ -304,7 +374,6 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		step1.files.length > 0 ||
 		step2.companyName !== "" ||
 		step2.inn !== "" ||
-		step2.pricePerUnit !== "" ||
 		step2.paymentType !== "prepayment" ||
 		step2.deferralDays !== "" ||
 		step2.prepaymentPercent !== "100" ||
@@ -312,9 +381,14 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		step2.deliveryCost !== "" ||
 		Object.values(step3.answers).some((a) => a.selectedOption || a.freeText);
 
-	function toPayload(): NewItemInput {
+	const canAddPosition = (() => {
+		const last = step1.positions[step1.positions.length - 1];
+		return !!last && last.name.trim() !== "";
+	})();
+
+	function toPayload(): NewItemInput[] {
 		const addressStrings = resolveAddressStrings(step1.companyId, step1.addressIds);
-		return buildNewItemInput(step1, step2, step3, addressStrings);
+		return step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3, addressStrings));
 	}
 
 	return {
@@ -325,6 +399,9 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		step1Errors,
 		step2Errors,
 		update1,
+		updatePosition,
+		addPosition,
+		removePosition,
 		update2,
 		update3,
 		blurInn,
@@ -332,6 +409,7 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		goBack,
 		reset,
 		isDirty,
+		canAddPosition,
 		toPayload,
 	};
 }

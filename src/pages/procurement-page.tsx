@@ -331,7 +331,7 @@ export function ProcurementPage() {
 			<AddPositionsDrawer
 				open={drawerOpen}
 				onOpenChange={setDrawerOpen}
-				onSubmit={(item) => handleCreateItems([item], "Позиция создана")}
+				onSubmit={(items) => handleCreateItems(items, items.length === 1 ? "Позиция создана" : "Позиции созданы")}
 			/>
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>

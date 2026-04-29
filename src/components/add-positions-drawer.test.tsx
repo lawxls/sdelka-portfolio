@@ -60,7 +60,7 @@ function renderDrawer(
 	overrides: Partial<{
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onSubmit: (item: NewItemInput) => void;
+		onSubmit: (items: NewItemInput[]) => void;
 	}> = {},
 ) {
 	const props = {
@@ -92,15 +92,15 @@ async function create(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("AddPositionsDrawer — wizard chrome", () => {
-	test("renders singular title and step 1 headline", () => {
+	test("renders title and step 1 headline", () => {
 		renderDrawer();
-		expect(screen.getByRole("heading", { name: "Добавить позицию" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Добавить позиции" })).toBeInTheDocument();
 		expect(screen.getByText(/Шаг 1 из 3/)).toBeInTheDocument();
 	});
 
 	test("does not render when closed", () => {
 		renderDrawer({ open: false });
-		expect(screen.queryByRole("heading", { name: "Добавить позицию" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("heading", { name: "Добавить позиции" })).not.toBeInTheDocument();
 	});
 
 	test("progress bar exposes aria-valuenow for each step", async () => {
@@ -217,11 +217,17 @@ describe("AddPositionsDrawer — Step 1 validation", () => {
 });
 
 describe("AddPositionsDrawer — Step 1 sections", () => {
-	test("renders three section group headers", () => {
+	test("renders the three section group headers + Позиции", () => {
 		renderDrawer();
-		expect(screen.getByRole("heading", { name: "Позиция" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Компания и категория" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Позиции" })).toBeInTheDocument();
 		expect(screen.getByRole("heading", { name: "Логистика и Финансы" })).toBeInTheDocument();
 		expect(screen.getByRole("heading", { name: "Дополнительно" })).toBeInTheDocument();
+	});
+
+	test("Позиции section renders the helper hint", () => {
+		renderDrawer();
+		expect(screen.getByText("Добавьте позиции которые вы заказываете одной поставкой")).toBeInTheDocument();
 	});
 
 	test("renders unit dropdown with all units", async () => {
@@ -230,6 +236,11 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		await user.click(screen.getByLabelText("Единица измерения"));
 		const options = await screen.findAllByRole("option");
 		expect(options.length).toBeGreaterThanOrEqual(10);
+	});
+
+	test("Текущая цена без НДС lives inside the position card on step 1", () => {
+		renderDrawer();
+		expect(screen.getByLabelText("Текущая цена без НДС")).toBeInTheDocument();
 	});
 
 	test("sole-company mode auto-selects the company and pre-fills main address", async () => {
@@ -247,7 +258,7 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		await screen.findByText("г. Москва, ул. Ленина, д. 15");
 	});
 
-	test("comment textarea and file dropzone are rendered inside Позиция", () => {
+	test("comment textarea and file dropzone are rendered inside Позиции", () => {
 		renderDrawer();
 		expect(screen.getByLabelText("Комментарий")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Прикрепить файлы" })).toBeInTheDocument();
@@ -264,6 +275,64 @@ describe("AddPositionsDrawer — Step 1 sections", () => {
 		expect(screen.getByRole("checkbox", { name: "Отсрочка нужна" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Нужен образец" })).not.toBeChecked();
 		expect(screen.getByRole("checkbox", { name: "Аналоги допускаются" })).not.toBeChecked();
+	});
+});
+
+describe("AddPositionsDrawer — multi-position cards", () => {
+	test("Добавить позицию is disabled until first card has a name", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		const addBtn = screen.getByRole("button", { name: "Добавить позицию" });
+		expect(addBtn).toBeDisabled();
+
+		await user.type(screen.getByLabelText("Название"), "Арматура");
+		expect(addBtn).not.toBeDisabled();
+	});
+
+	test("Добавить позицию appends a second card and disables itself again", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		await user.type(screen.getByLabelText("Название"), "First");
+		await user.click(screen.getByRole("button", { name: "Добавить позицию" }));
+
+		expect(screen.getAllByRole("region", { name: /Позиция \d+/ })).toHaveLength(2);
+		expect(screen.getByRole("button", { name: "Добавить позицию" })).toBeDisabled();
+	});
+
+	test("delete-card button shows only when there are 2+ cards", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+
+		expect(screen.queryByRole("button", { name: /Удалить позицию/ })).not.toBeInTheDocument();
+
+		await user.type(screen.getByLabelText("Название"), "First");
+		await user.click(screen.getByRole("button", { name: "Добавить позицию" }));
+		expect(screen.getAllByRole("button", { name: /Удалить позицию/ })).toHaveLength(2);
+
+		await user.click(screen.getAllByRole("button", { name: /Удалить позицию/ })[1]);
+		expect(screen.queryByRole("button", { name: /Удалить позицию/ })).not.toBeInTheDocument();
+	});
+
+	test("submit emits one item per filled card", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+
+		await user.type(screen.getAllByLabelText("Название")[0], "Арматура");
+		await user.click(screen.getByRole("button", { name: "Добавить позицию" }));
+		await user.type(screen.getAllByLabelText("Название")[1], "Цемент");
+
+		await advance(user);
+		await advance(user);
+		await create(user);
+
+		expect(onSubmit).toHaveBeenCalledTimes(1);
+		const [items] = onSubmit.mock.calls[0];
+		expect(items).toHaveLength(2);
+		expect(items[0]).toMatchObject({ name: "Арматура" });
+		expect(items[1]).toMatchObject({ name: "Цемент" });
 	});
 });
 
@@ -334,27 +403,26 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await advance(user);
 	}
 
-	// «Ваш поставщик» downstream fields (payment / delivery) stay disabled until Название,
-	// ИНН and Цена are all filled. Tests that exercise those fields go through this helper.
+	// Step 2 Оплата / Доставка lock until Название and ИНН are entered.
+	// Price moved to per-position on step 1, so it is not part of the unlock.
 	async function unlockSupplierFields(user: ReturnType<typeof userEvent.setup>) {
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "ACME");
 		await user.type(screen.getByLabelText("ИНН"), "1234567890");
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1");
 	}
 
-	test("renders the supplier fields", async () => {
+	test("renders the supplier fields without price", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
 
 		expect(screen.getByLabelText("Название текущего поставщика")).toBeInTheDocument();
 		expect(screen.getByLabelText("ИНН")).toBeInTheDocument();
-		expect(screen.getByLabelText("Текущая цена без НДС")).toBeInTheDocument();
+		expect(screen.queryByLabelText("Текущая цена без НДС")).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Предоплата" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeInTheDocument();
 	});
 
-	test("delivery dropdown now lives in step 2 and reveals cost when paid", async () => {
+	test("delivery dropdown reveals cost when paid", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
@@ -386,7 +454,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		expect(screen.queryByLabelText("Дней отсрочки")).not.toBeInTheDocument();
 	});
 
-	test("Оплата and Доставка stay disabled until Название, ИНН and Цена are all entered", async () => {
+	test("Оплата and Доставка stay disabled until Название and ИНН are entered", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await reachStep2(user);
@@ -399,10 +467,6 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeDisabled();
 
 		await user.type(screen.getByLabelText("ИНН"), "1234567890");
-		// Name + ИНН but no price → still locked.
-		expect(screen.getByRole("button", { name: "Отсрочка" })).toBeDisabled();
-
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "100");
 		expect(screen.getByRole("button", { name: "Отсрочка" })).not.toBeDisabled();
 		expect(screen.getByLabelText("Доставка")).not.toBeDisabled();
 	});
@@ -449,7 +513,6 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await reachStep2(user);
 
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
 		await user.type(screen.getByLabelText("ИНН"), "1234567890");
 		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
 		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
@@ -462,14 +525,16 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		expect(screen.getByLabelText("Дней отсрочки")).toHaveValue(30);
 	});
 
-	test("submit with populated Step 2 emits currentSupplier", async () => {
+	test("submit with populated Step 2 + price emits currentSupplier", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
-		await reachStep2(user);
+
+		await user.type(screen.getByLabelText("Название"), "Арматура");
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
+		await advance(user);
 
 		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
 		await user.type(screen.getByLabelText("ИНН"), "1234567890");
 		await user.click(screen.getByRole("button", { name: "Отсрочка" }));
 		await user.type(screen.getByLabelText("Дней отсрочки"), "30");
@@ -477,8 +542,8 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await advance(user);
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload.currentSupplier).toEqual({
+		const [items] = onSubmit.mock.calls[0];
+		expect(items[0].currentSupplier).toEqual({
 			companyName: "МеталлТрейд",
 			inn: "1234567890",
 			paymentType: "deferred",
@@ -619,8 +684,8 @@ describe("AddPositionsDrawer — Step 3 generated questions", () => {
 
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload.generatedAnswers).toEqual([
+		const [items] = onSubmit.mock.calls[0];
+		expect(items[0].generatedAnswers).toEqual([
 			{ questionId: "material-grade", selectedOption: "Стандарт" },
 			{ questionId: "packaging", freeText: "евро-палеты" },
 		]);
@@ -634,13 +699,13 @@ describe("AddPositionsDrawer — Step 3 generated questions", () => {
 
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload.generatedAnswers).toBeUndefined();
+		const [items] = onSubmit.mock.calls[0];
+		expect(items[0].generatedAnswers).toBeUndefined();
 	});
 });
 
 describe("AddPositionsDrawer — submit", () => {
-	test("completing wizard with minimal data emits single NewItemInput", async () => {
+	test("completing wizard with minimal data emits a single-item array", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -651,13 +716,14 @@ describe("AddPositionsDrawer — submit", () => {
 		await create(user);
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload).toMatchObject({
+		const [items] = onSubmit.mock.calls[0];
+		expect(items).toHaveLength(1);
+		expect(items[0]).toMatchObject({
 			name: "Арматура А500С",
 			paymentType: "prepayment",
 			paymentMethod: "bank_transfer",
 		});
-		expect(payload.deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15"]);
+		expect(items[0].deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15"]);
 	});
 
 	test("submit invokes onSubmit and closes drawer without firing its own toast", async () => {
@@ -676,7 +742,7 @@ describe("AddPositionsDrawer — submit", () => {
 		expect(onOpenChange).toHaveBeenCalledWith(false);
 	});
 
-	test("submit with full step 1 payload captures all Step 1 fields", async () => {
+	test("submit with full step 1 payload captures all per-position fields", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -689,6 +755,7 @@ describe("AddPositionsDrawer — submit", () => {
 
 		await user.type(screen.getByLabelText("Объём в год"), "600");
 		await user.type(screen.getByLabelText("Количество в поставке"), "50");
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1200");
 
 		await user.click(screen.getByRole("button", { name: "Силами поставщика" }));
 		await user.click(screen.getByRole("button", { name: "Наличные" }));
@@ -703,13 +770,14 @@ describe("AddPositionsDrawer — submit", () => {
 		await advance(user);
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload).toMatchObject({
+		const [items] = onSubmit.mock.calls[0];
+		expect(items[0]).toMatchObject({
 			name: "Цемент М500",
 			description: "Портландцемент",
 			unit: "т",
 			annualQuantity: 600,
 			quantityPerDelivery: 50,
+			currentPrice: 1200,
 			unloading: "supplier",
 			paymentMethod: "cash",
 			paymentType: "deferred",
@@ -729,9 +797,9 @@ describe("AddPositionsDrawer — submit", () => {
 		await advance(user);
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0];
-		expect(payload.currentSupplier).toBeUndefined();
-		expect(payload.generatedAnswers).toBeUndefined();
+		const [items] = onSubmit.mock.calls[0];
+		expect(items[0].currentSupplier).toBeUndefined();
+		expect(items[0].generatedAnswers).toBeUndefined();
 	});
 
 	test("form resets after submit — reopening returns to step 1 empty", async () => {

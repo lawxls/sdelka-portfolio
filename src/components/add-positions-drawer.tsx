@@ -1,4 +1,4 @@
-import { CircleHelp, LoaderCircle, X } from "lucide-react";
+import { CircleHelp, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -36,12 +36,12 @@ import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatFileSize, formatGroupedInteger } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useAddPositionForm, type WizardStep } from "./use-add-position-form";
+import { type PositionDraft, useAddPositionForm, type WizardStep } from "./use-add-position-form";
 
 interface AddPositionsDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (item: NewItemInput) => void;
+	onSubmit: (items: NewItemInput[]) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -54,7 +54,11 @@ const STEP_TITLES: Record<WizardStep, string> = {
 };
 
 function SectionGroupHeader({ title }: { title: string }) {
-	return <h3 className="mt-5 mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>;
+	return (
+		<h3 className="mt-5 mb-1 text-xs font-semibold uppercase tracking-wide text-balance text-muted-foreground">
+			{title}
+		</h3>
+	);
 }
 
 function Field({
@@ -129,7 +133,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [step3Ready, setStep3Ready] = useState(false);
-	const nameInputRef = useRef<HTMLInputElement>(null);
+	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -164,7 +168,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 			const result = form.advance();
 			if (!result.advanced) {
 				if (result.focus === "company") companyTriggerRef.current?.focus();
-				else if (result.focus === "name") nameInputRef.current?.focus();
+				else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
 			}
 			return;
 		}
@@ -175,11 +179,16 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		handleSubmit();
 	}
 
+	function resetForm() {
+		form.reset();
+		setStep3Ready(false);
+		nameInputRefs.current = [];
+	}
+
 	function handleSubmit() {
 		const payload = form.toPayload();
 		onSubmit(payload);
-		form.reset();
-		setStep3Ready(false);
+		resetForm();
 		onOpenChange(false);
 	}
 
@@ -189,17 +198,23 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 				setShowConfirm(true);
 				return;
 			}
-			form.reset();
-			setStep3Ready(false);
+			resetForm();
 		}
 		onOpenChange(nextOpen);
 	}
 
 	function handleConfirmDiscard() {
 		setShowConfirm(false);
-		form.reset();
-		setStep3Ready(false);
+		resetForm();
 		onOpenChange(false);
+	}
+
+	function handleAddPosition() {
+		// Capture index before the addPosition setState commits — the new card lands at
+		// `current length`, which is also the index we'll focus once it mounts.
+		const newIndex = step1.positions.length;
+		form.addPosition();
+		queueMicrotask(() => nameInputRefs.current[newIndex]?.focus());
 	}
 
 	function handleFilesAdd(newFiles: FileList | null) {
@@ -235,7 +250,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 					className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 				>
 					<SheetHeader className="border-b pb-4">
-						<SheetTitle>Добавить позицию</SheetTitle>
+						<SheetTitle>Добавить позиции</SheetTitle>
 						<SheetDescription className="sr-only">{STEP_TITLES[step]}</SheetDescription>
 						<div className="mt-3 flex flex-col gap-2">
 							<div
@@ -270,11 +285,12 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									folders={folders}
 									nextFolderColor={nextFolderColor}
 									onCreateFolder={handleCreateFolder}
-									nameInputRef={nameInputRef}
+									nameInputRefs={nameInputRefs}
 									companyTriggerRef={companyTriggerRef}
 									fileInputRef={fileInputRef}
 									onFilesAdd={handleFilesAdd}
 									onFileRemove={handleFileRemove}
+									onAddPosition={handleAddPosition}
 								/>
 							</TooltipProvider>
 						)}
@@ -323,11 +339,10 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 	const { step2, step2Errors, update2, blurInn } = form;
 	const deliveryCostVisible = step2.deliveryCostType === "paid";
-	// «Ваш поставщик» downstream fields stay locked until Название, ИНН and Цена are all
-	// filled — otherwise we'd persist a supplier record with no identifiable counterparty
-	// or price, which leaks into the Поставщики/Предложения tabs as an unnamed row.
-	const supplierBaseFilled =
-		step2.companyName.trim() !== "" && step2.inn.trim() !== "" && step2.pricePerUnit.trim() !== "";
+	// Lock «Ваш поставщик» downstream fields (payment, delivery) until we have an
+	// identifiable counterparty — otherwise they would persist a supplier row with
+	// no name or ИНН attached and surface as an unnamed row downstream.
+	const supplierBaseFilled = step2.companyName.trim() !== "" && step2.inn.trim() !== "";
 
 	return (
 		<div className="flex flex-col gap-4 pt-4">
@@ -342,43 +357,26 @@ function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
 				/>
 			</Field>
 
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-				<Field label="ИНН" htmlFor="supplier-inn" className="flex-1">
-					<Input
-						id="supplier-inn"
-						placeholder="7712345678"
-						value={step2.inn}
-						onChange={(e) => update2("inn", e.target.value)}
-						onBlur={blurInn}
-						inputMode="numeric"
-						autoComplete="off"
-						spellCheck={false}
-						aria-invalid={step2Errors.inn ? true : undefined}
-						aria-describedby={step2Errors.inn ? "inn-error" : undefined}
-						className={cn("w-full", step2Errors.inn && "border-destructive")}
-					/>
-					{step2Errors.inn && (
-						<p id="inn-error" className="text-sm text-destructive">
-							{step2Errors.inn}
-						</p>
-					)}
-				</Field>
-
-				<Field label="Текущая цена без НДС" htmlFor="supplier-price" className="flex-1">
-					<div className="flex items-center gap-1.5">
-						<Input
-							id="supplier-price"
-							placeholder="1250"
-							value={step2.pricePerUnit}
-							onChange={(e) => update2("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
-							inputMode="decimal"
-							autoComplete="off"
-							className="flex-1"
-						/>
-						<span className="text-sm text-muted-foreground">₽</span>
-					</div>
-				</Field>
-			</div>
+			<Field label="ИНН" htmlFor="supplier-inn">
+				<Input
+					id="supplier-inn"
+					placeholder="7712345678"
+					value={step2.inn}
+					onChange={(e) => update2("inn", e.target.value)}
+					onBlur={blurInn}
+					inputMode="numeric"
+					autoComplete="off"
+					spellCheck={false}
+					aria-invalid={step2Errors.inn ? true : undefined}
+					aria-describedby={step2Errors.inn ? "inn-error" : undefined}
+					className={cn("w-full sm:w-1/2", step2Errors.inn && "border-destructive")}
+				/>
+				{step2Errors.inn && (
+					<p id="inn-error" className="text-sm text-destructive">
+						{step2Errors.inn}
+					</p>
+				)}
+			</Field>
 
 			<Field label="Условия оплаты">
 				<div className="flex flex-wrap items-center gap-3">
@@ -563,11 +561,12 @@ interface Step1BodyProps {
 	folders: FolderList;
 	nextFolderColor: string;
 	onCreateFolder: (name: string, color: string) => void;
-	nameInputRef: React.RefObject<HTMLInputElement | null>;
+	nameInputRefs: React.RefObject<(HTMLInputElement | null)[]>;
 	companyTriggerRef: React.RefObject<HTMLButtonElement | null>;
 	fileInputRef: React.RefObject<HTMLInputElement | null>;
 	onFilesAdd: (files: FileList | null) => void;
 	onFileRemove: (index: number) => void;
+	onAddPosition: () => void;
 }
 
 function Step1Body({
@@ -578,18 +577,20 @@ function Step1Body({
 	folders,
 	nextFolderColor,
 	onCreateFolder,
-	nameInputRef,
+	nameInputRefs,
 	companyTriggerRef,
 	fileInputRef,
 	onFilesAdd,
 	onFileRemove,
+	onAddPosition,
 }: Step1BodyProps) {
-	const { step1, step1Errors, update1 } = form;
+	const { step1, step1Errors, update1, updatePosition, removePosition, canAddPosition } = form;
 	const companyDisabled = !!lockedCompany;
+	const showRemove = step1.positions.length > 1;
 
 	return (
 		<div className="flex flex-col gap-0 pt-3">
-			<SectionGroupHeader title="Позиция" />
+			<SectionGroupHeader title="Компания и категория" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Field label="Компания" required className="flex-1">
@@ -638,81 +639,41 @@ function Step1Body({
 						/>
 					</Field>
 				</div>
+			</div>
 
-				<Field label="Название" htmlFor="position-name" required>
-					<Input
-						id="position-name"
-						ref={nameInputRef}
-						placeholder="Арматура А500С Ø12 мм"
-						value={step1.name}
-						onChange={(e) => update1("name", e.target.value)}
-						autoFocus
-						spellCheck={false}
-						autoComplete="off"
-						aria-required="true"
-						aria-invalid={step1Errors.name ? true : undefined}
-						aria-describedby={step1Errors.name ? "name-error" : undefined}
-						className={step1Errors.name ? "border-destructive" : undefined}
+			<SectionGroupHeader title="Позиции" />
+			<div className="flex flex-col gap-3 border-t border-border py-4">
+				<p className="text-sm text-pretty text-muted-foreground">
+					Добавьте позиции которые вы заказываете одной поставкой
+				</p>
+				{step1.positions.map((position, index) => (
+					<PositionCard
+						// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
+						key={index}
+						index={index}
+						position={position}
+						error={step1Errors.positions[index]}
+						onChange={(key, value) => updatePosition(index, key, value)}
+						onRemove={showRemove ? () => removePosition(index) : undefined}
+						nameInputRef={(el) => {
+							nameInputRefs.current[index] = el;
+						}}
+						autoFocus={index === 0}
 					/>
-					{step1Errors.name && (
-						<p id="name-error" className="text-sm text-destructive">
-							{step1Errors.name}
-						</p>
-					)}
-				</Field>
-
-				<Field label="Спецификация" hint="Описание позиции" htmlFor="position-description">
-					<Input
-						id="position-description"
-						placeholder="По ГОСТ 34028-2016"
-						value={step1.description}
-						onChange={(e) => update1("description", e.target.value)}
-						spellCheck={false}
-						autoComplete="off"
-					/>
-				</Field>
-
-				<div className="flex flex-wrap gap-3">
-					<Field label="Ед. изм." className="w-32 shrink-0">
-						<Select value={step1.unit || undefined} onValueChange={(v) => update1("unit", v as typeof step1.unit)}>
-							<SelectTrigger aria-label="Единица измерения" className="w-full">
-								<SelectValue placeholder="Выберите" />
-							</SelectTrigger>
-							<SelectContent>
-								{UNITS.map((u) => (
-									<SelectItem key={u} value={u}>
-										{u}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</Field>
-					<Field label="Кол-во в поставке" htmlFor="position-qty-delivery" className="flex-1 min-w-32">
-						<Input
-							id="position-qty-delivery"
-							type="number"
-							inputMode="numeric"
-							min={0}
-							placeholder="50"
-							value={step1.quantityPerDelivery}
-							onChange={(e) => update1("quantityPerDelivery", e.target.value)}
-							autoComplete="off"
-							aria-label="Количество в поставке"
-						/>
-					</Field>
-					<Field label="Объём в год" htmlFor="position-annual" className="flex-1 min-w-32">
-						<Input
-							id="position-annual"
-							type="number"
-							inputMode="numeric"
-							min={0}
-							placeholder="600"
-							value={step1.annualQuantity}
-							onChange={(e) => update1("annualQuantity", e.target.value)}
-							autoComplete="off"
-							aria-label="Объём в год"
-						/>
-					</Field>
+				))}
+				<div>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={onAddPosition}
+						disabled={!canAddPosition}
+						aria-label="Добавить позицию"
+						className="active:scale-[0.96] transition-transform duration-100 motion-reduce:transition-none motion-reduce:active:scale-100"
+					>
+						<Plus aria-hidden="true" className="size-4" />
+						Добавить позицию
+					</Button>
 				</div>
 
 				<Field
@@ -852,5 +813,138 @@ function Step1Body({
 				</CheckboxBadge>
 			</div>
 		</div>
+	);
+}
+
+interface PositionCardProps {
+	index: number;
+	position: PositionDraft;
+	error: { name?: string } | undefined;
+	onChange: <K extends keyof PositionDraft>(key: K, value: PositionDraft[K]) => void;
+	onRemove?: () => void;
+	nameInputRef: (el: HTMLInputElement | null) => void;
+	autoFocus: boolean;
+}
+
+function PositionCard({ index, position, error, onChange, onRemove, nameInputRef, autoFocus }: PositionCardProps) {
+	const nameId = `position-${index}-name`;
+	const descId = `position-${index}-description`;
+	const qtyId = `position-${index}-qty`;
+	const annualId = `position-${index}-annual`;
+	const priceId = `position-${index}-price`;
+	const nameError = error?.name;
+
+	return (
+		<section
+			aria-label={`Позиция ${index + 1}`}
+			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none"
+		>
+			{onRemove && (
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					onClick={onRemove}
+					aria-label={`Удалить позицию ${index + 1}`}
+					className="absolute right-2 top-2 text-muted-foreground hover:text-foreground active:scale-[0.96] transition-[color,scale] duration-100 motion-reduce:transition-none motion-reduce:active:scale-100 before:absolute before:-inset-1.5 before:content-['']"
+				>
+					<Trash2 aria-hidden="true" className="size-4" />
+				</Button>
+			)}
+
+			<Field label="Название" htmlFor={nameId} required>
+				<Input
+					id={nameId}
+					ref={nameInputRef}
+					placeholder="Арматура А500С Ø12 мм"
+					value={position.name}
+					onChange={(e) => onChange("name", e.target.value)}
+					autoFocus={autoFocus}
+					spellCheck={false}
+					autoComplete="off"
+					aria-required="true"
+					aria-invalid={nameError ? true : undefined}
+					aria-describedby={nameError ? `${nameId}-error` : undefined}
+					className={nameError ? "border-destructive" : undefined}
+				/>
+				{nameError && (
+					<p id={`${nameId}-error`} className="text-sm text-destructive">
+						{nameError}
+					</p>
+				)}
+			</Field>
+
+			<Field label="Спецификация" hint="Описание позиции" htmlFor={descId}>
+				<Input
+					id={descId}
+					placeholder="По ГОСТ 34028-2016"
+					value={position.description}
+					onChange={(e) => onChange("description", e.target.value)}
+					spellCheck={false}
+					autoComplete="off"
+				/>
+			</Field>
+
+			<div className="flex flex-wrap gap-3">
+				<Field label="Ед. изм." className="w-32 shrink-0">
+					<Select value={position.unit || undefined} onValueChange={(v) => onChange("unit", v as typeof position.unit)}>
+						<SelectTrigger aria-label="Единица измерения" className="w-full">
+							<SelectValue placeholder="Выберите" />
+						</SelectTrigger>
+						<SelectContent>
+							{UNITS.map((u) => (
+								<SelectItem key={u} value={u}>
+									{u}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</Field>
+				<Field label="Кол-во в поставке" htmlFor={qtyId} className="flex-1 min-w-32">
+					<Input
+						id={qtyId}
+						type="number"
+						inputMode="numeric"
+						min={0}
+						placeholder="50"
+						value={position.quantityPerDelivery}
+						onChange={(e) => onChange("quantityPerDelivery", e.target.value)}
+						autoComplete="off"
+						aria-label="Количество в поставке"
+						className="tabular-nums"
+					/>
+				</Field>
+				<Field label="Объём в год" htmlFor={annualId} className="flex-1 min-w-32">
+					<Input
+						id={annualId}
+						type="number"
+						inputMode="numeric"
+						min={0}
+						placeholder="600"
+						value={position.annualQuantity}
+						onChange={(e) => onChange("annualQuantity", e.target.value)}
+						autoComplete="off"
+						aria-label="Объём в год"
+						className="tabular-nums"
+					/>
+				</Field>
+			</div>
+
+			<Field label="Текущая цена без НДС" htmlFor={priceId}>
+				<div className="flex items-center gap-1.5">
+					<Input
+						id={priceId}
+						placeholder="1250"
+						value={position.pricePerUnit}
+						onChange={(e) => onChange("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
+						inputMode="decimal"
+						autoComplete="off"
+						aria-label="Текущая цена без НДС"
+						className="flex-1 tabular-nums"
+					/>
+					<span className="text-sm text-muted-foreground">₽</span>
+				</div>
+			</Field>
+		</section>
 	);
 }

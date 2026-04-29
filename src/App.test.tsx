@@ -355,7 +355,7 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		expect(screen.getByText("Добавить позицию", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
+		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
 		expect(screen.getByLabelText("Название")).toBeInTheDocument();
 	});
 
