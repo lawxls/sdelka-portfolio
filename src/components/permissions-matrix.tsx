@@ -15,14 +15,14 @@ const PERMISSION_MODULES: { key: PermissionModuleKey; Icon: LucideIcon }[] = [
 const PERMISSION_LEVELS: { value: PermissionLevel; label: string; short: string }[] = [
 	{ value: "none", label: "Нет доступа", short: "Нет" },
 	{ value: "view", label: "Просмотр", short: "Просмотр" },
-	{ value: "edit", label: "Редактирование", short: "Редакт." },
+	{ value: "edit", label: "Редактирование", short: "Редактирование" },
 ];
 
 const LEVEL_LABEL: Record<PermissionLevel, string> = Object.fromEntries(
 	PERMISSION_LEVELS.map((l) => [l.value, l.label]),
 ) as Record<PermissionLevel, string>;
 
-const GRID_COLS = "minmax(0,1fr) repeat(3, 4.5rem)";
+const GRID_COLS = "minmax(0,1fr) 3.5rem 5rem 7rem";
 
 const ICON_TINT: Record<PermissionLevel, string> = {
 	edit: "text-green-600 dark:text-green-400",
@@ -97,7 +97,7 @@ export function PermissionsMatrix({
 			</div>
 
 			<div
-				className="grid items-center gap-x-3 rounded-md bg-background/60 px-1 py-1.5"
+				className="grid items-center gap-x-3 rounded-md bg-background/60 py-1.5 pl-3 pr-1"
 				style={{ gridTemplateColumns: GRID_COLS }}
 				data-testid="perm-row-all"
 			>

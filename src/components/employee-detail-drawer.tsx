@@ -121,8 +121,7 @@ function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
 			<div className="flex-1 overflow-y-auto px-4 py-4">
 				{activeTab === "info" && <InfoTab employee={employee} canEdit={canEdit} />}
 				{activeTab === "permissions" && (
-					<div className="flex flex-col gap-2" data-testid="employee-permissions-tab">
-						<h4 className="text-xs font-medium text-muted-foreground">Права доступа</h4>
+					<div data-testid="employee-permissions-tab">
 						<PermissionsMatrix permissions={employee.permissions} onChange={handlePermissionChange} mode="edit" />
 					</div>
 				)}
