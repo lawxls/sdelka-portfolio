@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTendersClient } from "./clients-context";
 import type { ListTendersParams } from "./domains/tenders";
 
@@ -22,4 +22,13 @@ export function useTenders(params: ListTendersParams = {}) {
 		error: query.error,
 		refetch: query.refetch,
 	};
+}
+
+export function useTender(slug: string | null) {
+	const client = useTendersClient();
+	return useQuery({
+		queryKey: ["tenders", "detail", slug] as const,
+		queryFn: () => client.get(slug as string),
+		enabled: slug !== null,
+	});
 }

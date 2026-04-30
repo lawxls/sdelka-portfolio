@@ -328,7 +328,13 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 const SEARCH_IN_PROGRESS_SINGLE = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
 const SEARCH_IN_PROGRESS_BATCH = "Дождитесь завершения поиска поставщиков чтобы отправить запросы";
 
-function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
+export function SuppliersTabPanel({
+	itemId,
+	onSupplierClick,
+}: {
+	itemId: string;
+	onSupplierClick: (id: string) => void;
+}) {
 	const { data: itemDetail } = useItemDetail(itemId);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
 	const currentSupplier = itemDetail?.currentSupplier;
@@ -550,7 +556,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	);
 }
 
-function OffersTabPanel({
+export function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
