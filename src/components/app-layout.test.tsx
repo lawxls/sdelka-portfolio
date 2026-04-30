@@ -14,7 +14,7 @@ import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppLayout } from "./app-layout";
 
-function renderLayout(initialEntry = "/procurement") {
+function renderLayout(initialEntry = "/positions") {
 	const queryClient = createTestQueryClient();
 	return render(
 		<TestClientsProvider
@@ -34,7 +34,8 @@ function renderLayout(initialEntry = "/procurement") {
 				<MemoryRouter initialEntries={[initialEntry]}>
 					<Routes>
 						<Route element={<AppLayout />}>
-							<Route path="/procurement" element={<div>procurement-content</div>} />
+							<Route path="/tenders" element={<div>tenders-content</div>} />
+							<Route path="/positions" element={<div>positions-content</div>} />
 							<Route path="/tasks" element={<div>tasks-content</div>} />
 							<Route path="/settings" element={<div>settings-content</div>} />
 						</Route>
@@ -53,17 +54,17 @@ describe("AppLayout — sidebar", () => {
 		expect(svg).toBeInTheDocument();
 	});
 
-	test("logo links to /procurement", async () => {
+	test("logo links to /tenders", async () => {
 		renderLayout("/tasks");
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("link", { name: "На главную" }));
-		expect(screen.getByText("procurement-content")).toBeInTheDocument();
+		expect(screen.getByText("tenders-content")).toBeInTheDocument();
 	});
 });
 
 describe("AppLayout — global header", () => {
 	test("does not render a page title", () => {
-		renderLayout("/procurement");
+		renderLayout("/positions");
 		expect(screen.queryByTestId("page-title")).not.toBeInTheDocument();
 	});
 
@@ -74,7 +75,7 @@ describe("AppLayout — global header", () => {
 
 	test("renders child route content", () => {
 		renderLayout();
-		expect(screen.getByText("procurement-content")).toBeInTheDocument();
+		expect(screen.getByText("positions-content")).toBeInTheDocument();
 	});
 });
 

@@ -78,12 +78,12 @@ function supplierHref(s: Supplier): string {
 	// "new" candidates have no standalone detail drawer — fall back to the item's
 	// Поставщики tab so the user still lands on something.
 	if (s.status === "new") {
-		return `/procurement?item=${encodeURIComponent(s.itemId)}&tab=suppliers`;
+		return `/positions?item=${encodeURIComponent(s.itemId)}&tab=suppliers`;
 	}
 	// Suppliers are workspace-level entities that may quote on many items.
 	// Open the detail drawer directly — no need to drag the item drawer along.
 	const tab = s.status === "получено_кп" ? "offers" : "info";
-	return `/procurement?supplier=${encodeURIComponent(s.id)}&supplier_tab=${tab}`;
+	return `/positions?supplier=${encodeURIComponent(s.id)}&supplier_tab=${tab}`;
 }
 
 // Lower number = higher priority when collapsing multi-item suppliers into a
@@ -125,7 +125,7 @@ export function matchGlobal(input: MatchInput): GroupResult[] {
 			id: i.id,
 			name: i.name,
 			meta: undefined,
-			href: `/procurement?item=${encodeURIComponent(i.id)}`,
+			href: `/positions?item=${encodeURIComponent(i.id)}`,
 		}),
 	);
 	if (items.length > 0) groups.push({ group: "items", results: items });

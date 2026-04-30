@@ -68,7 +68,7 @@ function UrlSpy() {
 	return <div data-testid="url-spy">{params.toString()}</div>;
 }
 
-function renderDrawer(initialEntries: string[] = ["/procurement?item=item-1"]) {
+function renderDrawer(initialEntries: string[] = ["/positions?item=item-1"]) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -118,19 +118,19 @@ afterEach(() => {
 
 describe("ProcurementItemDrawer — open/close", () => {
 	test("opens when ?item= param is present", () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
 		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
 	test("stays closed when ?item= param is absent", () => {
-		renderDrawer(["/procurement"]);
+		renderDrawer(["/positions"]);
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 
 	test("close button removes ?item= and ?tab= from URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=details"]);
+		renderDrawer(["/positions?item=item-1&tab=details"]);
 		await user.click(screen.getByRole("button", { name: "Close" }));
 		const urlText = screen.getByTestId("url-spy").textContent ?? "";
 		expect(urlText).not.toContain("item=");
@@ -152,7 +152,7 @@ describe("ProcurementItemDrawer — tabs", () => {
 
 	test("Поставщики tab omits &tab= (default)", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=details"]);
+		renderDrawer(["/positions?item=item-1&tab=details"]);
 		await user.click(screen.getByRole("tab", { name: "Поставщики" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1");
 		expect(screen.getByTestId("url-spy").textContent).not.toContain("tab=");
@@ -160,20 +160,20 @@ describe("ProcurementItemDrawer — tabs", () => {
 
 	test("Предложения tab sets &tab=offers", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await user.click(screen.getByRole("tab", { name: "Предложения" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=offers");
 	});
 
 	test("Информация tab sets &tab=details", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await user.click(screen.getByRole("tab", { name: "Информация" }));
 		expect(screen.getByTestId("url-spy")).toHaveTextContent("item=item-1&tab=details");
 	});
 
 	test("invalid tab param defaults to Поставщики", () => {
-		renderDrawer(["/procurement?item=item-1&tab=bogus"]);
+		renderDrawer(["/positions?item=item-1&tab=bogus"]);
 		expect(screen.getByRole("tab", { name: "Поставщики" })).toHaveAttribute("aria-selected", "true");
 	});
 
@@ -192,7 +192,7 @@ describe("ProcurementItemDrawer — tabs", () => {
 
 describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => {
 	test("renders pipeline columns (no status column)", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
 		});
@@ -204,14 +204,14 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 	});
 
 	test("shows ИНН under company name", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByText(/ИНН:/).length).toBeGreaterThan(0);
 		});
 	});
 
 	test("has «Отправить запросы» action in toolbar", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Отправить запросы" })).toBeInTheDocument();
 		});
@@ -219,7 +219,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 
 	test("clicking «Отправить запросы» opens confirmation dialog with candidate count", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Отправить запросы" })).toBeInTheDocument();
 		});
@@ -230,7 +230,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 	});
 
 	test("new-status row shows «Запросить КП» button", async () => {
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("button", { name: "Запросить КП" }).length).toBeGreaterThan(0);
 		});
@@ -238,7 +238,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 
 	test("clicking «Запросить КП» transitions row to «КП Запрошено» chip", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("button", { name: "Запросить КП" }).length).toBeGreaterThan(0);
 		});
@@ -252,7 +252,7 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 
 describe("ProcurementItemDrawer — Предложения (offers) tab", () => {
 	test("renders offer columns with «Получено» date under company name (no status column)", async () => {
-		renderDrawer(["/procurement?item=item-1&tab=offers"]);
+		renderDrawer(["/positions?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			expect(screen.getByText("КОМПАНИЯ")).toBeInTheDocument();
 		});
@@ -265,7 +265,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 	});
 
 	test("only shows получено_кп suppliers (plus pinned current-supplier row)", async () => {
-		renderDrawer(["/procurement?item=item-1&tab=offers"]);
+		renderDrawer(["/positions?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			// Header + 1 pinned current-supplier + SEED_KP_COUNT КП rows.
 			const rows = screen.getAllByRole("row");
@@ -275,7 +275,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 
 	test("clicking offer row opens supplier detail drawer with &supplier= in URL", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=offers"]);
+		renderDrawer(["/positions?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(SEED_KP_COUNT + 2);
 		});
@@ -290,7 +290,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 
 	test("clicking a Поставщики row opens drawer with supplier_tab=info", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		// Wait for the first data row to render, then click it. The exact first-page supplier
 		// depends on the default alphabetical sort across the full candidate pool, so we don't
 		// pin the test to a specific company name.
@@ -311,7 +311,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 
 describe("ProcurementItemDrawer — Информация (details) tab", () => {
 	test("deep link shows read-only view", async () => {
-		renderDrawer(["/procurement?item=item-1&tab=details"]);
+		renderDrawer(["/positions?item=item-1&tab=details"]);
 		await waitFor(() => {
 			expect(screen.getByTestId("tab-panel-details")).toBeInTheDocument();
 		});
@@ -321,7 +321,7 @@ describe("ProcurementItemDrawer — Информация (details) tab", () => {
 describe("ProcurementItemDrawer — Задачи (tasks) tab", () => {
 	test("loads assigned tasks", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1"]);
+		renderDrawer(["/positions?item=item-1"]);
 		await user.click(screen.getByRole("tab", { name: "Задачи" }));
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
@@ -329,7 +329,7 @@ describe("ProcurementItemDrawer — Задачи (tasks) tab", () => {
 	});
 
 	test("clicking task row opens task drawer with &task= in URL", async () => {
-		renderDrawer(["/procurement?item=item-1&tab=tasks"]);
+		renderDrawer(["/positions?item=item-1&tab=tasks"]);
 		await waitFor(() => {
 			expect(screen.getByText("Согласовать цену")).toBeInTheDocument();
 		});
@@ -346,7 +346,7 @@ describe("ProcurementItemDrawer — Задачи (tasks) tab", () => {
 describe("ProcurementItemDrawer — supplier select dialog", () => {
 	test("context menu «Выбрать текущего поставщика» opens confirmation dialog", async () => {
 		const user = userEvent.setup();
-		renderDrawer(["/procurement?item=item-1&tab=offers"]);
+		renderDrawer(["/positions?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			expect(screen.getAllByRole("row").length).toBe(SEED_KP_COUNT + 2);
 		});

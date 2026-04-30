@@ -37,7 +37,7 @@ function resolveNotification(
 				notification: n,
 				title,
 				context: itemName ?? null,
-				href: itemName ? `/procurement?item=${encodeURIComponent(n.itemId)}` : null,
+				href: itemName ? `/positions?item=${encodeURIComponent(n.itemId)}` : null,
 			};
 		}
 		case "task_assigned":
@@ -60,7 +60,7 @@ function resolveNotification(
 				context: parts.length > 0 ? parts.join(" · ") : null,
 				href:
 					itemName && supplierName
-						? `/procurement?item=${encodeURIComponent(n.itemId)}&supplier=${encodeURIComponent(n.supplierId)}`
+						? `/positions?item=${encodeURIComponent(n.itemId)}&supplier=${encodeURIComponent(n.supplierId)}`
 						: null,
 			};
 		}
@@ -70,7 +70,7 @@ function resolveNotification(
 				notification: n,
 				title,
 				context: itemName ?? null,
-				href: itemName ? `/procurement?item=${encodeURIComponent(n.itemId)}` : null,
+				href: itemName ? `/positions?item=${encodeURIComponent(n.itemId)}` : null,
 			};
 		}
 	}

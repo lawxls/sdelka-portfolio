@@ -266,7 +266,7 @@ export function ProcurementPage() {
 			<PageToolbar
 				left={
 					<>
-						<h1 className="text-sm font-semibold text-foreground leading-none">Закупки</h1>
+						<h1 className="text-sm font-semibold text-foreground leading-none">Позиции</h1>
 						<span aria-hidden="true" className="text-sm text-border leading-none">
 							/
 						</span>

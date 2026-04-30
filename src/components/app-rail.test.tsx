@@ -7,7 +7,7 @@ import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
 import { AppRail } from "./app-rail";
 
-function renderRail(initialPath = "/procurement") {
+function renderRail(initialPath = "/positions") {
 	const queryClient = createTestQueryClient();
 	return render(
 		<TestClientsProvider
@@ -26,25 +26,25 @@ function renderRail(initialPath = "/procurement") {
 }
 
 describe("AppRail items", () => {
-	test("renders Тендеры, Закупки, Задачи, and Настройки with aria-labels", () => {
+	test("renders Тендеры, Позиции, Задачи, and Настройки with aria-labels", () => {
 		renderRail();
 		expect(screen.getByRole("link", { name: "Тендеры" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
-	test("Тендеры is the first top-nav item, above Закупки", () => {
+	test("Тендеры is the first top-nav item, above Позиции", () => {
 		renderRail();
 		const mainNav = screen.getByRole("navigation", { name: "Основная навигация" });
 		const links = within(mainNav).getAllByRole("link");
 		expect(links[0]).toHaveAccessibleName("Тендеры");
-		expect(links[1]).toHaveAccessibleName("Закупки");
+		expect(links[1]).toHaveAccessibleName("Позиции");
 	});
 
-	test("items link to /procurement, /tasks, and /settings", () => {
+	test("items link to /positions, /tasks, and /settings", () => {
 		renderRail();
-		expect(screen.getByRole("link", { name: "Закупки" })).toHaveAttribute("href", "/procurement");
+		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
 		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
 		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
 	});
@@ -88,9 +88,9 @@ describe("AppRail items", () => {
 });
 
 describe("AppRail active state", () => {
-	test("marks Закупки active at /procurement", () => {
-		renderRail("/procurement");
-		expect(screen.getByRole("link", { name: "Закупки" })).toHaveAttribute("aria-current", "page");
+	test("marks Позиции active at /positions", () => {
+		renderRail("/positions");
+		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
 		expect(screen.getByRole("link", { name: "Задачи" })).not.toHaveAttribute("aria-current");
 	});
 
@@ -109,9 +109,9 @@ describe("AppRail active state", () => {
 		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
 	});
 
-	test("marks Закупки active when query params are present", () => {
-		renderRail("/procurement?folder=archive");
-		expect(screen.getByRole("link", { name: "Закупки" })).toHaveAttribute("aria-current", "page");
+	test("marks Позиции active when query params are present", () => {
+		renderRail("/positions?folder=archive");
+		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
 	});
 });
 
@@ -133,10 +133,10 @@ describe("AppRail navigation", () => {
 				clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
 			>
 				<TooltipWrapper>
-					<MemoryRouter initialEntries={["/procurement"]}>
+					<MemoryRouter initialEntries={["/positions"]}>
 						<AppRail />
 						<Routes>
-							<Route path="/procurement" element={<div>procurement-page</div>} />
+							<Route path="/positions" element={<div>procurement-page</div>} />
 							<Route path="/tasks" element={<div>tasks-page</div>} />
 						</Routes>
 					</MemoryRouter>

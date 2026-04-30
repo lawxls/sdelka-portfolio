@@ -56,7 +56,7 @@ function renderPage(initialEntries?: string[]) {
 				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
 			}}
 		>
-			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
+			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>
 				<TooltipProvider>
 					<ProcurementPage />
 				</TooltipProvider>
@@ -96,7 +96,7 @@ describe("ProcurementPage — multi-company mode", () => {
 
 	test("company URL param scopes items and shows folder badges", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Труба стальная")).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe("ProcurementPage — item drawer", () => {
 
 	test("?item= URL param opens drawer on page load", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?item=i1"]);
+		renderPage(["/positions?item=i1"]);
 
 		await waitFor(() => {
 			expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("ProcurementPage — item drawer", () => {
 
 	test("close button removes drawer and ?item= param", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?item=i1"]);
+		renderPage(["/positions?item=i1"]);
 
 		await waitFor(() => {
 			expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -193,7 +193,7 @@ describe("ProcurementPage — archive toggle", () => {
 
 	test("clicking while in archive view clears folder param", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=archive"]);
+		renderPage(["/positions?folder=archive"]);
 		await waitForToolbar();
 
 		const archive = screen.getByRole("button", { name: "Архив" });
@@ -220,7 +220,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("total count reflects folder filter scope", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=f1"]);
+		renderPage(["/positions?folder=f1"]);
 
 		await waitFor(() => {
 			// Only item i1 is in folder f1
@@ -230,7 +230,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("total count updates when company filter changes", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(
 			() => {
@@ -252,7 +252,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders company chip when company filter active", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
@@ -262,7 +262,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("clicking × on company chip clears only the company param", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1&folder=f1"]);
+		renderPage(["/positions?company=c1&folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
@@ -280,7 +280,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders folder chip with color and name when folder filter active", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=f1"]);
+		renderPage(["/positions?folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
@@ -290,7 +290,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("clicking × on folder chip clears only the folder param", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1&folder=f1"]);
+		renderPage(["/positions?company=c1&folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
@@ -307,7 +307,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders 'Без категории' chip when folder=none", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=none"]);
+		renderPage(["/positions?folder=none"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Без категории");
@@ -316,7 +316,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders 'Архив' chip when folder=archive", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=archive"]);
+		renderPage(["/positions?folder=archive"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Архив");

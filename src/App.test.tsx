@@ -15,6 +15,7 @@ import { createInMemoryNotificationsClient } from "@/data/clients/notifications-
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
@@ -90,6 +91,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: [] }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
@@ -98,7 +100,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				invitations: createInMemoryInvitationsClient(),
 			}}
 		>
-			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
+			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>
 				<TooltipProvider>
 					<App />
 				</TooltipProvider>
@@ -132,21 +134,34 @@ afterEach(() => {
 // ---- Route tests (TDD) ----
 
 describe("Routing", () => {
-	test("/ redirects to /procurement", async () => {
+	test("/ redirects to /tenders", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
 		});
 	});
 
-	test("/ preserves query params when redirecting to /procurement", async () => {
-		await renderAppReady(["/?deviation=overpaying"]);
+	test("/ preserves query params when redirecting to /tenders", async () => {
+		renderApp(["/?company=c1"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+		});
+	});
+
+	test("/procurement redirects to /positions", async () => {
+		await renderAppReady(["/procurement"]);
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+		expect(screen.getByTestId("global-header")).toBeInTheDocument();
+	});
+
+	test("/procurement preserves query params when redirecting to /positions", async () => {
+		await renderAppReady(["/procurement?deviation=overpaying"]);
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
 		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("/procurement renders procurement content", async () => {
+	test("/positions renders positions content", async () => {
 		await renderAppReady();
 		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
@@ -187,8 +202,8 @@ describe("Routing", () => {
 		expect(screen.queryByRole("button", { name: /Добавить сотрудника/ })).not.toBeInTheDocument();
 	});
 
-	test("URL query params preserved under /procurement", async () => {
-		await renderAppReady(["/procurement?deviation=overpaying"]);
+	test("URL query params preserved under /positions", async () => {
+		await renderAppReady(["/positions?deviation=overpaying"]);
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
 		expect(rows.length).toBeGreaterThan(1);
@@ -325,7 +340,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("restores state from URL search params", async () => {
-		await renderAppReady(["/procurement?deviation=overpaying"]);
+		await renderAppReady(["/positions?deviation=overpaying"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -333,7 +348,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("deep-link with folder param filters table to folder items", async () => {
-		await renderAppReady(["/procurement?folder=folder-1"]);
+		await renderAppReady(["/positions?folder=folder-1"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -342,7 +357,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("deep-link with folder=none shows only unassigned items", async () => {
-		await renderAppReady(["/procurement?folder=none"]);
+		await renderAppReady(["/positions?folder=none"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");

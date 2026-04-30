@@ -17,7 +17,8 @@ function renderLogin(initialEntries = ["/login"]) {
 					<Route element={<AuthLayout />}>
 						<Route path="/login" element={<LoginPage />} />
 					</Route>
-					<Route path="/procurement" element={<div>Procurement Page</div>} />
+					<Route path="/tenders" element={<div>Tenders Page</div>} />
+					<Route path="/positions" element={<div>Positions Page</div>} />
 					<Route path="/analytics" element={<div>Analytics Page</div>} />
 					<Route path="/forgot-password" element={<div>Forgot Password</div>} />
 				</Routes>
@@ -58,7 +59,7 @@ describe("LoginPage", () => {
 		expect(screen.getByText("Forgot Password")).toBeInTheDocument();
 	});
 
-	test("submits login with any credentials and redirects to /procurement", async () => {
+	test("submits login with any credentials and redirects to /tenders", async () => {
 		renderLogin();
 		const user = userEvent.setup();
 
@@ -67,7 +68,7 @@ describe("LoginPage", () => {
 		await user.click(screen.getByRole("button", { name: "Войти" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Procurement Page")).toBeInTheDocument();
+			expect(screen.getByText("Tenders Page")).toBeInTheDocument();
 		});
 		expect(localStorage.getItem("auth-access-token")).toBeTruthy();
 	});
@@ -102,7 +103,7 @@ describe("LoginPage", () => {
 		function LocationSpy() {
 			const loc = useLocation();
 			currentLocation = { search: loc.search, hash: loc.hash };
-			return <div>Procurement Page</div>;
+			return <div>Positions Page</div>;
 		}
 
 		render(
@@ -111,7 +112,7 @@ describe("LoginPage", () => {
 					initialEntries={[
 						{
 							pathname: "/login",
-							state: { from: { pathname: "/procurement", search: "?folder=none", hash: "#details" } },
+							state: { from: { pathname: "/positions", search: "?folder=none", hash: "#details" } },
 						},
 					]}
 				>
@@ -119,7 +120,7 @@ describe("LoginPage", () => {
 						<Route element={<AuthLayout />}>
 							<Route path="/login" element={<LoginPage />} />
 						</Route>
-						<Route path="/procurement" element={<LocationSpy />} />
+						<Route path="/positions" element={<LocationSpy />} />
 					</Routes>
 				</MemoryRouter>
 			</QueryClientProvider>,
@@ -131,7 +132,7 @@ describe("LoginPage", () => {
 		await user.click(screen.getByRole("button", { name: "Войти" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Procurement Page")).toBeInTheDocument();
+			expect(screen.getByText("Positions Page")).toBeInTheDocument();
 		});
 		expect(currentLocation?.search).toBe("?folder=none");
 		expect(currentLocation?.hash).toBe("#details");
