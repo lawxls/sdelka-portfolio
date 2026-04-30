@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, test } from "vitest";
@@ -26,11 +26,20 @@ function renderRail(initialPath = "/procurement") {
 }
 
 describe("AppRail items", () => {
-	test("renders Закупки, Задачи, and Настройки with aria-labels", () => {
+	test("renders Тендеры, Закупки, Задачи, and Настройки with aria-labels", () => {
 		renderRail();
+		expect(screen.getByRole("link", { name: "Тендеры" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
+	});
+
+	test("Тендеры is the first top-nav item, above Закупки", () => {
+		renderRail();
+		const mainNav = screen.getByRole("navigation", { name: "Основная навигация" });
+		const links = within(mainNav).getAllByRole("link");
+		expect(links[0]).toHaveAccessibleName("Тендеры");
+		expect(links[1]).toHaveAccessibleName("Закупки");
 	});
 
 	test("items link to /procurement, /tasks, and /settings", () => {

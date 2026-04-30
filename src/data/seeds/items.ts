@@ -6,6 +6,7 @@ import { ITEM as ITEM_6 } from "../items/item-6";
 import { ITEM as ITEM_7 } from "../items/item-7";
 import { ITEM as ITEM_8 } from "../items/item-8";
 import type { ProcurementItem } from "../types";
+import { SEED_ITEM_TENDER } from "./tenders";
 
 const ITEM_1: ProcurementItem = {
 	id: "item-1",
@@ -42,6 +43,11 @@ const ITEM_1: ProcurementItem = {
 	attachedFiles: [{ name: "specification-pvd-2600.pdf", size: 204_800 }],
 };
 
-export const SEED_ITEMS: ProcurementItem[] = [ITEM_1, ITEM_2, ITEM_3, ITEM_4, ITEM_5, ITEM_6, ITEM_7, ITEM_8];
+const RAW_ITEMS: ProcurementItem[] = [ITEM_1, ITEM_2, ITEM_3, ITEM_4, ITEM_5, ITEM_6, ITEM_7, ITEM_8];
+
+export const SEED_ITEMS: ProcurementItem[] = RAW_ITEMS.map((item) => {
+	const tenderId = SEED_ITEM_TENDER[item.id];
+	return tenderId ? { ...item, tenderId } : { ...item };
+});
 
 export const SEED_ARCHIVED: string[] = [];

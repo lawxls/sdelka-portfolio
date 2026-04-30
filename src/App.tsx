@@ -16,6 +16,7 @@ import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { SettingsIndexPage } from "@/pages/settings-index-page";
 import { TariffsSettingsPage } from "@/pages/tariffs-settings-page";
 import { TasksPage } from "@/pages/tasks-page";
+import { TendersPage } from "@/pages/tenders-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
 function RootRedirect() {
@@ -40,6 +41,7 @@ function App() {
 				<Route path="/" element={<RootRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
+					<Route path="/tenders" element={<TendersPage />} />
 					<Route path="/procurement" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					{/* Settings */}

@@ -6,6 +6,10 @@ export type ProcurementStatus = "searching" | "negotiating" | "completed";
  * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
 export type DisplayStatus = ProcurementStatus | "searching_completed";
 
+/** Tender display status — pure rollup of item DisplayStatus across one tender.
+ * Same vocabulary as items, no separate transition UI. */
+export type TenderStatus = DisplayStatus;
+
 export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching: "Ищем поставщиков",
 	searching_completed: "Поиск поставщиков завершён",
@@ -104,6 +108,8 @@ export interface ProcurementItem {
 	averagePrice: number | null;
 	folderId: string | null;
 	companyId: string;
+	/** Parent tender slug. Items belong to exactly one tender. */
+	tenderId?: string;
 	taskCount?: number;
 	description?: string;
 	unit?: Unit;
@@ -123,6 +129,30 @@ export interface ProcurementItem {
 	generatedAnswers?: GeneratedAnswer[];
 	attachedFiles?: AttachedFile[];
 	searchCompleted?: boolean;
+}
+
+/** Тендер — primary procurement container that bundles a 1:N collection of
+ * `ProcurementItem`s sharing one budget, deadline, company, and category.
+ * Slug `id` (e.g. `T-001`) doubles as URL param. */
+export interface ProcurementInquiry {
+	id: string;
+	name: string;
+	companyId: string;
+	folderId: string | null;
+	/** Budget cap in ₽ (free-form integer; not a derived sum of item prices). */
+	budget: number;
+	/** Required deadline ISO date (YYYY-MM-DD or full ISO). */
+	deadline: string;
+	createdAt: string;
+	currentSupplier?: CurrentSupplier;
+	addressIds?: string[];
+	unloading?: UnloadingType;
+	paymentMethod?: PaymentMethod;
+	deferralRequired?: boolean;
+	sampleRequired?: boolean;
+	analoguesAllowed?: boolean;
+	additionalInfo?: string;
+	attachedFiles?: AttachedFile[];
 }
 
 export interface Folder {
