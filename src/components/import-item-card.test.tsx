@@ -43,53 +43,18 @@ describe("ImportItemCard", () => {
 		renderCard({
 			name: "Труба",
 			deliveryCostType: "free",
-			deliveryAddresses: ["г. Москва, ул. Строителей, 15"],
 		});
 		expect(screen.getByText("Доставка")).toBeInTheDocument();
 		expect(screen.getByText("Бесплатная")).toBeInTheDocument();
-		expect(screen.getByText("Адрес")).toBeInTheDocument();
-		expect(screen.getByText("г. Москва, ул. Строителей, 15")).toBeInTheDocument();
 	});
 
 	test("renders payment section when payment fields present", () => {
 		renderCard({
 			name: "Плитка",
 			paymentType: "deferred",
-			paymentMethod: "bank_transfer",
 		});
 		expect(screen.getByText("Оплата")).toBeInTheDocument();
 		expect(screen.getByText("Отсрочка")).toBeInTheDocument();
-		expect(screen.getByText("Р/С")).toBeInTheDocument();
-	});
-
-	test("renders sample request when sampleRequired is set", () => {
-		renderCard({
-			name: "Подвес",
-			sampleRequired: true,
-		});
-		expect(screen.getByText("Образец")).toBeInTheDocument();
-		expect(screen.getByText("Запрошен")).toBeInTheDocument();
-	});
-
-	test("renders unloading and analogues when present", () => {
-		renderCard({
-			name: "Лист ГКЛ",
-			unloading: "supplier",
-			analoguesAllowed: true,
-		});
-		expect(screen.getByText("Разгрузка")).toBeInTheDocument();
-		expect(screen.getByText("Силами поставщика")).toBeInTheDocument();
-		expect(screen.getByText("Аналоги")).toBeInTheDocument();
-		expect(screen.getByText("Допускаются")).toBeInTheDocument();
-	});
-
-	test("renders additional info when present", () => {
-		renderCard({
-			name: "Товар",
-			additionalInfo: "Особые условия хранения",
-		});
-		expect(screen.getByText("Дополнительная информация")).toBeInTheDocument();
-		expect(screen.getByText("Особые условия хранения")).toBeInTheDocument();
 	});
 
 	test("omits sections with no data", () => {
@@ -97,8 +62,5 @@ describe("ImportItemCard", () => {
 		expect(screen.queryByText("Количество")).not.toBeInTheDocument();
 		expect(screen.queryByText("Доставка")).not.toBeInTheDocument();
 		expect(screen.queryByText("Оплата")).not.toBeInTheDocument();
-		expect(screen.queryByText("Образец")).not.toBeInTheDocument();
-		expect(screen.queryByText("Разгрузка")).not.toBeInTheDocument();
-		expect(screen.queryByText("Аналоги")).not.toBeInTheDocument();
 	});
 });

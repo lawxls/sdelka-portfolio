@@ -9,25 +9,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 473,
 	bestPrice: 378,
 	averagePrice: 412,
-	folderId: "folder-fabrics",
-	companyId: "company-1",
 	unit: "м",
 	quantityPerDelivery: 70_000,
 	paymentType: "deferred",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "free",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	sampleRequired: true,
-	additionalInfo: "Трикотажный жаккард, плотность 360 г/м², полотно — стрейч. Светоустойчивость 4–5 баллов.",
-	currentSupplier: {
-		companyName: "Ивановский текстиль",
-		inn: "7712345678",
-		paymentType: "deferred",
-		deferralDays: 30,
-		pricePerUnit: 473,
-	},
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

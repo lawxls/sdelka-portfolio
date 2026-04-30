@@ -9,25 +9,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 1190,
 	bestPrice: 915,
 	averagePrice: 997,
-	folderId: "folder-panels",
-	companyId: "company-1",
 	unit: "м²",
 	quantityPerDelivery: 3500,
 	paymentType: "deferred",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	sampleRequired: false,
-	additionalInfo: "ЛДСП E0,5, класс эмиссии формальдегида E1. Декор «дуб сонома». Формат 2750×1830.",
-	currentSupplier: {
-		companyName: "Kronospan",
-		inn: "5012345678",
-		paymentType: "deferred",
-		deferralDays: 45,
-		pricePerUnit: 1190,
-	},
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

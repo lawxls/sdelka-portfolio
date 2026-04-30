@@ -9,25 +9,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 167_675,
 	bestPrice: 176_500,
 	averagePrice: 189_000,
-	folderId: "folder-fillings",
-	companyId: "company-1",
 	unit: "т",
 	quantityPerDelivery: 100,
 	paymentType: "deferred",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: false,
-	sampleRequired: true,
-	additionalInfo: "ППУ марки ST2240, плотность 22 кг/м³, нагрузка 4,0 кПа. Сертификат соответствия обязателен.",
-	currentSupplier: {
-		companyName: "Изолон",
-		inn: "7710123456",
-		paymentType: "deferred",
-		deferralDays: 30,
-		pricePerUnit: 167_675,
-	},
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

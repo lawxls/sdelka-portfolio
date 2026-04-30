@@ -52,6 +52,7 @@ import {
 	useSuppliers,
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
+import { useTender } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -305,8 +306,9 @@ export function SuppliersTabPanel({
 	kpRequestEnabled?: boolean;
 }) {
 	const { data: itemDetail } = useItemDetail(itemId);
+	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
-	const currentSupplier = itemDetail?.currentSupplier;
+	const currentSupplier = tender?.currentSupplier;
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -555,7 +557,8 @@ export function OffersTabPanel({
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
 	const { data: itemDetail } = useItemDetail(itemId);
-	const currentSupplier = itemDetail?.currentSupplier;
+	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
+	const currentSupplier = tender?.currentSupplier;
 	// When no payment/delivery client-side filters are active, the server total matches.
 	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
 	// all pages just to produce a total isn't worth it for these local filters.

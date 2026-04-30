@@ -1,15 +1,4 @@
-import {
-	Archive,
-	ArchiveRestore,
-	Building2,
-	Check,
-	Ellipsis,
-	FolderInput,
-	Inbox,
-	LoaderCircle,
-	Pencil,
-	Trash2,
-} from "lucide-react";
+import { Archive, ArchiveRestore, Building2, Check, Ellipsis, LoaderCircle, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -23,10 +12,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
 	DropdownMenu,
-	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -74,12 +61,10 @@ export function ProcurementStatusIcon({
 interface ProcurementCardProps {
 	item: ProcurementItem;
 	folder?: Folder;
-	folders?: Folder[];
 	index: number;
 	onRowClick?: (item: ProcurementItem) => void;
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
-	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	onArchiveItem?: (id: string, isArchived: boolean) => void;
 	isArchiveView?: boolean;
 	companyName?: string;
@@ -96,12 +81,10 @@ const FIELDS: { label: string; key: string }[] = [
 export function ProcurementCard({
 	item,
 	folder,
-	folders,
 	index,
 	onRowClick,
 	onDeleteItem,
 	onRenameItem,
-	onAssignFolder,
 	onArchiveItem,
 	isArchiveView,
 	companyName,
@@ -128,7 +111,7 @@ export function ProcurementCard({
 		averagePrice: formatCurrency(item.averagePrice),
 	};
 
-	const hasActions = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
+	const hasActions = !!(onDeleteItem || onRenameItem || onArchiveItem);
 
 	function clearLongPressTimer() {
 		if (longPressTimerRef.current) {
@@ -271,43 +254,13 @@ export function ProcurementCard({
 									Переименовать
 								</DropdownMenuItem>
 							)}
-							{onAssignFolder && folders && !isArchiveView && (
+							{onArchiveItem && !isArchiveView && (
 								<>
 									<DropdownMenuSeparator />
-									<DropdownMenuLabel className="flex items-center gap-1.5">
-										<FolderInput className="size-3.5" />
-										Переместить в категорию
-									</DropdownMenuLabel>
-									{folders.map((f) => (
-										<DropdownMenuCheckboxItem
-											key={f.id}
-											checked={item.folderId === f.id}
-											onCheckedChange={() => onAssignFolder(item.id, f.id)}
-										>
-											<span
-												className="size-2 shrink-0 rounded-full"
-												style={{ backgroundColor: `var(--folder-${f.color})` }}
-												aria-hidden="true"
-											/>
-											{f.name}
-										</DropdownMenuCheckboxItem>
-									))}
-									<DropdownMenuCheckboxItem
-										checked={item.folderId == null}
-										onCheckedChange={() => onAssignFolder(item.id, null)}
-									>
-										<Inbox className="size-3.5" />
-										Без категории
-									</DropdownMenuCheckboxItem>
-									{onArchiveItem && (
-										<>
-											<DropdownMenuSeparator />
-											<DropdownMenuItem onSelect={() => onArchiveItem(item.id, true)}>
-												<Archive className="size-3.5" />
-												Архив
-											</DropdownMenuItem>
-										</>
-									)}
+									<DropdownMenuItem onSelect={() => onArchiveItem(item.id, true)}>
+										<Archive className="size-3.5" />
+										Архив
+									</DropdownMenuItem>
 								</>
 							)}
 							{onArchiveItem && isArchiveView && (

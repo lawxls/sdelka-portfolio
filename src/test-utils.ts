@@ -33,8 +33,6 @@ export function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): 
 		currentPrice: 50,
 		bestPrice: 40,
 		averagePrice: 45,
-		folderId: null,
-		companyId: "company-1",
 		...overrides,
 	};
 }

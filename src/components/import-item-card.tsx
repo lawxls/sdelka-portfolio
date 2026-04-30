@@ -1,5 +1,5 @@
 import type { NewItemInput } from "@/data/types";
-import { DELIVERY_COST_TYPE_LABELS, PAYMENT_METHOD_LABELS, PAYMENT_TYPE_LABELS, UNLOADING_LABELS } from "@/data/types";
+import { DELIVERY_COST_TYPE_LABELS, PAYMENT_TYPE_LABELS } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 
 interface ImportItemCardProps {
@@ -27,8 +27,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function ImportItemCard({ item, index }: ImportItemCardProps) {
 	const hasBasicInfo = item.annualQuantity != null || item.unit != null || item.currentPrice != null;
-	const hasPayment = item.paymentType != null || item.paymentMethod != null;
-	const hasAnalogues = item.analoguesAllowed != null;
+	const hasPayment = item.paymentType != null;
 
 	return (
 		<article className="rounded-lg border bg-background p-4">
@@ -52,44 +51,12 @@ export function ImportItemCard({ item, index }: ImportItemCardProps) {
 				{hasPayment && (
 					<Section title="Оплата">
 						{item.paymentType != null && <Field label="Тип оплаты" value={PAYMENT_TYPE_LABELS[item.paymentType]} />}
-						{item.paymentMethod != null && (
-							<Field label="Способ оплаты" value={PAYMENT_METHOD_LABELS[item.paymentMethod]} />
-						)}
 					</Section>
 				)}
 
 				{item.deliveryCostType != null && (
 					<Section title="Доставка">
 						<Field label="Тип доставки" value={DELIVERY_COST_TYPE_LABELS[item.deliveryCostType]} />
-						{item.deliveryAddresses && item.deliveryAddresses.length > 0 && (
-							<Field label="Адрес" value={item.deliveryAddresses.join(", ")} />
-						)}
-					</Section>
-				)}
-
-				{item.unloading != null && (
-					<Section title="Разгрузка">
-						<Field label="Тип" value={UNLOADING_LABELS[item.unloading]} />
-					</Section>
-				)}
-
-				{hasAnalogues && (
-					<Section title="Аналоги">
-						<Field label="Допустимость" value={item.analoguesAllowed ? "Допускаются" : "Не допускаются"} />
-					</Section>
-				)}
-
-				{item.sampleRequired && (
-					<Section title="Образец">
-						<Field label="Запрошен" value="Да" />
-					</Section>
-				)}
-
-				{item.additionalInfo && (
-					<Section title="Дополнительная информация">
-						<div className="col-span-2">
-							<p className="text-sm">{item.additionalInfo}</p>
-						</div>
 					</Section>
 				)}
 			</div>

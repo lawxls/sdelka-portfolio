@@ -15,15 +15,27 @@ import { NotFoundError } from "../errors";
 import { _getAllItems, _getItem, _isArchived, _patchItem, _setItems } from "../items-mock-data";
 import { delay, nextId, paginate } from "../mock-utils";
 import { _addYourSupplier } from "../supplier-mock-data";
+import { _getTender } from "../tenders-mock/store";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, type ProcurementStatus } from "../types";
 import type { ItemsClient } from "./items-client";
+
+function tenderFolderId(item: ProcurementItem): string | null {
+	if (!item.tenderId) return null;
+	return _getTender(item.tenderId)?.folderId ?? null;
+}
+
+function tenderCompanyId(item: ProcurementItem): string | null {
+	if (!item.tenderId) return null;
+	return _getTender(item.tenderId)?.companyId ?? null;
+}
 
 function matchesFolder(item: ProcurementItem, folder: string | undefined, archived: boolean): boolean {
 	if (folder === "archive") return archived;
 	if (archived) return false;
 	if (folder === undefined || folder === "all") return true;
-	if (folder === "none") return item.folderId === null;
-	return item.folderId === folder;
+	const folderId = tenderFolderId(item);
+	if (folder === "none") return folderId === null;
+	return folderId === folder;
 }
 
 function matchesDeviation(item: ProcurementItem, deviation: string | undefined): boolean {
@@ -43,7 +55,7 @@ function applyFilters(items: ProcurementItem[], params: ListItemsParams): Procur
 	const q = params.q?.trim().toLowerCase();
 	return items.filter((item) => {
 		if (!matchesFolder(item, params.folder, _isArchived(item.id))) return false;
-		if (params.company && item.companyId !== params.company) return false;
+		if (params.company && tenderCompanyId(item) !== params.company) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
@@ -159,26 +171,16 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				name: input.name,
 				status: "searching" as ProcurementStatus,
 				annualQuantity: input.annualQuantity ?? 0,
-				currentPrice: input.currentPrice ?? input.currentSupplier?.pricePerUnit ?? 0,
+				currentPrice: input.currentPrice ?? 0,
 				bestPrice: null,
 				averagePrice: null,
-				folderId: input.folderId ?? null,
-				companyId: "company-1",
 				unit: input.unit,
 				description: input.description,
 				quantityPerDelivery: input.quantityPerDelivery,
 				paymentType: input.paymentType,
-				paymentMethod: input.paymentMethod,
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
-				deliveryAddresses: input.deliveryAddresses,
-				unloading: input.unloading,
-				analoguesAllowed: input.analoguesAllowed,
-				sampleRequired: input.sampleRequired,
-				additionalInfo: input.additionalInfo,
-				currentSupplier: input.currentSupplier,
 				generatedAnswers: input.generatedAnswers,
-				attachedFiles: input.attachedFiles,
 			}));
 			const current = _getAllItems();
 			const archivedNow = current.filter((c) => _isArchived(c.id)).map((c) => c.id);
@@ -219,11 +221,11 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 		async export(params: ExportItemsParams): Promise<{ blob: Blob; filename: string }> {
 			await delay();
 			const filtered = applyFilters(_getAllItems(), params as ListItemsParams);
-			const header = "id\tname\tstatus\tcompanyId\tfolderId\tcurrentPrice\tbestPrice\tannualQuantity\n";
+			const header = "id\tname\tstatus\ttenderId\tcurrentPrice\tbestPrice\tannualQuantity\n";
 			const rows = filtered
 				.map(
 					(i) =>
-						`${i.id}\t${i.name}\t${i.status}\t${i.companyId ?? ""}\t${i.folderId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
+						`${i.id}\t${i.name}\t${i.status}\t${i.tenderId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
 				)
 				.join("\n");
 			const blob = new Blob([header + rows], {

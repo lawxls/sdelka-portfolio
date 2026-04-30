@@ -10,18 +10,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 18.5,
 	bestPrice: null,
 	averagePrice: null,
-	folderId: "folder-packaging",
-	companyId: "company-1",
 	unit: "шт",
 	quantityPerDelivery: 50_000,
 	paymentType: "prepayment",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	sampleRequired: false,
-	additionalInfo: "Уголки картонные защитные 50×50×3 мм, длина 1 м, плотность 550 г/м². Для палет с матрасами.",
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

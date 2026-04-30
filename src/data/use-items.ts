@@ -190,37 +190,3 @@ export function useExportItems() {
 		},
 	});
 }
-
-export function useAssignFolder() {
-	const client = useItemsClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ id, folderId, isArchived }: { id: string; folderId: string | null; isArchived?: boolean }) => {
-			if (isArchived !== undefined) {
-				return client.archive(id, isArchived).then(() => client.update(id, { folderId }));
-			}
-			return client.update(id, { folderId });
-		},
-		onMutate: ({ id, folderId }) =>
-			applyOptimistic(queryClient, [
-				{
-					queryKey: keys.items.all(),
-					prefix: true,
-					update: itemsListPages.patchOrRemoveById(id, (item, key) => {
-						const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;
-						if (cacheFolder !== undefined) {
-							const matches = cacheFolder === "none" ? folderId === null : cacheFolder === folderId;
-							if (!matches) return null;
-						}
-						return { ...item, folderId };
-					}),
-				},
-			]),
-		onError: (_err, _vars, context) => {
-			rollbackOptimistic(queryClient, context);
-			toast.error("Не удалось переместить закупку");
-		},
-		onSettled: () => invalidateAfterItemListChange(queryClient),
-	});
-}

@@ -9,25 +9,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 2154,
 	bestPrice: 1_795,
 	averagePrice: 1_980,
-	folderId: "folder-springs",
-	companyId: "company-1",
 	unit: "шт",
 	quantityPerDelivery: 8_000,
 	paymentType: "prepayment",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: false,
-	sampleRequired: true,
-	additionalInfo: "Пружинный блок «Боннель» 120×200×120 мм, проволока 2,2 мм, 108 пружин/м². Сертификат ГОСТ Р 52584.",
-	currentSupplier: {
-		companyName: "ТД «Боннель»",
-		inn: "7725123456",
-		paymentType: "prepayment",
-		deferralDays: 0,
-		pricePerUnit: 2154,
-	},
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

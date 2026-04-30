@@ -74,7 +74,6 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 	self: "Своими силами",
 };
 
-export const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
@@ -106,27 +105,17 @@ export interface ProcurementItem {
 	currentPrice: number;
 	bestPrice: number | null;
 	averagePrice: number | null;
-	folderId: string | null;
-	companyId: string;
-	/** Parent tender slug. Items belong to exactly one tender. */
+	/** Parent tender slug. Items belong to exactly one tender. Company, folder,
+	 * current supplier, and all shared step1 meta live on the parent tender. */
 	tenderId?: string;
 	description?: string;
 	unit?: Unit;
 	quantityPerDelivery?: number;
 	paymentType?: PaymentType;
 	prepaymentPercent?: number;
-	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
-	deliveryAddresses?: string[];
-	unloading?: UnloadingType;
-	analoguesAllowed?: boolean;
-	sampleRequired?: boolean;
-	deferralRequired?: boolean;
-	additionalInfo?: string;
-	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
-	attachedFiles?: AttachedFile[];
 	searchCompleted?: boolean;
 }
 
@@ -197,7 +186,6 @@ export interface Totals {
 
 export interface NewItemInput {
 	name: string;
-	folderId?: string | null;
 	description?: string;
 	unit?: Unit;
 	annualQuantity?: number;
@@ -205,18 +193,9 @@ export interface NewItemInput {
 	currentPrice?: number;
 	paymentType?: PaymentType;
 	prepaymentPercent?: number;
-	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
-	deliveryAddresses?: string[];
-	unloading?: UnloadingType;
-	analoguesAllowed?: boolean;
-	sampleRequired?: boolean;
-	deferralRequired?: boolean;
-	additionalInfo?: string;
-	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
-	attachedFiles?: AttachedFile[];
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

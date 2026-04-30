@@ -17,29 +17,14 @@ const ITEM_1: ProcurementItem = {
 	// Computed from ORMATEK_SUPPLIERS получено_кп TCOs (50 offers): min 1485, mean 2256.
 	bestPrice: 1485,
 	averagePrice: 2256,
-	folderId: "folder-packaging",
-	companyId: "company-1",
 	unit: "м",
 	quantityPerDelivery: 15_000,
 	paymentType: "prepayment",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	additionalInfo: "Полотно ПВД первичка (без вторсырья), ширина 2600 мм, прозрачное.",
-	currentSupplier: {
-		companyName: "ПолимерПром",
-		inn: "6164012345",
-		paymentType: "prepayment",
-		deferralDays: 0,
-		pricePerUnit: 1776,
-	},
 	generatedAnswers: [
 		{ questionId: "material-grade", selectedOption: "Первичка без вторсырья" },
 		{ questionId: "certificates", selectedOption: "Паспорт качества", freeText: "На каждую партию" },
 	],
-	attachedFiles: [{ name: "specification-pvd-2600.pdf", size: 204_800 }],
 };
 
 const RAW_ITEMS: ProcurementItem[] = [ITEM_1, ITEM_2, ITEM_3, ITEM_4, ITEM_5, ITEM_6, ITEM_7, ITEM_8];

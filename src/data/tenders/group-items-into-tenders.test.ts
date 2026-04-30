@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { NewItemInput } from "../types";
 import { groupItemsIntoTenders } from "./group-items-into-tenders";
 
-const item = (name: string, folderId?: string | null): NewItemInput => ({ name, folderId: folderId ?? null });
+const item = (name: string): NewItemInput => ({ name });
 
 describe("groupItemsIntoTenders", () => {
 	it("returns an empty array for no items", () => {
@@ -31,14 +31,6 @@ describe("groupItemsIntoTenders", () => {
 	it("preserves first-seen order", () => {
 		const result = groupItemsIntoTenders([item("Бета"), item("Альфа"), item("Бета 2")]);
 		expect(result.map((r) => r.name)).toEqual(["Бета", "Альфа"]);
-	});
-
-	it("inherits folderId from the first item in a group", () => {
-		const result = groupItemsIntoTenders([
-			item("Полотно ПВД", "folder-packaging"),
-			item("Полотно стрейч", "folder-other"),
-		]);
-		expect(result[0].folderId).toBe("folder-packaging");
 	});
 
 	it("skips noise leading words like 'и', 'для', 'с' when picking the group key", () => {

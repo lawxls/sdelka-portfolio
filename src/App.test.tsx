@@ -27,12 +27,42 @@ const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
 		status: i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
-		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
+		tenderId: i < 5 ? "T-folder-1" : i < 10 ? "T-folder-2" : "T-no-folder",
 		// Ensure deviation=overpaying filter captures some rows
 		currentPrice: 100,
 		bestPrice: 80,
 	}),
 );
+
+const TEST_TENDERS = [
+	{
+		id: "T-folder-1",
+		name: "Tender folder-1",
+		companyId: "company-1",
+		folderId: "folder-1" as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+	{
+		id: "T-folder-2",
+		name: "Tender folder-2",
+		companyId: "company-1",
+		folderId: "folder-2" as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+	{
+		id: "T-no-folder",
+		name: "Tender no folder",
+		companyId: "company-1",
+		folderId: null as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+];
 
 const TEST_FOLDERS: Folder[] = [
 	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
@@ -92,7 +122,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
-				tenders: createInMemoryTendersClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
@@ -467,29 +497,6 @@ describe("ProcurementPage", () => {
 
 		await waitFor(() => {
 			expect(screen.queryByText("Арматура А500С ∅12")).not.toBeInTheDocument();
-		});
-	});
-
-	test("context menu assign folder sends PATCH", async () => {
-		// Use an item that has no folder (item-11 has folderId: null)
-		await renderAppReady();
-
-		const row = screen.getByTestId("row-item-11");
-		fireEvent.contextMenu(row);
-
-		await screen.findByText("Переместить в категорию");
-		fireEvent.click(screen.getByText("Переместить в категорию"));
-
-		// Context menu submenu items are checkbox items — use role
-		const menuItems = await screen.findAllByRole("menuitemcheckbox");
-		const target = menuItems.find((el) => el.textContent?.includes("Стройматериалы"));
-		if (!target) throw new Error("Стройматериалы menu item not found");
-		fireEvent.click(target);
-
-		// Optimistic: folder badge should appear on item-11
-		await waitFor(() => {
-			const badge = screen.queryByTestId("folder-badge-item-11");
-			expect(badge).toBeInTheDocument();
 		});
 	});
 

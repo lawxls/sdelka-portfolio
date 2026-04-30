@@ -8,6 +8,7 @@ import { ITEM as ITEM_8, SUPPLIERS as SUPPLIERS_8 } from "../items/item-8";
 import { _getItem } from "../items-mock-data";
 import { ORMATEK_SUPPLIERS } from "../seeds/suppliers-ormatek";
 import type { Supplier, SupplierSeed } from "../supplier-types";
+import { _getTender } from "../tenders-mock/store";
 import {
 	enrichSeed,
 	generateCandidates,
@@ -76,13 +77,15 @@ export function listKnownItemIds(): string[] {
 	return [...itemIds];
 }
 
-/** Build a получено_кп Supplier row that mirrors the item's `currentSupplier` (the «Ваш поставщик»).
- * INN/companyName come from currentSupplier verbatim; profile fields (region/revenue/etc.) are
- * deterministically derived from the INN so the row looks like a real legal entity. Returns null
- * when the item has no currentSupplier or no INN. */
+/** Build a получено_кп Supplier row that mirrors the parent tender's `currentSupplier`
+ * (the «Ваш поставщик»). INN/companyName come from currentSupplier verbatim; profile
+ * fields (region/revenue/etc.) are deterministically derived from the INN so the row
+ * looks like a real legal entity. Returns null when the item has no parent tender,
+ * or the tender has no currentSupplier or no INN. */
 function makeYourSupplier(itemId: string): Supplier | null {
 	const item = _getItem(itemId);
-	const cs = item?.currentSupplier;
+	const tender = item?.tenderId ? _getTender(item.tenderId) : null;
+	const cs = tender?.currentSupplier;
 	if (!cs?.inn) return null;
 	const identityHash = hash(cs.inn);
 	const profile = makeIdentityProfile(identityHash);

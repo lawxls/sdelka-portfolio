@@ -343,7 +343,7 @@ describe("useAddPositionForm", () => {
 
 	// --- toPayload() ---
 
-	test("toPayload with minimal valid input emits a single item with payment defaults", () => {
+	test("toPayload with minimal valid input emits a single per-position item", () => {
 		const { result } = setup();
 		act(() => result.current.update1("companyId", "c1"));
 		act(() => result.current.updatePosition(0, "name", "  Арматура  "));
@@ -353,38 +353,7 @@ describe("useAddPositionForm", () => {
 		expect(payload).toHaveLength(1);
 		expect(payload[0].name).toBe("Арматура");
 		expect(payload[0].paymentType).toBe("prepayment");
-		expect(payload[0].paymentMethod).toBe("bank_transfer");
-		expect(payload[0].currentSupplier).toBeUndefined();
 		expect(payload[0].generatedAnswers).toBeUndefined();
-	});
-
-	test("toPayload includes folderId when one is selected", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "X"));
-		act(() => result.current.update1("folderId", "folder-metal"));
-
-		const [payload] = result.current.toPayload();
-		expect(payload.folderId).toBe("folder-metal");
-	});
-
-	test("toPayload omits folderId when none is selected", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "X"));
-
-		const [payload] = result.current.toPayload();
-		expect(payload.folderId).toBeUndefined();
-	});
-
-	test("toPayload includes deliveryAddresses when addresses selected", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "X"));
-		act(() => result.current.update1("addressIds", ["a-1", "a-2"]));
-
-		const [payload] = result.current.toPayload();
-		expect(payload.deliveryAddresses).toEqual(["Главный офис", "Склад"]);
 	});
 
 	test("toPayload maps 'Отсрочка нужна' checkbox to paymentType=deferred", () => {
@@ -433,7 +402,7 @@ describe("useAddPositionForm", () => {
 		expect(payload.deliveryCost).toBeUndefined();
 	});
 
-	test("toPayload includes a fully populated single position", () => {
+	test("toPayload includes per-position fields; tender meta (company/folder/addresses/supplier) is dropped", () => {
 		const { result } = setup();
 		act(() => {
 			result.current.update1("companyId", "c1");
@@ -456,6 +425,10 @@ describe("useAddPositionForm", () => {
 
 		const payload = result.current.toPayload();
 		expect(payload).toHaveLength(1);
+		// Schema migration (#261): per-item payload only carries position-level data.
+		// Tender meta (folderId, addresses, paymentMethod, unloading, currentSupplier,
+		// requirements, attached files) is captured in the wizard but routes to the
+		// parent tender via the CreateTenderDrawer flow in slice #8.
 		expect(payload[0]).toEqual({
 			name: "Цемент М500",
 			description: "Портландцемент",
@@ -463,16 +436,9 @@ describe("useAddPositionForm", () => {
 			quantityPerDelivery: 50,
 			annualQuantity: 600,
 			currentPrice: 1200,
-			deliveryAddresses: ["Главный офис"],
 			deliveryCostType: "paid",
 			deliveryCost: 2000,
-			unloading: "supplier",
-			paymentMethod: "cash",
 			paymentType: "deferred",
-			sampleRequired: true,
-			analoguesAllowed: true,
-			deferralRequired: true,
-			additionalInfo: "Срочно",
 		});
 	});
 
@@ -491,50 +457,6 @@ describe("useAddPositionForm", () => {
 		expect(payload[0].currentPrice).toBe(1000);
 		expect(payload[1].name).toBe("Цемент");
 		expect(payload[1].currentPrice).toBe(500);
-	});
-
-	test("toPayload emits currentSupplier per position when name+inn+price are present", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "X"));
-		act(() => result.current.updatePosition(0, "pricePerUnit", "1200"));
-		act(() => result.current.update2("companyName", "МеталлТрейд"));
-		act(() => result.current.update2("inn", "1234567890"));
-		act(() => result.current.update2("paymentType", "deferred"));
-		act(() => result.current.update2("deferralDays", "30"));
-
-		const [payload] = result.current.toPayload();
-		expect(payload.currentSupplier).toEqual({
-			companyName: "МеталлТрейд",
-			inn: "1234567890",
-			paymentType: "deferred",
-			deferralDays: 30,
-			pricePerUnit: 1200,
-		});
-	});
-
-	test("toPayload omits currentSupplier when step 2 empty", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "X"));
-
-		const [payload] = result.current.toPayload();
-		expect(payload.currentSupplier).toBeUndefined();
-	});
-
-	test("toPayload omits currentSupplier on a position with no price even when supplier name+inn are set", () => {
-		const { result } = setup();
-		act(() => result.current.update1("companyId", "c1"));
-		act(() => result.current.updatePosition(0, "name", "Priced"));
-		act(() => result.current.updatePosition(0, "pricePerUnit", "100"));
-		act(() => result.current.addPosition());
-		act(() => result.current.updatePosition(1, "name", "Unpriced"));
-		act(() => result.current.update2("companyName", "Acme"));
-		act(() => result.current.update2("inn", "1234567890"));
-
-		const payload = result.current.toPayload();
-		expect(payload[0].currentSupplier?.pricePerUnit).toBe(100);
-		expect(payload[1].currentSupplier).toBeUndefined();
 	});
 
 	test("toPayload emits generatedAnswers only for answered questions", () => {

@@ -7,6 +7,7 @@ import type {
 	SupplierSortField,
 	SupplierStatus,
 } from "../supplier-types";
+import { _getTender } from "../tenders-mock/store";
 import { ALL_ITEM_IDS, getSuppliersForItem, listKnownItemIds, simulateDelay } from "./store";
 
 // --- Filtering & sorting ---
@@ -176,15 +177,16 @@ export async function getSupplierQuotesByInn(inn: string, contextItemId: string)
 		const match = suppliers.find((s) => s.inn === inn && s.status === "получено_кп" && !s.archived);
 		if (!match) continue;
 		const item = _getItem(itemId);
+		const tender = item?.tenderId ? _getTender(item.tenderId) : null;
+		const currentSupplier = tender?.currentSupplier;
 		const isCurrentSupplier =
-			item?.currentSupplier != null &&
-			(item.currentSupplier.inn === inn ||
-				(item.currentSupplier.inn == null && item.currentSupplier.companyName === match.companyName));
+			currentSupplier != null &&
+			(currentSupplier.inn === inn ||
+				(currentSupplier.inn == null && currentSupplier.companyName === match.companyName));
 
 		const supplierBatch = item ? batchCost(match, item) : null;
-		const currentBatch = item?.currentSupplier
-			? batchCost({ pricePerUnit: item.currentSupplier.pricePerUnit }, item)
-			: null;
+		const currentBatch =
+			currentSupplier && item ? batchCost({ pricePerUnit: currentSupplier.pricePerUnit }, item) : null;
 		// Savings are only meaningful when comparing against a different incumbent.
 		const canCompare = !isCurrentSupplier && supplierBatch != null && currentBatch != null;
 		const savingsRub = canCompare ? (currentBatch as number) - (supplierBatch as number) : null;

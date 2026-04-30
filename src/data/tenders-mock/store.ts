@@ -28,6 +28,19 @@ export function readTenders(): ProcurementInquiry[] {
 	return tendersStore;
 }
 
+/** Cross-entity lookup helper. Returns a defensive clone, or null when the slug
+ * is unknown. Used by items-in-memory (filter join), folders-mock-data (stats),
+ * and suppliers-mock (currentSupplier reads) since shared step1 meta now lives
+ * on the tender, not on the item. */
+export function _getTender(id: string): ProcurementInquiry | null {
+	const tender = tendersStore.find((t) => t.id === id);
+	return tender ? cloneTender(tender) : null;
+}
+
+export function _resetTendersStore(): void {
+	seedStore();
+}
+
 export function writeTenderAt(idx: number, tender: ProcurementInquiry): void {
 	tendersStore[idx] = tender;
 }

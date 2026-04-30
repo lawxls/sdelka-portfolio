@@ -17,7 +17,6 @@ const MOCK_ITEMS: NewItemInput[] = [
 		annualQuantity: 200,
 		currentPrice: 320,
 		deliveryCostType: "free",
-		deliveryAddresses: ["г. Москва, ул. Строителей, 15"],
 	},
 	{ name: "Электрокабель ВВГнг 3×2.5", unit: "м", annualQuantity: 5000, currentPrice: 85 },
 	{ name: "Краска фасадная белая", unit: "л", annualQuantity: 200, currentPrice: 450 },
@@ -32,24 +31,11 @@ const MOCK_ITEMS: NewItemInput[] = [
 	},
 	{ name: "Смесь штукатурная гипсовая", unit: "кг", annualQuantity: 2000, currentPrice: 18 },
 	{ name: "Герметик силиконовый", unit: "шт", annualQuantity: 50, currentPrice: 320 },
-	{
-		name: "Анкер-болт 12×120",
-		unit: "шт",
-		annualQuantity: 1000,
-		currentPrice: 35,
-		paymentMethod: "bank_transfer",
-	},
+	{ name: "Анкер-болт 12×120", unit: "шт", annualQuantity: 1000, currentPrice: 35 },
 	{ name: "Пена монтажная профессиональная", unit: "шт", annualQuantity: 200, currentPrice: 480 },
-	{
-		name: "Лист ГКЛ 12.5мм",
-		unit: "шт",
-		annualQuantity: 300,
-		currentPrice: 420,
-		unloading: "supplier",
-		analoguesAllowed: true,
-	},
+	{ name: "Лист ГКЛ 12.5мм", unit: "шт", annualQuantity: 300, currentPrice: 420 },
 	{ name: "Профиль потолочный 60×27", unit: "шт", annualQuantity: 500, currentPrice: 180 },
-	{ name: "Подвес прямой", unit: "шт", annualQuantity: 2000, currentPrice: 12, sampleRequired: true },
+	{ name: "Подвес прямой", unit: "шт", annualQuantity: 2000, currentPrice: 12 },
 ];
 
 export function parseFile(_file: File): Promise<NewItemInput[]> {

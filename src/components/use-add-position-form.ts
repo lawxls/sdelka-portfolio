@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type {
-	CurrentSupplier,
 	DeliveryCostType,
 	GeneratedAnswer,
 	NewItemInput,
@@ -131,29 +130,6 @@ function toNumber(value: string): number | undefined {
 	return Number.isFinite(n) ? n : undefined;
 }
 
-function buildCurrentSupplier(step2: Step2State, position: PositionDraft): CurrentSupplier | undefined {
-	// Drop the supplier when any of {company name, ИНН, this position's price} is missing
-	// — downstream surfaces (Поставщики / Предложения) treat a present record as fully
-	// identifiable, so a partial one would render as an unnamed or zero-priced row.
-	const companyName = step2.companyName.trim();
-	const inn = step2.inn.trim();
-	if (companyName === "" || inn === "" || position.pricePerUnit.trim() === "") return undefined;
-
-	const prepaymentPercentNum = step2.paymentType === "prepayment" ? (toNumber(step2.prepaymentPercent) ?? 100) : 100;
-
-	const supplier: CurrentSupplier = {
-		companyName,
-		inn,
-		paymentType: step2.paymentType,
-		deferralDays: step2.paymentType === "deferred" ? (toNumber(step2.deferralDays) ?? 0) : 0,
-		pricePerUnit: Number(position.pricePerUnit),
-	};
-	if (step2.paymentType === "prepayment" && prepaymentPercentNum !== 100) {
-		supplier.prepaymentPercent = prepaymentPercentNum;
-	}
-	return supplier;
-}
-
 function buildGeneratedAnswers(step3: Step3State): GeneratedAnswer[] | undefined {
 	const entries: GeneratedAnswer[] = [];
 	for (const [questionId, answer] of Object.entries(step3.answers)) {
@@ -173,15 +149,16 @@ function buildNewItemInput(
 	step1: Step1State,
 	step2: Step2State,
 	step3: Step3State,
-	addressStrings: string[],
 ): NewItemInput {
+	// Tender-level meta (folderId, addresses, paymentMethod, unloading, supplier
+	// step1 fields, attachedFiles, currentSupplier) is captured in the wizard
+	// but NOT emitted onto the per-position payload after the schema migration
+	// — those fields belong on the parent tender. Slice #8 (CreateTenderDrawer)
+	// dispatches an atomic create-with-tender that consumes this state.
 	const payload: NewItemInput = {
 		name: position.name.trim(),
 		paymentType: step1.deferralRequired ? "deferred" : "prepayment",
-		paymentMethod: step1.paymentMethod,
 	};
-
-	if (step1.folderId !== null) payload.folderId = step1.folderId;
 
 	const description = position.description.trim();
 	if (description) payload.description = description;
@@ -197,8 +174,6 @@ function buildNewItemInput(
 	const price = toNumber(position.pricePerUnit);
 	if (price !== undefined) payload.currentPrice = price;
 
-	if (addressStrings.length > 0) payload.deliveryAddresses = addressStrings;
-
 	if (step2.deliveryCostType !== null) {
 		payload.deliveryCostType = step2.deliveryCostType;
 		if (step2.deliveryCostType === "paid") {
@@ -207,23 +182,8 @@ function buildNewItemInput(
 		}
 	}
 
-	if (step1.unloading !== null) payload.unloading = step1.unloading;
-	if (step1.sampleRequired) payload.sampleRequired = true;
-	if (step1.analoguesAllowed) payload.analoguesAllowed = true;
-	if (step1.deferralRequired) payload.deferralRequired = true;
-
-	const info = step1.additionalInfo.trim();
-	if (info) payload.additionalInfo = info;
-
-	const supplier = buildCurrentSupplier(step2, position);
-	if (supplier) payload.currentSupplier = supplier;
-
 	const answers = buildGeneratedAnswers(step3);
 	if (answers) payload.generatedAnswers = answers;
-
-	if (step1.files.length > 0) {
-		payload.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
-	}
 
 	return payload;
 }
@@ -387,8 +347,11 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	})();
 
 	function toPayload(): NewItemInput[] {
-		const addressStrings = resolveAddressStrings(step1.companyId, step1.addressIds);
-		return step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3, addressStrings));
+		// resolveAddressStrings is intentionally unused here — addresses live on
+		// the tender now. Slice #8's CreateTenderDrawer consumes step1.addressIds
+		// directly and resolves them at tender creation.
+		void resolveAddressStrings;
+		return step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3));
 	}
 
 	return {

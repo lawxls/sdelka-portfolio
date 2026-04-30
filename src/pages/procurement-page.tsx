@@ -23,7 +23,6 @@ import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdate
 import {
 	buildFilterParams,
 	useArchiveItem,
-	useAssignFolder,
 	useCreateItems,
 	useDeleteItem,
 	useExportItems,
@@ -31,6 +30,7 @@ import {
 	useTotals,
 	useUpdateItem,
 } from "@/data/use-items";
+import { useTenders } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const SORT_FIELDS = new Set<string>([
@@ -99,9 +99,17 @@ export function ProcurementPage() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
+	// Items inherit company + folder from their parent tender after the schema
+	// migration; load enough tenders to build an in-memory lookup for badges.
+	const { items: tenderRows } = useTenders({ limit: 1000 });
+	const tenderMap = useMemo(() => {
+		const map: Record<string, { companyId: string; folderId: string | null }> = {};
+		for (const t of tenderRows) map[t.id] = { companyId: t.companyId, folderId: t.folderId };
+		return map;
+	}, [tenderRows]);
+
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
-	const assignFolderMutation = useAssignFolder();
 	const archiveItemMutation = useArchiveItem();
 	const createItemsMutation = useCreateItems();
 	const exportItemsMutation = useExportItems();
@@ -302,6 +310,7 @@ export function ProcurementPage() {
 				<ProcurementTable
 					items={items}
 					folders={folders}
+					tenderMap={tenderMap}
 					sort={sort}
 					hasNextPage={hasNextPage}
 					loadMore={loadMore}
@@ -309,7 +318,6 @@ export function ProcurementPage() {
 					onRowClick={handleRowClick}
 					onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 					onDeleteItem={(id) => deleteItemMutation.mutate(id)}
-					onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
 					onArchiveItem={(id, isArchived) => archiveItemMutation.mutate({ id, isArchived })}
 					isArchiveView={isArchiveView}
 					isLoading={itemsLoading}

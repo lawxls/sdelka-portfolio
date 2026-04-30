@@ -26,11 +26,9 @@ export type ExportItemsParams = Omit<ListItemsParams, "cursor" | "limit">;
 
 /**
  * Fields a caller may patch on an existing item via `update`. Excludes immutable
- * identity / server-derived fields (id, status, bestPrice, averagePrice, companyId).
+ * identity / server-derived fields (id, status, bestPrice, averagePrice).
  */
-export type UpdateItemData = Partial<
-	Omit<ProcurementItem, "id" | "status" | "bestPrice" | "averagePrice" | "companyId">
->;
+export type UpdateItemData = Partial<Omit<ProcurementItem, "id" | "status" | "bestPrice" | "averagePrice">>;
 
 export interface CreateItemsResult {
 	items?: ProcurementItem[];

@@ -7,15 +7,7 @@ import type { ItemsClient } from "./clients/items-client";
 import type { CursorPage, ProcurementItem } from "./domains/items";
 import { NetworkError, NotFoundError } from "./errors";
 import { fakeItemsClient, TestClientsProvider } from "./test-clients-provider";
-import {
-	useAssignFolder,
-	useCreateItems,
-	useDeleteItem,
-	useExportItems,
-	useItems,
-	useTotals,
-	useUpdateItem,
-} from "./use-items";
+import { useCreateItems, useDeleteItem, useExportItems, useItems, useTotals, useUpdateItem } from "./use-items";
 
 vi.mock("sonner", () => ({
 	toast: { error: vi.fn() },
@@ -268,92 +260,6 @@ describe("useDeleteItem (optimistic)", () => {
 			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
 		]);
 		expect(data?.pages[0].items).toHaveLength(2);
-		expect(toast.error).toHaveBeenCalled();
-	});
-});
-
-describe("useAssignFolder (optimistic)", () => {
-	it("optimistically assigns folder to item", async () => {
-		seedItemsCache([makeItem("i1", { folderId: null })]);
-		const update = vi.fn().mockResolvedValue(makeItem("i1", { folderId: "f1" }));
-		const client = fakeItemsClient({ update });
-
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: wrapperFactory(client) });
-
-		act(() => {
-			result.current.mutate({ id: "i1", folderId: "f1" });
-		});
-
-		await waitFor(() => {
-			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
-				"items",
-				{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
-			]);
-			expect(data?.pages[0].items[0].folderId).toBe("f1");
-		});
-	});
-
-	it("removes item from folder-filtered cache when reassigned to another folder", async () => {
-		seedItemsCache([makeItem("i1", { folderId: "f1" }), makeItem("i2", { folderId: "f1" })], "f1");
-		const update = vi.fn().mockResolvedValue(makeItem("i1", { folderId: "f2" }));
-		const client = fakeItemsClient({ update });
-
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: wrapperFactory(client) });
-
-		act(() => {
-			result.current.mutate({ id: "i1", folderId: "f2" });
-		});
-
-		await waitFor(() => {
-			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
-				"items",
-				{ q: undefined, status: undefined, deviation: undefined, folder: "f1", sort: undefined, dir: undefined },
-			]);
-			expect(data?.pages[0].items).toHaveLength(1);
-			expect(data?.pages[0].items[0].id).toBe("i2");
-		});
-	});
-
-	it("removes item from 'none' cache when assigned to a folder", async () => {
-		seedItemsCache([makeItem("i1", { folderId: null }), makeItem("i2", { folderId: null })], "none");
-		const update = vi.fn().mockResolvedValue(makeItem("i1", { folderId: "f1" }));
-		const client = fakeItemsClient({ update });
-
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: wrapperFactory(client) });
-
-		act(() => {
-			result.current.mutate({ id: "i1", folderId: "f1" });
-		});
-
-		await waitFor(() => {
-			const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
-				"items",
-				{ q: undefined, status: undefined, deviation: undefined, folder: "none", sort: undefined, dir: undefined },
-			]);
-			expect(data?.pages[0].items).toHaveLength(1);
-			expect(data?.pages[0].items[0].id).toBe("i2");
-		});
-	});
-
-	it("rolls back on error and shows toast", async () => {
-		const { toast } = await import("sonner");
-		seedItemsCache([makeItem("i1", { folderId: null })]);
-		const update = vi.fn().mockRejectedValue(new Error("fail"));
-		const client = fakeItemsClient({ update });
-
-		const { result } = renderHook(() => useAssignFolder(), { wrapper: wrapperFactory(client) });
-
-		await act(async () => {
-			try {
-				await result.current.mutateAsync({ id: "i1", folderId: "bad-id" });
-			} catch {}
-		});
-
-		const data = queryClient.getQueryData<{ pages: Array<{ items: ProcurementItem[] }> }>([
-			"items",
-			{ q: undefined, status: undefined, deviation: undefined, folder: undefined, sort: undefined, dir: undefined },
-		]);
-		expect(data?.pages[0].items[0].folderId).toBeNull();
 		expect(toast.error).toHaveBeenCalled();
 	});
 });

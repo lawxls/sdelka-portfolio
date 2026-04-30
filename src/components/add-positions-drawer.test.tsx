@@ -536,7 +536,11 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		expect(screen.getByLabelText("Дней отсрочки")).toHaveValue(30);
 	});
 
-	test("submit with populated Step 2 + price emits currentSupplier", async () => {
+	test("submit with populated Step 2 does not emit currentSupplier on items", async () => {
+		// Schema migration (#261): currentSupplier moved off ProcurementItem onto
+		// the parent ProcurementInquiry. Step 2 captures the supplier in the form
+		// state but it routes to the tender via the slice-#8 CreateTenderDrawer
+		// flow, not onto the per-position payload.
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -554,13 +558,7 @@ describe("AddPositionsDrawer — Step 2 supplier form", () => {
 		await create(user);
 
 		const [items] = onSubmit.mock.calls[0];
-		expect(items[0].currentSupplier).toEqual({
-			companyName: "МеталлТрейд",
-			inn: "1234567890",
-			paymentType: "deferred",
-			deferralDays: 30,
-			pricePerUnit: 1200,
-		});
+		expect(items[0]).not.toHaveProperty("currentSupplier");
 	});
 
 	test("dirty detection fires when only Step 2 fields touched", async () => {
@@ -732,9 +730,10 @@ describe("AddPositionsDrawer — submit", () => {
 		expect(items[0]).toMatchObject({
 			name: "Арматура А500С",
 			paymentType: "prepayment",
-			paymentMethod: "bank_transfer",
 		});
-		expect(items[0].deliveryAddresses).toEqual(["г. Москва, ул. Ленина, д. 15"]);
+		// Schema migration (#261): paymentMethod and deliveryAddresses are tender-level.
+		expect(items[0]).not.toHaveProperty("paymentMethod");
+		expect(items[0]).not.toHaveProperty("deliveryAddresses");
 	});
 
 	test("submit invokes onSubmit and closes drawer without firing its own toast", async () => {
@@ -782,6 +781,11 @@ describe("AddPositionsDrawer — submit", () => {
 		await create(user);
 
 		const [items] = onSubmit.mock.calls[0];
+		// Schema migration (#261): wizard captures tender meta in form state but
+		// emits only per-position fields onto the items payload. Tender meta
+		// (unloading, paymentMethod, sampleRequired, analoguesAllowed,
+		// additionalInfo) is dropped here; the slice-#8 CreateTenderDrawer
+		// dispatches an atomic create-with-tender that consumes it.
 		expect(items[0]).toMatchObject({
 			name: "Цемент М500",
 			description: "Портландцемент",
@@ -789,13 +793,13 @@ describe("AddPositionsDrawer — submit", () => {
 			annualQuantity: 600,
 			quantityPerDelivery: 50,
 			currentPrice: 1200,
-			unloading: "supplier",
-			paymentMethod: "cash",
 			paymentType: "deferred",
-			sampleRequired: true,
-			analoguesAllowed: true,
-			additionalInfo: "Срочно",
 		});
+		expect(items[0]).not.toHaveProperty("unloading");
+		expect(items[0]).not.toHaveProperty("paymentMethod");
+		expect(items[0]).not.toHaveProperty("sampleRequired");
+		expect(items[0]).not.toHaveProperty("analoguesAllowed");
+		expect(items[0]).not.toHaveProperty("additionalInfo");
 	});
 
 	test("step 2/3 placeholders do not contribute to payload on skip", async () => {

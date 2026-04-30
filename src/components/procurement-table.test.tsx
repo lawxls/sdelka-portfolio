@@ -30,8 +30,6 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 55000,
 		bestPrice: 50000,
 		averagePrice: 52000,
-		folderId: null,
-		companyId: "company-1",
 	},
 	{
 		id: "2",
@@ -41,8 +39,6 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 30000,
 		bestPrice: 35000,
 		averagePrice: 32000,
-		folderId: null,
-		companyId: "company-1",
 	},
 	{
 		id: "3",
@@ -52,8 +48,6 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 8000,
 		bestPrice: null,
 		averagePrice: null,
-		folderId: null,
-		companyId: "company-1",
 	},
 	{
 		id: "4",
@@ -63,8 +57,6 @@ const mockItems: ProcurementItem[] = [
 		currentPrice: 1850,
 		bestPrice: null,
 		averagePrice: null,
-		folderId: null,
-		companyId: "company-1",
 	},
 ];
 
@@ -328,45 +320,57 @@ const testFolders: Folder[] = [
 	{ id: "f-2", name: "Стройматериалы", color: "green" },
 ];
 
-const itemsWithFolders: ProcurementItem[] = [
-	{ ...mockItems[0], folderId: "f-1" },
-	{ ...mockItems[1], folderId: null },
-	{ ...mockItems[2], folderId: "f-2" },
+const itemsWithTenders: ProcurementItem[] = [
+	{ ...mockItems[0], tenderId: "T-1" },
+	{ ...mockItems[1], tenderId: "T-no-folder" },
+	{ ...mockItems[2], tenderId: "T-2" },
 ];
 
+const tenderMap = {
+	"T-1": { companyId: "company-1", folderId: "f-1" },
+	"T-no-folder": { companyId: "company-1", folderId: null },
+	"T-2": { companyId: "company-1", folderId: "f-2" },
+};
+
 describe("ProcurementTable folder badges", () => {
-	test("renders folder badge for items with folderId", () => {
-		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+	test("renders folder badge for items whose parent tender has a folder", () => {
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+		);
 		const badge = screen.getByTestId("folder-badge-1");
 		expect(badge).toBeInTheDocument();
 		expect(badge.textContent).toContain("Металлопрокат");
 	});
 
-	test("does not render badge for items without folderId", () => {
-		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+	test("does not render badge when parent tender has no folder", () => {
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+		);
 		expect(screen.queryByTestId("folder-badge-2")).not.toBeInTheDocument();
 	});
 
 	test("badge shows correct folder color", () => {
-		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} folders={testFolders} />);
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+		);
 		const badge = screen.getByTestId("folder-badge-1");
 		const dot = badge.querySelector("span[aria-hidden]") as HTMLElement;
 		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
 	});
 
-	test("does not render badges when folders prop is omitted", () => {
-		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithFolders} />);
+	test("does not render badges when tenderMap prop is omitted", () => {
+		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} />);
 		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
 	});
 });
 
 const contextMenuProps = {
 	...defaultProps,
-	items: itemsWithFolders,
+	items: itemsWithTenders,
 	folders: testFolders,
+	tenderMap,
 	onDeleteItem: vi.fn(),
 	onRenameItem: vi.fn(),
-	onAssignFolder: vi.fn(),
 };
 
 describe("ProcurementTable context menu", () => {
@@ -385,19 +389,8 @@ describe("ProcurementTable context menu", () => {
 		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
 		const row = screen.getByTestId("row-1");
 		fireEvent.contextMenu(row);
-		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
-	});
-
-	test("folder assignment submenu shows folders", () => {
-		renderWithTooltip(<ProcurementTable {...contextMenuProps} />);
-		fireEvent.contextMenu(screen.getByTestId("row-1"));
-
-		// Hover over submenu trigger to open it
-		fireEvent.click(screen.getByText("Переместить в категорию"));
-
-		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 
 	test("clicking delete opens AlertDialog", () => {
@@ -434,12 +427,12 @@ describe("ProcurementTable context menu", () => {
 	});
 
 	test("clicking Переименовать shows inline input", async () => {
-		// Render without onAssignFolder to isolate rename from submenu
 		renderWithTooltip(
 			<ProcurementTable
 				{...defaultProps}
-				items={itemsWithFolders}
+				items={itemsWithTenders}
 				folders={testFolders}
+				tenderMap={tenderMap}
 				onRenameItem={vi.fn()}
 				onDeleteItem={vi.fn()}
 			/>,
@@ -507,7 +500,6 @@ describe("ProcurementTable responsive card/table switch", () => {
 				isMobile
 				onDeleteItem={() => {}}
 				onRenameItem={() => {}}
-				onAssignFolder={() => {}}
 				folders={testFolders}
 			/>,
 		);

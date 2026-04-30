@@ -9,19 +9,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 1_240,
 	bestPrice: 1_145,
 	averagePrice: 1_325,
-	folderId: "folder-fillings",
-	companyId: "company-1",
 	unit: "м²",
 	quantityPerDelivery: 1500,
 	paymentType: "prepayment",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	sampleRequired: true,
-	additionalInfo:
-		"Плита из латексированной кокосовой койры, толщина 20 мм, плотность 80 кг/м³. Импорт — Шри-Ланка / Индия. Без запаха.",
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

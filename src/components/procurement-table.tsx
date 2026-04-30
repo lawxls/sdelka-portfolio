@@ -6,7 +6,6 @@ import {
 	ArrowUp,
 	ArrowUpDown,
 	Building2,
-	FolderInput,
 	Inbox,
 	LoaderCircle,
 	Pencil,
@@ -25,13 +24,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
 	ContextMenu,
-	ContextMenuCheckboxItem,
 	ContextMenuContent,
 	ContextMenuItem,
 	ContextMenuSeparator,
-	ContextMenuSub,
-	ContextMenuSubContent,
-	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,6 +106,10 @@ function SortableHeaderButton({
 interface ProcurementTableProps {
 	items: ProcurementItem[];
 	folders?: Folder[];
+	/** Map of tender id → category + company derived from the parent tender.
+	 * After the schema migration items reference only `tenderId`; the table
+	 * looks up category badge / company name through this map. */
+	tenderMap?: Record<string, { companyId: string; folderId: string | null }>;
 	sort: SortState | null;
 	hasNextPage: boolean;
 	loadMore: () => void;
@@ -118,7 +117,6 @@ interface ProcurementTableProps {
 	onRowClick?: (item: ProcurementItem) => void;
 	onDeleteItem?: (id: string) => void;
 	onRenameItem?: (id: string, name: string) => void;
-	onAssignFolder?: (itemId: string, folderId: string | null) => void;
 	onArchiveItem?: (id: string, isArchived: boolean) => void;
 	isArchiveView?: boolean;
 	isLoading?: boolean;
@@ -133,6 +131,7 @@ interface ProcurementTableProps {
 export function ProcurementTable({
 	items,
 	folders,
+	tenderMap,
 	sort,
 	hasNextPage,
 	loadMore,
@@ -140,7 +139,6 @@ export function ProcurementTable({
 	onRowClick,
 	onDeleteItem,
 	onRenameItem,
-	onAssignFolder,
 	onArchiveItem,
 	isArchiveView,
 	isLoading,
@@ -164,7 +162,15 @@ export function ProcurementTable({
 		}
 		return map;
 	}, [folders]);
-	const hasContextMenu = !!(onDeleteItem || onRenameItem || onAssignFolder || onArchiveItem);
+	const hasContextMenu = !!(onDeleteItem || onRenameItem || onArchiveItem);
+	function tenderFolderId(item: ProcurementItem): string | null {
+		if (!item.tenderId) return null;
+		return tenderMap?.[item.tenderId]?.folderId ?? null;
+	}
+	function tenderCompanyId(item: ProcurementItem): string | undefined {
+		if (!item.tenderId) return undefined;
+		return tenderMap?.[item.tenderId]?.companyId;
+	}
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 	const [optimisticNames, setOptimisticNames] = useState<Record<string, string>>({});
@@ -226,23 +232,25 @@ export function ProcurementTable({
 					)}
 					{!isLoading && !error && items.length > 0 && (
 						<div className="flex flex-col gap-3 p-4">
-							{items.map((item, index) => (
-								<ProcurementCard
-									key={item.id}
-									item={item}
-									folder={item.folderId ? folderMap[item.folderId] : undefined}
-									folders={folders}
-									index={index}
-									onRowClick={onRowClick}
-									onDeleteItem={onDeleteItem}
-									onRenameItem={onRenameItem}
-									onAssignFolder={onAssignFolder}
-									onArchiveItem={onArchiveItem}
-									isArchiveView={isArchiveView}
-									companyName={companyMap?.[item.companyId]}
-									showCompanyBadge={showCompanyBadge}
-								/>
-							))}
+							{items.map((item, index) => {
+								const folderId = tenderFolderId(item);
+								const companyId = tenderCompanyId(item);
+								return (
+									<ProcurementCard
+										key={item.id}
+										item={item}
+										folder={folderId ? folderMap[folderId] : undefined}
+										index={index}
+										onRowClick={onRowClick}
+										onDeleteItem={onDeleteItem}
+										onRenameItem={onRenameItem}
+										onArchiveItem={onArchiveItem}
+										isArchiveView={isArchiveView}
+										companyName={companyId ? companyMap?.[companyId] : undefined}
+										showCompanyBadge={showCompanyBadge}
+									/>
+								);
+							})}
 						</div>
 					)}
 					{hasNextPage && <div ref={sentinelRef} data-testid="scroll-sentinel" className="h-px" />}
@@ -333,7 +341,10 @@ export function ProcurementTable({
 								const dev = formatDeviation(deviation);
 								const displayStatus = getDisplayStatus(item);
 								const status = STATUS_CONFIG[displayStatus];
-								const folder = item.folderId ? folderMap[item.folderId] : undefined;
+								const folderId = tenderFolderId(item);
+								const folder = folderId ? folderMap[folderId] : undefined;
+								const companyId = tenderCompanyId(item);
+								const companyName = companyId ? companyMap?.[companyId] : undefined;
 								const isEditing = editingItemId === item.id;
 								const rowCls = onRowClick && !isEditing ? "cursor-pointer group" : "group";
 								const displayName = optimisticNames[item.id] ?? item.name;
@@ -354,13 +365,13 @@ export function ProcurementTable({
 										<div className="max-w-[350px]">
 											<div className="flex items-center gap-2 min-w-0">
 												<TruncatedName name={displayName} className="truncate" />
-												{showCompanyBadge && companyMap?.[item.companyId] && (
+												{showCompanyBadge && companyName && (
 													<div
 														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
 														data-testid={`company-badge-${item.id}`}
 													>
 														<Building2 className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-														<span className="text-xs text-muted-foreground">{companyMap[item.companyId]}</span>
+														<span className="text-xs text-muted-foreground">{companyName}</span>
 													</div>
 												)}
 												{!showCompanyBadge && folder && !isArchiveView && (
@@ -435,48 +446,11 @@ export function ProcurementTable({
 													Переименовать
 												</ContextMenuItem>
 											)}
-											{onAssignFolder && folders && !isArchiveView && (
-												<ContextMenuSub>
-													<ContextMenuSubTrigger>
-														<FolderInput className="size-3.5" />
-														Переместить в категорию
-													</ContextMenuSubTrigger>
-													<ContextMenuSubContent>
-														{folders.map((f) => (
-															<ContextMenuCheckboxItem
-																key={f.id}
-																checked={item.folderId === f.id}
-																onCheckedChange={() => onAssignFolder(item.id, f.id)}
-															>
-																<span
-																	className="size-2 shrink-0 rounded-full"
-																	style={{
-																		backgroundColor: `var(--folder-${f.color})`,
-																	}}
-																	aria-hidden="true"
-																/>
-																{f.name}
-															</ContextMenuCheckboxItem>
-														))}
-														<ContextMenuSeparator />
-														<ContextMenuCheckboxItem
-															checked={item.folderId == null}
-															onCheckedChange={() => onAssignFolder(item.id, null)}
-														>
-															<Inbox className="size-3.5" />
-															Без категории
-														</ContextMenuCheckboxItem>
-														{onArchiveItem && (
-															<>
-																<ContextMenuSeparator />
-																<ContextMenuItem onSelect={() => onArchiveItem(item.id, true)}>
-																	<Archive className="size-3.5" />
-																	Архив
-																</ContextMenuItem>
-															</>
-														)}
-													</ContextMenuSubContent>
-												</ContextMenuSub>
+											{onArchiveItem && !isArchiveView && (
+												<ContextMenuItem onSelect={() => onArchiveItem(item.id, true)}>
+													<Archive className="size-3.5" />
+													Архив
+												</ContextMenuItem>
 											)}
 											{onArchiveItem && isArchiveView && (
 												<ContextMenuItem onSelect={() => onArchiveItem(item.id, false)}>

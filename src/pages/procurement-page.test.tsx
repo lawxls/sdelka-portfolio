@@ -10,8 +10,9 @@ import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import type { Company, Folder, ProcurementItem } from "@/data/types";
+import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
 
@@ -29,13 +30,31 @@ const MULTI_COMPANIES: Company[] = [
 const SINGLE_COMPANY: Company[] = [makeCompanyDetail("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 })];
 
 const ITEMS_C1: ProcurementItem[] = [
-	makeItem("i1", { name: "Труба стальная", companyId: "c1", folderId: "f1" }),
-	makeItem("i2", { name: "Швеллер", companyId: "c1", folderId: null }),
+	makeItem("i1", { name: "Труба стальная", tenderId: "T-c1-f1" }),
+	makeItem("i2", { name: "Швеллер", tenderId: "T-c1-no-folder" }),
 ];
 
-const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", companyId: "c2", folderId: null })];
+const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", tenderId: "T-c2-no-folder" })];
 
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
+
+function makeTender(id: string, companyId: string, folderId: string | null = null): ProcurementInquiry {
+	return {
+		id,
+		name: `Tender ${id}`,
+		companyId,
+		folderId,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	};
+}
+
+const TEST_TENDERS: ProcurementInquiry[] = [
+	makeTender("T-c1-f1", "c1", "f1"),
+	makeTender("T-c1-no-folder", "c1"),
+	makeTender("T-c2-no-folder", "c2"),
+];
 
 let queryClient: QueryClient;
 let companies: Company[];
@@ -53,6 +72,7 @@ function renderPage(initialEntries?: string[]) {
 				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
 				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
 			}}
 		>

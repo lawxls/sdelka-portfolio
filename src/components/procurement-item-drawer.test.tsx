@@ -14,8 +14,10 @@ import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
 import { ORMATEK_SUPPLIERS } from "@/data/seeds/suppliers-ormatek";
+import { SEED_TENDERS } from "@/data/seeds/tenders";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
 import { TestClientsProvider } from "@/data/test-clients-provider";
@@ -50,15 +52,7 @@ const TEST_ITEM: ProcurementItem = {
 	currentPrice: 1776,
 	bestPrice: null,
 	averagePrice: null,
-	folderId: "folder-packaging",
-	companyId: "company-1",
-	currentSupplier: {
-		companyName: "ПолимерПром",
-		inn: "6164012345",
-		paymentType: "prepayment",
-		deferralDays: 0,
-		pricePerUnit: 1776,
-	},
+	tenderId: "T-001",
 };
 
 let queryClient: QueryClient;
@@ -77,6 +71,7 @@ function renderDrawer(initialEntries: string[] = ["/positions?item=item-1"]) {
 				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
 				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: SEED_TENDERS }),
 				folders: createInMemoryFoldersClient(),
 			}}
 		>
