@@ -26,6 +26,8 @@ export function createHttpTendersClient(http: HttpClient = defaultHttpClient): T
 		get: (id) => http.get<ProcurementInquiry>(`/api/tenders/${enc(id)}`),
 		create: (input: CreateTenderInput) => http.post<ProcurementInquiry>(`/api/tenders`, { body: input }),
 		update: (id, patch) => http.patch<ProcurementInquiry>(`/api/tenders/${enc(id)}`, { body: patch }),
+		archive: (id, isArchived) =>
+			http.post<ProcurementInquiry>(`/api/tenders/${enc(id)}/archive`, { body: { isArchived } }),
 		delete: (id) => http.delete<void>(`/api/tenders/${enc(id)}`),
 	};
 }

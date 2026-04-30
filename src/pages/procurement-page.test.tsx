@@ -174,57 +174,13 @@ describe("ProcurementPage — item drawer", () => {
 	});
 });
 
-describe("ProcurementPage — archive toggle", () => {
-	test("archive button appears between filters and download", async () => {
+describe("ProcurementPage — no archive toggle", () => {
+	test("does not render an archive toggle button", async () => {
 		setupHandlers(SINGLE_COMPANY);
 		renderPage();
 		await waitForToolbar();
 
-		const filters = screen.getByRole("button", { name: "Фильтры" });
-		const archive = screen.getByRole("button", { name: "Архив" });
-		const download = screen.getByRole("button", { name: "Скачать таблицу" });
-
-		expect(filters.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-	});
-
-	test("toggle off-state has aria-pressed=false and no folder param", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage();
-		await waitForToolbar();
-
-		const archive = screen.getByRole("button", { name: "Архив" });
-		expect(archive).toHaveAttribute("aria-pressed", "false");
-	});
-
-	test("clicking sets folder=archive and aria-pressed=true", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage();
-		await waitForToolbar();
-
-		const user = userEvent.setup();
-		const archive = screen.getByRole("button", { name: "Архив" });
-		await user.click(archive);
-
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "true");
-		});
-	});
-
-	test("clicking while in archive view clears folder param", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/positions?folder=archive"]);
-		await waitForToolbar();
-
-		const archive = screen.getByRole("button", { name: "Архив" });
-		expect(archive).toHaveAttribute("aria-pressed", "true");
-
-		const user = userEvent.setup();
-		await user.click(archive);
-
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "false");
-		});
+		expect(screen.queryByRole("button", { name: "Архив" })).not.toBeInTheDocument();
 	});
 });
 
@@ -331,15 +287,6 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Без категории");
-		});
-	});
-
-	test("renders 'Архив' chip when folder=archive", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/positions?folder=archive"]);
-
-		await waitFor(() => {
-			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Архив");
 		});
 	});
 });

@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useItemsClient, useSuppliersClient, useTendersClient } from "../clients-context";
+import { invalidateAfterItemListChange } from "../invalidation-policies";
 import { invalidateSupplierLists } from "../use-suppliers";
-import { selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
+import { archiveTenderCascade, selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
 
 export function useSelectSupplierForItem() {
 	const items = useItemsClient();
@@ -15,6 +17,22 @@ export function useSelectSupplierForItem() {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["tenders"] });
 			invalidateSupplierLists(queryClient, itemId);
+		},
+	});
+}
+
+export function useArchiveTenderCascade() {
+	const tenders = useTendersClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) =>
+			archiveTenderCascade(id, isArchived, { tenders }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			invalidateAfterItemListChange(queryClient);
+		},
+		onError: () => {
+			toast.error("Не удалось переместить тендер");
 		},
 	});
 }

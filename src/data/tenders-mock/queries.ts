@@ -18,10 +18,18 @@ export interface TenderSummary {
 	kpCount: number;
 }
 
+/** "Все" (default — exclude archived) | "просрочены" | "ближайшие 7 дней". */
+export type DeadlineFilter = "all" | "overdue" | "soon";
+
 export interface ListTendersParams {
 	q?: string;
 	company?: string;
+	/** Folder id (`folder-*`), `"none"` for tenders without a folder, or
+	 * `"archive"` for the archive view. The non-archive view always excludes
+	 * archived tenders. */
 	folder?: string;
+	status?: TenderStatus;
+	deadline?: DeadlineFilter;
 	cursor?: string;
 	limit?: number;
 }
@@ -61,12 +69,40 @@ function summarize(tender: ProcurementInquiry, allItems: readonly ProcurementIte
 	};
 }
 
-function applyFilters(tenders: ProcurementInquiry[], params: ListTendersParams): ProcurementInquiry[] {
+function matchesFolder(tender: ProcurementInquiry, folder: string | undefined): boolean {
+	if (folder === "archive") return tender.isArchived === true;
+	if (tender.isArchived === true) return false;
+	if (folder === undefined || folder === "all") return true;
+	if (folder === "none") return tender.folderId === null;
+	return tender.folderId === folder;
+}
+
+function matchesDeadline(tender: ProcurementInquiry, filter: DeadlineFilter | undefined, now: Date): boolean {
+	if (!filter || filter === "all") return true;
+	const deadline = new Date(tender.deadline);
+	if (Number.isNaN(deadline.getTime())) return false;
+	if (filter === "overdue") return deadline.getTime() < now.getTime();
+	const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+	const diff = deadline.getTime() - now.getTime();
+	return diff >= 0 && diff <= sevenDaysMs;
+}
+
+function applyFilters(
+	tenders: ProcurementInquiry[],
+	params: ListTendersParams,
+	allItems: readonly ProcurementItem[],
+	now: Date,
+): ProcurementInquiry[] {
 	const q = params.q?.trim().toLowerCase();
 	return tenders.filter((t) => {
+		if (!matchesFolder(t, params.folder)) return false;
 		if (params.company && t.companyId !== params.company) return false;
-		if (params.folder && t.folderId !== params.folder) return false;
 		if (q && !t.name.toLowerCase().includes(q)) return false;
+		if (!matchesDeadline(t, params.deadline, now)) return false;
+		if (params.status) {
+			const status = getTenderStatus(itemsForTender(t.id, allItems));
+			if (status !== params.status) return false;
+		}
 		return true;
 	});
 }
@@ -81,7 +117,7 @@ export async function fetchTendersListMock(params: ListTendersParams): Promise<{
 }> {
 	await delay();
 	const allItems = _getAllItems();
-	const filtered = sortByCreatedAtDesc(applyFilters(readTenders(), params));
+	const filtered = sortByCreatedAtDesc(applyFilters(readTenders(), params, allItems, new Date()));
 	const page = paginate({ items: filtered, cursor: params.cursor, limit: params.limit, getId: (t) => t.id });
 	return {
 		items: page.items.map((t) => summarize(t, allItems)),

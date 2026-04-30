@@ -1,7 +1,7 @@
 import { delay, nextId, paginate } from "./mock-utils";
 import { SEED_ARCHIVED, SEED_ITEMS } from "./seeds/items";
 import { _addYourSupplier } from "./supplier-mock-data";
-import { _getTender } from "./tenders-mock/store";
+import { _getTender, _isTenderArchived } from "./tenders-mock/store";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "./types";
 
@@ -72,6 +72,12 @@ function tenderCompanyId(item: ProcurementItem): string | null {
 	return _getTender(item.tenderId)?.companyId ?? null;
 }
 
+function isEffectivelyArchived(item: ProcurementItem): boolean {
+	if (archivedIds.has(item.id)) return true;
+	if (item.tenderId && _isTenderArchived(item.tenderId)) return true;
+	return false;
+}
+
 function matchesFolder(item: ProcurementItem, folder: string | undefined, archived: boolean): boolean {
 	if (folder === "archive") return archived;
 	if (archived) return false;
@@ -97,7 +103,7 @@ function matchesStatus(item: ProcurementItem, status: string | undefined): boole
 function applyFilters(items: ProcurementItem[], params: FilterParams): ProcurementItem[] {
 	const q = params.q?.trim().toLowerCase();
 	return items.filter((item) => {
-		if (!matchesFolder(item, params.folder, archivedIds.has(item.id))) return false;
+		if (!matchesFolder(item, params.folder, isEffectivelyArchived(item))) return false;
 		if (params.company && tenderCompanyId(item) !== params.company) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
@@ -253,12 +259,13 @@ export async function exportItemsMock(
 
 // --- Filter helpers for folder stats (used by folders-mock-data) ---
 
-/** Group active items by their parent tender's folder. Items with no tender —
- * or whose tender has no folder — fall into the `null` bucket. */
+/** Group active items by their parent tender's folder. Items whose parent
+ * tender is archived (or item itself archived) are excluded. Items with no
+ * tender — or whose tender has no folder — fall into the `null` bucket. */
 export function _statsByFolder(company?: string): Map<string | null, number> {
 	const counts = new Map<string | null, number>();
 	for (const item of itemsStore) {
-		if (archivedIds.has(item.id)) continue;
+		if (isEffectivelyArchived(item)) continue;
 		const tender = item.tenderId ? _getTender(item.tenderId) : null;
 		if (company && tender?.companyId !== company) continue;
 		const folderId = tender?.folderId ?? null;
@@ -268,13 +275,14 @@ export function _statsByFolder(company?: string): Map<string | null, number> {
 }
 
 export function _archivedCount(company?: string): number {
-	if (!company) return archivedIds.size;
 	let count = 0;
-	for (const id of archivedIds) {
-		const item = itemsStore.find((i) => i.id === id);
-		if (!item?.tenderId) continue;
-		const tender = _getTender(item.tenderId);
-		if (tender?.companyId === company) count += 1;
+	for (const item of itemsStore) {
+		if (!isEffectivelyArchived(item)) continue;
+		if (company) {
+			const tender = item.tenderId ? _getTender(item.tenderId) : null;
+			if (tender?.companyId !== company) continue;
+		}
+		count += 1;
 	}
 	return count;
 }

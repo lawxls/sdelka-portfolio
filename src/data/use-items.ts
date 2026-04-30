@@ -155,24 +155,6 @@ export function useDeleteItem() {
 	});
 }
 
-export function useArchiveItem() {
-	const client = useItemsClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => client.archive(id, isArchived),
-		onMutate: ({ id }) =>
-			applyOptimistic(queryClient, [
-				{ queryKey: keys.items.all(), prefix: true, update: itemsListPages.removeById(id) },
-			]),
-		onError: (_err, _vars, context) => {
-			rollbackOptimistic(queryClient, context);
-			toast.error("Не удалось переместить закупку");
-		},
-		onSettled: () => invalidateAfterItemListChange(queryClient),
-	});
-}
-
 export function useExportItems() {
 	const client = useItemsClient();
 	return useMutation({

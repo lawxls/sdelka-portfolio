@@ -132,6 +132,10 @@ export interface ProcurementInquiry {
 	/** Required deadline ISO date (YYYY-MM-DD or full ISO). */
 	deadline: string;
 	createdAt: string;
+	/** Archive flag — archiving cascades to items: archived tender's items
+	 * disappear from /positions non-archive views (see archiveTenderCascade
+	 * operation). */
+	isArchived?: boolean;
 	currentSupplier?: CurrentSupplier;
 	addressIds?: string[];
 	unloading?: UnloadingType;

@@ -37,6 +37,13 @@ export function _getTender(id: string): ProcurementInquiry | null {
 	return tender ? cloneTender(tender) : null;
 }
 
+/** Cross-entity helper: is the parent tender archived? Items-in-memory uses
+ * this to cascade archive into the positions list — items belonging to an
+ * archived tender disappear from non-archive views. */
+export function _isTenderArchived(tenderId: string): boolean {
+	return tendersStore.find((t) => t.id === tenderId)?.isArchived === true;
+}
+
 export function _resetTendersStore(): void {
 	seedStore();
 }

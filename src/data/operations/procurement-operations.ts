@@ -2,6 +2,7 @@ import type { ItemsClient } from "../clients/items-client";
 import type { SuppliersClient } from "../clients/suppliers-client";
 import type { TendersClient } from "../clients/tenders-client";
 import { NotFoundError } from "../errors";
+import type { ProcurementInquiry } from "../types";
 
 /**
  * Single public seam for cross-entity domain rules in the procurement
@@ -86,4 +87,22 @@ export async function setCurrentSupplierFromQuote(
 	if (tco != null && tco !== item.currentPrice) {
 		await items.update(itemId, { currentPrice: tco });
 	}
+}
+
+/**
+ * Tender-level archive that cascades into items. Flips the tender's
+ * `isArchived` flag; the in-memory items adapter then hides the tender's
+ * items from /positions non-archive views by joining through
+ * `_isTenderArchived`. Restoring (`isArchived=false`) reverses both — items
+ * reappear on /positions, the tender shows up in non-archive views again.
+ *
+ * No per-item write happens here; the cascade is read-time, so state can
+ * never drift between the tender flag and the items' visibility.
+ */
+export async function archiveTenderCascade(
+	id: string,
+	isArchived: boolean,
+	{ tenders }: Pick<ProcurementOperationsContext, "tenders">,
+): Promise<ProcurementInquiry> {
+	return tenders.archive(id, isArchived);
 }

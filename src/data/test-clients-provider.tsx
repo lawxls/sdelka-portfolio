@@ -130,6 +130,7 @@ export function fakeTendersClient(overrides: Partial<TendersClient> = {}): Tende
 		get: notImplemented("get"),
 		create: notImplemented("create"),
 		update: notImplemented("update"),
+		archive: notImplemented("archive"),
 		delete: notImplemented("delete"),
 		...overrides,
 	};

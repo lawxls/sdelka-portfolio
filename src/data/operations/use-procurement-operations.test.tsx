@@ -8,7 +8,11 @@ import type { SuppliersClient } from "../clients/suppliers-client";
 import type { TendersClient } from "../clients/tenders-client";
 import { fakeItemsClient, fakeSuppliersClient, fakeTendersClient, TestClientsProvider } from "../test-clients-provider";
 import type { ProcurementInquiry } from "../types";
-import { useSelectSupplierForItem, useSetCurrentSupplierFromQuote } from "./use-procurement-operations";
+import {
+	useArchiveTenderCascade,
+	useSelectSupplierForItem,
+	useSetCurrentSupplierFromQuote,
+} from "./use-procurement-operations";
 
 let queryClient: QueryClient;
 
@@ -69,6 +73,35 @@ describe("useSelectSupplierForItem", () => {
 		expect(queryClient.getQueryState(["itemDetail", "item-1"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["suppliers", "item-1", {}])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["tenders", { foo: "bar" }])?.isInvalidated).toBe(true);
+	});
+});
+
+describe("useArchiveTenderCascade", () => {
+	it("invalidates tenders + items + folder stats after archiving", async () => {
+		const archive = vi.fn().mockResolvedValue({ id: "T-001", isArchived: true });
+		const tenders = fakeTendersClient({ archive });
+
+		queryClient.setQueryData(["tenders", { foo: "bar" }], { items: [], nextCursor: null });
+		queryClient.setQueryData(["items"], []);
+		queryClient.setQueryData(["items-global"], []);
+		queryClient.setQueryData(["totals"], { itemCount: 0 });
+		queryClient.setQueryData(["folderStats"], {});
+
+		const { result } = renderHook(() => useArchiveTenderCascade(), {
+			wrapper: ({ children }) => (
+				<TestClientsProvider queryClient={queryClient} clients={{ tenders }}>
+					{children}
+				</TestClientsProvider>
+			),
+		});
+		await result.current.mutateAsync({ id: "T-001", isArchived: true });
+
+		expect(archive).toHaveBeenCalledWith("T-001", true);
+		expect(queryClient.getQueryState(["tenders", { foo: "bar" }])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["items-global"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["folderStats"])?.isInvalidated).toBe(true);
 	});
 });
 

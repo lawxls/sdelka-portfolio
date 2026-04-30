@@ -22,7 +22,6 @@ import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
 import {
 	buildFilterParams,
-	useArchiveItem,
 	useCreateItems,
 	useDeleteItem,
 	useExportItems,
@@ -110,11 +109,9 @@ export function ProcurementPage() {
 
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
-	const archiveItemMutation = useArchiveItem();
 	const createItemsMutation = useCreateItems();
 	const exportItemsMutation = useExportItems();
 
-	const isArchiveView = folder === "archive";
 	const isMobile = useIsMobile();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -202,15 +199,6 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleArchiveToggle() {
-		setSearchParams((prev) => {
-			const next = new URLSearchParams(prev);
-			if (next.get("folder") === "archive") next.delete("folder");
-			else next.set("folder", "archive");
-			return next;
-		});
-	}
-
 	function handleClearCompanyFilter() {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -231,9 +219,7 @@ export function ProcurementPage() {
 
 	let folderChipLabel: string | undefined;
 	let folderChipColor: string | undefined;
-	if (folder === "archive") {
-		folderChipLabel = "Архив";
-	} else if (folder === "none") {
+	if (folder === "none") {
 		folderChipLabel = "Без категории";
 	} else if (folder) {
 		const f = folders.find((ff) => ff.id === folder);
@@ -251,8 +237,6 @@ export function ProcurementPage() {
 			onSort={handleSort}
 			onAddPositions={() => setDialogOpen(true)}
 			onExport={handleExport}
-			isArchiveView={isArchiveView}
-			onArchiveToggle={handleArchiveToggle}
 			folders={folders}
 			folderCounts={counts}
 			foldersLoading={foldersLoading || statsLoading}
@@ -318,8 +302,6 @@ export function ProcurementPage() {
 					onRowClick={handleRowClick}
 					onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 					onDeleteItem={(id) => deleteItemMutation.mutate(id)}
-					onArchiveItem={(id, isArchived) => archiveItemMutation.mutate({ id, isArchived })}
-					isArchiveView={isArchiveView}
 					isLoading={itemsLoading}
 					isFetchingNextPage={isFetchingNextPage}
 					error={itemsError}

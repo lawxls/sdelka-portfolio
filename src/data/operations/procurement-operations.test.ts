@@ -1,9 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeItem, makeSupplier } from "@/test-utils";
+import { createInMemoryItemsClient } from "../clients/items-in-memory";
+import { createInMemoryTendersClient } from "../clients/tenders-in-memory";
 import { NotFoundError } from "../errors";
+import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import { fakeItemsClient, fakeSuppliersClient, fakeTendersClient } from "../test-clients-provider";
 import type { ProcurementInquiry } from "../types";
-import { selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
+import { archiveTenderCascade, selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
 
 /**
  * Layer A — operation tested in isolation against stub clients. Asserts on the
@@ -170,5 +173,66 @@ describe("setCurrentSupplierFromQuote", () => {
 				tenders: fakeTendersClient({ update: vi.fn() }),
 			}),
 		).rejects.toBeInstanceOf(NotFoundError);
+	});
+});
+
+describe("archiveTenderCascade", () => {
+	function makeTenderRecord(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
+		return {
+			id,
+			name: `Tender ${id}`,
+			companyId: "company-1",
+			folderId: null,
+			budget: 0,
+			createdAt: "2026-04-01",
+			deadline: "2026-05-01",
+			...overrides,
+		};
+	}
+
+	beforeEach(() => {
+		_setMockDelay(0, 0);
+	});
+
+	afterEach(() => {
+		_resetMockDelay();
+	});
+
+	it("flips the tender's isArchived flag via tenders.archive", async () => {
+		const archive = vi.fn().mockResolvedValue(makeTenderRecord("T-001", { isArchived: true }));
+		const result = await archiveTenderCascade("T-001", true, {
+			tenders: fakeTendersClient({ archive }),
+		});
+		expect(archive).toHaveBeenCalledWith("T-001", true);
+		expect(result.isArchived).toBe(true);
+	});
+
+	it("cascade hides items belonging to the archived tender from non-archive item lists", async () => {
+		const tenders = createInMemoryTendersClient({
+			seed: [makeTenderRecord("T-100"), makeTenderRecord("T-200")],
+		});
+		const items = createInMemoryItemsClient({
+			seed: [
+				makeItem("i-100-a", { tenderId: "T-100" }),
+				makeItem("i-100-b", { tenderId: "T-100" }),
+				makeItem("i-200-a", { tenderId: "T-200" }),
+			],
+		});
+
+		const before = await items.list({});
+		expect(before.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b", "i-200-a"]);
+
+		await archiveTenderCascade("T-100", true, { tenders });
+
+		const after = await items.list({});
+		expect(after.items.map((i) => i.id)).toEqual(["i-200-a"]);
+
+		const archiveView = await items.list({ folder: "archive" });
+		expect(archiveView.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b"]);
+
+		await archiveTenderCascade("T-100", false, { tenders });
+
+		const restored = await items.list({});
+		expect(restored.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b", "i-200-a"]);
 	});
 });

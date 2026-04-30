@@ -61,6 +61,17 @@ export function createInMemoryTendersClient(options?: InMemoryTendersOptions): T
 			}
 		},
 
+		async archive(id: string, isArchived: boolean): Promise<ProcurementInquiry> {
+			try {
+				return await updateTenderMock(id, { isArchived });
+			} catch (err) {
+				if (err instanceof Error && err.message.includes("not found")) {
+					throw new NotFoundError({ id });
+				}
+				throw err;
+			}
+		},
+
 		async delete(id: string): Promise<void> {
 			try {
 				await deleteTenderMock(id);

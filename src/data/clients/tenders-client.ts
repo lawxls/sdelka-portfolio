@@ -21,5 +21,6 @@ export interface TendersClient {
 	get(id: string): Promise<ProcurementInquiry>;
 	create(input: CreateTenderInput): Promise<ProcurementInquiry>;
 	update(id: string, patch: Partial<ProcurementInquiry>): Promise<ProcurementInquiry>;
+	archive(id: string, isArchived: boolean): Promise<ProcurementInquiry>;
 	delete(id: string): Promise<void>;
 }

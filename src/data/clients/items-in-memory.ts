@@ -15,7 +15,7 @@ import { NotFoundError } from "../errors";
 import { _getAllItems, _getItem, _isArchived, _patchItem, _setItems } from "../items-mock-data";
 import { delay, nextId, paginate } from "../mock-utils";
 import { _addYourSupplier } from "../supplier-mock-data";
-import { _getTender } from "../tenders-mock/store";
+import { _getTender, _isTenderArchived } from "../tenders-mock/store";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, type ProcurementStatus } from "../types";
 import type { ItemsClient } from "./items-client";
 
@@ -27,6 +27,12 @@ function tenderFolderId(item: ProcurementItem): string | null {
 function tenderCompanyId(item: ProcurementItem): string | null {
 	if (!item.tenderId) return null;
 	return _getTender(item.tenderId)?.companyId ?? null;
+}
+
+function isEffectivelyArchived(item: ProcurementItem, itemArchived: boolean): boolean {
+	if (itemArchived) return true;
+	if (item.tenderId && _isTenderArchived(item.tenderId)) return true;
+	return false;
 }
 
 function matchesFolder(item: ProcurementItem, folder: string | undefined, archived: boolean): boolean {
@@ -54,7 +60,8 @@ function matchesStatus(item: ProcurementItem, status: string | undefined): boole
 function applyFilters(items: ProcurementItem[], params: ListItemsParams): ProcurementItem[] {
 	const q = params.q?.trim().toLowerCase();
 	return items.filter((item) => {
-		if (!matchesFolder(item, params.folder, _isArchived(item.id))) return false;
+		const archived = isEffectivelyArchived(item, _isArchived(item.id));
+		if (!matchesFolder(item, params.folder, archived)) return false;
 		if (params.company && tenderCompanyId(item) !== params.company) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
@@ -130,7 +137,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 
 		async listAll(): Promise<ProcurementItem[]> {
 			await delay();
-			return _getAllItems().filter((i) => !_isArchived(i.id));
+			return _getAllItems().filter((i) => !isEffectivelyArchived(i, _isArchived(i.id)));
 		},
 
 		async totals(params: TotalsParams): Promise<Totals> {
