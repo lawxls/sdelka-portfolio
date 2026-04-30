@@ -48,7 +48,8 @@ function makeDetail(id: number, overrides: Partial<WorkspaceEmployeeDetail> = {}
 		permissions: {
 			id: `perm-${id}`,
 			employeeId: id,
-			procurement: "view",
+			tenders: "view",
+			positions: "view",
 			tasks: "view",
 			companies: "none",
 			employees: "none",
@@ -264,7 +265,8 @@ describe("useUpdateWorkspaceEmployeePermissions", () => {
 		const updatePermissions = vi.fn().mockResolvedValue({
 			id: "perm-3",
 			employeeId: 3,
-			procurement: "edit" as const,
+			tenders: "edit" as const,
+			positions: "edit" as const,
 			tasks: "view" as const,
 			companies: "none" as const,
 			employees: "none" as const,
@@ -280,10 +282,10 @@ describe("useUpdateWorkspaceEmployeePermissions", () => {
 		});
 
 		await act(async () => {
-			await result.current.mutateAsync({ id: 3, data: { procurement: "edit" } });
+			await result.current.mutateAsync({ id: 3, data: { tenders: "edit" } });
 		});
 
-		expect(updatePermissions).toHaveBeenCalledWith(3, { procurement: "edit" });
+		expect(updatePermissions).toHaveBeenCalledWith(3, { tenders: "edit" });
 		expect(queryClient.getQueryState(["workspace-employee", 3])?.isInvalidated).toBe(true);
 		// list cache stays fresh — permissions don't surface in the table.
 		expect(queryClient.getQueryState(["workspace-employees"])?.isInvalidated).toBe(false);

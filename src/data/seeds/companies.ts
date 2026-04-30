@@ -45,7 +45,8 @@ export const SEED_COMPANIES: Company[] = [
 				permissions: {
 					id: "perm-c1-1",
 					employeeId: 1,
-					procurement: "edit",
+					tenders: "edit",
+					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
 					employees: "edit",
@@ -65,7 +66,8 @@ export const SEED_COMPANIES: Company[] = [
 				permissions: {
 					id: "perm-c1-2",
 					employeeId: 2,
-					procurement: "edit",
+					tenders: "edit",
+					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
 					employees: "edit",
@@ -85,7 +87,8 @@ export const SEED_COMPANIES: Company[] = [
 				permissions: {
 					id: "perm-c1-3",
 					employeeId: 3,
-					procurement: "edit",
+					tenders: "edit",
+					positions: "edit",
 					tasks: "edit",
 					companies: "view",
 					employees: "view",
@@ -105,7 +108,8 @@ export const SEED_COMPANIES: Company[] = [
 				permissions: {
 					id: "perm-c1-4",
 					employeeId: 4,
-					procurement: "view",
+					tenders: "view",
+					positions: "view",
 					tasks: "view",
 					companies: "view",
 					employees: "none",

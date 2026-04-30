@@ -83,7 +83,8 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 				permissions: {
 					id: `perm-${id}`,
 					employeeId: 1,
-					procurement: "edit",
+					tenders: "edit",
+					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
 					employees: "edit",

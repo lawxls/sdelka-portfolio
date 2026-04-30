@@ -47,7 +47,8 @@ const MOCK_COMPANIES: Company[] = [
 			permissions: {
 				id: `p${i}`,
 				employeeId: i + 1,
-				procurement: "none" as const,
+				tenders: "none" as const,
+				positions: "none" as const,
 				tasks: "none" as const,
 				companies: "none" as const,
 				employees: "none" as const,
@@ -71,7 +72,8 @@ const MOCK_COMPANIES: Company[] = [
 			permissions: {
 				id: `p2-${i}`,
 				employeeId: 100 + i,
-				procurement: "none" as const,
+				tenders: "none" as const,
+				positions: "none" as const,
 				tasks: "none" as const,
 				companies: "none" as const,
 				employees: "none" as const,

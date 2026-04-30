@@ -260,11 +260,12 @@ export interface Address {
 
 export type PermissionLevel = "none" | "view" | "edit";
 
-export const PERMISSION_MODULE_KEYS = ["procurement", "tasks", "companies", "employees", "emails"] as const;
+export const PERMISSION_MODULE_KEYS = ["tenders", "positions", "tasks", "companies", "employees", "emails"] as const;
 export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
 
 export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
-	procurement: "Позиции",
+	tenders: "Тендеры",
+	positions: "Позиции",
 	tasks: "Задачи",
 	companies: "Компании",
 	employees: "Сотрудники",
@@ -274,7 +275,8 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 export interface EmployeePermissions {
 	id: string;
 	employeeId: number;
-	procurement: PermissionLevel;
+	tenders: PermissionLevel;
+	positions: PermissionLevel;
 	tasks: PermissionLevel;
 	companies: PermissionLevel;
 	employees: PermissionLevel;

@@ -40,7 +40,8 @@ export interface UpdateWorkspaceEmployeeData {
 }
 
 export interface UpdatePermissionsData {
-	procurement?: PermissionLevel;
+	tenders?: PermissionLevel;
+	positions?: PermissionLevel;
 	tasks?: PermissionLevel;
 	companies?: PermissionLevel;
 	employees?: PermissionLevel;

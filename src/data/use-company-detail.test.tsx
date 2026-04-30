@@ -235,7 +235,8 @@ describe("useUpdateEmployeePermissions", () => {
 		const updateEmployeePermissions = vi.fn().mockResolvedValue({
 			id: "p1",
 			employeeId: 1,
-			procurement: "edit",
+			tenders: "edit",
+			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
 			employees: "view",
