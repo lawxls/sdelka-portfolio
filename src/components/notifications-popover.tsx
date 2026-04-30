@@ -25,7 +25,7 @@ function resolveNotification(
 	n: Notification,
 	lookups: {
 		itemName: (id: string) => string | undefined;
-		taskName: (id: string) => { name: string; itemName: string } | undefined;
+		taskName: (id: string) => { name: string; tenderName: string } | undefined;
 		supplierName: (id: string) => string | undefined;
 	},
 ): ResolvedNotification {
@@ -46,7 +46,7 @@ function resolveNotification(
 			return {
 				notification: n,
 				title,
-				context: task ? `${task.name} · ${task.itemName}` : null,
+				context: task ? `${task.name} · ${task.tenderName}` : null,
 				href: task ? `/tasks?task=${encodeURIComponent(n.taskId)}` : null,
 			};
 		}
@@ -92,7 +92,7 @@ export function NotificationsPopover() {
 
 	const lookups = useMemo(() => {
 		const itemMap = new Map((itemsQ.data ?? []).map((i) => [i.id, i.name]));
-		const taskMap = new Map((tasksQ.data ?? []).map((t) => [t.id, { name: t.name, itemName: t.item.name }]));
+		const taskMap = new Map((tasksQ.data ?? []).map((t) => [t.id, { name: t.name, tenderName: t.tender.name }]));
 		const supplierMap = new Map((suppliersQ.data ?? []).map((s) => [s.id, s.companyName]));
 		return {
 			itemName: (id: string) => itemMap.get(id),

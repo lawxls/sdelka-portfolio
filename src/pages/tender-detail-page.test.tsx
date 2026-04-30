@@ -18,7 +18,7 @@ import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
-import { makeItem } from "@/test-utils";
+import { makeItem, makeTask } from "@/test-utils";
 import { TenderDetailPage } from "./tender-detail-page";
 
 const FOLDERS: Folder[] = [{ id: "folder-packaging", name: "Упаковка", color: "blue" }];
@@ -120,18 +120,55 @@ describe("TenderDetailPage", () => {
 		expect(screen.getByTestId("tender-item-item-2")).toBeInTheDocument();
 	});
 
-	test("Задачи tab renders the placeholder (real content lands in slice #5)", async () => {
-		renderPage({
-			tenders: [makeTender("T-001")],
-			items: [makeItem("item-1", { tenderId: "T-001" })],
-			slug: "T-001",
+	test("Задачи tab renders tasks for the tender; clicking a row opens the task drawer", async () => {
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 		});
+		const taskForT1 = makeTask("task-T1-1", {
+			name: "Согласовать спецификацию",
+			tender: { id: "T-001", name: "Упаковочные материалы Q2", companyId: "company-1" },
+		});
+		const taskForOther = makeTask("task-other", {
+			name: "Не наша задача",
+			tender: { id: "T-002", name: "Другой тендер", companyId: "company-1" },
+		});
+		render(
+			<TestClientsProvider
+				queryClient={queryClient}
+				clients={{
+					companies: createInMemoryCompaniesClient(),
+					items: createInMemoryItemsClient({ seed: [makeItem("item-1", { tenderId: "T-001" })] }),
+					suppliers: createInMemorySuppliersClient({ seedByItemId: {} }),
+					tasks: createInMemoryTasksClient({ seed: [taskForT1, taskForOther] }),
+					tenders: createInMemoryTendersClient({ seed: [makeTender("T-001")] }),
+					folders: createInMemoryFoldersClient({ seed: FOLDERS }),
+				}}
+			>
+				<TooltipProvider>
+					<MemoryRouter initialEntries={["/tenders/T-001"]}>
+						<Routes>
+							<Route path="/tenders/:slug" element={<TenderDetailPage />} />
+							<Route path="/tenders" element={<div data-testid="tenders-list">Тендеры</div>} />
+						</Routes>
+					</MemoryRouter>
+				</TooltipProvider>
+			</TestClientsProvider>,
+		);
 
 		await screen.findByRole("heading", { name: "Тендер T-001" });
 		fireEvent.click(screen.getByRole("tab", { name: "Задачи" }));
 
 		await waitFor(() => expect(screen.getByTestId("tender-tab-tasks")).toBeInTheDocument());
-		expect(screen.getByText(/Задачи появятся в следующем обновлении/)).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByText("Согласовать спецификацию")).toBeInTheDocument());
+		// Tasks belonging to a different tender stay out of this tab.
+		expect(screen.queryByText("Не наша задача")).not.toBeInTheDocument();
+
+		fireEvent.click(screen.getByTestId("tender-task-row-task-T1-1"));
+		await waitFor(() => {
+			expect(
+				screen.getByText("Согласовать спецификацию", { selector: "[data-slot='sheet-title']" }),
+			).toBeInTheDocument();
+		});
 	});
 
 	test("single-item tender shows ТСО / ед. headline = item.currentPrice", async () => {

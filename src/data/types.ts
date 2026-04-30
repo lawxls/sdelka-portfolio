@@ -110,7 +110,6 @@ export interface ProcurementItem {
 	companyId: string;
 	/** Parent tender slug. Items belong to exactly one tender. */
 	tenderId?: string;
-	taskCount?: number;
 	description?: string;
 	unit?: Unit;
 	quantityPerDelivery?: number;

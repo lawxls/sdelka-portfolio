@@ -12,7 +12,6 @@ export const ITEM: ProcurementItem = {
 	folderId: "folder-fillings",
 	companyId: "company-1",
 	unit: "т",
-	taskCount: 0,
 	quantityPerDelivery: 100,
 	paymentType: "deferred",
 	paymentMethod: "bank_transfer",

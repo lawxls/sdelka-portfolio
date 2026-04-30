@@ -13,7 +13,6 @@ export const ITEM: ProcurementItem = {
 	folderId: "folder-packaging",
 	companyId: "company-1",
 	unit: "шт",
-	taskCount: 2,
 	quantityPerDelivery: 50_000,
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",

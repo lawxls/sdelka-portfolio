@@ -1,17 +1,21 @@
-import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft, Inbox } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { OffersTabPanel, SuppliersTabPanel } from "@/components/procurement-item-drawer";
+import { TaskDrawer } from "@/components/task-drawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Task } from "@/data/task-types";
 import { getTenderStatus } from "@/data/tenders/get-tender-status";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { getAnnualCost } from "@/data/types";
 import { useFolders } from "@/data/use-folders";
 import { useAllItems } from "@/data/use-items";
+import { useTasksList } from "@/data/use-tasks";
 import { useTender } from "@/data/use-tenders";
-import { formatCurrency } from "@/lib/format";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { formatAssigneeName, formatCurrency, formatDayMonthShort, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type TenderDetailTab = "suppliers" | "offers" | "tasks" | "details";
@@ -60,12 +64,36 @@ export function TenderDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const isMobile = useIsMobile();
 	const activeTab = parseTenderTab(searchParams.get("tab"));
+	const taskId = searchParams.get("task");
 
 	const { data: tender, isLoading, isError } = useTender(slug);
 	const { data: folders = [] } = useFolders();
 	const { data: allItems = [] } = useAllItems();
 	const items = useMemo(() => allItems.filter((i) => i.tenderId === slug), [allItems, slug]);
+
+	function handleTaskOpen(id: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("task", id);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleTaskClose() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("task");
+				return next;
+			},
+			{ replace: false },
+		);
+	}
 
 	function handleTabChange(tab: TenderDetailTab) {
 		setSearchParams(
@@ -204,9 +232,10 @@ export function TenderDetailPage() {
 			<main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-muted/50 p-4">
 				{activeTab === "suppliers" && <TenderSuppliersTab items={items} />}
 				{activeTab === "offers" && <TenderOffersTab items={items} />}
-				{activeTab === "tasks" && <TenderTasksTab />}
+				{activeTab === "tasks" && <TenderTasksTab tenderId={tender.id} onTaskClick={handleTaskOpen} />}
 				{activeTab === "details" && <TenderDetailsTab tender={tender} items={items} folder={folder} />}
 			</main>
+			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 		</div>
 	);
 }
@@ -256,17 +285,97 @@ function TenderOffersTab({ items }: { items: readonly ProcurementItem[] }) {
 	);
 }
 
-function TenderTasksTab() {
+type TenderTaskFilter = "active" | "completed" | "archived";
+
+const TASK_FILTER_LABELS: Record<TenderTaskFilter, string> = {
+	active: "Активные",
+	completed: "Завершённые",
+	archived: "Архив",
+};
+
+function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskClick: (id: string) => void }) {
+	const [filter, setFilter] = useState<TenderTaskFilter>("active");
+	const statuses =
+		filter === "active"
+			? (["assigned", "in_progress"] as const)
+			: filter === "completed"
+				? (["completed"] as const)
+				: (["archived"] as const);
+	const { tasks, isLoading } = useTasksList({ tender: tenderId, statuses: [...statuses] });
+
 	return (
-		<div
-			data-testid="tender-tab-tasks"
-			className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center"
-		>
-			<p className="text-sm font-medium">Задачи появятся в следующем обновлении</p>
-			<p className="text-sm text-muted-foreground">
-				Сейчас задачи привязаны к позициям; миграция на тендер — в работе.
-			</p>
+		<div data-testid="tender-tab-tasks" className="flex flex-col gap-3">
+			<div className="flex items-center gap-1" role="tablist" aria-label="Фильтр задач">
+				{(Object.keys(TASK_FILTER_LABELS) as TenderTaskFilter[]).map((key) => {
+					const isActive = filter === key;
+					return (
+						<button
+							key={key}
+							type="button"
+							role="tab"
+							aria-selected={isActive}
+							onClick={() => setFilter(key)}
+							className={cn(
+								"inline-flex items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 py-1 text-sm transition-colors",
+								"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+								isActive ? "bg-accent text-accent-foreground" : "text-foreground",
+							)}
+						>
+							{TASK_FILTER_LABELS[key]}
+						</button>
+					);
+				})}
+			</div>
+			{isLoading ? (
+				<div className="flex flex-col gap-2">
+					<Skeleton className="h-20 w-full" />
+					<Skeleton className="h-20 w-full" />
+				</div>
+			) : tasks.length === 0 ? (
+				<div
+					className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground"
+					data-testid="tender-tasks-empty"
+				>
+					<Inbox className="size-8" aria-hidden="true" />
+					<p className="text-sm">Нет задач</p>
+				</div>
+			) : (
+				<ul className="flex flex-col gap-2" data-testid="tender-tasks-list">
+					{tasks.map((task) => (
+						<li key={task.id}>
+							<TenderTaskRow task={task} onClick={onTaskClick} />
+						</li>
+					))}
+				</ul>
+			)}
 		</div>
+	);
+}
+
+function TenderTaskRow({ task, onClick }: { task: Task; onClick: (id: string) => void }) {
+	const overdue = isOverdue(task.deadlineAt);
+	const assignee = formatAssigneeName(task.assignee);
+	return (
+		<button
+			type="button"
+			data-testid={`tender-task-row-${task.id}`}
+			onClick={() => onClick(task.id)}
+			className="flex w-full items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+		>
+			<div className="min-w-0 flex-1">
+				<div className="truncate text-sm font-medium">{task.name}</div>
+				<div className="mt-0.5 truncate text-xs text-muted-foreground">{assignee}</div>
+			</div>
+			<time
+				dateTime={task.deadlineAt}
+				className={cn(
+					"shrink-0 tabular-nums text-xs",
+					overdue ? "font-medium text-destructive" : "text-muted-foreground",
+				)}
+			>
+				{formatDayMonthShort(task.deadlineAt)}
+			</time>
+		</button>
 	);
 }
 

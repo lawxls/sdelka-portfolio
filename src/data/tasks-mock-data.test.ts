@@ -17,7 +17,7 @@ function makeStoredTask(id: string, overrides: Partial<Task> = {}): Task {
 		id,
 		name: `Task ${id}`,
 		status: "assigned",
-		item: { id: "item-1", name: "Item", companyId: "company-1" },
+		tender: { id: "T-001", name: "Tender", companyId: "company-1" },
 		assignee: {
 			id: "user-1",
 			firstName: "Иван",
@@ -76,20 +76,20 @@ describe("fetchTaskBoardMock", () => {
 		expect(result.assigned?.results[0].id).toBe("t1");
 	});
 
-	it("filters by item id", async () => {
+	it("filters by tender id", async () => {
 		_setTasks([
-			makeStoredTask("t1", { status: "assigned", item: { id: "item-a", name: "A", companyId: "c1" } }),
-			makeStoredTask("t2", { status: "assigned", item: { id: "item-b", name: "B", companyId: "c1" } }),
+			makeStoredTask("t1", { status: "assigned", tender: { id: "T-A", name: "A", companyId: "c1" } }),
+			makeStoredTask("t2", { status: "assigned", tender: { id: "T-B", name: "B", companyId: "c1" } }),
 		]);
-		const result = await fetchTaskBoardMock({ item: "item-a" });
+		const result = await fetchTaskBoardMock({ tender: "T-A" });
 		expect(result.assigned?.results).toHaveLength(1);
 		expect(result.assigned?.results[0].id).toBe("t1");
 	});
 
 	it("filters by company id", async () => {
 		_setTasks([
-			makeStoredTask("t1", { status: "assigned", item: { id: "i1", name: "A", companyId: "c1" } }),
-			makeStoredTask("t2", { status: "assigned", item: { id: "i2", name: "B", companyId: "c2" } }),
+			makeStoredTask("t1", { status: "assigned", tender: { id: "T-1", name: "A", companyId: "c1" } }),
+			makeStoredTask("t2", { status: "assigned", tender: { id: "T-2", name: "B", companyId: "c2" } }),
 		]);
 		const result = await fetchTaskBoardMock({ company: "c2" });
 		expect(result.assigned?.results).toHaveLength(1);
@@ -279,14 +279,14 @@ describe("deleteTaskAttachmentMock", () => {
 });
 
 describe("seed coherence", () => {
-	it("references real item ids from items seed", async () => {
+	it("references real tender ids from tenders seed", async () => {
 		_resetTasksStore();
 		const all = _getAllTasks();
-		const itemIds = new Set(all.map((t) => t.item.id));
-		expect(itemIds.has("item-1")).toBe(true);
-		expect(itemIds.has("item-2")).toBe(true);
-		expect(itemIds.has("item-3")).toBe(true);
-		expect(itemIds.has("item-4")).toBe(true);
+		const tenderIds = new Set(all.map((t) => t.tender.id));
+		expect(tenderIds.has("T-001")).toBe(true);
+		expect(tenderIds.has("T-002")).toBe(true);
+		expect(tenderIds.has("T-003")).toBe(true);
+		expect(tenderIds.has("T-004")).toBe(true);
 	});
 
 	it("distributes seed tasks across all four statuses", async () => {

@@ -13,7 +13,6 @@ export const ITEM: ProcurementItem = {
 	folderId: "folder-chemistry",
 	companyId: "company-1",
 	unit: "кг",
-	taskCount: 3,
 	quantityPerDelivery: 700,
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",

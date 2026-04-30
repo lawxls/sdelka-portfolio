@@ -13,7 +13,6 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { TaskCountBadge } from "@/components/task-count-badge";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -386,9 +385,6 @@ export function ProcurementTable({
 												>
 													<ProcurementStatusIcon status={displayStatus} />
 													{status.label}
-													{displayStatus === "negotiating" && item.taskCount != null && item.taskCount > 0 && (
-														<TaskCountBadge count={item.taskCount} />
-													)}
 												</span>
 											</div>
 										</div>

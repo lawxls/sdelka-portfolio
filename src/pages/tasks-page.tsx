@@ -1,4 +1,3 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Inbox, ListFilter, LoaderCircle } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -17,9 +16,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { fetchItemsMock } from "@/data/items-mock-data";
 import { STATUS_ICONS, type Task, type TaskFilterParams, type TaskStatus } from "@/data/task-types";
 import { useTasksCount, useTasksList, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useTenders } from "@/data/use-tenders";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -163,10 +162,10 @@ function csvEscape(value: string): string {
 }
 
 function downloadTasksCsv(tasks: Task[]) {
-	const header = ["Задача", "Позиция", "Назначена", "Вопросы", "Дедлайн", "Дата и время создания"];
+	const header = ["Задача", "Тендер", "Назначена", "Вопросы", "Дедлайн", "Дата и время создания"];
 	const rows = tasks.map((t) => [
 		csvEscape(t.name),
-		csvEscape(t.item.name),
+		csvEscape(t.tender.name),
 		csvEscape(formatAssigneeName(t.assignee)),
 		String(t.questionCount),
 		formatDayMonthShort(t.deadlineAt),
@@ -184,12 +183,12 @@ function downloadTasksCsv(tasks: Task[]) {
 	URL.revokeObjectURL(url);
 }
 
-interface ItemFilterPopoverProps {
-	activeItem?: string;
-	onSelect: (itemId: string | undefined) => void;
+interface TenderFilterPopoverProps {
+	activeTender?: string;
+	onSelect: (tenderId: string | undefined) => void;
 }
 
-function ItemFilterPopover({ activeItem, onSelect }: ItemFilterPopoverProps) {
+function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProps) {
 	const [searchInput, setSearchInput] = useState("");
 	const [effectiveSearch, setEffectiveSearch] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -202,18 +201,12 @@ function ItemFilterPopover({ activeItem, onSelect }: ItemFilterPopoverProps) {
 		debounceRef.current = setTimeout(() => setEffectiveSearch(next), 200);
 	}
 
-	const query = useInfiniteQuery({
-		queryKey: ["items-filter", effectiveSearch],
-		queryFn: ({ pageParam }) => fetchItemsMock({ q: effectiveSearch || undefined, cursor: pageParam, limit: 25 }),
-		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-	});
-
-	const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
-	const activeItemName = useMemo(() => items.find((i) => i.id === activeItem)?.name, [items, activeItem]);
+	const query = useTenders({ q: effectiveSearch || undefined, limit: 25 });
+	const tenders = query.items;
+	const activeTenderName = useMemo(() => tenders.find((t) => t.id === activeTender)?.name, [tenders, activeTender]);
 
 	const sentinelRef = useIntersectionObserver(() => {
-		if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
+		if (query.hasNextPage && !query.isFetchingNextPage) query.loadMore();
 	});
 
 	return (
@@ -223,25 +216,25 @@ function ItemFilterPopover({ activeItem, onSelect }: ItemFilterPopoverProps) {
 					<PopoverTrigger asChild>
 						<button
 							type="button"
-							aria-label={activeItemName ? `Фильтр: ${activeItemName}` : "Фильтр по позиции"}
+							aria-label={activeTenderName ? `Фильтр: ${activeTenderName}` : "Фильтр по тендеру"}
 							className={cn(
 								"relative inline-flex h-8 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm transition-colors",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-								activeItem ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
+								activeTender ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
 							)}
 						>
 							<ListFilter className="size-4" aria-hidden="true" />
-							{activeItem && <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />}
+							{activeTender && <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />}
 						</button>
 					</PopoverTrigger>
 				</TooltipTrigger>
-				<TooltipContent>{activeItemName ? `Позиция: ${activeItemName}` : "Фильтр по позиции"}</TooltipContent>
+				<TooltipContent>{activeTenderName ? `Тендер: ${activeTenderName}` : "Фильтр по тендеру"}</TooltipContent>
 			</Tooltip>
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="border-b p-2">
 					<Input
 						type="search"
-						placeholder="Поиск позиции…"
+						placeholder="Поиск тендера…"
 						value={searchInput}
 						onChange={(e) => handleSearchChange(e.target.value)}
 						spellCheck={false}
@@ -249,8 +242,8 @@ function ItemFilterPopover({ activeItem, onSelect }: ItemFilterPopoverProps) {
 						className="h-8"
 					/>
 				</div>
-				<div className="flex max-h-72 flex-col overflow-y-auto p-1" data-testid="item-filter-list">
-					{activeItem && (
+				<div className="flex max-h-72 flex-col overflow-y-auto p-1" data-testid="tender-filter-list">
+					{activeTender && (
 						<>
 							<button
 								type="button"
@@ -269,24 +262,24 @@ function ItemFilterPopover({ activeItem, onSelect }: ItemFilterPopoverProps) {
 							<Skeleton className="h-7 w-5/6" />
 						</div>
 					)}
-					{!query.isLoading && items.length === 0 && (
+					{!query.isLoading && tenders.length === 0 && (
 						<div className="px-2 py-3 text-sm text-muted-foreground">Ничего не найдено</div>
 					)}
-					{items.map((item) => {
-						const isActive = activeItem === item.id;
+					{tenders.map((tender) => {
+						const isActive = activeTender === tender.id;
 						return (
 							<button
-								key={item.id}
+								key={tender.id}
 								type="button"
 								aria-pressed={isActive}
-								onClick={() => onSelect(isActive ? undefined : item.id)}
+								onClick={() => onSelect(isActive ? undefined : tender.id)}
 								className={cn(
 									"truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors",
 									"hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
 									isActive && "bg-accent font-medium text-accent-foreground",
 								)}
 							>
-								{item.name}
+								{tender.name}
 							</button>
 						);
 					})}
@@ -350,7 +343,7 @@ function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive,
 			<TableCell className="w-[1%] font-medium">
 				<div className="max-w-[440px]">
 					<div className="truncate">{task.name}</div>
-					<div className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{task.item.name}</div>
+					<div className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{task.tender.name}</div>
 				</div>
 			</TableCell>
 			<TableCell>
@@ -389,7 +382,7 @@ export function TasksPage() {
 
 	const taskId = searchParams.get("task");
 	const search = searchParams.get("q") ?? "";
-	const activeItem = searchParams.get("item") ?? undefined;
+	const activeTender = searchParams.get("tender") ?? undefined;
 	const statusFilter = parseStatusFilter(searchParams.get("status"));
 	const sort = parseSort(searchParams);
 
@@ -420,8 +413,8 @@ export function TasksPage() {
 		setSelectedIds(new Set());
 	}
 
-	function setItemFilter(item: string | undefined) {
-		updateParams((p) => (item ? p.set("item", item) : p.delete("item")));
+	function setTenderFilter(tender: string | undefined) {
+		updateParams((p) => (tender ? p.set("tender", tender) : p.delete("tender")));
 		setSelectedIds(new Set());
 	}
 
@@ -453,14 +446,14 @@ export function TasksPage() {
 
 	const listParams: TaskFilterParams = {
 		...(search && { q: search }),
-		...(activeItem && { item: activeItem }),
+		...(activeTender && { tender: activeTender }),
 	};
 
 	const activeStatuses = STATUS_FILTER_TO_STATUSES[statusFilter];
 
 	const query = useTasksList({
 		q: listParams.q,
-		item: listParams.item,
+		tender: listParams.tender,
 		statuses: activeStatuses,
 	});
 
@@ -474,8 +467,8 @@ export function TasksPage() {
 
 	const sentinelRef = useIntersectionObserver(query.loadMore, { root: scrollContainerRef.current });
 
-	const completedCount = useTasksCount({ q: listParams.q, item: listParams.item, statuses: ["completed"] });
-	const archivedCount = useTasksCount({ q: listParams.q, item: listParams.item, statuses: ["archived"] });
+	const completedCount = useTasksCount({ q: listParams.q, tender: listParams.tender, statuses: ["completed"] });
+	const archivedCount = useTasksCount({ q: listParams.q, tender: listParams.tender, statuses: ["archived"] });
 
 	const allSelected = tasks.length > 0 && tasks.every((t) => selectedIds.has(t.id));
 
@@ -595,7 +588,7 @@ export function TasksPage() {
 							active={statusFilter === "archived"}
 							onClick={() => setStatusFilter(statusFilter === "archived" ? "active" : "archived")}
 						/>
-						<ItemFilterPopover activeItem={activeItem} onSelect={setItemFilter} />
+						<TenderFilterPopover activeTender={activeTender} onSelect={setTenderFilter} />
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={handleDownload}>

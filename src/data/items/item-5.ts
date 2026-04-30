@@ -12,7 +12,6 @@ export const ITEM: ProcurementItem = {
 	folderId: "folder-springs",
 	companyId: "company-1",
 	unit: "шт",
-	taskCount: 0,
 	quantityPerDelivery: 8_000,
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",

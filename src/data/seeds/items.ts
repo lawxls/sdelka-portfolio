@@ -20,7 +20,6 @@ const ITEM_1: ProcurementItem = {
 	folderId: "folder-packaging",
 	companyId: "company-1",
 	unit: "м",
-	taskCount: 16,
 	quantityPerDelivery: 15_000,
 	paymentType: "prepayment",
 	paymentMethod: "bank_transfer",
