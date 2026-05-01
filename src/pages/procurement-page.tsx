@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddPositionsDialog } from "@/components/add-positions-dialog";
-import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
@@ -59,6 +58,7 @@ function parseStatus(params: URLSearchParams): StatusFilter {
 }
 
 export function ProcurementPage() {
+	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const search = searchParams.get("q") ?? "";
@@ -114,7 +114,6 @@ export function ProcurementPage() {
 
 	const isMobile = useIsMobile();
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleExport() {
 		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
@@ -315,13 +314,8 @@ export function ProcurementPage() {
 			<AddPositionsDialog
 				open={dialogOpen}
 				onOpenChange={setDialogOpen}
-				onManual={() => setDrawerOpen(true)}
+				onManual={() => navigate("/tenders")}
 				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
-			/>
-			<AddPositionsDrawer
-				open={drawerOpen}
-				onOpenChange={setDrawerOpen}
-				onSubmit={(items) => handleCreateItems(items, items.length === 1 ? "Позиция создана" : "Позиции созданы")}
 			/>
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>

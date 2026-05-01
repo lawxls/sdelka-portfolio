@@ -3,7 +3,13 @@ import { toast } from "sonner";
 import { useItemsClient, useSuppliersClient, useTendersClient } from "../clients-context";
 import { invalidateAfterItemListChange } from "../invalidation-policies";
 import { invalidateSupplierLists } from "../use-suppliers";
-import { archiveTenderCascade, selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
+import {
+	archiveTenderCascade,
+	type CreateTenderWithItemsInput,
+	createTenderWithItems,
+	selectSupplierForItem,
+	setCurrentSupplierFromQuote,
+} from "./procurement-operations";
 
 export function useSelectSupplierForItem() {
 	const items = useItemsClient();
@@ -17,6 +23,22 @@ export function useSelectSupplierForItem() {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["tenders"] });
 			invalidateSupplierLists(queryClient, itemId);
+		},
+	});
+}
+
+export function useCreateTenderWithItems() {
+	const items = useItemsClient();
+	const tenders = useTendersClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: CreateTenderWithItemsInput) => createTenderWithItems(input, { items, tenders }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			invalidateAfterItemListChange(queryClient);
+		},
+		onError: () => {
+			toast.error("Не удалось создать тендер");
 		},
 	});
 }

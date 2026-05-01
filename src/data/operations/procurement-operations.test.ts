@@ -6,7 +6,12 @@ import { NotFoundError } from "../errors";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import { fakeItemsClient, fakeSuppliersClient, fakeTendersClient } from "../test-clients-provider";
 import type { ProcurementInquiry } from "../types";
-import { archiveTenderCascade, selectSupplierForItem, setCurrentSupplierFromQuote } from "./procurement-operations";
+import {
+	archiveTenderCascade,
+	createTenderWithItems,
+	selectSupplierForItem,
+	setCurrentSupplierFromQuote,
+} from "./procurement-operations";
 
 /**
  * Layer A — operation tested in isolation against stub clients. Asserts on the
@@ -234,5 +239,112 @@ describe("archiveTenderCascade", () => {
 
 		const restored = await items.list({});
 		expect(restored.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b", "i-200-a"]);
+	});
+});
+
+describe("createTenderWithItems", () => {
+	beforeEach(() => {
+		_setMockDelay(0, 0);
+	});
+
+	afterEach(() => {
+		_resetMockDelay();
+	});
+
+	it("creates the tender then the items, stamping the new tender id onto each item", async () => {
+		const calls: string[] = [];
+		const createdTender: ProcurementInquiry = {
+			id: "T-001",
+			name: "T",
+			companyId: "company-1",
+			folderId: null,
+			budget: 0,
+			createdAt: "2026-04-01",
+			deadline: "2026-05-01",
+		};
+		const tendersCreate = vi.fn().mockImplementation(async () => {
+			calls.push("tenders.create");
+			return createdTender;
+		});
+		const itemsCreate = vi.fn().mockImplementation(async (inputs: { tenderId?: string }[]) => {
+			calls.push("items.create");
+			return { items: inputs.map((_, i) => makeItem(`i-${i}`, { tenderId: "T-001" })), isAsync: false };
+		});
+
+		const result = await createTenderWithItems(
+			{
+				tender: { name: "T", companyId: "company-1", folderId: null, budget: 0, deadline: "2026-05-01" },
+				items: [
+					{ name: "Pos A", paymentType: "prepayment" },
+					{ name: "Pos B", paymentType: "prepayment" },
+				],
+			},
+			{
+				items: fakeItemsClient({ create: itemsCreate }),
+				tenders: fakeTendersClient({ create: tendersCreate, delete: vi.fn() }),
+			},
+		);
+
+		expect(calls).toEqual(["tenders.create", "items.create"]);
+		expect(itemsCreate).toHaveBeenCalledWith([
+			{ name: "Pos A", paymentType: "prepayment", tenderId: "T-001" },
+			{ name: "Pos B", paymentType: "prepayment", tenderId: "T-001" },
+		]);
+		expect(result.tender.id).toBe("T-001");
+		expect(result.items).toHaveLength(2);
+	});
+
+	it("rolls back the tender via tenders.delete if items.create fails — neither half persists", async () => {
+		const tenders = createInMemoryTendersClient({ seed: [] });
+		const itemsCreate = vi.fn().mockRejectedValue(new Error("items create failed"));
+		const items = fakeItemsClient({ create: itemsCreate });
+
+		await expect(
+			createTenderWithItems(
+				{
+					tender: {
+						name: "Will roll back",
+						companyId: "company-1",
+						folderId: null,
+						budget: 0,
+						deadline: "2026-05-01",
+					},
+					items: [{ name: "Pos A", paymentType: "prepayment" }],
+				},
+				{ items, tenders },
+			),
+		).rejects.toThrow("items create failed");
+
+		const after = await tenders.list({});
+		expect(after.items.find((t) => t.name === "Will roll back")).toBeUndefined();
+	});
+
+	it("end-to-end: tender + items both land in their stores against in-memory adapters", async () => {
+		const tenders = createInMemoryTendersClient({ seed: [] });
+		const items = createInMemoryItemsClient({ seed: [] });
+
+		const result = await createTenderWithItems(
+			{
+				tender: {
+					name: "Закупка металлопроката",
+					companyId: "company-1",
+					folderId: "folder-1",
+					budget: 1500000,
+					deadline: "2026-06-15",
+				},
+				items: [
+					{ name: "Арматура", paymentType: "prepayment" },
+					{ name: "Цемент", paymentType: "prepayment" },
+				],
+			},
+			{ items, tenders },
+		);
+
+		const stored = await tenders.list({});
+		expect(stored.items.find((t) => t.id === result.tender.id)).toBeDefined();
+		const list = await items.list({});
+		const created = list.items.filter((i) => i.tenderId === result.tender.id);
+		expect(created).toHaveLength(2);
+		expect(created.map((i) => i.name).sort()).toEqual(["Арматура", "Цемент"]);
 	});
 });

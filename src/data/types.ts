@@ -200,6 +200,10 @@ export interface NewItemInput {
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
 	generatedAnswers?: GeneratedAnswer[];
+	/** Parent tender slug. Set by `createTenderWithItems` so the new items
+	 * inherit company / folder / supplier context from the freshly-created
+	 * tender. Direct callers (legacy import flows) leave it unset. */
+	tenderId?: string;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */

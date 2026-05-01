@@ -1,6 +1,6 @@
 import { delay } from "../mock-utils";
 import { generateTenderSlug } from "../tenders/generate-tender-slug";
-import type { ProcurementInquiry } from "../types";
+import type { AttachedFile, CurrentSupplier, PaymentMethod, ProcurementInquiry, UnloadingType } from "../types";
 import { findTenderIndex, listSlugs, pushTender, readTenders, removeTender, writeTenderAt } from "./store";
 
 export interface CreateTenderInput {
@@ -10,6 +10,15 @@ export interface CreateTenderInput {
 	budget: number;
 	deadline: string;
 	createdAt?: string;
+	currentSupplier?: CurrentSupplier;
+	addressIds?: string[];
+	unloading?: UnloadingType;
+	paymentMethod?: PaymentMethod;
+	deferralRequired?: boolean;
+	sampleRequired?: boolean;
+	analoguesAllowed?: boolean;
+	additionalInfo?: string;
+	attachedFiles?: AttachedFile[];
 }
 
 export async function createTenderMock(input: CreateTenderInput): Promise<ProcurementInquiry> {
@@ -22,6 +31,15 @@ export async function createTenderMock(input: CreateTenderInput): Promise<Procur
 		budget: input.budget,
 		deadline: input.deadline,
 		createdAt: input.createdAt ?? new Date().toISOString(),
+		...(input.currentSupplier && { currentSupplier: input.currentSupplier }),
+		...(input.addressIds && { addressIds: input.addressIds }),
+		...(input.unloading && { unloading: input.unloading }),
+		...(input.paymentMethod && { paymentMethod: input.paymentMethod }),
+		...(input.deferralRequired !== undefined && { deferralRequired: input.deferralRequired }),
+		...(input.sampleRequired !== undefined && { sampleRequired: input.sampleRequired }),
+		...(input.analoguesAllowed !== undefined && { analoguesAllowed: input.analoguesAllowed }),
+		...(input.additionalInfo && { additionalInfo: input.additionalInfo }),
+		...(input.attachedFiles && { attachedFiles: input.attachedFiles }),
 	};
 	pushTender(tender);
 	return { ...tender };

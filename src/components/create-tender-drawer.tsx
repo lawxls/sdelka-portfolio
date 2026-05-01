@@ -21,7 +21,6 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import type { NewItemInput } from "@/data/types";
 import {
 	DELIVERY_COST_TYPE_LABELS,
 	PAYMENT_METHOD_LABELS,
@@ -36,19 +35,24 @@ import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatFileSize, formatGroupedInteger } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { type PositionDraft, useAddPositionForm, type WizardStep } from "./use-add-position-form";
+import {
+	type CreateTenderPayload,
+	type PositionDraft,
+	useCreateTenderForm,
+	type WizardStep,
+} from "./use-create-tender-form";
 
-interface AddPositionsDrawerProps {
+interface CreateTenderDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (items: NewItemInput[]) => void;
+	onSubmit: (payload: CreateTenderPayload) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
 const STEP_TITLES: Record<WizardStep, string> = {
-	1: "Заполните данные по позиции",
+	1: "Заполните данные по тендеру",
 	2: "Заполните данные по текущему поставщику",
 	3: "Дополнительные вопросы",
 };
@@ -113,27 +117,23 @@ function Field({
 	);
 }
 
-export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPositionsDrawerProps) {
+export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTenderDrawerProps) {
 	const { data: companies } = useProcurementCompanies();
 	const { data: folders = [] } = useFolders();
 	const createFolderMutation = useCreateFolder();
 
 	const companiesById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
 
-	const form = useAddPositionForm({
-		resolveAddressStrings: (companyId, ids) => {
-			const company = companiesById.get(companyId);
-			if (!company) return [];
-			const wanted = new Set(ids);
-			return company.addresses.filter((a) => wanted.has(a.id)).map((a) => a.address);
-		},
-	});
+	const form = useCreateTenderForm();
 
 	const { step, step1 } = form;
 
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [step3Ready, setStep3Ready] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+	const tenderNameInputRef = useRef<HTMLInputElement>(null);
+	const deadlineInputRef = useRef<HTMLInputElement>(null);
+	const budgetInputRef = useRef<HTMLInputElement>(null);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -167,7 +167,10 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 		if (step === 1) {
 			const result = form.advance();
 			if (!result.advanced) {
-				if (result.focus === "company") companyTriggerRef.current?.focus();
+				if (result.focus === "tenderName") tenderNameInputRef.current?.focus();
+				else if (result.focus === "deadline") deadlineInputRef.current?.focus();
+				else if (result.focus === "budget") budgetInputRef.current?.focus();
+				else if (result.focus === "company") companyTriggerRef.current?.focus();
 				else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
 			}
 			return;
@@ -210,8 +213,6 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	}
 
 	function handleAddPosition() {
-		// Capture index before the addPosition setState commits — the new card lands at
-		// `current length`, which is also the index we'll focus once it mounts.
 		const newIndex = step1.positions.length;
 		form.addPosition();
 		queueMicrotask(() => nameInputRefs.current[newIndex]?.focus());
@@ -250,7 +251,7 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 					className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 				>
 					<SheetHeader className="border-b pb-4">
-						<SheetTitle>Добавить позиции</SheetTitle>
+						<SheetTitle>Создать тендер</SheetTitle>
 						<SheetDescription className="sr-only">{STEP_TITLES[step]}</SheetDescription>
 						<div className="mt-3 flex flex-col gap-2">
 							<div
@@ -286,6 +287,9 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 									nextFolderColor={nextFolderColor}
 									onCreateFolder={handleCreateFolder}
 									nameInputRefs={nameInputRefs}
+									tenderNameInputRef={tenderNameInputRef}
+									deadlineInputRef={deadlineInputRef}
+									budgetInputRef={budgetInputRef}
 									companyTriggerRef={companyTriggerRef}
 									fileInputRef={fileInputRef}
 									onFilesAdd={handleFilesAdd}
@@ -336,12 +340,9 @@ export function AddPositionsDrawer({ open, onOpenChange, onSubmit }: AddPosition
 	);
 }
 
-function Step2Body({ form }: { form: ReturnType<typeof useAddPositionForm> }) {
+function Step2Body({ form }: { form: ReturnType<typeof useCreateTenderForm> }) {
 	const { step2, step2Errors, update2, blurInn } = form;
 	const deliveryCostVisible = step2.deliveryCostType === "paid";
-	// Lock «Ваш поставщик» downstream fields (payment, delivery) until we have an
-	// identifiable counterparty — otherwise they would persist a supplier row with
-	// no name or ИНН attached and surface as an unnamed row downstream.
 	const supplierBaseFilled = step2.companyName.trim() !== "" && step2.inn.trim() !== "";
 
 	return (
@@ -466,7 +467,7 @@ function Step3Body({
 	ready,
 	onReady,
 }: {
-	form: ReturnType<typeof useAddPositionForm>;
+	form: ReturnType<typeof useCreateTenderForm>;
 	ready: boolean;
 	onReady: () => void;
 }) {
@@ -554,7 +555,7 @@ type CompanyList = ReturnType<typeof useProcurementCompanies>["data"];
 type FolderList = NonNullable<ReturnType<typeof useFolders>["data"]>;
 
 interface Step1BodyProps {
-	form: ReturnType<typeof useAddPositionForm>;
+	form: ReturnType<typeof useCreateTenderForm>;
 	companies: CompanyList;
 	lockedCompany: CompanyList[number] | undefined;
 	selectedCompany: CompanyList[number] | undefined;
@@ -562,6 +563,9 @@ interface Step1BodyProps {
 	nextFolderColor: string;
 	onCreateFolder: (name: string, color: string) => void;
 	nameInputRefs: React.RefObject<(HTMLInputElement | null)[]>;
+	tenderNameInputRef: React.RefObject<HTMLInputElement | null>;
+	deadlineInputRef: React.RefObject<HTMLInputElement | null>;
+	budgetInputRef: React.RefObject<HTMLInputElement | null>;
 	companyTriggerRef: React.RefObject<HTMLButtonElement | null>;
 	fileInputRef: React.RefObject<HTMLInputElement | null>;
 	onFilesAdd: (files: FileList | null) => void;
@@ -578,6 +582,9 @@ function Step1Body({
 	nextFolderColor,
 	onCreateFolder,
 	nameInputRefs,
+	tenderNameInputRef,
+	deadlineInputRef,
+	budgetInputRef,
 	companyTriggerRef,
 	fileInputRef,
 	onFilesAdd,
@@ -590,8 +597,74 @@ function Step1Body({
 
 	return (
 		<div className="flex flex-col gap-0 pt-3">
-			<SectionGroupHeader title="Компания и категория" />
+			<SectionGroupHeader title="Тендер" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
+				<Field label="Название тендера" htmlFor="tender-name" required>
+					<Input
+						id="tender-name"
+						ref={tenderNameInputRef}
+						placeholder="Закупка металлопроката Q3"
+						value={step1.tenderName}
+						onChange={(e) => update1("tenderName", e.target.value)}
+						aria-required="true"
+						aria-invalid={step1Errors.tenderName ? true : undefined}
+						aria-describedby={step1Errors.tenderName ? "tender-name-error" : undefined}
+						className={step1Errors.tenderName ? "border-destructive" : undefined}
+						autoComplete="off"
+						spellCheck={false}
+						autoFocus
+					/>
+					{step1Errors.tenderName && (
+						<p id="tender-name-error" className="text-sm text-destructive">
+							{step1Errors.tenderName}
+						</p>
+					)}
+				</Field>
+
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+					<Field label="Бюджет" htmlFor="tender-budget" className="flex-1">
+						<div className="flex items-center gap-1.5">
+							<Input
+								id="tender-budget"
+								ref={budgetInputRef}
+								placeholder="1 500 000"
+								value={formatGroupedInteger(step1.budget)}
+								onChange={(e) => update1("budget", e.target.value.replace(/\D/g, ""))}
+								inputMode="numeric"
+								autoComplete="off"
+								aria-invalid={step1Errors.budget ? true : undefined}
+								aria-describedby={step1Errors.budget ? "tender-budget-error" : undefined}
+								className={cn("flex-1 tabular-nums", step1Errors.budget && "border-destructive")}
+							/>
+							<span className="text-sm text-muted-foreground">₽</span>
+						</div>
+						{step1Errors.budget && (
+							<p id="tender-budget-error" className="text-sm text-destructive">
+								{step1Errors.budget}
+							</p>
+						)}
+					</Field>
+
+					<Field label="Дедлайн" htmlFor="tender-deadline" required className="flex-1">
+						<Input
+							id="tender-deadline"
+							ref={deadlineInputRef}
+							type="date"
+							value={step1.deadline}
+							onChange={(e) => update1("deadline", e.target.value)}
+							aria-required="true"
+							aria-invalid={step1Errors.deadline ? true : undefined}
+							aria-describedby={step1Errors.deadline ? "tender-deadline-error" : undefined}
+							className={step1Errors.deadline ? "border-destructive" : undefined}
+						/>
+						{step1Errors.deadline && (
+							<p id="tender-deadline-error" className="text-sm text-destructive">
+								{step1Errors.deadline}
+							</p>
+						)}
+					</Field>
+				</div>
+
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Field label="Компания" required className="flex-1">
 						<Select
@@ -658,7 +731,6 @@ function Step1Body({
 						nameInputRef={(el) => {
 							nameInputRefs.current[index] = el;
 						}}
-						autoFocus={index === 0}
 					/>
 				))}
 				<div>
@@ -823,10 +895,9 @@ interface PositionCardProps {
 	onChange: <K extends keyof PositionDraft>(key: K, value: PositionDraft[K]) => void;
 	onRemove?: () => void;
 	nameInputRef: (el: HTMLInputElement | null) => void;
-	autoFocus: boolean;
 }
 
-function PositionCard({ index, position, error, onChange, onRemove, nameInputRef, autoFocus }: PositionCardProps) {
+function PositionCard({ index, position, error, onChange, onRemove, nameInputRef }: PositionCardProps) {
 	const nameId = `position-${index}-name`;
 	const descId = `position-${index}-description`;
 	const qtyId = `position-${index}-qty`;
@@ -859,7 +930,6 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 					placeholder="Арматура А500С Ø12 мм"
 					value={position.name}
 					onChange={(e) => onChange("name", e.target.value)}
-					autoFocus={autoFocus}
 					spellCheck={false}
 					autoComplete="off"
 					aria-required="true"

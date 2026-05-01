@@ -10,6 +10,7 @@ import { fakeItemsClient, fakeSuppliersClient, fakeTendersClient, TestClientsPro
 import type { ProcurementInquiry } from "../types";
 import {
 	useArchiveTenderCascade,
+	useCreateTenderWithItems,
 	useSelectSupplierForItem,
 	useSetCurrentSupplierFromQuote,
 } from "./use-procurement-operations";
@@ -100,6 +101,41 @@ describe("useArchiveTenderCascade", () => {
 		expect(queryClient.getQueryState(["tenders", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items-global"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["folderStats"])?.isInvalidated).toBe(true);
+	});
+});
+
+describe("useCreateTenderWithItems", () => {
+	it("invalidates tenders + items + totals + folder stats after the operation runs", async () => {
+		const createdTender = makeTender("T-001");
+		const tendersCreate = vi.fn().mockResolvedValue(createdTender);
+		const itemsCreate = vi.fn().mockResolvedValue({ items: [makeItem("i-1", { tenderId: "T-001" })], isAsync: false });
+		const tenders = fakeTendersClient({ create: tendersCreate, delete: vi.fn() });
+		const items = fakeItemsClient({ create: itemsCreate });
+
+		queryClient.setQueryData(["tenders", { foo: "bar" }], { items: [], nextCursor: null });
+		queryClient.setQueryData(["items"], []);
+		queryClient.setQueryData(["totals"], { itemCount: 0 });
+		queryClient.setQueryData(["folderStats"], {});
+
+		const { result } = renderHook(() => useCreateTenderWithItems(), {
+			wrapper: ({ children }) => (
+				<TestClientsProvider queryClient={queryClient} clients={{ items, tenders }}>
+					{children}
+				</TestClientsProvider>
+			),
+		});
+
+		await result.current.mutateAsync({
+			tender: { name: "T", companyId: "c1", folderId: null, budget: 0, deadline: "2026-05-01" },
+			items: [{ name: "Pos", paymentType: "prepayment" }],
+		});
+
+		expect(tendersCreate).toHaveBeenCalled();
+		expect(itemsCreate).toHaveBeenCalledWith([{ name: "Pos", paymentType: "prepayment", tenderId: "T-001" }]);
+		expect(queryClient.getQueryState(["tenders", { foo: "bar" }])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["folderStats"])?.isInvalidated).toBe(true);
 	});

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, EllipsisVertical } from "lucide-react";
+import { Archive, ArchiveRestore, EllipsisVertical, Plus } from "lucide-react";
 import { useState } from "react";
 import { CategoriesPopover } from "@/components/categories-popover";
 import { TendersFiltersPopover } from "@/components/tenders-filters-popover";
@@ -40,6 +40,7 @@ interface TendersToolbarProps {
 	showCompanies?: boolean;
 	isArchiveView?: boolean;
 	onArchiveToggle?: () => void;
+	onCreateTender?: () => void;
 }
 
 export function TendersToolbar({
@@ -62,6 +63,7 @@ export function TendersToolbar({
 	showCompanies,
 	isArchiveView = false,
 	onArchiveToggle,
+	onCreateTender,
 }: TendersToolbarProps) {
 	const isMobile = useIsMobile();
 	const { current, setDebounced } = useDebouncedSearchParam("q", 300);
@@ -219,6 +221,14 @@ export function TendersToolbar({
 						</Tooltip>
 					)}
 				</div>
+			)}
+
+			{onCreateTender && (
+				<Button type="button" size="sm" onClick={onCreateTender} className="btn-cta rounded-full border-0">
+					<Plus data-icon="inline-start" aria-hidden="true" />
+					<span className="hidden sm:inline">Создать тендер</span>
+					<span className="sm:hidden">Создать</span>
+				</Button>
 			)}
 		</div>
 	);

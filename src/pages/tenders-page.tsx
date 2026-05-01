@@ -1,6 +1,8 @@
 import { Archive, ArchiveRestore } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { CreateTenderDrawer } from "@/components/create-tender-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
@@ -9,7 +11,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { TenderSummary } from "@/data/domains/tenders";
-import { useArchiveTenderCascade } from "@/data/operations/use-procurement-operations";
+import { useArchiveTenderCascade, useCreateTenderWithItems } from "@/data/operations/use-procurement-operations";
 import type { Folder, TenderStatus } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
@@ -141,6 +143,8 @@ export function TendersPage() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 	const archiveTenderMutation = useArchiveTenderCascade();
+	const createTenderMutation = useCreateTenderWithItems();
+	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	const companyMap = useMemo(() => {
 		const map: Record<string, string> = {};
@@ -233,6 +237,7 @@ export function TendersPage() {
 			showCompanies={isMultiCompany}
 			isArchiveView={isArchiveView}
 			onArchiveToggle={handleArchiveToggle}
+			onCreateTender={() => setDrawerOpen(true)}
 		/>
 	);
 
@@ -310,6 +315,17 @@ export function TendersPage() {
 					</TableBody>
 				</Table>
 			</main>
+			<CreateTenderDrawer
+				open={drawerOpen}
+				onOpenChange={setDrawerOpen}
+				onSubmit={(payload) => {
+					createTenderMutation.mutate(payload, {
+						onSuccess: ({ tender }) => {
+							toast.success(`Тендер ${tender.id} создан`);
+						},
+					});
+				}}
+			/>
 		</div>
 	);
 }

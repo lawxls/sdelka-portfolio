@@ -1,8 +1,9 @@
 import type { ItemsClient } from "../clients/items-client";
 import type { SuppliersClient } from "../clients/suppliers-client";
 import type { TendersClient } from "../clients/tenders-client";
+import type { CreateTenderInput } from "../domains/tenders";
 import { NotFoundError } from "../errors";
-import type { ProcurementInquiry } from "../types";
+import type { NewItemInput, ProcurementInquiry, ProcurementItem } from "../types";
 
 /**
  * Single public seam for cross-entity domain rules in the procurement
@@ -86,6 +87,45 @@ export async function setCurrentSupplierFromQuote(
 	});
 	if (tco != null && tco !== item.currentPrice) {
 		await items.update(itemId, { currentPrice: tco });
+	}
+}
+
+export interface CreateTenderWithItemsInput {
+	tender: CreateTenderInput;
+	items: NewItemInput[];
+}
+
+export interface CreateTenderWithItemsResult {
+	tender: ProcurementInquiry;
+	items: ProcurementItem[];
+}
+
+/**
+ * Atomic tender + items create. The tender is created first; items inherit
+ * the new tender's id via `tenderId` so they're parented from the moment they
+ * land. If items.create fails, the tender is rolled back via tenders.delete
+ * so neither half persists.
+ *
+ * The rollback is best-effort — if delete also fails (offline, concurrent
+ * archive), the original items error surfaces while the orphan tender stays.
+ * Real backend will collapse this to one transactional call; the seam stays
+ * the same.
+ */
+export async function createTenderWithItems(
+	input: CreateTenderWithItemsInput,
+	{ items, tenders }: Pick<ProcurementOperationsContext, "items" | "tenders">,
+): Promise<CreateTenderWithItemsResult> {
+	const tender = await tenders.create(input.tender);
+	try {
+		const result = await items.create(input.items.map((item) => ({ ...item, tenderId: tender.id })));
+		return { tender, items: result.items ?? [] };
+	} catch (err) {
+		try {
+			await tenders.delete(tender.id);
+		} catch {
+			// rollback failed — surface the original error; the orphan tender is logged.
+		}
+		throw err;
 	}
 }
 

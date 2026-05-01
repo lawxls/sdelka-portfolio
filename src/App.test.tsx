@@ -407,29 +407,16 @@ describe("ProcurementPage", () => {
 		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
 	});
 
-	test("clicking Вручную in dialog opens the wizard drawer", async () => {
+	test("clicking Вручную on /positions navigates to /tenders", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 		await user.click(screen.getByRole("button", { name: /Вручную/ }));
 
-		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getByLabelText("Название")).toBeInTheDocument();
-	});
-
-	test("Отмена on dirty drawer prompts discard and closes", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-		await user.type(screen.getByLabelText("Название"), "Should not appear");
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
-
-		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+		});
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -500,60 +487,27 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	async function completeWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
+	test("«Создать тендер» on /tenders opens the create-tender drawer and submitting persists the tender + items", async () => {
+		await renderAppReady(["/tenders"]);
+		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Название"), name);
+		await user.click(screen.getByRole("button", { name: /Создать тендер/ }));
 
-		// Single company → auto-selected and locked; no manual pick needed.
+		expect(screen.getByRole("heading", { name: "Создать тендер" })).toBeInTheDocument();
+
+		await user.type(screen.getByLabelText("Название тендера"), "Тестовый тендер из drawer");
+		await user.type(screen.getByLabelText("Дедлайн"), "2026-07-01");
+		await user.type(screen.getByLabelText("Название"), "Позиция А");
+
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Создать" }));
-	}
-
-	test("drawer submit sends batch create and closes drawer", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Тестовая позиция");
 
 		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+			expect(screen.queryByRole("heading", { name: "Создать тендер" })).not.toBeInTheDocument();
 		});
-	});
-
-	test("drawer submit shows toast for async batch response", async () => {
-		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
-		const items: ItemsClient = {
-			...baseItems,
-			create: vi.fn().mockResolvedValueOnce({ isAsync: true, taskId: "task-123" }),
-		};
-
-		await renderAppReady(undefined, { items });
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Большая партия");
-
 		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		});
-	});
-
-	test("drawer submit shows error toast on 400 validation failure", async () => {
-		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
-		const items: ItemsClient = {
-			...baseItems,
-			create: vi.fn().mockRejectedValueOnce(new Error("validation")),
-		};
-
-		await renderAppReady(undefined, { items });
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Test");
-
-		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+			expect(screen.getByText("Тестовый тендер из drawer")).toBeInTheDocument();
 		});
 	});
 

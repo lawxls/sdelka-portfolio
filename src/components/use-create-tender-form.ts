@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CreateTenderInput } from "@/data/domains/tenders";
 import type {
 	DeliveryCostType,
 	GeneratedAnswer,
@@ -11,7 +12,8 @@ import type {
 
 export type WizardStep = 1 | 2 | 3;
 
-type AdvanceResult = { advanced: boolean; focus?: "company" | "name"; positionIndex?: number };
+type AdvanceFocus = "company" | "name" | "tenderName" | "deadline" | "budget";
+type AdvanceResult = { advanced: boolean; focus?: AdvanceFocus; positionIndex?: number };
 
 export interface PositionDraft {
 	name: string;
@@ -23,6 +25,9 @@ export interface PositionDraft {
 }
 
 interface Step1State {
+	tenderName: string;
+	budget: string;
+	deadline: string;
 	companyId: string;
 	folderId: string | null;
 	positions: PositionDraft[];
@@ -60,6 +65,9 @@ interface PositionErrors {
 }
 
 interface Step1Errors {
+	tenderName?: string;
+	budget?: string;
+	deadline?: string;
 	company?: string;
 	positions: PositionErrors[];
 }
@@ -81,6 +89,9 @@ function defaultPosition(): PositionDraft {
 
 function defaultStep1(): Step1State {
 	return {
+		tenderName: "",
+		budget: "",
+		deadline: "",
 		companyId: "",
 		folderId: null,
 		positions: [defaultPosition()],
@@ -116,6 +127,7 @@ function defaultStep1Errors(): Step1Errors {
 }
 
 const INN_PATTERN = /^\d{10}$|^\d{12}$/;
+const BUDGET_PATTERN = /^\d+$/;
 
 function validateInn(value: string): { ok: boolean; error?: string } {
 	const trimmed = value.trim();
@@ -150,11 +162,6 @@ function buildNewItemInput(
 	step2: Step2State,
 	step3: Step3State,
 ): NewItemInput {
-	// Tender-level meta (folderId, addresses, paymentMethod, unloading, supplier
-	// step1 fields, attachedFiles, currentSupplier) is captured in the wizard
-	// but NOT emitted onto the per-position payload after the schema migration
-	// — those fields belong on the parent tender. Slice #8 (CreateTenderDrawer)
-	// dispatches an atomic create-with-tender that consumes this state.
 	const payload: NewItemInput = {
 		name: position.name.trim(),
 		paymentType: step1.deferralRequired ? "deferred" : "prepayment",
@@ -188,13 +195,57 @@ function buildNewItemInput(
 	return payload;
 }
 
-export interface UseAddPositionFormArgs {
-	resolveAddressStrings: (companyId: string, addressIds: string[]) => string[];
+function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInput {
+	const tender: CreateTenderInput = {
+		name: step1.tenderName.trim(),
+		companyId: step1.companyId,
+		folderId: step1.folderId,
+		budget: toNumber(step1.budget) ?? 0,
+		deadline: step1.deadline,
+	};
+
+	if (step1.addressIds.length > 0) tender.addressIds = step1.addressIds;
+	if (step1.unloading) tender.unloading = step1.unloading;
+	if (step1.paymentMethod !== "bank_transfer") tender.paymentMethod = step1.paymentMethod;
+	if (step1.deferralRequired) tender.deferralRequired = true;
+	if (step1.sampleRequired) tender.sampleRequired = true;
+	if (step1.analoguesAllowed) tender.analoguesAllowed = true;
+	const info = step1.additionalInfo.trim();
+	if (info) tender.additionalInfo = info;
+	if (step1.files.length > 0) {
+		tender.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
+	}
+
+	const supplierName = step2.companyName.trim();
+	const supplierInn = step2.inn.trim();
+	if (supplierName) {
+		tender.currentSupplier = {
+			companyName: supplierName,
+			...(supplierInn && { inn: supplierInn }),
+			paymentType: step2.paymentType,
+			deferralDays: toNumber(step2.deferralDays) ?? 0,
+			...(step2.paymentType === "prepayment" && {
+				prepaymentPercent: toNumber(step2.prepaymentPercent) ?? 100,
+			}),
+			pricePerUnit: null,
+		};
+	}
+
+	return tender;
+}
+
+export interface CreateTenderPayload {
+	tender: CreateTenderInput;
+	items: NewItemInput[];
+}
+
+export interface UseCreateTenderFormArgs {
+	resolveAddressStrings?: (companyId: string, addressIds: string[]) => string[];
 }
 
 type SharedStep1Key = Exclude<keyof Step1State, "positions">;
 
-export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionFormArgs) {
+export function useCreateTenderForm(_args: UseCreateTenderFormArgs = {}) {
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(defaultStep1);
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
@@ -205,6 +256,9 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
+		if (key === "tenderName") setStep1Errors((prev) => (prev.tenderName ? { ...prev, tenderName: undefined } : prev));
+		if (key === "deadline") setStep1Errors((prev) => (prev.deadline ? { ...prev, deadline: undefined } : prev));
+		if (key === "budget") setStep1Errors((prev) => (prev.budget ? { ...prev, budget: undefined } : prev));
 	}
 
 	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
@@ -263,6 +317,10 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 			p.name.trim() ? {} : { name: "Укажите название позиции" },
 		);
 		const errors: Step1Errors = { positions: positionErrors };
+		if (!step1.tenderName.trim()) errors.tenderName = "Укажите название тендера";
+		if (!step1.deadline) errors.deadline = "Укажите дедлайн";
+		const budget = step1.budget.trim();
+		if (budget && !BUDGET_PATTERN.test(budget)) errors.budget = "Бюджет должен быть целым числом";
 		if (!step1.companyId) errors.company = "Выберите компанию";
 		return errors;
 	}
@@ -276,8 +334,13 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		if (step === 1) {
 			const errors = validateStep1();
 			const firstNameErrorIndex = errors.positions.findIndex((e) => e.name);
-			if (errors.company || firstNameErrorIndex >= 0) {
+			const blocked =
+				errors.tenderName || errors.deadline || errors.budget || errors.company || firstNameErrorIndex >= 0;
+			if (blocked) {
 				setStep1Errors(errors);
+				if (errors.tenderName) return { advanced: false, focus: "tenderName" };
+				if (errors.deadline) return { advanced: false, focus: "deadline" };
+				if (errors.budget) return { advanced: false, focus: "budget" };
 				if (errors.company) return { advanced: false, focus: "company" };
 				return { advanced: false, focus: "name", positionIndex: firstNameErrorIndex };
 			}
@@ -320,6 +383,9 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	}
 
 	const isDirty =
+		step1.tenderName !== "" ||
+		step1.budget !== "" ||
+		step1.deadline !== "" ||
 		step1.companyId !== "" ||
 		step1.folderId !== null ||
 		step1.positions.length > 1 ||
@@ -346,12 +412,10 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		return !!last && last.name.trim() !== "";
 	})();
 
-	function toPayload(): NewItemInput[] {
-		// resolveAddressStrings is intentionally unused here — addresses live on
-		// the tender now. Slice #8's CreateTenderDrawer consumes step1.addressIds
-		// directly and resolves them at tender creation.
-		void resolveAddressStrings;
-		return step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3));
+	function toPayload(): CreateTenderPayload {
+		const tender = buildTenderInput(step1, step2);
+		const items = step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3));
+		return { tender, items };
 	}
 
 	return {

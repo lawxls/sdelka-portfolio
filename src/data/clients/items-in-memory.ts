@@ -188,6 +188,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
 				generatedAnswers: input.generatedAnswers,
+				tenderId: input.tenderId,
 			}));
 			const current = _getAllItems();
 			const archivedNow = current.filter((c) => _isArchived(c.id)).map((c) => c.id);
