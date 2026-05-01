@@ -2,7 +2,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
@@ -98,6 +104,9 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	vi.mocked(toast.error).mockClear();
+	vi.mocked(toast.success).mockClear();
+	vi.mocked(toast.info).mockClear();
 	// Suppress "Not implemented: HTMLFormElement.prototype.requestSubmit" from jsdom
 	vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -288,6 +297,32 @@ describe("ProcurementPage — toolbar left zone", () => {
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Без категории");
 		});
+	});
+});
+
+describe("ProcurementPage — multi-company import guard", () => {
+	test("clicking «Добавить позиции» without a company selected shows error toast and does not open dialog", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage();
+		await waitForToolbar();
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+
+		expect(toast.error).toHaveBeenCalledWith("Выберите компанию, чтобы добавить позиции");
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	});
+
+	test("with a company selected the dialog opens normally", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/positions?company=c1"]);
+		await waitForToolbar();
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+
+		expect(toast.error).not.toHaveBeenCalled();
+		await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 	});
 });
 

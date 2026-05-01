@@ -1,5 +1,5 @@
 import { ArrowLeft, Inbox } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
@@ -11,9 +11,10 @@ import { getTenderStatus } from "@/data/tenders/get-tender-status";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { getAnnualCost } from "@/data/types";
 import { useFolders } from "@/data/use-folders";
-import { useAllItems } from "@/data/use-items";
+import { useTenderItems } from "@/data/use-items";
 import { useTasksList } from "@/data/use-tasks";
 import { useTender } from "@/data/use-tenders";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatAssigneeName, formatCurrency, formatDayMonthShort, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -70,8 +71,7 @@ export function TenderDetailPage() {
 
 	const { data: tender, isLoading, isError } = useTender(slug);
 	const { data: folders = [] } = useFolders();
-	const { data: allItems = [] } = useAllItems();
-	const items = useMemo(() => allItems.filter((i) => i.tenderId === slug), [allItems, slug]);
+	const { data: items = [] } = useTenderItems(slug || undefined);
 
 	function handleTaskOpen(id: string) {
 		setSearchParams(
@@ -301,7 +301,13 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 			: filter === "completed"
 				? (["completed"] as const)
 				: (["archived"] as const);
-	const { tasks, isLoading } = useTasksList({ tender: tenderId, statuses: [...statuses] });
+	const { tasks, isLoading, hasNextPage, loadMore, isFetchingNextPage } = useTasksList({
+		tender: tenderId,
+		statuses: [...statuses],
+	});
+	const sentinelRef = useIntersectionObserver(() => {
+		if (hasNextPage && !isFetchingNextPage) loadMore();
+	});
 
 	return (
 		<div data-testid="tender-tab-tasks" className="flex flex-col gap-3">
@@ -346,6 +352,12 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 							<TenderTaskRow task={task} onClick={onTaskClick} />
 						</li>
 					))}
+					{hasNextPage && <li ref={sentinelRef} data-testid="tender-tasks-sentinel" className="h-px" />}
+					{isFetchingNextPage && (
+						<li>
+							<Skeleton className="h-20 w-full" />
+						</li>
+					)}
 				</ul>
 			)}
 		</div>

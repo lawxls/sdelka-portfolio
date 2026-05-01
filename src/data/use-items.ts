@@ -61,6 +61,15 @@ export function useAllItems(options?: { enabled?: boolean }) {
 	});
 }
 
+export function useTenderItems(tenderId: string | undefined) {
+	const client = useItemsClient();
+	return useQuery({
+		queryKey: keys.items.byTender(tenderId ?? ""),
+		queryFn: () => client.listByTender(tenderId as string),
+		enabled: !!tenderId,
+	});
+}
+
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	const client = useItemsClient();
 	const { sort: _sort, dir: _dir, ...filterParams } = buildFilterParams({ ...params, sort: null });

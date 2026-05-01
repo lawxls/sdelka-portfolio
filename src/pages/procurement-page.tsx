@@ -162,9 +162,21 @@ export function ProcurementPage() {
 		});
 	}
 
+	function handleAddPositions() {
+		if (isMultiCompany && !company) {
+			toast.error("Выберите компанию, чтобы добавить позиции");
+			return;
+		}
+		setDialogOpen(true);
+	}
+
 	function handleImportItems(items: NewItemInput[]) {
 		const groups = groupItemsIntoTenders(items);
 		if (groups.length === 0) return;
+		if (isMultiCompany && !company) {
+			toast.error("Выберите компанию для импорта позиций");
+			return;
+		}
 		const targetCompanyId = company ?? companies[0]?.id;
 		if (!targetCompanyId) {
 			toast.error("Не удалось определить компанию для импорта");
@@ -251,7 +263,7 @@ export function ProcurementPage() {
 			onFiltersChange={handleFiltersChange}
 			sort={sort}
 			onSort={handleSort}
-			onAddPositions={() => setDialogOpen(true)}
+			onAddPositions={handleAddPositions}
 			onExport={handleExport}
 			folders={folders}
 			folderCounts={counts}

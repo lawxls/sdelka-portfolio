@@ -140,6 +140,11 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 			return _getAllItems().filter((i) => !isEffectivelyArchived(i, _isArchived(i.id)));
 		},
 
+		async listByTender(tenderId: string): Promise<ProcurementItem[]> {
+			await delay();
+			return _getAllItems().filter((i) => i.tenderId === tenderId);
+		},
+
 		async totals(params: TotalsParams): Promise<Totals> {
 			await delay();
 			const filtered = applyFilters(_getAllItems(), params as ListItemsParams);

@@ -206,4 +206,26 @@ describe("TenderDetailPage", () => {
 		await waitFor(() => expect(screen.getByTestId("tender-not-found")).toBeInTheDocument());
 		expect(screen.getByText("Тендер не найден")).toBeInTheDocument();
 	});
+
+	test("archived tender still shows its positions in detail (cascade does not hide them here)", async () => {
+		renderPage({
+			tenders: [makeTender("T-001", { isArchived: true })],
+			items: [
+				makeItem("item-1", { tenderId: "T-001", name: "Полотно ПВД", currentPrice: 100, annualQuantity: 50 }),
+				makeItem("item-2", { tenderId: "T-001", name: "Скотч", currentPrice: 200, annualQuantity: 30 }),
+			],
+			slug: "T-001",
+		});
+
+		await screen.findByRole("heading", { name: "Тендер T-001" });
+		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
+
+		await waitFor(() => expect(screen.getByTestId("tender-tab-details")).toBeInTheDocument());
+		expect(screen.getByTestId("tender-item-item-1")).toBeInTheDocument();
+		expect(screen.getByTestId("tender-item-item-2")).toBeInTheDocument();
+
+		const headline = screen.getByTestId("tender-tco-headline");
+		expect(headline).toHaveTextContent("Итого ТСО");
+		expect(headline).toHaveTextContent(/11\s?000/);
+	});
 });
