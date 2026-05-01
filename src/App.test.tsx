@@ -15,6 +15,7 @@ import { createInMemoryNotificationsClient } from "@/data/clients/notifications-
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
@@ -26,12 +27,42 @@ const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
 		status: i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
-		folderId: i < 5 ? "folder-1" : i < 10 ? "folder-2" : null,
+		tenderId: i < 5 ? "T-folder-1" : i < 10 ? "T-folder-2" : "T-no-folder",
 		// Ensure deviation=overpaying filter captures some rows
 		currentPrice: 100,
 		bestPrice: 80,
 	}),
 );
+
+const TEST_TENDERS = [
+	{
+		id: "T-folder-1",
+		name: "Tender folder-1",
+		companyId: "company-1",
+		folderId: "folder-1" as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+	{
+		id: "T-folder-2",
+		name: "Tender folder-2",
+		companyId: "company-1",
+		folderId: "folder-2" as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+	{
+		id: "T-no-folder",
+		name: "Tender no folder",
+		companyId: "company-1",
+		folderId: null as string | null,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	},
+];
 
 const TEST_FOLDERS: Folder[] = [
 	{ id: "folder-1", name: "Металлопрокат", color: "blue" },
@@ -64,7 +95,8 @@ const TEST_COMPANIES: Company[] = [
 				permissions: {
 					id: "p1",
 					employeeId: 1,
-					procurement: "edit",
+					tenders: "edit",
+					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
 					employees: "edit",
@@ -90,6 +122,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
@@ -98,7 +131,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				invitations: createInMemoryInvitationsClient(),
 			}}
 		>
-			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
+			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>
 				<TooltipProvider>
 					<App />
 				</TooltipProvider>
@@ -132,21 +165,34 @@ afterEach(() => {
 // ---- Route tests (TDD) ----
 
 describe("Routing", () => {
-	test("/ redirects to /procurement", async () => {
+	test("/ redirects to /tenders", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
 		});
 	});
 
-	test("/ preserves query params when redirecting to /procurement", async () => {
-		await renderAppReady(["/?deviation=overpaying"]);
+	test("/ preserves query params when redirecting to /tenders", async () => {
+		renderApp(["/?company=c1"]);
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+		});
+	});
+
+	test("/procurement redirects to /positions", async () => {
+		await renderAppReady(["/procurement"]);
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+		expect(screen.getByTestId("global-header")).toBeInTheDocument();
+	});
+
+	test("/procurement preserves query params when redirecting to /positions", async () => {
+		await renderAppReady(["/procurement?deviation=overpaying"]);
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
 		expect(rows.length).toBeGreaterThan(1);
 	});
 
-	test("/procurement renders procurement content", async () => {
+	test("/positions renders positions content", async () => {
 		await renderAppReady();
 		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
@@ -187,8 +233,8 @@ describe("Routing", () => {
 		expect(screen.queryByRole("button", { name: /Добавить сотрудника/ })).not.toBeInTheDocument();
 	});
 
-	test("URL query params preserved under /procurement", async () => {
-		await renderAppReady(["/procurement?deviation=overpaying"]);
+	test("URL query params preserved under /positions", async () => {
+		await renderAppReady(["/positions?deviation=overpaying"]);
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
 		expect(rows.length).toBeGreaterThan(1);
@@ -325,7 +371,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("restores state from URL search params", async () => {
-		await renderAppReady(["/procurement?deviation=overpaying"]);
+		await renderAppReady(["/positions?deviation=overpaying"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -333,7 +379,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("deep-link with folder param filters table to folder items", async () => {
-		await renderAppReady(["/procurement?folder=folder-1"]);
+		await renderAppReady(["/positions?folder=folder-1"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -342,7 +388,7 @@ describe("ProcurementPage", () => {
 	});
 
 	test("deep-link with folder=none shows only unassigned items", async () => {
-		await renderAppReady(["/procurement?folder=none"]);
+		await renderAppReady(["/positions?folder=none"]);
 
 		const table = screen.getByRole("table");
 		const rows = within(table).getAllByRole("row");
@@ -350,40 +396,16 @@ describe("ProcurementPage", () => {
 		expect(rows).toHaveLength(16);
 	});
 
-	test("clicking Добавить позиции opens choice dialog", async () => {
+	test("clicking Добавить позиции on /positions opens upload dialog directly (no choice screen)", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
-	});
-
-	test("clicking Вручную in dialog opens the wizard drawer", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-
-		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='sheet-title']" })).toBeInTheDocument();
-		expect(screen.getByLabelText("Название")).toBeInTheDocument();
-	});
-
-	test("Отмена on dirty drawer prompts discard and closes", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-		await user.type(screen.getByLabelText("Название"), "Should not appear");
-		await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
-
-		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /Вручную/ })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Скачать пример файла/ })).toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -454,96 +476,43 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("context menu assign folder sends PATCH", async () => {
-		// Use an item that has no folder (item-11 has folderId: null)
-		await renderAppReady();
+	test("«Создать тендер» on /tenders opens the create-tender drawer and submitting persists the tender + items", async () => {
+		await renderAppReady(["/tenders"]);
+		const user = userEvent.setup();
 
-		const row = screen.getByTestId("row-item-11");
-		fireEvent.contextMenu(row);
+		await user.click(screen.getByRole("button", { name: /Создать тендер/ }));
 
-		await screen.findByText("Переместить в категорию");
-		fireEvent.click(screen.getByText("Переместить в категорию"));
+		expect(screen.getByRole("heading", { name: "Создать тендер" })).toBeInTheDocument();
 
-		// Context menu submenu items are checkbox items — use role
-		const menuItems = await screen.findAllByRole("menuitemcheckbox");
-		const target = menuItems.find((el) => el.textContent?.includes("Стройматериалы"));
-		if (!target) throw new Error("Стройматериалы menu item not found");
-		fireEvent.click(target);
+		await user.type(screen.getByLabelText("Название тендера"), "Тестовый тендер из drawer");
+		await user.type(screen.getByLabelText("Дедлайн"), "2026-07-01");
+		await user.type(screen.getByLabelText("Название"), "Позиция А");
 
-		// Optimistic: folder badge should appear on item-11
-		await waitFor(() => {
-			const badge = screen.queryByTestId("folder-badge-item-11");
-			expect(badge).toBeInTheDocument();
-		});
-	});
-
-	async function completeWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-
-		await user.type(screen.getByLabelText("Название"), name);
-
-		// Single company → auto-selected and locked; no manual pick needed.
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Создать" }));
-	}
-
-	test("drawer submit sends batch create and closes drawer", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Тестовая позиция");
 
 		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+			expect(screen.queryByRole("heading", { name: "Создать тендер" })).not.toBeInTheDocument();
+		});
+		await waitFor(() => {
+			expect(screen.getByText("Тестовый тендер из drawer")).toBeInTheDocument();
 		});
 	});
 
-	test("drawer submit shows toast for async batch response", async () => {
-		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
-		const items: ItemsClient = {
-			...baseItems,
-			create: vi.fn().mockResolvedValueOnce({ isAsync: true, taskId: "task-123" }),
-		};
-
-		await renderAppReady(undefined, { items });
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Большая партия");
-
-		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		});
-	});
-
-	test("drawer submit shows error toast on 400 validation failure", async () => {
-		const baseItems = createInMemoryItemsClient({ seed: ITEMS_PAGE_1 });
-		const items: ItemsClient = {
-			...baseItems,
-			create: vi.fn().mockRejectedValueOnce(new Error("validation")),
-		};
-
-		await renderAppReady(undefined, { items });
-		const user = userEvent.setup();
-
-		await completeWizard(user, "Test");
-
-		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
-		});
-	});
-
-	test("file import via dialog calls createItemsBatch and closes dialog", async () => {
-		vi.spyOn(mockParser, "parseFile").mockResolvedValue([{ name: "Import 1" }, { name: "Import 2" }]);
+	test("file import via dialog dispatches a tender per AI-grouped batch and closes the dialog", async () => {
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue([
+			{ name: "Кабель ВВГнг 3x2.5" },
+			{ name: "Кабель ВВГнг 3x4" },
+			{ name: "Розетка серая" },
+		]);
 
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
-		await waitFor(() => expect(screen.getByText("Import 1")).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument());
 
 		await user.click(screen.getByRole("button", { name: /Импортировать/ }));
 
@@ -551,6 +520,14 @@ describe("ProcurementPage", () => {
 			expect(
 				screen.queryByText("Добавить позиции", { selector: "[data-slot='dialog-title']" }),
 			).not.toBeInTheDocument();
+		});
+
+		// Two AI-grouped tenders should land on /tenders: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
+		const rail = screen.getByTestId("app-rail");
+		await user.click(within(rail).getByRole("link", { name: /Тендеры/ }));
+		await waitFor(() => {
+			expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument();
+			expect(screen.getByText("Розетка серая")).toBeInTheDocument();
 		});
 	});
 });

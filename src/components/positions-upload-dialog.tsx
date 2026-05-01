@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, FileUp, Loader2, PenLine } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -18,56 +18,22 @@ import type { NewItemInput } from "@/data/types";
 import { FileDropzone } from "./file-dropzone";
 import { ImportPreview } from "./import-preview";
 
-type Step = "choice" | "upload" | "loading" | "preview";
+type Step = "upload" | "loading" | "preview";
 
-interface AddPositionsDialogProps {
+interface PositionsUploadDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onManual: () => void;
 	onImport: (items: NewItemInput[]) => void;
 }
 
-function ChoiceCard({
-	icon: Icon,
-	title,
-	description,
-	onClick,
-}: {
-	icon: React.ComponentType<{ className?: string }>;
-	title: string;
-	description: string;
-	onClick: () => void;
-}) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className="flex flex-1 flex-col items-center gap-3 rounded-lg border border-border p-6 text-center transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-		>
-			<div className="flex size-12 items-center justify-center rounded-lg bg-muted">
-				<Icon className="size-6 text-muted-foreground" aria-hidden="true" />
-			</div>
-			<div className="flex flex-col gap-1">
-				<span className="text-sm font-medium">{title}</span>
-				<span className="text-xs text-muted-foreground">{description}</span>
-			</div>
-		</button>
-	);
-}
-
-export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: AddPositionsDialogProps) {
-	const [step, setStep] = useState<Step>("choice");
+export function PositionsUploadDialog({ open, onOpenChange, onImport }: PositionsUploadDialogProps) {
+	const [step, setStep] = useState<Step>("upload");
 	const [parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
 	const [showCloseWarning, setShowCloseWarning] = useState(false);
 
 	function resetDialog() {
-		setStep("choice");
+		setStep("upload");
 		setParsedItems([]);
-	}
-
-	function handleManual() {
-		onOpenChange(false);
-		onManual();
 	}
 
 	function handleOpenChange(next: boolean) {
@@ -75,9 +41,7 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 			setShowCloseWarning(true);
 			return;
 		}
-		if (!next) {
-			resetDialog();
-		}
+		if (!next) resetDialog();
 		onOpenChange(next);
 	}
 
@@ -113,35 +77,18 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 				<DialogContent className="sm:max-w-4xl max-h-[85vh]">
 					<DialogHeader>
 						<DialogTitle>Добавить позиции</DialogTitle>
-						<DialogDescription className="sr-only">Выберите способ добавления позиций</DialogDescription>
+						<DialogDescription className="sr-only">Загрузите файл с позициями</DialogDescription>
 					</DialogHeader>
-					{step === "choice" && (
-						<div className="flex flex-col gap-4 sm:flex-row">
-							<ChoiceCard
-								icon={PenLine}
-								title="Вручную"
-								description="Заполните данные для каждой позиции"
-								onClick={handleManual}
-							/>
-							<ChoiceCard
-								icon={FileUp}
-								title="Из файла"
-								description="Загрузите файл с позициями"
-								onClick={() => setStep("upload")}
-							/>
-						</div>
-					)}
 					{step === "upload" && (
 						<div className="flex flex-col gap-4">
 							<FileDropzone onFile={handleFile} />
-							<div className="flex items-center justify-between">
-								<Button variant="ghost" onClick={() => setStep("choice")}>
-									<ArrowLeft className="size-4" aria-hidden="true" />
-									Назад
-								</Button>
+							<p className="text-center text-xs text-muted-foreground">
+								ИИ сам сформирует тендеры на&nbsp;основе загруженных позиций
+							</p>
+							<div className="flex items-center justify-end">
 								<Button variant="ghost" onClick={() => {}}>
 									<Download className="size-4" aria-hidden="true" />
-									Скачать шаблон
+									Скачать пример файла с&nbsp;позициями
 								</Button>
 							</div>
 						</div>

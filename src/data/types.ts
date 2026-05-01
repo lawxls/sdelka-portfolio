@@ -6,6 +6,10 @@ export type ProcurementStatus = "searching" | "negotiating" | "completed";
  * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
 export type DisplayStatus = ProcurementStatus | "searching_completed";
 
+/** Tender display status — pure rollup of item DisplayStatus across one tender.
+ * Same vocabulary as items, no separate transition UI. */
+export type TenderStatus = DisplayStatus;
+
 export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching: "Ищем поставщиков",
 	searching_completed: "Поиск поставщиков завершён",
@@ -70,7 +74,6 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 	self: "Своими силами",
 };
 
-export const UNLOADING_TYPES = Object.keys(UNLOADING_LABELS) as UnloadingType[];
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
@@ -102,27 +105,46 @@ export interface ProcurementItem {
 	currentPrice: number;
 	bestPrice: number | null;
 	averagePrice: number | null;
-	folderId: string | null;
-	companyId: string;
-	taskCount?: number;
+	/** Parent tender slug. Items belong to exactly one tender. Company, folder,
+	 * current supplier, and all shared step1 meta live on the parent tender. */
+	tenderId?: string;
 	description?: string;
 	unit?: Unit;
 	quantityPerDelivery?: number;
 	paymentType?: PaymentType;
 	prepaymentPercent?: number;
-	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
-	deliveryAddresses?: string[];
-	unloading?: UnloadingType;
-	analoguesAllowed?: boolean;
-	sampleRequired?: boolean;
-	deferralRequired?: boolean;
-	additionalInfo?: string;
-	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
-	attachedFiles?: AttachedFile[];
 	searchCompleted?: boolean;
+}
+
+/** Тендер — primary procurement container that bundles a 1:N collection of
+ * `ProcurementItem`s sharing one budget, deadline, company, and category.
+ * Slug `id` (e.g. `T-001`) doubles as URL param. */
+export interface ProcurementInquiry {
+	id: string;
+	name: string;
+	companyId: string;
+	folderId: string | null;
+	/** Budget cap in ₽ (free-form integer; not a derived sum of item prices). */
+	budget: number;
+	/** Required deadline ISO date (YYYY-MM-DD or full ISO). */
+	deadline: string;
+	createdAt: string;
+	/** Archive flag — archiving cascades to items: archived tender's items
+	 * disappear from /positions non-archive views (see archiveTenderCascade
+	 * operation). */
+	isArchived?: boolean;
+	currentSupplier?: CurrentSupplier;
+	addressIds?: string[];
+	unloading?: UnloadingType;
+	paymentMethod?: PaymentMethod;
+	deferralRequired?: boolean;
+	sampleRequired?: boolean;
+	analoguesAllowed?: boolean;
+	additionalInfo?: string;
+	attachedFiles?: AttachedFile[];
 }
 
 export interface Folder {
@@ -168,7 +190,6 @@ export interface Totals {
 
 export interface NewItemInput {
 	name: string;
-	folderId?: string | null;
 	description?: string;
 	unit?: Unit;
 	annualQuantity?: number;
@@ -176,18 +197,13 @@ export interface NewItemInput {
 	currentPrice?: number;
 	paymentType?: PaymentType;
 	prepaymentPercent?: number;
-	paymentMethod?: PaymentMethod;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
-	deliveryAddresses?: string[];
-	unloading?: UnloadingType;
-	analoguesAllowed?: boolean;
-	sampleRequired?: boolean;
-	deferralRequired?: boolean;
-	additionalInfo?: string;
-	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
-	attachedFiles?: AttachedFile[];
+	/** Parent tender slug. Set by `createTenderWithItems` so the new items
+	 * inherit company / folder / supplier context from the freshly-created
+	 * tender. Direct callers (legacy import flows) leave it unset. */
+	tenderId?: string;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. */
@@ -230,11 +246,12 @@ export interface Address {
 
 export type PermissionLevel = "none" | "view" | "edit";
 
-export const PERMISSION_MODULE_KEYS = ["procurement", "tasks", "companies", "employees", "emails"] as const;
+export const PERMISSION_MODULE_KEYS = ["tenders", "positions", "tasks", "companies", "employees", "emails"] as const;
 export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
 
 export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
-	procurement: "Закупки",
+	tenders: "Тендеры",
+	positions: "Позиции",
 	tasks: "Задачи",
 	companies: "Компании",
 	employees: "Сотрудники",
@@ -244,7 +261,8 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 export interface EmployeePermissions {
 	id: string;
 	employeeId: number;
-	procurement: PermissionLevel;
+	tenders: PermissionLevel;
+	positions: PermissionLevel;
 	tasks: PermissionLevel;
 	companies: PermissionLevel;
 	employees: PermissionLevel;

@@ -2,7 +2,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
+}));
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
@@ -10,8 +16,9 @@ import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import type { Company, Folder, ProcurementItem } from "@/data/types";
+import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
 
@@ -29,13 +36,31 @@ const MULTI_COMPANIES: Company[] = [
 const SINGLE_COMPANY: Company[] = [makeCompanyDetail("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 })];
 
 const ITEMS_C1: ProcurementItem[] = [
-	makeItem("i1", { name: "Труба стальная", companyId: "c1", folderId: "f1" }),
-	makeItem("i2", { name: "Швеллер", companyId: "c1", folderId: null }),
+	makeItem("i1", { name: "Труба стальная", tenderId: "T-c1-f1" }),
+	makeItem("i2", { name: "Швеллер", tenderId: "T-c1-no-folder" }),
 ];
 
-const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", companyId: "c2", folderId: null })];
+const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", tenderId: "T-c2-no-folder" })];
 
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
+
+function makeTender(id: string, companyId: string, folderId: string | null = null): ProcurementInquiry {
+	return {
+		id,
+		name: `Tender ${id}`,
+		companyId,
+		folderId,
+		budget: 0,
+		createdAt: "2026-04-01",
+		deadline: "2026-05-01",
+	};
+}
+
+const TEST_TENDERS: ProcurementInquiry[] = [
+	makeTender("T-c1-f1", "c1", "f1"),
+	makeTender("T-c1-no-folder", "c1"),
+	makeTender("T-c2-no-folder", "c2"),
+];
 
 let queryClient: QueryClient;
 let companies: Company[];
@@ -53,10 +78,11 @@ function renderPage(initialEntries?: string[]) {
 				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
+				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
 				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
 			}}
 		>
-			<MemoryRouter initialEntries={initialEntries ?? ["/procurement"]}>
+			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>
 				<TooltipProvider>
 					<ProcurementPage />
 				</TooltipProvider>
@@ -78,6 +104,9 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	vi.mocked(toast.error).mockClear();
+	vi.mocked(toast.success).mockClear();
+	vi.mocked(toast.info).mockClear();
 	// Suppress "Not implemented: HTMLFormElement.prototype.requestSubmit" from jsdom
 	vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -96,7 +125,7 @@ describe("ProcurementPage — multi-company mode", () => {
 
 	test("company URL param scopes items and shows folder badges", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(() => {
 			expect(screen.getByText("Труба стальная")).toBeInTheDocument();
@@ -129,7 +158,7 @@ describe("ProcurementPage — item drawer", () => {
 
 	test("?item= URL param opens drawer on page load", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?item=i1"]);
+		renderPage(["/positions?item=i1"]);
 
 		await waitFor(() => {
 			expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -139,7 +168,7 @@ describe("ProcurementPage — item drawer", () => {
 
 	test("close button removes drawer and ?item= param", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?item=i1"]);
+		renderPage(["/positions?item=i1"]);
 
 		await waitFor(() => {
 			expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -154,57 +183,13 @@ describe("ProcurementPage — item drawer", () => {
 	});
 });
 
-describe("ProcurementPage — archive toggle", () => {
-	test("archive button appears between filters and download", async () => {
+describe("ProcurementPage — no archive toggle", () => {
+	test("does not render an archive toggle button", async () => {
 		setupHandlers(SINGLE_COMPANY);
 		renderPage();
 		await waitForToolbar();
 
-		const filters = screen.getByRole("button", { name: "Фильтры" });
-		const archive = screen.getByRole("button", { name: "Архив" });
-		const download = screen.getByRole("button", { name: "Скачать таблицу" });
-
-		expect(filters.compareDocumentPosition(archive) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-		expect(archive.compareDocumentPosition(download) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-	});
-
-	test("toggle off-state has aria-pressed=false and no folder param", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage();
-		await waitForToolbar();
-
-		const archive = screen.getByRole("button", { name: "Архив" });
-		expect(archive).toHaveAttribute("aria-pressed", "false");
-	});
-
-	test("clicking sets folder=archive and aria-pressed=true", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage();
-		await waitForToolbar();
-
-		const user = userEvent.setup();
-		const archive = screen.getByRole("button", { name: "Архив" });
-		await user.click(archive);
-
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "true");
-		});
-	});
-
-	test("clicking while in archive view clears folder param", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=archive"]);
-		await waitForToolbar();
-
-		const archive = screen.getByRole("button", { name: "Архив" });
-		expect(archive).toHaveAttribute("aria-pressed", "true");
-
-		const user = userEvent.setup();
-		await user.click(archive);
-
-		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "false");
-		});
+		expect(screen.queryByRole("button", { name: "Архив" })).not.toBeInTheDocument();
 	});
 });
 
@@ -220,7 +205,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("total count reflects folder filter scope", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=f1"]);
+		renderPage(["/positions?folder=f1"]);
 
 		await waitFor(() => {
 			// Only item i1 is in folder f1
@@ -230,7 +215,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("total count updates when company filter changes", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(
 			() => {
@@ -252,7 +237,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders company chip when company filter active", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1"]);
+		renderPage(["/positions?company=c1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
@@ -262,7 +247,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("clicking × on company chip clears only the company param", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1&folder=f1"]);
+		renderPage(["/positions?company=c1&folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-company")).toBeInTheDocument();
@@ -280,7 +265,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders folder chip with color and name when folder filter active", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=f1"]);
+		renderPage(["/positions?folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
@@ -290,7 +275,7 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("clicking × on folder chip clears only the folder param", async () => {
 		setupHandlers(MULTI_COMPANIES);
-		renderPage(["/procurement?company=c1&folder=f1"]);
+		renderPage(["/positions?company=c1&folder=f1"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toBeInTheDocument();
@@ -307,20 +292,37 @@ describe("ProcurementPage — toolbar left zone", () => {
 
 	test("renders 'Без категории' chip when folder=none", async () => {
 		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=none"]);
+		renderPage(["/positions?folder=none"]);
 
 		await waitFor(() => {
 			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Без категории");
 		});
 	});
+});
 
-	test("renders 'Архив' chip when folder=archive", async () => {
-		setupHandlers(SINGLE_COMPANY);
-		renderPage(["/procurement?folder=archive"]);
+describe("ProcurementPage — multi-company import guard", () => {
+	test("clicking «Добавить позиции» without a company selected shows error toast and does not open dialog", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage();
+		await waitForToolbar();
 
-		await waitFor(() => {
-			expect(screen.getByTestId("chip-folder")).toHaveTextContent("Архив");
-		});
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+
+		expect(toast.error).toHaveBeenCalledWith("Выберите компанию, чтобы добавить позиции");
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	});
+
+	test("with a company selected the dialog opens normally", async () => {
+		setupHandlers(MULTI_COMPANIES);
+		renderPage(["/positions?company=c1"]);
+		await waitForToolbar();
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+
+		expect(toast.error).not.toHaveBeenCalled();
+		await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 	});
 });
 

@@ -18,6 +18,10 @@ import type {
 export interface ItemsClient {
 	list(params: ListItemsParams): Promise<CursorPage<ProcurementItem>>;
 	listAll(): Promise<ProcurementItem[]>;
+	/** All items belonging to a single tender, regardless of archive state.
+	 * `listAll()` cascades archive — opening an archived tender's detail page
+	 * needs to see its positions so headline TCO and tabs render correctly. */
+	listByTender(tenderId: string): Promise<ProcurementItem[]>;
 	totals(params: TotalsParams): Promise<Totals>;
 	get(id: string): Promise<ProcurementItem>;
 	create(inputs: NewItemInput[]): Promise<CreateItemsResult>;

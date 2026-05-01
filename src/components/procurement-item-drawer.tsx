@@ -1,10 +1,8 @@
-import { Archive, Ban, Check, Mail } from "lucide-react";
+import { Ban, Check, Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
-import { LoadMoreSentinel } from "@/components/load-more-sentinel";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import {
@@ -13,9 +11,6 @@ import {
 	type SupplierDrawerTab,
 } from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
-import { TaskCard } from "@/components/task-card";
-import { TaskDrawer } from "@/components/task-drawer";
-import { ToolbarSearch } from "@/components/toolbar-search";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -46,7 +41,6 @@ import {
 	type SupplierSortState,
 	type SupplierStatus,
 } from "@/data/supplier-types";
-import { STATUS_ICONS, type Task } from "@/data/task-types";
 import type { PaymentType, ProcurementItem } from "@/data/types";
 import { getDisplayStatus } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
@@ -58,17 +52,16 @@ import {
 	useSuppliers,
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
-import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
+import { useTender } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { formatDayMonthShort, formatDayMonthShortTime, formatRussianPlural, isOverdue } from "@/lib/format";
+import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type ItemDrawerTab = "suppliers" | "offers" | "details" | "tasks";
+type ItemDrawerTab = "suppliers" | "offers" | "details";
 
 const TABS: { key: ItemDrawerTab; label: string; mobileLabel?: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "offers", label: "Предложения" },
-	{ key: "tasks", label: "Задачи" },
 	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
@@ -99,7 +92,6 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 	const activeTab = parseItemDrawerTab(searchParams.get("tab"));
 	const supplierId = searchParams.get("supplier");
 	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
-	const taskId = searchParams.get("task");
 	const open = itemId != null;
 
 	// Look up by id alone so `?supplier=…` deep links work without an `?item=…`.
@@ -147,8 +139,6 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				next.delete("item");
 				next.delete("tab");
 				next.delete("supplier");
-				next.delete("task_status");
-				next.delete("task");
 				return next;
 			},
 			{ replace: false },
@@ -206,28 +196,6 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 		);
 	}
 
-	function handleTaskOpen(id: string) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.set("task", id);
-				return next;
-			},
-			{ replace: false },
-		);
-	}
-
-	function handleTaskClose() {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.delete("task");
-				return next;
-			},
-			{ replace: false },
-		);
-	}
-
 	function handleSelectSupplier(supplierId: string, companyName: string) {
 		setSelectingSupplier({ id: supplierId, companyName });
 	}
@@ -261,7 +229,6 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 							activeTab={activeTab}
 							onTabChange={handleTabChange}
 							onSupplierClick={handleSupplierOpen}
-							onTaskClick={handleTaskOpen}
 							onSelectSupplier={handleSelectSupplier}
 						/>
 					)}
@@ -276,7 +243,6 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 				onNavigateToItem={handleNavigateToItem}
 				onSelectSupplierForItem={handleSelectSupplierForItem}
 			/>
-			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
 			<AlertDialog
 				open={selectingSupplier != null}
 				onOpenChange={(open) => {
@@ -328,10 +294,21 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 const SEARCH_IN_PROGRESS_SINGLE = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
 const SEARCH_IN_PROGRESS_BATCH = "Дождитесь завершения поиска поставщиков чтобы отправить запросы";
 
-function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupplierClick: (id: string) => void }) {
+export function SuppliersTabPanel({
+	itemId,
+	onSupplierClick,
+	kpRequestEnabled = true,
+}: {
+	itemId: string;
+	onSupplierClick: (id: string) => void;
+	/** Default `true`. Pass `false` from the item drawer where КП requests live at
+	 * the parent tender, not per-position. Hides all КП-request UI in the table. */
+	kpRequestEnabled?: boolean;
+}) {
 	const { data: itemDetail } = useItemDetail(itemId);
+	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
-	const currentSupplier = itemDetail?.currentSupplier;
+	const currentSupplier = tender?.currentSupplier;
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -497,6 +474,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 				isLoading={query.isLoading}
 				onRowClick={onSupplierClick}
 				searchBlocked={searchBlocked}
+				kpRequestEnabled={kpRequestEnabled}
 				currentSupplierInn={currentSupplier?.inn}
 				currentSupplierName={currentSupplier?.companyName}
 				statusCounts={statusCounts}
@@ -550,7 +528,7 @@ function SuppliersTabPanel({ itemId, onSupplierClick }: { itemId: string; onSupp
 	);
 }
 
-function OffersTabPanel({
+export function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
@@ -579,7 +557,8 @@ function OffersTabPanel({
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
 	const { data: itemDetail } = useItemDetail(itemId);
-	const currentSupplier = itemDetail?.currentSupplier;
+	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
+	const currentSupplier = tender?.currentSupplier;
 	// When no payment/delivery client-side filters are active, the server total matches.
 	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
 	// all pages just to produce a total isn't worth it for these local filters.
@@ -688,263 +667,6 @@ function OffersTabPanel({
 	);
 }
 
-type TasksFilter = "completed" | "archived";
-
-const FILTER_BUTTONS: { key: TasksFilter; label: string }[] = [
-	{ key: "completed", label: "Завершённые" },
-	{ key: "archived", label: "Архив" },
-];
-
-const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
-	{
-		id: "name",
-		header: "ЗАДАЧА",
-		sortable: true,
-		cell: (t) => <span className="font-medium">{t.name}</span>,
-	},
-	{
-		id: "questionCount",
-		header: "ВОПРОСЫ",
-		sortable: true,
-		align: "right",
-		cell: (t) =>
-			t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "\u2014",
-	},
-	{
-		id: "deadlineAt",
-		header: "ДЕДЛАЙН",
-		sortable: true,
-		align: "right",
-		cell: (t) => (
-			<time
-				dateTime={t.deadlineAt}
-				className={cn("tabular-nums", isOverdue(t.deadlineAt) && "font-medium text-destructive")}
-			>
-				{formatDayMonthShort(t.deadlineAt)}
-			</time>
-		),
-	},
-	{
-		id: "createdAt",
-		header: "ДАТА И ВРЕМЯ СОЗДАНИЯ",
-		sortable: true,
-		align: "right",
-		cell: (t) => (
-			<time dateTime={t.createdAt} className="tabular-nums">
-				{formatDayMonthShortTime(t.createdAt)}
-			</time>
-		),
-	},
-];
-
-type TaskSortField = "name" | "questionCount" | "deadlineAt" | "createdAt";
-
-function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc"): number {
-	const sign = dir === "asc" ? 1 : -1;
-	if (field === "name") return a.name.localeCompare(b.name, "ru") * sign;
-	if (field === "questionCount") return (a.questionCount - b.questionCount) * sign;
-	const av = new Date(field === "deadlineAt" ? a.deadlineAt : a.createdAt).getTime();
-	const bv = new Date(field === "deadlineAt" ? b.deadlineAt : b.createdAt).getTime();
-	return (av - bv) * sign;
-}
-
-function TasksTabPanel({ itemId, onTaskClick }: { itemId: string; onTaskClick: (id: string) => void }) {
-	const [searchParams, setSearchParams] = useSearchParams();
-	const [search, setSearch] = useState("");
-	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
-	const searchExpanded = search.length > 0 || searchUserExpanded;
-	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-	const [sort, setSort] = useState<DataTableSort | null>({ field: "createdAt", direction: "desc" });
-	const isMobile = useIsMobile();
-	const updateStatus = useUpdateTaskStatus();
-
-	const statusParam = searchParams.get("task_status") as TasksFilter | null;
-	const activeFilter: TasksFilter | null =
-		statusParam === "completed" || statusParam === "archived" ? statusParam : null;
-
-	const taskColumns = useTaskColumns({ item: itemId, q: search || undefined });
-
-	function handleFilterToggle(filter: TasksFilter) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				if (activeFilter === filter) {
-					next.delete("task_status");
-				} else {
-					next.set("task_status", filter);
-				}
-				return next;
-			},
-			{ replace: true },
-		);
-		setSelectedIds(new Set());
-	}
-
-	function handleSort(field: string) {
-		setSort((prev) => {
-			if (prev?.field !== field) return { field, direction: "asc" };
-			if (prev.direction === "asc") return { field, direction: "desc" };
-			return null;
-		});
-	}
-
-	const activeFilterTasks = activeFilter ? taskColumns[activeFilter].tasks : null;
-
-	const tasks = useMemo(() => {
-		const base = activeFilterTasks ?? [...taskColumns.assigned.tasks, ...taskColumns.in_progress.tasks];
-		if (!sort) {
-			return [...base].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-		}
-		return [...base].sort((a, b) => compareTasks(a, b, sort.field as TaskSortField, sort.direction));
-	}, [activeFilterTasks, taskColumns.assigned.tasks, taskColumns.in_progress.tasks, sort]);
-
-	const isLoading = taskColumns.assigned.isLoading;
-
-	// Toolbar count is the total matching the active filter across all pages, not just the loaded rows.
-	const tasksTotalCount = activeFilter
-		? taskColumns[activeFilter].count
-		: taskColumns.assigned.count + taskColumns.in_progress.count;
-
-	function handleSelectionChange(idOrAll: string) {
-		if (idOrAll === "all") {
-			setSelectedIds((prev) => {
-				const allSelected = tasks.length > 0 && tasks.every((t) => prev.has(t.id));
-				if (allSelected) {
-					const next = new Set(prev);
-					for (const t of tasks) next.delete(t.id);
-					return next;
-				}
-				const next = new Set(prev);
-				for (const t of tasks) next.add(t.id);
-				return next;
-			});
-		} else {
-			setSelectedIds((prev) => {
-				const next = new Set(prev);
-				if (next.has(idOrAll)) next.delete(idOrAll);
-				else next.add(idOrAll);
-				return next;
-			});
-		}
-	}
-
-	function handleArchiveTask(id: string) {
-		updateStatus.mutate({ id, status: "archived" });
-	}
-
-	function handleArchiveSelected() {
-		for (const id of selectedIds) {
-			updateStatus.mutate({ id, status: "archived" });
-		}
-		setSelectedIds(new Set());
-	}
-
-	const toolbar =
-		selectedIds.size > 0 ? (
-			<div className="mx-3 flex items-center gap-3 rounded-xl bg-muted px-3 py-2">
-				<span className="text-sm font-medium tabular-nums">Выбрано: {selectedIds.size}</span>
-				<Button type="button" variant="outline" size="sm" onClick={handleArchiveSelected} aria-label="Архивировать">
-					<Archive className="mr-1 size-4" aria-hidden="true" />
-					Архивировать
-				</Button>
-			</div>
-		) : (
-			<div className="flex items-center gap-2 px-3">
-				{!(isMobile && searchExpanded) && (
-					<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-						{formatRussianPlural(tasksTotalCount, ["задача", "задачи", "задач"])}
-					</span>
-				)}
-				<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
-					<ToolbarSearch
-						value={search}
-						onChange={setSearch}
-						ariaLabel="Поиск задач"
-						debounceMs={250}
-						expanded={searchUserExpanded}
-						onExpandedChange={setSearchUserExpanded}
-					/>
-					{!(isMobile && searchExpanded) &&
-						FILTER_BUTTONS.map(({ key, label }) => {
-							const Icon = STATUS_ICONS[key];
-							const count = taskColumns[key].count;
-							const active = activeFilter === key;
-							return (
-								<Tooltip key={key}>
-									<TooltipTrigger asChild>
-										<button
-											type="button"
-											aria-label={label}
-											aria-pressed={active}
-											className={cn(
-												"inline-flex items-center gap-1 rounded-[min(var(--radius-md),12px)] px-2 py-1 text-sm transition-colors",
-												"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-												active && "bg-muted",
-											)}
-											onClick={() => handleFilterToggle(key)}
-										>
-											<Icon className="size-4" aria-hidden="true" />
-											{count > 0 && <span className="tabular-nums text-xs">{count}</span>}
-										</button>
-									</TooltipTrigger>
-									<TooltipContent>{label}</TooltipContent>
-								</Tooltip>
-							);
-						})}
-				</div>
-			</div>
-		);
-
-	function renderMobileCard(t: Task) {
-		return <TaskCard task={t} onClick={onTaskClick} hideItemName />;
-	}
-
-	const sentinel = (
-		<>
-			{!activeFilter && taskColumns.assigned.hasNextPage && (
-				<LoadMoreSentinel loadMore={taskColumns.assigned.loadMore} />
-			)}
-			{!activeFilter && taskColumns.in_progress.hasNextPage && (
-				<LoadMoreSentinel loadMore={taskColumns.in_progress.loadMore} />
-			)}
-			{activeFilter && taskColumns[activeFilter].hasNextPage && (
-				<LoadMoreSentinel loadMore={taskColumns[activeFilter].loadMore} />
-			)}
-		</>
-	);
-
-	return (
-		<div data-testid="tab-panel-tasks" className="h-full">
-			<DataTable<Task>
-				columns={TASK_TABLE_COLUMNS}
-				rows={tasks}
-				getRowId={(t) => t.id}
-				isLoading={isLoading}
-				emptyMessage="Нет задач"
-				selection={{
-					selectedIds,
-					onChange: handleSelectionChange,
-					getRowLabel: (id) => `Выбрать ${tasks.find((t) => t.id === id)?.name ?? id}`,
-				}}
-				sort={sort}
-				onSort={handleSort}
-				rowActions={(t) => [
-					{
-						label: "Архивировать",
-						icon: <Archive className="size-3.5" />,
-						onSelect: () => handleArchiveTask(t.id),
-					},
-				]}
-				toolbar={toolbar}
-				mobileCardRender={renderMobileCard}
-				onRowClick={onTaskClick}
-				isMobile={isMobile}
-				sentinel={sentinel}
-			/>
-		</div>
-	);
-}
-
 function HeaderMetric({
 	icon: Icon,
 	count,
@@ -977,7 +699,6 @@ function ProcurementItemDrawerContent({
 	activeTab,
 	onTabChange,
 	onSupplierClick,
-	onTaskClick,
 	onSelectSupplier,
 }: {
 	itemId: string;
@@ -985,7 +706,6 @@ function ProcurementItemDrawerContent({
 	activeTab: ItemDrawerTab;
 	onTabChange: (tab: ItemDrawerTab) => void;
 	onSupplierClick: (id: string, origin?: SupplierDrawerTab) => void;
-	onTaskClick: (id: string) => void;
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
 }) {
 	const itemName = item?.name;
@@ -1009,13 +729,9 @@ function ProcurementItemDrawerContent({
 		return { total, contacted, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);
 
-	const taskColumns = useTaskColumns({ item: itemId });
-	const activeTaskCount = taskColumns.assigned.count + taskColumns.in_progress.count;
-
 	const tabCounts: Partial<Record<ItemDrawerTab, number>> = {
 		suppliers: supplierCounts.total,
 		offers: supplierCounts.quotesReceived,
-		tasks: activeTaskCount,
 	};
 
 	return (
@@ -1114,7 +830,11 @@ function ProcurementItemDrawerContent({
 				)}
 			>
 				{activeTab === "suppliers" && (
-					<SuppliersTabPanel itemId={itemId} onSupplierClick={(id) => onSupplierClick(id, "info")} />
+					<SuppliersTabPanel
+						itemId={itemId}
+						onSupplierClick={(id) => onSupplierClick(id, "info")}
+						kpRequestEnabled={false}
+					/>
 				)}
 				{activeTab === "offers" && (
 					<OffersTabPanel
@@ -1124,7 +844,6 @@ function ProcurementItemDrawerContent({
 					/>
 				)}
 				{activeTab === "details" && <DetailsTabPanel itemId={itemId} />}
-				{activeTab === "tasks" && <TasksTabPanel itemId={itemId} onTaskClick={onTaskClick} />}
 			</div>
 		</div>
 	);

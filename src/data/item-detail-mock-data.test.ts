@@ -37,7 +37,7 @@ describe("getItemDetail", () => {
 		expect(item?.quantityPerDelivery).toBe(15_000);
 		expect(item?.paymentType).toBe("prepayment");
 		expect(item?.deliveryCostType).toBe("paid");
-		expect(item?.folderId).toBe("folder-packaging");
+		expect(item?.tenderId).toBe("T-001");
 	});
 
 	it("includes read-only fields", async () => {

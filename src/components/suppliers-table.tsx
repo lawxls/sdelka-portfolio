@@ -67,6 +67,10 @@ interface SuppliersTableProps {
 	/** When true, the per-row «Запросить КП» button is disabled with a tooltip —
 	 * the parent still routes bulk actions through a toast so the blocked state is consistent. */
 	searchBlocked?: boolean;
+	/** Default `true`. When `false`, all KP-request UI is hidden (top-right CTA, batch
+	 * action, and per-row «Запросить КП» button — replaced by the status indicator).
+	 * Used by the item drawer where KP requests are scoped to the parent tender. */
+	kpRequestEnabled?: boolean;
 	/** INN of the item's currentSupplier, if any — drives the «Ваш поставщик» subtext that
 	 * replaces «ИНН: …» on the matching row. Falls back to companyName when INN is absent. */
 	currentSupplierInn?: string;
@@ -123,6 +127,7 @@ export function SuppliersTable({
 	isFetchingNextPage,
 	onRowClick,
 	searchBlocked,
+	kpRequestEnabled = true,
 	currentSupplierInn,
 	currentSupplierName,
 }: SuppliersTableProps) {
@@ -150,7 +155,7 @@ export function SuppliersTable({
 				<Archive className="mr-1 size-4" aria-hidden="true" />
 				Архивировать
 			</Button>
-			{!showArchived && (
+			{!showArchived && kpRequestEnabled && (
 				<Button type="button" variant="outline" size="sm" onClick={onSendRequestBatch}>
 					<Mails data-icon="inline-start" aria-hidden="true" />
 					Отправить запросы
@@ -271,7 +276,7 @@ export function SuppliersTable({
 							</TooltipTrigger>
 							<TooltipContent>Архив</TooltipContent>
 						</Tooltip>
-						{!showArchived && (
+						{!showArchived && kpRequestEnabled && (
 							<Button
 								type="button"
 								size="sm"
@@ -365,7 +370,7 @@ export function SuppliersTable({
 			align: "right",
 			headerClassName: "w-[160px]",
 			cellClassName: "w-[160px] whitespace-nowrap",
-			cell: (s) => renderStateCell(s, onSendRequest, searchBlocked),
+			cell: (s) => renderStateCell(s, onSendRequest, searchBlocked, kpRequestEnabled),
 		},
 	];
 
@@ -412,7 +417,7 @@ export function SuppliersTable({
 							<div className="text-xs text-muted-foreground tabular-nums">ИНН:&nbsp;{s.inn}</div>
 						)}
 					</div>
-					<div className="shrink-0">{renderStateCell(s, onSendRequest, searchBlocked)}</div>
+					<div className="shrink-0">{renderStateCell(s, onSendRequest, searchBlocked, kpRequestEnabled)}</div>
 				</div>
 				<a
 					href={s.website}
@@ -497,8 +502,13 @@ export function SuppliersTable({
 	);
 }
 
-function renderStateCell(s: Supplier, onSendRequest: (id: string) => void, searchBlocked?: boolean) {
-	if (s.status === "new") {
+function renderStateCell(
+	s: Supplier,
+	onSendRequest: (id: string) => void,
+	searchBlocked?: boolean,
+	kpRequestEnabled = true,
+) {
+	if (s.status === "new" && kpRequestEnabled) {
 		// Use aria-disabled (not `disabled`) so the button stays focusable and the tooltip can trigger;
 		// the click still routes through — the parent shows a toast on blocked attempts.
 		const button = (

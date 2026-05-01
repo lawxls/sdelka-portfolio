@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
@@ -53,6 +54,7 @@ function renderPage(initialEntries?: string[]) {
 			clients={{
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: allTasks }),
+				tenders: createInMemoryTendersClient({ seed: [] }),
 			}}
 		>
 			<TooltipProvider>
@@ -210,11 +212,11 @@ describe("TasksPage", () => {
 		}
 	});
 
-	it("shows item (position) name under task name in the same cell", async () => {
+	it("shows tender name under task name in the same cell", async () => {
 		renderPage();
 		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
-		// Position is rendered via makeTask as "Арматура А500С" — should appear inline
-		expect(screen.getAllByText("Арматура А500С").length).toBeGreaterThan(0);
+		// Tender is rendered via makeTask as "Тендер арматуры" — should appear inline.
+		expect(screen.getAllByText("Тендер арматуры").length).toBeGreaterThan(0);
 	});
 
 	it("renders Скачать таблицу button", async () => {

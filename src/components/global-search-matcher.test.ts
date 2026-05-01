@@ -62,7 +62,7 @@ describe("matchGlobal", () => {
 		const items = groups.find((g) => g.group === "items");
 		expect(items?.results.map((r) => r.id)).toEqual(["1"]);
 		expect(items?.results[0].name).toBe("Газобетон D400");
-		expect(items?.results[0].href).toBe("/procurement?item=1");
+		expect(items?.results[0].href).toBe("/positions?item=1");
 	});
 
 	it("matches suppliers by name, email, website", () => {
@@ -114,7 +114,7 @@ describe("matchGlobal", () => {
 		expect(sup?.results[0]).toMatchObject({ id: "s2", status: "получено_кп" });
 		// Opens the supplier drawer directly — no item= param, so the item drawer
 		// stays closed behind the supplier drawer.
-		expect(sup?.results[0].href).toBe("/procurement?supplier=s2&supplier_tab=offers");
+		expect(sup?.results[0].href).toBe("/positions?supplier=s2&supplier_tab=offers");
 	});
 
 	it("supplier href opens the detail drawer without the item drawer for non-new statuses", () => {
@@ -127,10 +127,10 @@ describe("matchGlobal", () => {
 		const byId = Object.fromEntries(
 			(groups.find((g) => g.group === "suppliers")?.results ?? []).map((r) => [r.id, r.href]),
 		);
-		expect(byId.s1).toBe("/procurement?supplier=s1&supplier_tab=offers");
-		expect(byId.s2).toBe("/procurement?supplier=s2&supplier_tab=info");
+		expect(byId.s1).toBe("/positions?supplier=s1&supplier_tab=offers");
+		expect(byId.s2).toBe("/positions?supplier=s2&supplier_tab=info");
 		// "new" candidates lack a detail drawer — fall back to the item's suppliers tab.
-		expect(byId.s3).toBe("/procurement?item=item-4&tab=suppliers");
+		expect(byId.s3).toBe("/positions?item=item-4&tab=suppliers");
 	});
 
 	it("matches tasks by title", () => {

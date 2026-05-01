@@ -11,6 +11,7 @@ import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
+import type { TendersClient } from "./clients/tenders-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
@@ -67,6 +68,7 @@ export function fakeItemsClient(overrides: Partial<ItemsClient> = {}): ItemsClie
 	return {
 		list: notImplemented("list"),
 		listAll: notImplemented("listAll"),
+		listByTender: notImplemented("listByTender"),
 		totals: notImplemented("totals"),
 		get: notImplemented("get"),
 		create: notImplemented("create"),
@@ -114,6 +116,23 @@ export function fakeTasksClient(overrides: Partial<TasksClient> = {}): TasksClie
 		changeStatus: notImplemented("changeStatus"),
 		uploadAttachments: notImplemented("uploadAttachments"),
 		deleteAttachment: notImplemented("deleteAttachment"),
+		...overrides,
+	};
+}
+
+/** Build a fake `TendersClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeTendersClient(overrides: Partial<TendersClient> = {}): TendersClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeTendersClient.${method} not stubbed`);
+	};
+	return {
+		list: notImplemented("list"),
+		get: notImplemented("get"),
+		create: notImplemented("create"),
+		update: notImplemented("update"),
+		archive: notImplemented("archive"),
+		delete: notImplemented("delete"),
 		...overrides,
 	};
 }

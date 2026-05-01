@@ -12,7 +12,10 @@ export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
 	archived: Archive,
 };
 
-export interface TaskItem {
+/** Parent tender reference on a `Task`. Tasks attach to tenders, not to
+ * individual positions — so a task carries the tender's slug, name, and the
+ * owning company id used for filter/search. */
+export interface TaskTender {
 	id: string;
 	name: string;
 	companyId: string;
@@ -49,7 +52,7 @@ export type TaskSortField = "created_at" | "deadline_at" | "question_count";
 
 export interface TaskFilterParams {
 	q?: string;
-	item?: string;
+	tender?: string;
 	company?: string;
 	sort?: TaskSortField;
 	dir?: "asc" | "desc";
@@ -59,7 +62,7 @@ export interface Task {
 	id: string;
 	name: string;
 	status: TaskStatus;
-	item: TaskItem;
+	tender: TaskTender;
 	assignee: TaskAssignee | null;
 	createdAt: string;
 	deadlineAt: string;

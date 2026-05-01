@@ -213,7 +213,7 @@ export function CompaniesSettingsPage() {
 											<dd className="tabular-nums">{company.addresses.length}</dd>
 											<dt className="text-xs text-muted-foreground">Сотрудники</dt>
 											<dd className="tabular-nums">{company.employeeCount}</dd>
-											<dt className="text-xs text-muted-foreground">Закупки</dt>
+											<dt className="text-xs text-muted-foreground">Позиции</dt>
 											<dd className="tabular-nums">{company.procurementItemCount}</dd>
 										</dl>
 									</button>
@@ -237,7 +237,7 @@ export function CompaniesSettingsPage() {
 								<th className="px-lg py-sm font-medium">Название компании</th>
 								<th className="px-lg py-sm font-medium tabular-nums">Адреса</th>
 								<th className="px-lg py-sm font-medium tabular-nums">Сотрудники</th>
-								<th className="px-lg py-sm font-medium tabular-nums">Закупки</th>
+								<th className="px-lg py-sm font-medium tabular-nums">Позиции</th>
 							</tr>
 						</thead>
 						<tbody>

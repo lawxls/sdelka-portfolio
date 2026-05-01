@@ -9,6 +9,7 @@ import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
+import type { TendersClient } from "./clients/tenders-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 
 /**
@@ -21,6 +22,7 @@ export interface DataClients {
 	items?: ItemsClient;
 	suppliers?: SuppliersClient;
 	tasks?: TasksClient;
+	tenders?: TendersClient;
 	folders?: FoldersClient;
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
@@ -70,6 +72,12 @@ export function useTasksClient(): TasksClient {
 	const { tasks } = useClients();
 	if (!tasks) throw new Error("tasks client not provided");
 	return tasks;
+}
+
+export function useTendersClient(): TendersClient {
+	const { tenders } = useClients();
+	if (!tenders) throw new Error("tenders client not provided");
+	return tenders;
 }
 
 export function useFoldersClient(): FoldersClient {

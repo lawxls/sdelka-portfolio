@@ -1,50 +1,32 @@
-import { FileText, Paperclip, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { FileText, Paperclip } from "lucide-react";
+import { useMemo, useState } from "react";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import type {
-	AttachedFile,
-	CurrentSupplier,
-	DeliveryCostType,
-	GeneratedAnswer,
-	PaymentType,
-	ProcurementItem,
-	Unit,
-	UnloadingType,
-} from "@/data/types";
+import type { GeneratedAnswer, ProcurementItem, Unit } from "@/data/types";
 import {
 	DELIVERY_COST_TYPE_LABELS,
 	formatPaymentType,
-	PAYMENT_TYPE_LABELS,
-	PAYMENT_TYPES,
+	PAYMENT_METHOD_LABELS,
 	UNITS,
 	UNLOADING_LABELS,
-	UNLOADING_TYPES,
 } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
-import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
-import { formatCurrency, formatFileSize } from "@/lib/format";
+import { useTender } from "@/data/use-tenders";
+import { formatCurrency, formatFileSize, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
 	itemId: string;
 }
 
-type SectionKey = "info" | "logistics" | "additional" | "currentSupplier" | "answers" | null;
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
+type SectionKey = "info" | "answers" | null;
 
 const QUESTION_BY_ID = new Map(CREATION_QUESTIONS.map((q) => [q.id, q]));
-
-const EMPTY_ADDRESSES: never[] = [];
 
 interface InfoFormState {
 	name: string;
@@ -52,53 +34,10 @@ interface InfoFormState {
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
-	folderId: string | null;
-}
-
-interface LogisticsFormState {
-	unloading: UnloadingType | "";
-	paymentType: PaymentType;
-	prepaymentPercent: string;
-	addressIds: string[];
-}
-
-interface AdditionalFormState {
-	deferralRequired: boolean;
-	sampleRequired: boolean;
-	analoguesAllowed: boolean;
-	additionalInfo: string;
-	attachedFiles: AttachedFile[];
 }
 
 interface AnswersFormState {
 	texts: Record<string, string>;
-}
-
-interface SupplierFormState {
-	companyName: string;
-	inn: string;
-	pricePerUnit: string;
-	paymentType: PaymentType;
-	deferralDays: string;
-	prepaymentPercent: string;
-	deliveryCostType: DeliveryCostType | "";
-	deliveryCost: string;
-}
-
-function toNumberOrUndefined(value: string): number | undefined {
-	const trimmed = value.trim();
-	if (trimmed === "") return undefined;
-	const n = Number(trimmed);
-	return Number.isFinite(n) ? n : undefined;
-}
-
-function effectivePrepaymentPercent(
-	paymentType: PaymentType,
-	percent: string | number | undefined,
-): number | undefined {
-	if (paymentType !== "prepayment") return undefined;
-	const parsed = typeof percent === "string" ? toNumberOrUndefined(percent) : percent;
-	return parsed ?? 100;
 }
 
 function initInfoForm(item: ProcurementItem): InfoFormState {
@@ -108,26 +47,6 @@ function initInfoForm(item: ProcurementItem): InfoFormState {
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
-		folderId: item.folderId,
-	};
-}
-
-function initLogisticsForm(item: ProcurementItem, addressIds: string[]): LogisticsFormState {
-	return {
-		unloading: item.unloading ?? "",
-		paymentType: item.paymentType ?? "prepayment",
-		prepaymentPercent: item.prepaymentPercent != null ? String(item.prepaymentPercent) : "100",
-		addressIds,
-	};
-}
-
-function initAdditionalForm(item: ProcurementItem): AdditionalFormState {
-	return {
-		deferralRequired: item.deferralRequired ?? false,
-		sampleRequired: item.sampleRequired ?? false,
-		analoguesAllowed: item.analoguesAllowed ?? false,
-		additionalInfo: item.additionalInfo ?? "",
-		attachedFiles: item.attachedFiles ?? [],
 	};
 }
 
@@ -139,20 +58,6 @@ function initAnswersForm(item: ProcurementItem): AnswersFormState {
 	return { texts };
 }
 
-function initSupplierForm(item: ProcurementItem): SupplierFormState {
-	const s = item.currentSupplier;
-	return {
-		companyName: s?.companyName ?? "",
-		inn: s?.inn ?? "",
-		pricePerUnit: s?.pricePerUnit != null ? String(s.pricePerUnit) : "",
-		paymentType: s?.paymentType ?? "prepayment",
-		deferralDays: s?.deferralDays != null ? String(s.deferralDays) : "",
-		prepaymentPercent: s?.prepaymentPercent != null ? String(s.prepaymentPercent) : "100",
-		deliveryCostType: item.deliveryCostType ?? "",
-		deliveryCost: item.deliveryCost != null ? String(item.deliveryCost) : "",
-	};
-}
-
 function answerValueText(answer: GeneratedAnswer): string {
 	const parts: string[] = [];
 	if (answer.selectedOption) parts.push(answer.selectedOption);
@@ -160,35 +65,31 @@ function answerValueText(answer: GeneratedAnswer): string {
 	return parts.join(" — ");
 }
 
-function formatDeliveryTypeWithCost(t: DeliveryCostType | undefined, cost: number | undefined): string {
-	if (!t) return "";
-	if (t === "paid" && cost != null) return `${DELIVERY_COST_TYPE_LABELS.paid} · ${formatCurrency(cost)}`;
-	return DELIVERY_COST_TYPE_LABELS[t];
-}
-
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: item, isLoading, isError } = useItemDetail(itemId);
 	const { data: folders = [] } = useFolders();
-	const { data: company } = useCompanyDetail(item?.companyId ?? null);
+	// Tender-level meta (company, category, address, payment method, current
+	// supplier, requirements) lives on the parent tender after the schema
+	// migration. Read-only here in the item drawer; edits are deferred to the
+	// tender detail page in a later slice.
+	const { data: tender } = useTender(item?.tenderId ?? null);
+	const { data: company } = useCompanyDetail(tender?.companyId ?? null);
 	const updateMutation = useUpdateItemDetail();
-	const createFolderMutation = useCreateFolder();
 
 	const [editingSection, setEditingSection] = useState<SectionKey>(null);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
-	const [logisticsForm, setLogisticsForm] = useState<LogisticsFormState | null>(null);
-	const [additionalForm, setAdditionalForm] = useState<AdditionalFormState | null>(null);
-	const [supplierForm, setSupplierForm] = useState<SupplierFormState | null>(null);
 	const [answersForm, setAnswersForm] = useState<AnswersFormState | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
+	const folder = useMemo(() => folders.find((f) => f.id === tender?.folderId), [folders, tender?.folderId]);
 
-	const companyAddresses = company?.addresses ?? EMPTY_ADDRESSES;
-	const currentAddressIds = useMemo(() => {
-		if (!item?.deliveryAddresses) return [];
-		const stored = new Set(item.deliveryAddresses);
-		return companyAddresses.filter((a) => stored.has(a.address)).map((a) => a.id);
-	}, [item?.deliveryAddresses, companyAddresses]);
+	const addressesText = useMemo(() => {
+		if (!tender?.addressIds || !company?.addresses) return "";
+		const set = new Set(tender.addressIds);
+		return company.addresses
+			.filter((a) => set.has(a.id))
+			.map((a) => a.address)
+			.join("; ");
+	}, [tender?.addressIds, company?.addresses]);
 
 	if (isLoading) {
 		return (
@@ -223,7 +124,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		});
 	}
 
-	// --- Info ---
 	function handleEditInfo() {
 		setInfoForm(initInfoForm(currentItem));
 		setEditingSection("info");
@@ -231,15 +131,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	function updateInfo<K extends keyof InfoFormState>(key: K, value: InfoFormState[K]) {
 		setInfoForm((prev) => (prev ? { ...prev, [key]: value } : prev));
-	}
-
-	function handleCreateFolder(name: string, color: string) {
-		createFolderMutation.mutate(
-			{ name, color },
-			{
-				onSuccess: (created) => updateInfo("folderId", created.id),
-			},
-		);
 	}
 
 	function handleSaveInfo() {
@@ -252,256 +143,21 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (qpd !== currentItem.quantityPerDelivery) data.quantityPerDelivery = qpd;
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		if (aq !== undefined && aq !== currentItem.annualQuantity) data.annualQuantity = aq;
-		if (infoForm.folderId !== currentItem.folderId) data.folderId = infoForm.folderId;
 		mutate(data);
 	}
 
 	function isInfoDirty() {
 		if (!infoForm) return false;
-		// annualQuantity is required; clearing the input (→ undefined) is treated as no change,
-		// matching handleSaveInfo which skips writes when the parsed value is undefined.
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		return (
 			infoForm.name !== currentItem.name ||
 			infoForm.description !== (currentItem.description ?? "") ||
 			infoForm.unit !== (currentItem.unit ?? "") ||
 			toNumberOrUndefined(infoForm.quantityPerDelivery) !== currentItem.quantityPerDelivery ||
-			(aq !== undefined && aq !== currentItem.annualQuantity) ||
-			infoForm.folderId !== currentItem.folderId
+			(aq !== undefined && aq !== currentItem.annualQuantity)
 		);
 	}
 
-	// --- Logistics ---
-	function handleEditLogistics() {
-		setLogisticsForm(initLogisticsForm(currentItem, currentAddressIds));
-		setEditingSection("logistics");
-	}
-
-	function updateLogistics<K extends keyof LogisticsFormState>(key: K, value: LogisticsFormState[K]) {
-		setLogisticsForm((prev) => (prev ? { ...prev, [key]: value } : prev));
-	}
-
-	function handleSaveLogistics() {
-		if (!logisticsForm) return;
-		const data: Record<string, unknown> = {};
-		if (logisticsForm.unloading !== (currentItem.unloading ?? ""))
-			data.unloading = logisticsForm.unloading || undefined;
-		if (logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment"))
-			data.paymentType = logisticsForm.paymentType;
-
-		const nextPrepaymentPercent = effectivePrepaymentPercent(
-			logisticsForm.paymentType,
-			logisticsForm.prepaymentPercent,
-		);
-		if (nextPrepaymentPercent !== currentItem.prepaymentPercent) {
-			data.prepaymentPercent = nextPrepaymentPercent === 100 ? undefined : nextPrepaymentPercent;
-		}
-
-		const selectedSet = new Set(logisticsForm.addressIds);
-		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
-		const prevAddresses = currentItem.deliveryAddresses ?? [];
-		const addressesChanged =
-			nextAddresses.length !== prevAddresses.length || nextAddresses.some((addr, idx) => addr !== prevAddresses[idx]);
-		if (addressesChanged) {
-			data.deliveryAddresses = nextAddresses.length > 0 ? nextAddresses : undefined;
-		}
-
-		mutate(data);
-	}
-
-	function isLogisticsDirty() {
-		if (!logisticsForm) return false;
-		const selectedSet = new Set(logisticsForm.addressIds);
-		const nextAddresses = companyAddresses.filter((a) => selectedSet.has(a.id)).map((a) => a.address);
-		const prevAddresses = currentItem.deliveryAddresses ?? [];
-		const nextPrepaymentPercent = effectivePrepaymentPercent(
-			logisticsForm.paymentType,
-			logisticsForm.prepaymentPercent,
-		);
-		const currentPrepaymentPercent = effectivePrepaymentPercent(
-			currentItem.paymentType ?? "prepayment",
-			currentItem.prepaymentPercent,
-		);
-		return (
-			logisticsForm.unloading !== (currentItem.unloading ?? "") ||
-			logisticsForm.paymentType !== (currentItem.paymentType ?? "prepayment") ||
-			nextPrepaymentPercent !== currentPrepaymentPercent ||
-			nextAddresses.length !== prevAddresses.length ||
-			nextAddresses.some((addr, idx) => addr !== prevAddresses[idx])
-		);
-	}
-
-	// --- Additional ---
-	function handleEditAdditional() {
-		setAdditionalForm(initAdditionalForm(currentItem));
-		setEditingSection("additional");
-	}
-
-	function updateAdditional<K extends keyof AdditionalFormState>(key: K, value: AdditionalFormState[K]) {
-		setAdditionalForm((prev) => (prev ? { ...prev, [key]: value } : prev));
-	}
-
-	function handleFilesAdd(newFiles: FileList | null) {
-		if (!newFiles || !additionalForm) return;
-		const current = additionalForm.attachedFiles;
-		const currentTotal = current.reduce((sum, f) => sum + f.size, 0);
-		const toAdd: AttachedFile[] = [];
-		let runningTotal = currentTotal;
-		for (const file of newFiles) {
-			if (file.size > MAX_FILE_SIZE) continue;
-			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
-			toAdd.push({ name: file.name, size: file.size });
-			runningTotal += file.size;
-		}
-		if (toAdd.length > 0) {
-			updateAdditional("attachedFiles", [...current, ...toAdd]);
-		}
-	}
-
-	function handleFileRemove(index: number) {
-		if (!additionalForm) return;
-		updateAdditional(
-			"attachedFiles",
-			additionalForm.attachedFiles.filter((_, i) => i !== index),
-		);
-	}
-
-	function handleSaveAdditional() {
-		if (!additionalForm) return;
-		const data: Record<string, unknown> = {};
-		if (additionalForm.deferralRequired !== (currentItem.deferralRequired ?? false))
-			data.deferralRequired = additionalForm.deferralRequired;
-		if (additionalForm.sampleRequired !== (currentItem.sampleRequired ?? false))
-			data.sampleRequired = additionalForm.sampleRequired;
-		if (additionalForm.analoguesAllowed !== (currentItem.analoguesAllowed ?? false))
-			data.analoguesAllowed = additionalForm.analoguesAllowed;
-		if (additionalForm.additionalInfo !== (currentItem.additionalInfo ?? ""))
-			data.additionalInfo = additionalForm.additionalInfo || undefined;
-
-		const prevFiles = currentItem.attachedFiles ?? [];
-		const nextFiles = additionalForm.attachedFiles;
-		const filesChanged =
-			prevFiles.length !== nextFiles.length ||
-			nextFiles.some((f, i) => f.name !== prevFiles[i]?.name || f.size !== prevFiles[i]?.size);
-		if (filesChanged) {
-			data.attachedFiles = nextFiles.length > 0 ? nextFiles : undefined;
-		}
-
-		mutate(data);
-	}
-
-	function isAdditionalDirty() {
-		if (!additionalForm) return false;
-		const prevFiles = currentItem.attachedFiles ?? [];
-		const nextFiles = additionalForm.attachedFiles;
-		const filesChanged =
-			prevFiles.length !== nextFiles.length ||
-			nextFiles.some((f, i) => f.name !== prevFiles[i]?.name || f.size !== prevFiles[i]?.size);
-		return (
-			additionalForm.deferralRequired !== (currentItem.deferralRequired ?? false) ||
-			additionalForm.sampleRequired !== (currentItem.sampleRequired ?? false) ||
-			additionalForm.analoguesAllowed !== (currentItem.analoguesAllowed ?? false) ||
-			additionalForm.additionalInfo !== (currentItem.additionalInfo ?? "") ||
-			filesChanged
-		);
-	}
-
-	// --- Current supplier ---
-	function handleEditSupplier() {
-		setSupplierForm(initSupplierForm(currentItem));
-		setEditingSection("currentSupplier");
-	}
-
-	function updateSupplier<K extends keyof SupplierFormState>(key: K, value: SupplierFormState[K]) {
-		setSupplierForm((prev) => (prev ? { ...prev, [key]: value } : prev));
-	}
-
-	function handleSaveSupplier() {
-		if (!supplierForm) return;
-		const data: Record<string, unknown> = {};
-
-		const existing = currentItem.currentSupplier;
-		const nextPrice = toNumberOrUndefined(supplierForm.pricePerUnit);
-		const nextDeferral = toNumberOrUndefined(supplierForm.deferralDays) ?? 0;
-		const nextPrepaymentPercent = effectivePrepaymentPercent(supplierForm.paymentType, supplierForm.prepaymentPercent);
-
-		const companyName = supplierForm.companyName.trim();
-		const inn = supplierForm.inn.trim();
-
-		const nextSupplier: CurrentSupplier = {
-			companyName,
-			...(inn ? { inn } : {}),
-			paymentType: supplierForm.paymentType,
-			deferralDays: nextDeferral,
-			...(nextPrepaymentPercent !== undefined && nextPrepaymentPercent !== 100
-				? { prepaymentPercent: nextPrepaymentPercent }
-				: {}),
-			pricePerUnit: nextPrice ?? null,
-		};
-
-		const supplierChanged =
-			!existing ||
-			existing.companyName !== nextSupplier.companyName ||
-			(existing.inn ?? "") !== (nextSupplier.inn ?? "") ||
-			(existing.paymentType ?? "prepayment") !== nextSupplier.paymentType ||
-			(existing.deferralDays ?? 0) !== nextSupplier.deferralDays ||
-			(existing.prepaymentPercent ?? 100) !== (nextSupplier.prepaymentPercent ?? 100) ||
-			(existing.pricePerUnit ?? null) !== nextSupplier.pricePerUnit;
-
-		if (supplierChanged) {
-			// Persist «Ваш поставщик» only when Название, ИНН and Цена are all present —
-			// the Поставщики/Предложения tabs match by ИНН and surface name + price together,
-			// so a partial record would render an unidentifiable row.
-			data.currentSupplier = companyName && inn && nextPrice !== undefined ? nextSupplier : undefined;
-		}
-
-		if (nextPrice !== undefined && nextPrice !== currentItem.currentPrice) {
-			data.currentPrice = nextPrice;
-		}
-
-		const nextDeliveryType = supplierForm.deliveryCostType || undefined;
-		if (nextDeliveryType !== currentItem.deliveryCostType) {
-			data.deliveryCostType = nextDeliveryType;
-		}
-
-		if (supplierForm.deliveryCostType === "paid") {
-			const nextDeliveryCost = toNumberOrUndefined(supplierForm.deliveryCost);
-			if (nextDeliveryCost !== currentItem.deliveryCost) {
-				data.deliveryCost = nextDeliveryCost;
-			}
-		} else if (currentItem.deliveryCost !== undefined) {
-			data.deliveryCost = undefined;
-		}
-
-		mutate(data);
-	}
-
-	function isSupplierDirty() {
-		if (!supplierForm) return false;
-		const existing = currentItem.currentSupplier;
-		const nextPrice = toNumberOrUndefined(supplierForm.pricePerUnit);
-		const nextDeferral = toNumberOrUndefined(supplierForm.deferralDays) ?? 0;
-		const nextPrepaymentPercent = effectivePrepaymentPercent(supplierForm.paymentType, supplierForm.prepaymentPercent);
-		const existingPrepaymentPercent = effectivePrepaymentPercent(
-			existing?.paymentType ?? "prepayment",
-			existing?.prepaymentPercent,
-		);
-
-		return (
-			(existing?.companyName ?? "") !== supplierForm.companyName.trim() ||
-			(existing?.inn ?? "") !== supplierForm.inn.trim() ||
-			(existing?.paymentType ?? "prepayment") !== supplierForm.paymentType ||
-			(existing?.deferralDays ?? 0) !== nextDeferral ||
-			existingPrepaymentPercent !== nextPrepaymentPercent ||
-			(existing?.pricePerUnit ?? null) !== (nextPrice ?? null) ||
-			(currentItem.deliveryCostType ?? "") !== supplierForm.deliveryCostType ||
-			(supplierForm.deliveryCostType === "paid"
-				? toNumberOrUndefined(supplierForm.deliveryCost) !== currentItem.deliveryCost
-				: false)
-		);
-	}
-
-	// --- Answers ---
 	function handleEditAnswers() {
 		setAnswersForm(initAnswersForm(currentItem));
 		setEditingSection("answers");
@@ -534,27 +190,11 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	}
 
 	const isEditingInfo = editingSection === "info" && infoForm !== null;
-	const isEditingLogistics = editingSection === "logistics" && logisticsForm !== null;
-	const isEditingAdditional = editingSection === "additional" && additionalForm !== null;
-	const isEditingSupplier = editingSection === "currentSupplier" && supplierForm !== null;
 	const isEditingAnswers = editingSection === "answers" && answersForm !== null;
 
-	// «Ваш поставщик» is the buyer's anchor — it has no meaning without an identifiable
-	// counterparty (Название, ИНН) and a benchmark price. Lock downstream fields and skip
-	// persistence until all three are present.
-	const supplierBaseFilled =
-		supplierForm != null &&
-		supplierForm.companyName.trim() !== "" &&
-		supplierForm.inn.trim() !== "" &&
-		supplierForm.pricePerUnit.trim() !== "";
-
-	const folder = folders?.find((f) => f.id === item.folderId);
-	const addressesText =
-		item.deliveryAddresses && item.deliveryAddresses.length > 0 ? item.deliveryAddresses.join("; ") : "";
-
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
-
 	const answers = item.generatedAnswers ?? [];
+	const currentSupplier = tender?.currentSupplier;
 
 	return (
 		<div data-testid="tab-panel-details" className="flex flex-col gap-6">
@@ -575,19 +215,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 
 					<FieldCard label="Категория">
-						{isEditingInfo ? (
-							<div className="max-w-48">
-								<FolderSelect
-									folders={folders}
-									value={infoForm.folderId}
-									onChange={(id) => updateInfo("folderId", id)}
-									onCreateFolder={handleCreateFolder}
-									nextFolderColor={nextFolderColor}
-								/>
-							</div>
-						) : (
-							<ValueText value={folder?.name ?? ""} />
-						)}
+						<ValueText value={folder?.name ?? ""} />
 					</FieldCard>
 
 					<FieldCard label="Название" span="full">
@@ -670,426 +298,111 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Логистика и финансы --- */}
-			<Section
-				title="Логистика и финансы"
-				editLabel="Редактировать логистику и финансы"
-				editing={isEditingLogistics}
-				onEdit={handleEditLogistics}
-				onCancel={handleCancel}
-				onSave={handleSaveLogistics}
-				saveDisabled={!isLogisticsDirty() || updateMutation.isPending}
-				isPending={updateMutation.isPending}
-			>
+			{/* --- Логистика и финансы (read-only, owned by parent tender) --- */}
+			<Section title="Логистика и финансы" editing={false}>
 				<CardGrid>
 					<FieldCard label="Разгрузка">
-						{isEditingLogistics ? (
-							<Select
-								value={logisticsForm.unloading || undefined}
-								onValueChange={(v) => updateLogistics("unloading", v as UnloadingType)}
-							>
-								<SelectTrigger aria-label="Разгрузка" className="h-8">
-									<SelectValue placeholder="Не указана" />
-								</SelectTrigger>
-								<SelectContent>
-									{UNLOADING_TYPES.map((u) => (
-										<SelectItem key={u} value={u}>
-											{UNLOADING_LABELS[u]}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						) : (
-							<ValueText value={item.unloading ? UNLOADING_LABELS[item.unloading] : ""} />
-						)}
+						<ValueText value={tender?.unloading ? UNLOADING_LABELS[tender.unloading] : ""} />
 					</FieldCard>
 
-					<FieldCard label="Оплата">
-						{isEditingLogistics ? (
-							<div className="flex flex-col gap-2">
-								<Select
-									value={logisticsForm.paymentType}
-									onValueChange={(v) => updateLogistics("paymentType", v as PaymentType)}
-								>
-									<SelectTrigger aria-label="Оплата" className="h-8">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{PAYMENT_TYPES.map((t) => (
-											<SelectItem key={t} value={t}>
-												{PAYMENT_TYPE_LABELS[t]}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								{logisticsForm.paymentType === "prepayment" && (
-									<div className="flex items-center gap-1.5">
-										<Input
-											aria-label="Размер предоплаты"
-											type="number"
-											inputMode="numeric"
-											min={1}
-											max={100}
-											value={logisticsForm.prepaymentPercent}
-											onChange={(e) => updateLogistics("prepaymentPercent", e.target.value)}
-											className="w-20 tabular-nums"
-											autoComplete="off"
-										/>
-										<span className="text-xs text-muted-foreground">%</span>
-									</div>
-								)}
-							</div>
-						) : (
-							<ValueText
-								value={formatPaymentType(item.paymentType ?? "prepayment", {
-									prepaymentPercent: item.prepaymentPercent,
-								})}
-							/>
-						)}
+					<FieldCard label="Способ оплаты">
+						<ValueText value={tender?.paymentMethod ? PAYMENT_METHOD_LABELS[tender.paymentMethod] : ""} />
 					</FieldCard>
 
 					<FieldCard label="Адрес доставки" span="full">
-						{isEditingLogistics ? (
-							<Select
-								value={logisticsForm.addressIds[0] ?? undefined}
-								onValueChange={(v) => updateLogistics("addressIds", v ? [v] : [])}
-								disabled={companyAddresses.length === 0}
-							>
-								<SelectTrigger aria-label="Адрес доставки" className="h-8">
-									<SelectValue placeholder={companyAddresses.length === 0 ? "Нет адресов" : "Выберите адрес"} />
-								</SelectTrigger>
-								<SelectContent>
-									{companyAddresses.map((a) => (
-										<SelectItem key={a.id} value={a.id}>
-											{a.address}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						) : (
-							<ValueText value={addressesText} />
-						)}
+						<ValueText value={addressesText} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
 
-			{/* --- Дополнительно --- */}
-			<Section
-				title="Дополнительно"
-				editLabel="Редактировать дополнительно"
-				editing={isEditingAdditional}
-				onEdit={handleEditAdditional}
-				onCancel={handleCancel}
-				onSave={handleSaveAdditional}
-				saveDisabled={!isAdditionalDirty() || updateMutation.isPending}
-				isPending={updateMutation.isPending}
-			>
-				<CardGrid>
-					<FieldCard label="Требования" span="half">
-						{isEditingAdditional ? (
-							<div className="flex flex-wrap gap-x-5 gap-y-2">
-								<div className="flex items-center gap-2">
-									<Checkbox
-										id="detail-deferralRequired"
-										aria-label="Отсрочка нужна"
-										checked={additionalForm.deferralRequired}
-										onCheckedChange={(v) => updateAdditional("deferralRequired", v === true)}
-									/>
-									<label htmlFor="detail-deferralRequired" className="text-sm">
-										Отсрочка нужна
-									</label>
-								</div>
-								<div className="flex items-center gap-2">
-									<Checkbox
-										id="detail-sampleRequired"
-										aria-label="Нужен образец"
-										checked={additionalForm.sampleRequired}
-										onCheckedChange={(v) => updateAdditional("sampleRequired", v === true)}
-									/>
-									<label htmlFor="detail-sampleRequired" className="text-sm">
-										Нужен образец
-									</label>
-								</div>
-								<div className="flex items-center gap-2">
-									<Checkbox
-										id="detail-analoguesAllowed"
-										aria-label="Допускаются аналоги"
-										checked={additionalForm.analoguesAllowed}
-										onCheckedChange={(v) => updateAdditional("analoguesAllowed", v === true)}
-									/>
-									<label htmlFor="detail-analoguesAllowed" className="text-sm">
-										Аналоги допускаются
-									</label>
-								</div>
-							</div>
-						) : (
+			{/* --- Дополнительно (read-only, owned by parent tender) --- */}
+			{tender && (
+				<Section title="Дополнительно" editing={false}>
+					<CardGrid>
+						<FieldCard label="Требования" span="half">
 							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 								<li>
-									<span className="text-muted-foreground">Отсрочка:</span> {yesNo(item.deferralRequired)}
+									<span className="text-muted-foreground">Отсрочка:</span> {yesNo(tender.deferralRequired)}
 								</li>
 								<li>
-									<span className="text-muted-foreground">Образец:</span> {yesNo(item.sampleRequired)}
+									<span className="text-muted-foreground">Образец:</span> {yesNo(tender.sampleRequired)}
 								</li>
 								<li>
-									<span className="text-muted-foreground">Аналоги:</span> {yesNo(item.analoguesAllowed)}
+									<span className="text-muted-foreground">Аналоги:</span> {yesNo(tender.analoguesAllowed)}
 								</li>
 							</ul>
-						)}
-					</FieldCard>
+						</FieldCard>
 
-					<FieldCard label="Комментарий" span="full">
-						{isEditingAdditional ? (
-							<Textarea
-								aria-label="Комментарий"
-								value={additionalForm.additionalInfo}
-								onChange={(e) => updateAdditional("additionalInfo", e.target.value)}
-								autoComplete="off"
-							/>
+						<FieldCard label="Комментарий" span="full">
+							<ValueText value={tender.additionalInfo ?? ""} />
+						</FieldCard>
+					</CardGrid>
+
+					<div className="mt-3">
+						<div className="mb-1.5 flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
+							<Paperclip className="size-3" aria-hidden="true" />
+							Прикреплённые файлы
+						</div>
+						{tender.attachedFiles && tender.attachedFiles.length > 0 ? (
+							<ul className="flex flex-wrap gap-1.5">
+								{tender.attachedFiles.map((file) => (
+									<li
+										key={`${file.name}-${file.size}`}
+										className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm"
+									>
+										<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
+										<span className="max-w-[18rem] truncate">{file.name}</span>
+										<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+									</li>
+								))}
+							</ul>
 						) : (
-							<ValueText value={item.additionalInfo ?? ""} />
+							<p className="text-sm text-muted-foreground/50">Нет прикреплённых файлов</p>
 						)}
-					</FieldCard>
-				</CardGrid>
-
-				<div className="mt-3">
-					<div className="mb-1.5 flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-						<Paperclip className="size-3" aria-hidden="true" />
-						Прикреплённые файлы
 					</div>
-					{isEditingAdditional ? (
-						<>
-							<button
-								type="button"
-								aria-label="Прикрепить файлы"
-								className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input px-4 py-3 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
-								onClick={() => fileInputRef.current?.click()}
-								onDragOver={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-								}}
-								onDrop={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									handleFilesAdd(e.dataTransfer.files);
-								}}
-							>
-								<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
-								<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
-							</button>
-							<input
-								ref={fileInputRef}
-								type="file"
-								multiple
-								className="hidden"
-								onChange={(e) => {
-									handleFilesAdd(e.target.files);
-									e.target.value = "";
-								}}
-							/>
-							{additionalForm.attachedFiles.length > 0 && (
-								<ul className="mt-2 flex flex-wrap gap-1.5">
-									{additionalForm.attachedFiles.map((file, i) => (
-										<li
-											key={`${file.name}-${file.size}`}
-											className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 py-1 pl-2 pr-1 text-sm"
-										>
-											<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
-											<span className="max-w-[18rem] truncate">{file.name}</span>
-											<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-											<Button
-												type="button"
-												variant="ghost"
-												size="icon-xs"
-												onClick={() => handleFileRemove(i)}
-												aria-label={`Удалить ${file.name}`}
-											>
-												<X aria-hidden="true" />
-											</Button>
-										</li>
-									))}
-								</ul>
-							)}
-						</>
-					) : item.attachedFiles && item.attachedFiles.length > 0 ? (
-						<ul className="flex flex-wrap gap-1.5">
-							{item.attachedFiles.map((file) => (
-								<li
-									key={`${file.name}-${file.size}`}
-									className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm"
-								>
-									<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
-									<span className="max-w-[18rem] truncate">{file.name}</span>
-									<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-								</li>
-							))}
-						</ul>
-					) : (
-						<p className="text-sm text-muted-foreground/50">Нет прикреплённых файлов</p>
-					)}
-				</div>
-			</Section>
+				</Section>
+			)}
 
-			{/* --- Ваш поставщик --- */}
-			<Section
-				title="Ваш поставщик"
-				editLabel="Редактировать текущего поставщика"
-				editing={isEditingSupplier}
-				onEdit={handleEditSupplier}
-				onCancel={handleCancel}
-				onSave={handleSaveSupplier}
-				saveDisabled={!isSupplierDirty() || !supplierBaseFilled || updateMutation.isPending}
-				isPending={updateMutation.isPending}
-			>
+			{/* --- Ваш поставщик (read-only, owned by parent tender) --- */}
+			<Section title="Ваш поставщик" editing={false}>
 				<CardGrid>
 					<FieldCard label="Название">
-						{isEditingSupplier ? (
-							<Input
-								aria-label="Название поставщика"
-								value={supplierForm.companyName}
-								onChange={(e) => updateSupplier("companyName", e.target.value)}
-								autoComplete="organization"
-							/>
-						) : (
-							<ValueText value={item.currentSupplier?.companyName ?? ""} />
-						)}
+						<ValueText value={currentSupplier?.companyName ?? ""} />
 					</FieldCard>
 
 					<FieldCard label="ИНН">
-						{isEditingSupplier ? (
-							<Input
-								aria-label="ИНН поставщика"
-								value={supplierForm.inn}
-								onChange={(e) => updateSupplier("inn", e.target.value)}
-								inputMode="numeric"
-								autoComplete="off"
-								spellCheck={false}
-								disabled={!supplierBaseFilled}
-							/>
-						) : (
-							<ValueText value={item.currentSupplier?.inn ?? ""} />
-						)}
+						<ValueText value={currentSupplier?.inn ?? ""} />
 					</FieldCard>
 
 					<FieldCard label="Цена">
-						{isEditingSupplier ? (
-							<Input
-								aria-label="Цена поставщика"
-								type="number"
-								inputMode="decimal"
-								min={0}
-								value={supplierForm.pricePerUnit}
-								onChange={(e) => updateSupplier("pricePerUnit", e.target.value)}
-								autoComplete="off"
-							/>
-						) : (
-							<ValueText
-								value={
-									item.currentSupplier?.pricePerUnit != null ? formatCurrency(item.currentSupplier.pricePerUnit) : ""
-								}
-							/>
-						)}
+						<ValueText
+							value={currentSupplier?.pricePerUnit != null ? formatCurrency(currentSupplier.pricePerUnit) : ""}
+						/>
 					</FieldCard>
 
 					<FieldCard label="Оплата">
-						{isEditingSupplier ? (
-							<div className="flex flex-col gap-2">
-								<Select
-									value={supplierForm.paymentType}
-									onValueChange={(v) => updateSupplier("paymentType", v as PaymentType)}
-									disabled={!supplierBaseFilled}
-								>
-									<SelectTrigger aria-label="Оплата" className="h-8">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{PAYMENT_TYPES.map((t) => (
-											<SelectItem key={t} value={t}>
-												{PAYMENT_TYPE_LABELS[t]}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								{supplierForm.paymentType === "deferred" && (
-									<div className="flex items-center gap-1.5">
-										<Input
-											aria-label="Дней отсрочки"
-											type="number"
-											inputMode="numeric"
-											min={0}
-											value={supplierForm.deferralDays}
-											onChange={(e) => updateSupplier("deferralDays", e.target.value)}
-											className="w-24"
-											autoComplete="off"
-											disabled={!supplierBaseFilled}
-										/>
-										<span className="text-xs text-muted-foreground">дней</span>
-									</div>
-								)}
-								{supplierForm.paymentType === "prepayment" && (
-									<div className="flex items-center gap-1.5">
-										<Input
-											aria-label="Размер предоплаты"
-											type="number"
-											inputMode="numeric"
-											min={1}
-											max={100}
-											value={supplierForm.prepaymentPercent}
-											onChange={(e) => updateSupplier("prepaymentPercent", e.target.value)}
-											className="w-20 tabular-nums"
-											autoComplete="off"
-											disabled={!supplierBaseFilled}
-										/>
-										<span className="text-xs text-muted-foreground">%</span>
-									</div>
-								)}
-							</div>
-						) : item.currentSupplier ? (
-							<ValueText
-								value={formatPaymentType(item.currentSupplier.paymentType ?? "prepayment", {
-									deferralDays: item.currentSupplier.deferralDays ?? 0,
-									prepaymentPercent: item.currentSupplier.prepaymentPercent,
-								})}
-							/>
-						) : (
-							<ValueText value="" />
-						)}
+						<ValueText
+							value={
+								currentSupplier
+									? formatPaymentType(currentSupplier.paymentType ?? "prepayment", {
+											deferralDays: currentSupplier.deferralDays ?? 0,
+											prepaymentPercent: currentSupplier.prepaymentPercent,
+										})
+									: ""
+							}
+						/>
 					</FieldCard>
 
 					<FieldCard label="Доставка">
-						{isEditingSupplier ? (
-							<div className="flex flex-col gap-2">
-								<Select
-									value={supplierForm.deliveryCostType || undefined}
-									onValueChange={(v) => updateSupplier("deliveryCostType", v as DeliveryCostType)}
-									disabled={!supplierBaseFilled}
-								>
-									<SelectTrigger aria-label="Тип доставки" className="h-8">
-										<SelectValue placeholder="Не указан" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="free">{DELIVERY_COST_TYPE_LABELS.free}</SelectItem>
-										<SelectItem value="paid">{DELIVERY_COST_TYPE_LABELS.paid}</SelectItem>
-										<SelectItem value="pickup">{DELIVERY_COST_TYPE_LABELS.pickup}</SelectItem>
-									</SelectContent>
-								</Select>
-								{supplierForm.deliveryCostType === "paid" && (
-									<Input
-										aria-label="Стоимость доставки"
-										type="number"
-										inputMode="numeric"
-										min={0}
-										value={supplierForm.deliveryCost}
-										onChange={(e) => updateSupplier("deliveryCost", e.target.value)}
-										autoComplete="off"
-										disabled={!supplierBaseFilled}
-									/>
-								)}
-							</div>
-						) : item.currentSupplier ? (
-							<ValueText value={formatDeliveryTypeWithCost(item.deliveryCostType, item.deliveryCost)} />
-						) : (
-							<ValueText value="" />
-						)}
+						<ValueText
+							value={
+								item.deliveryCostType
+									? item.deliveryCostType === "paid" && item.deliveryCost != null
+										? `${DELIVERY_COST_TYPE_LABELS.paid} · ${formatCurrency(item.deliveryCost)}`
+										: DELIVERY_COST_TYPE_LABELS[item.deliveryCostType]
+									: ""
+							}
+						/>
 					</FieldCard>
 				</CardGrid>
 			</Section>

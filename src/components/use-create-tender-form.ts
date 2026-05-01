@@ -1,6 +1,6 @@
 import { useState } from "react";
+import type { CreateTenderInput } from "@/data/domains/tenders";
 import type {
-	CurrentSupplier,
 	DeliveryCostType,
 	GeneratedAnswer,
 	NewItemInput,
@@ -9,10 +9,12 @@ import type {
 	Unit,
 	UnloadingType,
 } from "@/data/types";
+import { toNumberOrUndefined } from "@/lib/format";
 
 export type WizardStep = 1 | 2 | 3;
 
-type AdvanceResult = { advanced: boolean; focus?: "company" | "name"; positionIndex?: number };
+type AdvanceFocus = "company" | "name" | "tenderName" | "deadline" | "budget";
+type AdvanceResult = { advanced: boolean; focus?: AdvanceFocus; positionIndex?: number };
 
 export interface PositionDraft {
 	name: string;
@@ -24,6 +26,9 @@ export interface PositionDraft {
 }
 
 interface Step1State {
+	tenderName: string;
+	budget: string;
+	deadline: string;
 	companyId: string;
 	folderId: string | null;
 	positions: PositionDraft[];
@@ -61,6 +66,9 @@ interface PositionErrors {
 }
 
 interface Step1Errors {
+	tenderName?: string;
+	budget?: string;
+	deadline?: string;
 	company?: string;
 	positions: PositionErrors[];
 }
@@ -82,6 +90,9 @@ function defaultPosition(): PositionDraft {
 
 function defaultStep1(): Step1State {
 	return {
+		tenderName: "",
+		budget: "",
+		deadline: "",
 		companyId: "",
 		folderId: null,
 		positions: [defaultPosition()],
@@ -117,41 +128,13 @@ function defaultStep1Errors(): Step1Errors {
 }
 
 const INN_PATTERN = /^\d{10}$|^\d{12}$/;
+const BUDGET_PATTERN = /^\d+$/;
 
 function validateInn(value: string): { ok: boolean; error?: string } {
 	const trimmed = value.trim();
 	if (trimmed === "") return { ok: true };
 	if (!INN_PATTERN.test(trimmed)) return { ok: false, error: "ИНН должен содержать 10 или 12 цифр" };
 	return { ok: true };
-}
-
-function toNumber(value: string): number | undefined {
-	if (value === "") return undefined;
-	const n = Number(value);
-	return Number.isFinite(n) ? n : undefined;
-}
-
-function buildCurrentSupplier(step2: Step2State, position: PositionDraft): CurrentSupplier | undefined {
-	// Drop the supplier when any of {company name, ИНН, this position's price} is missing
-	// — downstream surfaces (Поставщики / Предложения) treat a present record as fully
-	// identifiable, so a partial one would render as an unnamed or zero-priced row.
-	const companyName = step2.companyName.trim();
-	const inn = step2.inn.trim();
-	if (companyName === "" || inn === "" || position.pricePerUnit.trim() === "") return undefined;
-
-	const prepaymentPercentNum = step2.paymentType === "prepayment" ? (toNumber(step2.prepaymentPercent) ?? 100) : 100;
-
-	const supplier: CurrentSupplier = {
-		companyName,
-		inn,
-		paymentType: step2.paymentType,
-		deferralDays: step2.paymentType === "deferred" ? (toNumber(step2.deferralDays) ?? 0) : 0,
-		pricePerUnit: Number(position.pricePerUnit),
-	};
-	if (step2.paymentType === "prepayment" && prepaymentPercentNum !== 100) {
-		supplier.prepaymentPercent = prepaymentPercentNum;
-	}
-	return supplier;
 }
 
 function buildGeneratedAnswers(step3: Step3State): GeneratedAnswer[] | undefined {
@@ -173,68 +156,87 @@ function buildNewItemInput(
 	step1: Step1State,
 	step2: Step2State,
 	step3: Step3State,
-	addressStrings: string[],
 ): NewItemInput {
 	const payload: NewItemInput = {
 		name: position.name.trim(),
 		paymentType: step1.deferralRequired ? "deferred" : "prepayment",
-		paymentMethod: step1.paymentMethod,
 	};
-
-	if (step1.folderId !== null) payload.folderId = step1.folderId;
 
 	const description = position.description.trim();
 	if (description) payload.description = description;
 
 	if (position.unit !== "") payload.unit = position.unit;
 
-	const annual = toNumber(position.annualQuantity);
+	const annual = toNumberOrUndefined(position.annualQuantity);
 	if (annual !== undefined) payload.annualQuantity = annual;
 
-	const perDelivery = toNumber(position.quantityPerDelivery);
+	const perDelivery = toNumberOrUndefined(position.quantityPerDelivery);
 	if (perDelivery !== undefined) payload.quantityPerDelivery = perDelivery;
 
-	const price = toNumber(position.pricePerUnit);
+	const price = toNumberOrUndefined(position.pricePerUnit);
 	if (price !== undefined) payload.currentPrice = price;
-
-	if (addressStrings.length > 0) payload.deliveryAddresses = addressStrings;
 
 	if (step2.deliveryCostType !== null) {
 		payload.deliveryCostType = step2.deliveryCostType;
 		if (step2.deliveryCostType === "paid") {
-			const cost = toNumber(step2.deliveryCost);
+			const cost = toNumberOrUndefined(step2.deliveryCost);
 			if (cost !== undefined) payload.deliveryCost = cost;
 		}
 	}
 
-	if (step1.unloading !== null) payload.unloading = step1.unloading;
-	if (step1.sampleRequired) payload.sampleRequired = true;
-	if (step1.analoguesAllowed) payload.analoguesAllowed = true;
-	if (step1.deferralRequired) payload.deferralRequired = true;
-
-	const info = step1.additionalInfo.trim();
-	if (info) payload.additionalInfo = info;
-
-	const supplier = buildCurrentSupplier(step2, position);
-	if (supplier) payload.currentSupplier = supplier;
-
 	const answers = buildGeneratedAnswers(step3);
 	if (answers) payload.generatedAnswers = answers;
-
-	if (step1.files.length > 0) {
-		payload.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
-	}
 
 	return payload;
 }
 
-export interface UseAddPositionFormArgs {
-	resolveAddressStrings: (companyId: string, addressIds: string[]) => string[];
+function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInput {
+	const tender: CreateTenderInput = {
+		name: step1.tenderName.trim(),
+		companyId: step1.companyId,
+		folderId: step1.folderId,
+		budget: toNumberOrUndefined(step1.budget) ?? 0,
+		deadline: step1.deadline,
+	};
+
+	if (step1.addressIds.length > 0) tender.addressIds = step1.addressIds;
+	if (step1.unloading) tender.unloading = step1.unloading;
+	if (step1.paymentMethod !== "bank_transfer") tender.paymentMethod = step1.paymentMethod;
+	if (step1.deferralRequired) tender.deferralRequired = true;
+	if (step1.sampleRequired) tender.sampleRequired = true;
+	if (step1.analoguesAllowed) tender.analoguesAllowed = true;
+	const info = step1.additionalInfo.trim();
+	if (info) tender.additionalInfo = info;
+	if (step1.files.length > 0) {
+		tender.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
+	}
+
+	const supplierName = step2.companyName.trim();
+	const supplierInn = step2.inn.trim();
+	if (supplierName) {
+		tender.currentSupplier = {
+			companyName: supplierName,
+			...(supplierInn && { inn: supplierInn }),
+			paymentType: step2.paymentType,
+			deferralDays: toNumberOrUndefined(step2.deferralDays) ?? 0,
+			...(step2.paymentType === "prepayment" && {
+				prepaymentPercent: toNumberOrUndefined(step2.prepaymentPercent) ?? 100,
+			}),
+			pricePerUnit: null,
+		};
+	}
+
+	return tender;
+}
+
+export interface CreateTenderPayload {
+	tender: CreateTenderInput;
+	items: NewItemInput[];
 }
 
 type SharedStep1Key = Exclude<keyof Step1State, "positions">;
 
-export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionFormArgs) {
+export function useCreateTenderForm() {
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(defaultStep1);
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
@@ -245,6 +247,9 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
+		if (key === "tenderName") setStep1Errors((prev) => (prev.tenderName ? { ...prev, tenderName: undefined } : prev));
+		if (key === "deadline") setStep1Errors((prev) => (prev.deadline ? { ...prev, deadline: undefined } : prev));
+		if (key === "budget") setStep1Errors((prev) => (prev.budget ? { ...prev, budget: undefined } : prev));
 	}
 
 	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
@@ -303,6 +308,10 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 			p.name.trim() ? {} : { name: "Укажите название позиции" },
 		);
 		const errors: Step1Errors = { positions: positionErrors };
+		if (!step1.tenderName.trim()) errors.tenderName = "Укажите название тендера";
+		if (!step1.deadline) errors.deadline = "Укажите дедлайн";
+		const budget = step1.budget.trim();
+		if (budget && !BUDGET_PATTERN.test(budget)) errors.budget = "Бюджет должен быть целым числом";
 		if (!step1.companyId) errors.company = "Выберите компанию";
 		return errors;
 	}
@@ -316,8 +325,13 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		if (step === 1) {
 			const errors = validateStep1();
 			const firstNameErrorIndex = errors.positions.findIndex((e) => e.name);
-			if (errors.company || firstNameErrorIndex >= 0) {
+			const blocked =
+				errors.tenderName || errors.deadline || errors.budget || errors.company || firstNameErrorIndex >= 0;
+			if (blocked) {
 				setStep1Errors(errors);
+				if (errors.tenderName) return { advanced: false, focus: "tenderName" };
+				if (errors.deadline) return { advanced: false, focus: "deadline" };
+				if (errors.budget) return { advanced: false, focus: "budget" };
 				if (errors.company) return { advanced: false, focus: "company" };
 				return { advanced: false, focus: "name", positionIndex: firstNameErrorIndex };
 			}
@@ -360,6 +374,9 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 	}
 
 	const isDirty =
+		step1.tenderName !== "" ||
+		step1.budget !== "" ||
+		step1.deadline !== "" ||
 		step1.companyId !== "" ||
 		step1.folderId !== null ||
 		step1.positions.length > 1 ||
@@ -386,9 +403,10 @@ export function useAddPositionForm({ resolveAddressStrings }: UseAddPositionForm
 		return !!last && last.name.trim() !== "";
 	})();
 
-	function toPayload(): NewItemInput[] {
-		const addressStrings = resolveAddressStrings(step1.companyId, step1.addressIds);
-		return step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3, addressStrings));
+	function toPayload(): CreateTenderPayload {
+		const tender = buildTenderInput(step1, step2);
+		const items = step1.positions.map((p) => buildNewItemInput(p, step1, step2, step3));
+		return { tender, items };
 	}
 
 	return {

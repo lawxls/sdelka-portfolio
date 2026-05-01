@@ -96,7 +96,8 @@ export function createInMemoryWorkspaceEmployeesClient(
 					permissions: {
 						id: nextId("perm-w"),
 						employeeId: id,
-						procurement: "none",
+						tenders: "none",
+						positions: "none",
 						tasks: "none",
 						companies: "none",
 						employees: "none",

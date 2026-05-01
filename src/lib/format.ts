@@ -75,6 +75,14 @@ export function formatGroupedInteger(raw: string): string {
 	return integerFormatter.format(Number(digits));
 }
 
+/** Parse a user-facing string as a number, returning undefined for empty/blank/non-finite input. */
+export function toNumberOrUndefined(value: string): number | undefined {
+	const trimmed = value.trim();
+	if (trimmed === "") return undefined;
+	const n = Number(trimmed);
+	return Number.isFinite(n) ? n : undefined;
+}
+
 export function formatFileSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} Б`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;

@@ -26,8 +26,6 @@ const ITEM: ProcurementItem = {
 	currentPrice: 50,
 	bestPrice: null,
 	averagePrice: null,
-	folderId: null,
-	companyId: "company-1",
 };
 
 function makeSeed(id: string, overrides: Partial<SupplierSeed> = {}): SupplierSeed {

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { SupplierQuestion, TaskAssignee } from "@/data/task-types";
-import { useSupplier } from "@/data/use-suppliers";
+import { useSupplierById } from "@/data/use-suppliers";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
 import { formatAssigneeName, formatDate, formatDateTime, formatDayMonthShortTime, isOverdue } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -170,8 +170,7 @@ function TaskDrawerContent({
 	const updateStatus = useUpdateTaskStatus();
 
 	const [activeSupplierId, setActiveSupplierId] = useState<string | null>(null);
-	const itemId = task?.item.id ?? "";
-	const { data: activeSupplier } = useSupplier(itemId, activeSupplierId);
+	const { data: activeSupplier } = useSupplierById(activeSupplierId);
 
 	if (!task) {
 		return (
@@ -215,7 +214,7 @@ function TaskDrawerContent({
 		<>
 			<SheetHeader className="relative border-b pr-24 pb-4">
 				<SheetTitle className="pr-4">{currentTask.name}</SheetTitle>
-				<SheetDescription className="text-xs">{currentTask.item.name}</SheetDescription>
+				<SheetDescription className="text-xs">{currentTask.tender.name}</SheetDescription>
 				<div className="absolute top-3 right-3 flex items-center gap-1">
 					{(!isAnswered || isArchived) && (
 						<DropdownMenu>

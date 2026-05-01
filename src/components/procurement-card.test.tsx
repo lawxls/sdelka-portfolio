@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
 import { ProcurementCard } from "./procurement-card";
 
@@ -16,7 +15,7 @@ describe("ProcurementCard", () => {
 	});
 
 	it("renders folder badge when folder is assigned", () => {
-		const item = makeItem("3", { folderId: "f1" });
+		const item = makeItem("3");
 		const folder = { id: "f1", name: "Металл", color: "blue" };
 		render(<ProcurementCard item={item} index={0} folder={folder} />);
 
@@ -24,7 +23,7 @@ describe("ProcurementCard", () => {
 	});
 
 	it("does not render folder badge when no folder", () => {
-		const item = makeItem("4", { folderId: null });
+		const item = makeItem("4");
 		render(<ProcurementCard item={item} index={0} />);
 
 		expect(screen.queryByTestId(/folder-badge/)).not.toBeInTheDocument();
@@ -147,24 +146,10 @@ describe("ProcurementCard name truncation", () => {
 	});
 });
 
-const testFolders: Folder[] = [
-	{ id: "f-1", name: "Металлопрокат", color: "blue" },
-	{ id: "f-2", name: "Стройматериалы", color: "green" },
-];
-
 describe("ProcurementCard actions", () => {
 	it("renders ⋮ button when action callbacks are provided", () => {
 		const item = makeItem("1");
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onDeleteItem={vi.fn()}
-				onRenameItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onDeleteItem={vi.fn()} onRenameItem={vi.fn()} />);
 
 		expect(screen.getByRole("button", { name: "Действия" })).toBeInTheDocument();
 	});
@@ -176,43 +161,23 @@ describe("ProcurementCard actions", () => {
 		expect(screen.queryByRole("button", { name: "Действия" })).not.toBeInTheDocument();
 	});
 
-	it("dropdown menu opens on ⋮ click with rename, delete, move-to-folder", async () => {
+	it("dropdown menu opens on ⋮ click with rename and delete", async () => {
 		const user = userEvent.setup();
 		const item = makeItem("1");
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onDeleteItem={vi.fn()}
-				onRenameItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onDeleteItem={vi.fn()} onRenameItem={vi.fn()} />);
 
 		await user.click(screen.getByRole("button", { name: "Действия" }));
 
-		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
 
-	it("context menu opens on right-click with rename, delete, move-to-folder", () => {
+	it("context menu opens on right-click with rename and delete", () => {
 		const item = makeItem("1");
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onDeleteItem={vi.fn()}
-				onRenameItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onDeleteItem={vi.fn()} onRenameItem={vi.fn()} />);
 
 		fireEvent.contextMenu(screen.getByTestId("card-1"));
 
-		expect(screen.getByText("Переместить в категорию")).toBeInTheDocument();
 		expect(screen.getByText("Переименовать")).toBeInTheDocument();
 		expect(screen.getByText("Удалить")).toBeInTheDocument();
 	});
@@ -221,16 +186,7 @@ describe("ProcurementCard actions", () => {
 		const user = userEvent.setup();
 		const onDeleteItem = vi.fn();
 		const item = makeItem("1", { name: "Арматура А500" });
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onDeleteItem={onDeleteItem}
-				onRenameItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onDeleteItem={onDeleteItem} onRenameItem={vi.fn()} />);
 
 		await user.click(screen.getByRole("button", { name: "Действия" }));
 		await user.click(screen.getByText("Удалить"));
@@ -249,16 +205,7 @@ describe("ProcurementCard actions", () => {
 		const user = userEvent.setup();
 		const onDeleteItem = vi.fn();
 		const item = makeItem("1");
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onDeleteItem={onDeleteItem}
-				onRenameItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onDeleteItem={onDeleteItem} onRenameItem={vi.fn()} />);
 
 		await user.click(screen.getByRole("button", { name: "Действия" }));
 		await user.click(screen.getByText("Удалить"));
@@ -271,16 +218,7 @@ describe("ProcurementCard actions", () => {
 		const user = userEvent.setup();
 		const onRenameItem = vi.fn();
 		const item = makeItem("1", { name: "Арматура А500" });
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onRenameItem={onRenameItem}
-				onDeleteItem={vi.fn()}
-				onAssignFolder={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
+		render(<ProcurementCard item={item} index={0} onRenameItem={onRenameItem} onDeleteItem={vi.fn()} />);
 
 		fireEvent.contextMenu(screen.getByTestId("card-1"));
 		fireEvent.click(screen.getByText("Переименовать"));
@@ -291,29 +229,5 @@ describe("ProcurementCard actions", () => {
 		await user.type(input, "Новое имя{Enter}");
 
 		expect(onRenameItem).toHaveBeenCalledWith("1", "Новое имя");
-	});
-
-	it("folder submenu shows folders and clicking one calls onAssignFolder", async () => {
-		const user = userEvent.setup();
-		const onAssignFolder = vi.fn();
-		const item = makeItem("1", { folderId: "f-1" });
-		render(
-			<ProcurementCard
-				item={item}
-				index={0}
-				onAssignFolder={onAssignFolder}
-				onDeleteItem={vi.fn()}
-				onRenameItem={vi.fn()}
-				folders={testFolders}
-			/>,
-		);
-
-		await user.click(screen.getByRole("button", { name: "Действия" }));
-		// Open folder submenu
-		fireEvent.click(screen.getByText("Переместить в категорию"));
-
-		expect(screen.getByText("Металлопрокат")).toBeInTheDocument();
-		expect(screen.getByText("Стройматериалы")).toBeInTheDocument();
-		expect(screen.getByText("Без категории")).toBeInTheDocument();
 	});
 });

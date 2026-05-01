@@ -23,8 +23,6 @@ function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): Procure
 		currentPrice: 50,
 		bestPrice: 40,
 		averagePrice: 45,
-		folderId: null,
-		companyId: "c1",
 		...overrides,
 	};
 }

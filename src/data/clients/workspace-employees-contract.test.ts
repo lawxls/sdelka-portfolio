@@ -47,7 +47,8 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-1",
 			employeeId: 1,
-			procurement: "edit",
+			tenders: "edit",
+			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
 			employees: "edit",
@@ -68,7 +69,8 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-2",
 			employeeId: 2,
-			procurement: "view",
+			tenders: "view",
+			positions: "view",
 			tasks: "view",
 			companies: "none",
 			employees: "none",
@@ -89,7 +91,8 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-3",
 			employeeId: 3,
-			procurement: "none",
+			tenders: "none",
+			positions: "none",
 			tasks: "none",
 			companies: "none",
 			employees: "none",
@@ -177,7 +180,8 @@ function httpAdapter(): Adapter {
 						permissions: {
 							id: `perm-${counter}`,
 							employeeId: counter,
-							procurement: "none",
+							tenders: "none",
+							positions: "none",
 							tasks: "none",
 							companies: "none",
 							employees: "none",
@@ -292,7 +296,8 @@ describe.each(
 	it("get returns detail with permissions for known id", async () => {
 		const detail = await client.get(2);
 		expect(detail.id).toBe(2);
-		expect(detail.permissions.procurement).toBe("view");
+		expect(detail.permissions.tenders).toBe("view");
+		expect(detail.permissions.positions).toBe("view");
 	});
 
 	it("get throws NotFoundError for unknown id", async () => {
@@ -344,15 +349,16 @@ describe.each(
 	});
 
 	it("updatePermissions patches only provided levels", async () => {
-		const result = await client.updatePermissions(2, { procurement: "edit" });
-		expect(result.procurement).toBe("edit");
+		const result = await client.updatePermissions(2, { tenders: "edit" });
+		expect(result.tenders).toBe("edit");
+		expect(result.positions).toBe("view");
 		expect(result.tasks).toBe("view");
 		const detail = await client.get(2);
-		expect(detail.permissions.procurement).toBe("edit");
+		expect(detail.permissions.tenders).toBe("edit");
 	});
 
 	it("updatePermissions throws NotFoundError for unknown id", async () => {
-		await expect(client.updatePermissions(99999, { procurement: "edit" })).rejects.toBeInstanceOf(NotFoundError);
+		await expect(client.updatePermissions(99999, { tenders: "edit" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 });
 

@@ -34,7 +34,7 @@ export interface TaskBoardResponse {
 
 export interface FetchTaskBoardParams {
 	q?: string;
-	item?: string;
+	tender?: string;
 	company?: string;
 	sort?: TaskSortField;
 	dir?: "asc" | "desc";

@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, test } from "vitest";
 import { BottomTabBar } from "./bottom-tab-bar";
 
-function renderBar(initialPath = "/procurement") {
+function renderBar(initialPath = "/positions") {
 	return render(
 		<MemoryRouter initialEntries={[initialPath]}>
 			<Routes>
@@ -15,16 +15,16 @@ function renderBar(initialPath = "/procurement") {
 }
 
 describe("BottomTabBar items", () => {
-	test("renders Закупки, Задачи, and Настройки with aria-labels", () => {
+	test("renders Позиции, Задачи, and Настройки with aria-labels", () => {
 		renderBar();
-		expect(screen.getByRole("link", { name: "Закупки" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
-	test("items link to /procurement, /tasks, and /settings", () => {
+	test("items link to /positions, /tasks, and /settings", () => {
 		renderBar();
-		expect(screen.getByRole("link", { name: "Закупки" })).toHaveAttribute("href", "/procurement");
+		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
 		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
 		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
 	});
@@ -36,9 +36,9 @@ describe("BottomTabBar items", () => {
 });
 
 describe("BottomTabBar active state", () => {
-	test("marks Закупки active at /procurement", () => {
-		renderBar("/procurement");
-		expect(screen.getByRole("link", { name: "Закупки" })).toHaveAttribute("aria-current", "page");
+	test("marks Позиции active at /positions", () => {
+		renderBar("/positions");
+		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
 		expect(screen.getByRole("link", { name: "Задачи" })).not.toHaveAttribute("aria-current");
 	});
 
@@ -69,10 +69,10 @@ describe("BottomTabBar visibility", () => {
 describe("BottomTabBar navigation", () => {
 	test("clicking an item navigates", async () => {
 		render(
-			<MemoryRouter initialEntries={["/procurement"]}>
+			<MemoryRouter initialEntries={["/positions"]}>
 				<BottomTabBar />
 				<Routes>
-					<Route path="/procurement" element={<div>procurement-page</div>} />
+					<Route path="/positions" element={<div>procurement-page</div>} />
 					<Route path="/settings" element={<div>settings-page</div>} />
 				</Routes>
 			</MemoryRouter>,

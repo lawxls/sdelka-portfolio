@@ -61,6 +61,15 @@ export function useAllItems(options?: { enabled?: boolean }) {
 	});
 }
 
+export function useTenderItems(tenderId: string | undefined) {
+	const client = useItemsClient();
+	return useQuery({
+		queryKey: keys.items.byTender(tenderId ?? ""),
+		queryFn: () => client.listByTender(tenderId as string),
+		enabled: !!tenderId,
+	});
+}
+
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	const client = useItemsClient();
 	const { sort: _sort, dir: _dir, ...filterParams } = buildFilterParams({ ...params, sort: null });
@@ -155,24 +164,6 @@ export function useDeleteItem() {
 	});
 }
 
-export function useArchiveItem() {
-	const client = useItemsClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => client.archive(id, isArchived),
-		onMutate: ({ id }) =>
-			applyOptimistic(queryClient, [
-				{ queryKey: keys.items.all(), prefix: true, update: itemsListPages.removeById(id) },
-			]),
-		onError: (_err, _vars, context) => {
-			rollbackOptimistic(queryClient, context);
-			toast.error("Не удалось переместить закупку");
-		},
-		onSettled: () => invalidateAfterItemListChange(queryClient),
-	});
-}
-
 export function useExportItems() {
 	const client = useItemsClient();
 	return useMutation({
@@ -188,39 +179,5 @@ export function useExportItems() {
 		onError: () => {
 			toast.error("Не удалось скачать таблицу");
 		},
-	});
-}
-
-export function useAssignFolder() {
-	const client = useItemsClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ id, folderId, isArchived }: { id: string; folderId: string | null; isArchived?: boolean }) => {
-			if (isArchived !== undefined) {
-				return client.archive(id, isArchived).then(() => client.update(id, { folderId }));
-			}
-			return client.update(id, { folderId });
-		},
-		onMutate: ({ id, folderId }) =>
-			applyOptimistic(queryClient, [
-				{
-					queryKey: keys.items.all(),
-					prefix: true,
-					update: itemsListPages.patchOrRemoveById(id, (item, key) => {
-						const cacheFolder = (key[1] as Record<string, unknown>).folder as string | undefined;
-						if (cacheFolder !== undefined) {
-							const matches = cacheFolder === "none" ? folderId === null : cacheFolder === folderId;
-							if (!matches) return null;
-						}
-						return { ...item, folderId };
-					}),
-				},
-			]),
-		onError: (_err, _vars, context) => {
-			rollbackOptimistic(queryClient, context);
-			toast.error("Не удалось переместить закупку");
-		},
-		onSettled: () => invalidateAfterItemListChange(queryClient),
 	});
 }

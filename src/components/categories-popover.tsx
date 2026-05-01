@@ -324,7 +324,7 @@ function FolderRow({
 					<AlertDialogHeader>
 						<AlertDialogTitle>Удалить категорию?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Категория «{folder.name}» будет удалена. Закупки из этой категории не будут удалены.
+							Категория «{folder.name}» будет удалена. Позиции из этой категории не будут удалены.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

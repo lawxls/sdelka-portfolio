@@ -16,11 +16,18 @@ import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { SettingsIndexPage } from "@/pages/settings-index-page";
 import { TariffsSettingsPage } from "@/pages/tariffs-settings-page";
 import { TasksPage } from "@/pages/tasks-page";
+import { TenderDetailPage } from "@/pages/tender-detail-page";
+import { TendersPage } from "@/pages/tenders-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
 function RootRedirect() {
-	const { search } = useLocation();
-	return <Navigate to={`/procurement${search}`} replace />;
+	const { search, hash } = useLocation();
+	return <Navigate to={`/tenders${search}${hash}`} replace />;
+}
+
+function ProcurementRedirect() {
+	const { search, hash } = useLocation();
+	return <Navigate to={`/positions${search}${hash}`} replace />;
 }
 
 function App() {
@@ -38,9 +45,12 @@ function App() {
 			{/* App routes (protected) */}
 			<Route element={<ProtectedRoute />}>
 				<Route path="/" element={<RootRedirect />} />
+				<Route path="/procurement" element={<ProcurementRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path="/procurement" element={<ProcurementPage />} />
+					<Route path="/tenders" element={<TendersPage />} />
+					<Route path="/tenders/:slug" element={<TenderDetailPage />} />
+					<Route path="/positions" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					{/* Settings */}
 					<Route element={<SettingsLayout />}>

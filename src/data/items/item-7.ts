@@ -10,20 +10,10 @@ export const ITEM: ProcurementItem = {
 	currentPrice: 620,
 	bestPrice: null,
 	averagePrice: null,
-	folderId: "folder-chemistry",
-	companyId: "company-1",
 	unit: "кг",
-	taskCount: 3,
 	quantityPerDelivery: 700,
 	paymentType: "prepayment",
-	paymentMethod: "bank_transfer",
 	deliveryCostType: "paid",
-	deliveryAddresses: ["Ростовская обл., Аксайский р-н, Южная промзона"],
-	unloading: "supplier",
-	analoguesAllowed: true,
-	sampleRequired: true,
-	additionalInfo:
-		"Клей полиуретановый одно-компонентный, время открытой выдержки ≥ 3 мин, расход ≤ 80 г/м². Сертификат гигиенический.",
 };
 
 export const SUPPLIERS: SupplierSeed[] = [

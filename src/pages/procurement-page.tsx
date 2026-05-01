@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { AddPositionsDialog } from "@/components/add-positions-dialog";
-import { AddPositionsDrawer } from "@/components/add-positions-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { PageToolbar } from "@/components/page-toolbar";
+import { PositionsUploadDialog } from "@/components/positions-upload-dialog";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
 import { TotalCount } from "@/components/total-count";
+import { useCreateTenderWithItems } from "@/data/operations/use-procurement-operations";
+import { groupItemsIntoTenders } from "@/data/tenders/group-items-into-tenders";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -20,17 +21,8 @@ import type {
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
-import {
-	buildFilterParams,
-	useArchiveItem,
-	useAssignFolder,
-	useCreateItems,
-	useDeleteItem,
-	useExportItems,
-	useItems,
-	useTotals,
-	useUpdateItem,
-} from "@/data/use-items";
+import { buildFilterParams, useDeleteItem, useExportItems, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import { useTenders } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const SORT_FIELDS = new Set<string>([
@@ -57,6 +49,14 @@ function parseDeviation(params: URLSearchParams): DeviationFilter {
 function parseStatus(params: URLSearchParams): StatusFilter {
 	const v = params.get("status");
 	return v === "searching" || v === "searching_completed" || v === "negotiating" || v === "completed" ? v : "all";
+}
+
+const DEFAULT_IMPORT_DEADLINE_DAYS = 14;
+
+function defaultImportDeadline(): string {
+	const d = new Date();
+	d.setDate(d.getDate() + DEFAULT_IMPORT_DEADLINE_DAYS);
+	return d.toISOString().slice(0, 10);
 }
 
 export function ProcurementPage() {
@@ -99,17 +99,20 @@ export function ProcurementPage() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
+	const { items: tenderRows } = useTenders({ limit: 1000 });
+	const tenderMap = useMemo(() => {
+		const map: Record<string, { companyId: string; folderId: string | null }> = {};
+		for (const t of tenderRows) map[t.id] = { companyId: t.companyId, folderId: t.folderId };
+		return map;
+	}, [tenderRows]);
+
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
-	const assignFolderMutation = useAssignFolder();
-	const archiveItemMutation = useArchiveItem();
-	const createItemsMutation = useCreateItems();
+	const createTenderWithItemsMutation = useCreateTenderWithItems();
 	const exportItemsMutation = useExportItems();
 
-	const isArchiveView = folder === "archive";
 	const isMobile = useIsMobile();
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [drawerOpen, setDrawerOpen] = useState(false);
 
 	function handleExport() {
 		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
@@ -159,15 +162,45 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleCreateItems(items: NewItemInput[], successMsg?: string) {
-		createItemsMutation.mutate(items, {
-			onSuccess: (data) => {
-				if (data.isAsync) {
-					toast.info("Позиции обрабатываются");
-				} else if (successMsg) {
-					toast.success(successMsg);
-				}
-			},
+	function handleAddPositions() {
+		if (isMultiCompany && !company) {
+			toast.error("Выберите компанию, чтобы добавить позиции");
+			return;
+		}
+		setDialogOpen(true);
+	}
+
+	function handleImportItems(items: NewItemInput[]) {
+		const groups = groupItemsIntoTenders(items);
+		if (groups.length === 0) return;
+		if (isMultiCompany && !company) {
+			toast.error("Выберите компанию для импорта позиций");
+			return;
+		}
+		const targetCompanyId = company ?? companies[0]?.id;
+		if (!targetCompanyId) {
+			toast.error("Не удалось определить компанию для импорта");
+			return;
+		}
+		const folderId = folder && folder !== "none" ? folder : null;
+		const deadline = defaultImportDeadline();
+		Promise.allSettled(
+			groups.map((group) =>
+				createTenderWithItemsMutation.mutateAsync({
+					tender: {
+						name: group.name,
+						companyId: targetCompanyId,
+						folderId,
+						budget: 0,
+						deadline,
+					},
+					items: group.items,
+				}),
+			),
+		).then((results) => {
+			const created = results.filter((r) => r.status === "fulfilled").length;
+			if (created === 0) return;
+			toast.success(created === 1 ? "Создан 1 тендер" : `Создано тендеров: ${created}`);
 		});
 	}
 
@@ -194,15 +227,6 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleArchiveToggle() {
-		setSearchParams((prev) => {
-			const next = new URLSearchParams(prev);
-			if (next.get("folder") === "archive") next.delete("folder");
-			else next.set("folder", "archive");
-			return next;
-		});
-	}
-
 	function handleClearCompanyFilter() {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
@@ -223,9 +247,7 @@ export function ProcurementPage() {
 
 	let folderChipLabel: string | undefined;
 	let folderChipColor: string | undefined;
-	if (folder === "archive") {
-		folderChipLabel = "Архив";
-	} else if (folder === "none") {
+	if (folder === "none") {
 		folderChipLabel = "Без категории";
 	} else if (folder) {
 		const f = folders.find((ff) => ff.id === folder);
@@ -241,10 +263,8 @@ export function ProcurementPage() {
 			onFiltersChange={handleFiltersChange}
 			sort={sort}
 			onSort={handleSort}
-			onAddPositions={() => setDialogOpen(true)}
+			onAddPositions={handleAddPositions}
 			onExport={handleExport}
-			isArchiveView={isArchiveView}
-			onArchiveToggle={handleArchiveToggle}
 			folders={folders}
 			folderCounts={counts}
 			foldersLoading={foldersLoading || statsLoading}
@@ -266,7 +286,7 @@ export function ProcurementPage() {
 			<PageToolbar
 				left={
 					<>
-						<h1 className="text-sm font-semibold text-foreground leading-none">Закупки</h1>
+						<h1 className="text-sm font-semibold text-foreground leading-none">Позиции</h1>
 						<span aria-hidden="true" className="text-sm text-border leading-none">
 							/
 						</span>
@@ -302,6 +322,7 @@ export function ProcurementPage() {
 				<ProcurementTable
 					items={items}
 					folders={folders}
+					tenderMap={tenderMap}
 					sort={sort}
 					hasNextPage={hasNextPage}
 					loadMore={loadMore}
@@ -309,9 +330,6 @@ export function ProcurementPage() {
 					onRowClick={handleRowClick}
 					onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 					onDeleteItem={(id) => deleteItemMutation.mutate(id)}
-					onAssignFolder={(itemId, folderId) => assignFolderMutation.mutate({ id: itemId, folderId })}
-					onArchiveItem={(id, isArchived) => archiveItemMutation.mutate({ id, isArchived })}
-					isArchiveView={isArchiveView}
 					isLoading={itemsLoading}
 					isFetchingNextPage={isFetchingNextPage}
 					error={itemsError}
@@ -322,17 +340,7 @@ export function ProcurementPage() {
 				/>
 			</main>
 
-			<AddPositionsDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
-				onManual={() => setDrawerOpen(true)}
-				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
-			/>
-			<AddPositionsDrawer
-				open={drawerOpen}
-				onOpenChange={setDrawerOpen}
-				onSubmit={(items) => handleCreateItems(items, items.length === 1 ? "Позиция создана" : "Позиции созданы")}
-			/>
+			<PositionsUploadDialog open={dialogOpen} onOpenChange={setDialogOpen} onImport={handleImportItems} />
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>
 	);
