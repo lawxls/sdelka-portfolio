@@ -18,7 +18,7 @@ import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
 import { useTender } from "@/data/use-tenders";
-import { formatCurrency, formatFileSize } from "@/lib/format";
+import { formatCurrency, formatFileSize, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
 	itemId: string;
@@ -38,13 +38,6 @@ interface InfoFormState {
 
 interface AnswersFormState {
 	texts: Record<string, string>;
-}
-
-function toNumberOrUndefined(value: string): number | undefined {
-	const trimmed = value.trim();
-	if (trimmed === "") return undefined;
-	const n = Number(trimmed);
-	return Number.isFinite(n) ? n : undefined;
 }
 
 function initInfoForm(item: ProcurementItem): InfoFormState {

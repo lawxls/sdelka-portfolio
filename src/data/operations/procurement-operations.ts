@@ -101,15 +101,10 @@ export interface CreateTenderWithItemsResult {
 }
 
 /**
- * Atomic tender + items create. The tender is created first; items inherit
- * the new tender's id via `tenderId` so they're parented from the moment they
- * land. If items.create fails, the tender is rolled back via tenders.delete
- * so neither half persists.
- *
- * The rollback is best-effort — if delete also fails (offline, concurrent
- * archive), the original items error surfaces while the orphan tender stays.
- * Real backend will collapse this to one transactional call; the seam stays
- * the same.
+ * Atomic tender + items create. Tender is created first so items can inherit
+ * its id via `tenderId`. If items.create fails, tenders.delete rolls back —
+ * best-effort: if rollback itself fails, the original items error surfaces and
+ * the orphan tender remains until the real transactional backend ships.
  */
 export async function createTenderWithItems(
 	input: CreateTenderWithItemsInput,
@@ -122,9 +117,7 @@ export async function createTenderWithItems(
 	} catch (err) {
 		try {
 			await tenders.delete(tender.id);
-		} catch {
-			// rollback failed — surface the original error; the orphan tender is logged.
-		}
+		} catch {}
 		throw err;
 	}
 }

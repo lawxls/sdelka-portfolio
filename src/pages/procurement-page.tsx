@@ -99,8 +99,6 @@ export function ProcurementPage() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
-	// Items inherit company + folder from their parent tender after the schema
-	// migration; load enough tenders to build an in-memory lookup for badges.
 	const { items: tenderRows } = useTenders({ limit: 1000 });
 	const tenderMap = useMemo(() => {
 		const map: Record<string, { companyId: string; folderId: string | null }> = {};

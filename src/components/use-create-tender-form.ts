@@ -9,6 +9,7 @@ import type {
 	Unit,
 	UnloadingType,
 } from "@/data/types";
+import { toNumberOrUndefined } from "@/lib/format";
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -136,12 +137,6 @@ function validateInn(value: string): { ok: boolean; error?: string } {
 	return { ok: true };
 }
 
-function toNumber(value: string): number | undefined {
-	if (value === "") return undefined;
-	const n = Number(value);
-	return Number.isFinite(n) ? n : undefined;
-}
-
 function buildGeneratedAnswers(step3: Step3State): GeneratedAnswer[] | undefined {
 	const entries: GeneratedAnswer[] = [];
 	for (const [questionId, answer] of Object.entries(step3.answers)) {
@@ -172,19 +167,19 @@ function buildNewItemInput(
 
 	if (position.unit !== "") payload.unit = position.unit;
 
-	const annual = toNumber(position.annualQuantity);
+	const annual = toNumberOrUndefined(position.annualQuantity);
 	if (annual !== undefined) payload.annualQuantity = annual;
 
-	const perDelivery = toNumber(position.quantityPerDelivery);
+	const perDelivery = toNumberOrUndefined(position.quantityPerDelivery);
 	if (perDelivery !== undefined) payload.quantityPerDelivery = perDelivery;
 
-	const price = toNumber(position.pricePerUnit);
+	const price = toNumberOrUndefined(position.pricePerUnit);
 	if (price !== undefined) payload.currentPrice = price;
 
 	if (step2.deliveryCostType !== null) {
 		payload.deliveryCostType = step2.deliveryCostType;
 		if (step2.deliveryCostType === "paid") {
-			const cost = toNumber(step2.deliveryCost);
+			const cost = toNumberOrUndefined(step2.deliveryCost);
 			if (cost !== undefined) payload.deliveryCost = cost;
 		}
 	}
@@ -200,7 +195,7 @@ function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInp
 		name: step1.tenderName.trim(),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
-		budget: toNumber(step1.budget) ?? 0,
+		budget: toNumberOrUndefined(step1.budget) ?? 0,
 		deadline: step1.deadline,
 	};
 
@@ -223,9 +218,9 @@ function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInp
 			companyName: supplierName,
 			...(supplierInn && { inn: supplierInn }),
 			paymentType: step2.paymentType,
-			deferralDays: toNumber(step2.deferralDays) ?? 0,
+			deferralDays: toNumberOrUndefined(step2.deferralDays) ?? 0,
 			...(step2.paymentType === "prepayment" && {
-				prepaymentPercent: toNumber(step2.prepaymentPercent) ?? 100,
+				prepaymentPercent: toNumberOrUndefined(step2.prepaymentPercent) ?? 100,
 			}),
 			pricePerUnit: null,
 		};
@@ -239,13 +234,9 @@ export interface CreateTenderPayload {
 	items: NewItemInput[];
 }
 
-export interface UseCreateTenderFormArgs {
-	resolveAddressStrings?: (companyId: string, addressIds: string[]) => string[];
-}
-
 type SharedStep1Key = Exclude<keyof Step1State, "positions">;
 
-export function useCreateTenderForm(_args: UseCreateTenderFormArgs = {}) {
+export function useCreateTenderForm() {
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(defaultStep1);
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
