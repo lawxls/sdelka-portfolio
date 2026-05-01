@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { AddPositionsDialog } from "@/components/add-positions-dialog";
 import { FilterChip } from "@/components/filter-chip";
 import { PageToolbar } from "@/components/page-toolbar";
+import { PositionsUploadDialog } from "@/components/positions-upload-dialog";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
 import { TotalCount } from "@/components/total-count";
+import { useCreateTenderWithItems } from "@/data/operations/use-procurement-operations";
+import { groupItemsIntoTenders } from "@/data/tenders/group-items-into-tenders";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -19,15 +21,7 @@ import type {
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
-import {
-	buildFilterParams,
-	useCreateItems,
-	useDeleteItem,
-	useExportItems,
-	useItems,
-	useTotals,
-	useUpdateItem,
-} from "@/data/use-items";
+import { buildFilterParams, useDeleteItem, useExportItems, useItems, useTotals, useUpdateItem } from "@/data/use-items";
 import { useTenders } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -57,8 +51,15 @@ function parseStatus(params: URLSearchParams): StatusFilter {
 	return v === "searching" || v === "searching_completed" || v === "negotiating" || v === "completed" ? v : "all";
 }
 
+const DEFAULT_IMPORT_DEADLINE_DAYS = 14;
+
+function defaultImportDeadline(): string {
+	const d = new Date();
+	d.setDate(d.getDate() + DEFAULT_IMPORT_DEADLINE_DAYS);
+	return d.toISOString().slice(0, 10);
+}
+
 export function ProcurementPage() {
-	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const search = searchParams.get("q") ?? "";
@@ -109,7 +110,7 @@ export function ProcurementPage() {
 
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
-	const createItemsMutation = useCreateItems();
+	const createTenderWithItemsMutation = useCreateTenderWithItems();
 	const exportItemsMutation = useExportItems();
 
 	const isMobile = useIsMobile();
@@ -163,15 +164,33 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleCreateItems(items: NewItemInput[], successMsg?: string) {
-		createItemsMutation.mutate(items, {
-			onSuccess: (data) => {
-				if (data.isAsync) {
-					toast.info("Позиции обрабатываются");
-				} else if (successMsg) {
-					toast.success(successMsg);
-				}
-			},
+	function handleImportItems(items: NewItemInput[]) {
+		const groups = groupItemsIntoTenders(items);
+		if (groups.length === 0) return;
+		const targetCompanyId = company ?? companies[0]?.id;
+		if (!targetCompanyId) {
+			toast.error("Не удалось определить компанию для импорта");
+			return;
+		}
+		const folderId = folder && folder !== "none" ? folder : null;
+		const deadline = defaultImportDeadline();
+		Promise.allSettled(
+			groups.map((group) =>
+				createTenderWithItemsMutation.mutateAsync({
+					tender: {
+						name: group.name,
+						companyId: targetCompanyId,
+						folderId,
+						budget: 0,
+						deadline,
+					},
+					items: group.items,
+				}),
+			),
+		).then((results) => {
+			const created = results.filter((r) => r.status === "fulfilled").length;
+			if (created === 0) return;
+			toast.success(created === 1 ? "Создан 1 тендер" : `Создано тендеров: ${created}`);
 		});
 	}
 
@@ -311,12 +330,7 @@ export function ProcurementPage() {
 				/>
 			</main>
 
-			<AddPositionsDialog
-				open={dialogOpen}
-				onOpenChange={setDialogOpen}
-				onManual={() => navigate("/tenders")}
-				onImport={(items) => handleCreateItems(items, "Позиции импортированы")}
-			/>
+			<PositionsUploadDialog open={dialogOpen} onOpenChange={setDialogOpen} onImport={handleImportItems} />
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>
 	);

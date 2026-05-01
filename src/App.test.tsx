@@ -396,27 +396,16 @@ describe("ProcurementPage", () => {
 		expect(rows).toHaveLength(16);
 	});
 
-	test("clicking Добавить позиции opens choice dialog", async () => {
+	test("clicking Добавить позиции on /positions opens upload dialog directly (no choice screen)", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Вручную/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Из файла/ })).toBeInTheDocument();
-	});
-
-	test("clicking Вручную on /positions navigates to /tenders", async () => {
-		await renderAppReady();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Вручную/ }));
-
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
-		});
+		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /Вручную/ })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Скачать пример файла/ })).toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -511,16 +500,19 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("file import via dialog calls createItemsBatch and closes dialog", async () => {
-		vi.spyOn(mockParser, "parseFile").mockResolvedValue([{ name: "Import 1" }, { name: "Import 2" }]);
+	test("file import via dialog dispatches a tender per AI-grouped batch and closes the dialog", async () => {
+		vi.spyOn(mockParser, "parseFile").mockResolvedValue([
+			{ name: "Кабель ВВГнг 3x2.5" },
+			{ name: "Кабель ВВГнг 3x4" },
+			{ name: "Розетка серая" },
+		]);
 
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
-		await user.click(screen.getByRole("button", { name: /Из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
-		await waitFor(() => expect(screen.getByText("Import 1")).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument());
 
 		await user.click(screen.getByRole("button", { name: /Импортировать/ }));
 
@@ -528,6 +520,14 @@ describe("ProcurementPage", () => {
 			expect(
 				screen.queryByText("Добавить позиции", { selector: "[data-slot='dialog-title']" }),
 			).not.toBeInTheDocument();
+		});
+
+		// Two AI-grouped tenders should land on /tenders: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
+		const rail = screen.getByTestId("app-rail");
+		await user.click(within(rail).getByRole("link", { name: /Тендеры/ }));
+		await waitFor(() => {
+			expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument();
+			expect(screen.getByText("Розетка серая")).toBeInTheDocument();
 		});
 	});
 });
