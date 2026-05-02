@@ -532,10 +532,20 @@ export function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
+	tenderItems,
+	tenderQuotesByIdentity,
 }: {
 	itemId: string;
 	onSupplierClick: (id: string) => void;
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
+	/** When set (multi-item tender context), the «ТСО / ЕД.» cell renders X/N
+	 * with a tooltip listing every position's per-supplier ТСО. Single-item
+	 * tenders pass `undefined` so the cell keeps its original price rendering. */
+	tenderItems?: readonly ProcurementItem[];
+	/** Cross-item TCO lookup keyed by supplier identity, supplied by the tender
+	 * drawer parent. Lets `OffersTable` render the X/N tooltip without itself
+	 * pulling from the suppliers client. */
+	tenderQuotesByIdentity?: Map<string, Map<string, number>>;
 }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "savings", direction: "desc" });
@@ -662,6 +672,8 @@ export function OffersTabPanel({
 				hasNextPage={query.hasNextPage}
 				loadMore={query.fetchNextPage}
 				isFetchingNextPage={query.isFetchingNextPage}
+				tenderItems={tenderItems}
+				tenderQuotesByIdentity={tenderQuotesByIdentity}
 			/>
 		</div>
 	);

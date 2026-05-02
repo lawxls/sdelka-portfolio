@@ -155,7 +155,7 @@ export function SuppliersTable({
 				<Archive className="mr-1 size-4" aria-hidden="true" />
 				Архивировать
 			</Button>
-			{!showArchived && kpRequestEnabled && (
+			{kpRequestEnabled && (
 				<Button type="button" variant="outline" size="sm" onClick={onSendRequestBatch}>
 					<Mails data-icon="inline-start" aria-hidden="true" />
 					Отправить запросы
@@ -269,22 +269,21 @@ export function SuppliersTable({
 									aria-label="Архив"
 									aria-pressed={showArchived}
 									onClick={onToggleArchived}
-									className={showArchived ? "bg-muted" : ""}
+									className={showArchived ? "text-highlight-foreground" : ""}
 								>
 									<Archive aria-hidden="true" />
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent>Архив</TooltipContent>
 						</Tooltip>
-						{!showArchived && kpRequestEnabled && (
+						{kpRequestEnabled && (
 							<Button
 								type="button"
 								size="sm"
 								onClick={onSendRequestAll}
 								aria-label="Отправить запросы"
-								className="btn-cta rounded-full border-0"
+								className="btn-cta ml-2 rounded-full border-0"
 							>
-								<Mails data-icon="inline-start" aria-hidden="true" />
 								<span className="hidden sm:inline">Отправить запросы</span>
 								<span className="sm:hidden">Отправить</span>
 							</Button>

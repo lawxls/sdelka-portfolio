@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -19,6 +19,15 @@ import { TasksPage } from "@/pages/tasks-page";
 import { TenderDetailPage } from "@/pages/tender-detail-page";
 import { TendersPage } from "@/pages/tenders-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
+
+function TendersOutletHost() {
+	return (
+		<>
+			<TendersPage />
+			<Outlet />
+		</>
+	);
+}
 
 function RootRedirect() {
 	const { search, hash } = useLocation();
@@ -48,8 +57,9 @@ function App() {
 				<Route path="/procurement" element={<ProcurementRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path="/tenders" element={<TendersPage />} />
-					<Route path="/tenders/:slug" element={<TenderDetailPage />} />
+					<Route path="/tenders" element={<TendersOutletHost />}>
+						<Route path=":slug" element={<TenderDetailPage />} />
+					</Route>
 					<Route path="/positions" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />
 					{/* Settings */}

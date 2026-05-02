@@ -1,13 +1,14 @@
-import { Archive, Download, ListFilter, LoaderCircle, UserCheck } from "lucide-react";
+import { Archive, Download, ListFilter, LoaderCircle, Search, UserCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeliveryValue } from "@/components/supplier-value-displays";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Supplier, SupplierSortField, SupplierSortState } from "@/data/supplier-types";
+import { type Supplier, type SupplierSortField, type SupplierSortState, supplierIdentity } from "@/data/supplier-types";
 import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types";
 import { formatQuotePaymentType, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -68,6 +69,20 @@ interface OffersTableProps {
 	hasNextPage?: boolean;
 	loadMore?: () => void;
 	isFetchingNextPage?: boolean;
+	/** When the parent tender holds multiple positions, render the «ТСО / ЕД.»
+	 * cell as `X/N` with a tooltip listing every position's per-supplier ТСО.
+	 * Single-position contexts pass `undefined`. */
+	tenderItems?: readonly ProcurementItem[];
+	/** Cross-item TCO lookup keyed by supplier identity (`inn || companyName`),
+	 * mapping each `itemId` to that supplier's ТСО / ЕД. for that position.
+	 * Built by the tender drawer parent and only consumed when `tenderItems` has
+	 * more than one entry. */
+	tenderQuotesByIdentity?: Map<string, Map<string, number>>;
+	/** Item IDs the user has selected from the «Позиция» filter section in the
+	 * popover. Used by the consolidated multi-item panel to narrow rows to
+	 * suppliers that quoted at least one of the selected items. */
+	activeItemIds?: string[];
+	onItemFilter?: (itemId: string) => void;
 }
 
 const FILTER_BTN =
@@ -134,6 +149,10 @@ export function OffersTable({
 	hasNextPage,
 	loadMore,
 	isFetchingNextPage,
+	tenderItems,
+	tenderQuotesByIdentity,
+	activeItemIds,
+	onItemFilter,
 }: OffersTableProps) {
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
@@ -146,6 +165,16 @@ export function OffersTable({
 		for (const s of suppliers) map.set(s.id, s.companyName);
 		return map;
 	}, [suppliers]);
+
+	const isMultiItemTender = (tenderItems?.length ?? 0) > 1;
+	const showItemFilter = isMultiItemTender && !!onItemFilter;
+	const activeItemIdsSet = useMemo(() => new Set(activeItemIds ?? []), [activeItemIds]);
+	const [itemFilterQuery, setItemFilterQuery] = useState("");
+	const filteredTenderItems = useMemo(() => {
+		const q = itemFilterQuery.trim().toLowerCase();
+		if (!q) return tenderItems ?? [];
+		return (tenderItems ?? []).filter((it) => it.name.toLowerCase().includes(q));
+	}, [tenderItems, itemFilterQuery]);
 
 	const rowsCount = totalCount;
 
@@ -187,7 +216,9 @@ export function OffersTable({
 									<PopoverTrigger asChild>
 										<Button type="button" variant="ghost" size="icon-sm" aria-label="Фильтры" className="relative">
 											<ListFilter aria-hidden="true" />
-											{(activePaymentTypes.length > 0 || activeDeliveryFilters.length > 0) && (
+											{(activePaymentTypes.length > 0 ||
+												activeDeliveryFilters.length > 0 ||
+												activeItemIdsSet.size > 0) && (
 												<span
 													className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary"
 													data-testid="filter-indicator"
@@ -198,8 +229,48 @@ export function OffersTable({
 								</TooltipTrigger>
 								<TooltipContent>Фильтры</TooltipContent>
 							</Tooltip>
-							<PopoverContent align="end" className="w-56">
+							<PopoverContent align="end" className="w-72">
 								<div className="flex flex-col gap-1">
+									{showItemFilter && (
+										<>
+											<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Позиция</div>
+											<div className="relative px-1">
+												<Search
+													aria-hidden="true"
+													className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+												/>
+												<Input
+													value={itemFilterQuery}
+													onChange={(e) => setItemFilterQuery(e.target.value)}
+													placeholder="Поиск по названию"
+													aria-label="Поиск по позициям"
+													className="h-8 pl-7 text-sm"
+												/>
+											</div>
+											<div className="flex max-h-44 flex-col gap-0.5 overflow-y-auto pt-0.5">
+												{filteredTenderItems.length === 0 ? (
+													<div className="px-3 py-2 text-xs text-muted-foreground">Ничего не найдено</div>
+												) : (
+													filteredTenderItems.map((it) => {
+														const active = activeItemIdsSet.has(it.id);
+														return (
+															<button
+																key={it.id}
+																type="button"
+																aria-label={it.name}
+																aria-pressed={active}
+																className={cn(FILTER_BTN, active && FILTER_BTN_ACTIVE)}
+																onClick={() => onItemFilter?.(it.id)}
+															>
+																<span className="truncate">{it.name}</span>
+															</button>
+														);
+													})
+												)}
+											</div>
+											<div className="my-1 border-t border-border" />
+										</>
+									)}
 									<div className="px-3 py-1 text-xs font-medium uppercase text-muted-foreground">Тип оплаты</div>
 									{PAYMENT_TYPES.map((t) => (
 										<button
@@ -247,7 +318,7 @@ export function OffersTable({
 									aria-label="Архив"
 									aria-pressed={showArchived}
 									onClick={onToggleArchived}
-									className={showArchived ? "bg-muted" : ""}
+									className={showArchived ? "text-highlight-foreground" : ""}
 								>
 									<Archive aria-hidden="true" />
 								</Button>
@@ -312,7 +383,44 @@ export function OffersTable({
 			header: "ТСО/ЕД.",
 			sortable: true,
 			align: "right",
-			cell: (s) => formatCurrency(s.tco),
+			cell: (s) => {
+				if (!isMultiItemTender) return formatCurrency(s.tco);
+				const perItem = tenderQuotesByIdentity?.get(supplierIdentity(s));
+				const quoted = perItem?.size ?? 0;
+				const total = tenderItems?.length ?? 0;
+				return (
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<button
+								type="button"
+								data-testid={`tco-coverage-${s.id}`}
+								className="inline-flex tabular-nums underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+							>
+								{quoted}/{total}
+							</button>
+						</TooltipTrigger>
+						<TooltipContent
+							side="left"
+							align="center"
+							sideOffset={8}
+							collisionPadding={16}
+							className="block max-w-[min(28rem,90vw)] p-2"
+						>
+							<ul className="flex flex-col gap-1 text-xs">
+								{(tenderItems ?? []).map((it) => {
+									const tco = perItem?.get(it.id);
+									return (
+										<li key={it.id} className="flex items-baseline justify-between gap-6">
+											<span className="truncate text-left">{it.name}</span>
+											<span className="shrink-0 tabular-nums">{tco != null ? formatCurrency(tco) : "—"}</span>
+										</li>
+									);
+								})}
+							</ul>
+						</TooltipContent>
+					</Tooltip>
+				);
+			},
 		},
 		{
 			id: "savings",

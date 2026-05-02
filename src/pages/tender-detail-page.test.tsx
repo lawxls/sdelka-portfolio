@@ -163,7 +163,7 @@ describe("TenderDetailPage", () => {
 		// Tasks belonging to a different tender stay out of this tab.
 		expect(screen.queryByText("Не наша задача")).not.toBeInTheDocument();
 
-		fireEvent.click(screen.getByTestId("tender-task-row-task-T1-1"));
+		fireEvent.click(screen.getByText("Согласовать спецификацию"));
 		await waitFor(() => {
 			expect(
 				screen.getByText("Согласовать спецификацию", { selector: "[data-slot='sheet-title']" }),
@@ -171,33 +171,19 @@ describe("TenderDetailPage", () => {
 		});
 	});
 
-	test("single-item tender shows ТСО / ед. headline = item.currentPrice", async () => {
+	test("header shows tender id beside name and supplier metrics in place of TCO", async () => {
 		renderPage({
-			tenders: [makeTender("T-001")],
+			tenders: [makeTender("T-001", { name: "Упаковочные материалы Q2" })],
 			items: [makeItem("item-1", { tenderId: "T-001", currentPrice: 1776, annualQuantity: 100 })],
 			slug: "T-001",
 		});
 
-		const headline = await screen.findByTestId("tender-tco-headline");
-		expect(headline).toHaveTextContent("ТСО / ед.");
-		expect(headline).toHaveTextContent(/1\s?776/);
-	});
-
-	test("multi-item tender hides ТСО / ед. and shows total ТСО (sum of annualQuantity × currentPrice)", async () => {
-		renderPage({
-			tenders: [makeTender("T-001")],
-			items: [
-				makeItem("item-1", { tenderId: "T-001", currentPrice: 100, annualQuantity: 50 }), // 5 000
-				makeItem("item-2", { tenderId: "T-001", currentPrice: 200, annualQuantity: 30 }), // 6 000
-			],
-			slug: "T-001",
-		});
-
-		const headline = await screen.findByTestId("tender-tco-headline");
-		expect(headline).toHaveTextContent("Итого ТСО");
-		expect(headline).not.toHaveTextContent("ТСО / ед.");
-		// 5000 + 6000 = 11 000 ₽
-		expect(headline).toHaveTextContent(/11\s?000/);
+		await screen.findByRole("heading", { name: "Упаковочные материалы Q2" });
+		expect(screen.getByText("T-001")).toBeInTheDocument();
+		expect(screen.queryByTestId("tender-tco-headline")).not.toBeInTheDocument();
+		expect(screen.getByTestId("tender-metric-contacted")).toBeInTheDocument();
+		expect(screen.getByTestId("tender-metric-quotes")).toBeInTheDocument();
+		expect(screen.getByTestId("tender-metric-refusals")).toBeInTheDocument();
 	});
 
 	test("renders «Тендер не найден» on unknown slug", async () => {
@@ -223,9 +209,5 @@ describe("TenderDetailPage", () => {
 		await waitFor(() => expect(screen.getByTestId("tender-tab-details")).toBeInTheDocument());
 		expect(screen.getByTestId("tender-item-item-1")).toBeInTheDocument();
 		expect(screen.getByTestId("tender-item-item-2")).toBeInTheDocument();
-
-		const headline = screen.getByTestId("tender-tco-headline");
-		expect(headline).toHaveTextContent("Итого ТСО");
-		expect(headline).toHaveTextContent(/11\s?000/);
 	});
 });
