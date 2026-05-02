@@ -10,8 +10,10 @@ export function BottomTabBar() {
 			className="flex shrink-0 border-t border-sidebar-border bg-sidebar md:hidden"
 			data-testid="bottom-tab-bar"
 		>
-			{NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-				const active = pathname.startsWith(path);
+			{NAV_ITEMS.map((item) => {
+				const { path, label, icon: Icon } = item;
+				const matchPath = "activePrefix" in item ? item.activePrefix : path;
+				const active = pathname.startsWith(matchPath);
 				return (
 					<Link
 						key={path}

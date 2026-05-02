@@ -42,11 +42,11 @@ describe("AppRail items", () => {
 		expect(links[1]).toHaveAccessibleName("Позиции");
 	});
 
-	test("items link to /positions, /tasks, and /settings", () => {
+	test("items link to /positions, /tasks, and /settings/workspace", () => {
 		renderRail();
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
 		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
+		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings/workspace");
 	});
 
 	test("nav has aria-label", () => {
@@ -83,7 +83,7 @@ describe("AppRail items", () => {
 	test("avatar trigger lives at the bottom of the sidebar, separated from nav items", () => {
 		renderRail();
 		const bottom = screen.getByTestId("app-rail-bottom");
-		expect(bottom).toContainElement(screen.getByRole("button", { name: "Меню пользователя" }));
+		expect(bottom).toContainElement(screen.getByRole("link", { name: "Меню пользователя" }));
 	});
 });
 

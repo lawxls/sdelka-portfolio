@@ -50,7 +50,7 @@ describe("UserAvatarMenu trigger", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Станислав Чмелев")).toBeInTheDocument();
 		});
-		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
+		const trigger = screen.getByRole("link", { name: "Меню пользователя" });
 		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();
 		expect(trigger.querySelector("svg.lucide-chevron-down")).not.toBeInTheDocument();
 		expect(screen.queryByText("СЧ")).not.toBeInTheDocument();
@@ -87,112 +87,36 @@ describe("UserAvatarMenu trigger", () => {
 		});
 		renderMenu({ profile });
 
-		const trigger = screen.getByRole("button", { name: "Меню пользователя" });
+		const trigger = screen.getByRole("link", { name: "Меню пользователя" });
 		expect(trigger.querySelector("svg.lucide-user")).toBeInTheDocument();
 		expect(screen.queryByText(/Станислав/)).not.toBeInTheDocument();
 	});
 });
 
-describe("UserAvatarMenu dropdown", () => {
-	test("contains only Мой профиль, Сменить тему, Выйти in order", async () => {
+describe("UserAvatarMenu navigation", () => {
+	test("trigger is a link to /settings/profile", () => {
 		renderMenu();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Мой профиль")).toBeInTheDocument();
-		});
-
-		const items = screen.getAllByRole("menuitem");
-		const labels = items.map((item) => item.textContent?.replace(/Сменить темуСменить тему/, "Сменить тему").trim());
-		expect(labels).toEqual(["Мой профиль", "Сменить тему", "Выйти"]);
+		const trigger = screen.getByRole("link", { name: "Меню пользователя" });
+		expect(trigger).toHaveAttribute("href", "/settings/profile");
 	});
 
-	test("does not show Компании, Сотрудники, or Задачи entries", async () => {
+	test("clicking the trigger navigates to /settings/profile", async () => {
 		renderMenu();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Мой профиль")).toBeInTheDocument();
-		});
-
-		expect(screen.queryByText("Компании")).not.toBeInTheDocument();
-		expect(screen.queryByText("Сотрудники")).not.toBeInTheDocument();
-		expect(screen.queryByText("Задачи")).not.toBeInTheDocument();
-	});
-
-	test("has a separator below Мой профиль and above Выйти", async () => {
-		renderMenu();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Мой профиль")).toBeInTheDocument();
-		});
-
-		const separators = screen.getAllByRole("separator");
-		expect(separators).toHaveLength(2);
-	});
-
-	test("Мой профиль navigates to /settings/profile", async () => {
-		renderMenu();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Мой профиль")).toBeInTheDocument();
-		});
-
-		await user.click(screen.getByText("Мой профиль"));
+		await user.click(screen.getByRole("link", { name: "Меню пользователя" }));
 
 		await waitFor(() => {
 			expect(screen.getByTestId("settings-profile-page")).toBeInTheDocument();
 		});
 	});
 
-	test("Выйти has destructive styling and clears tokens", async () => {
-		localStorage.setItem("auth-access-token", "token");
+	test("does not open a dropdown menu", async () => {
 		renderMenu();
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+		await user.click(screen.getByRole("link", { name: "Меню пользователя" }));
 
-		await waitFor(() => {
-			expect(screen.getByText("Выйти")).toBeInTheDocument();
-		});
-
-		const logout = screen.getByText("Выйти").closest('[role="menuitem"]');
-		expect(logout).toHaveAttribute("data-variant", "destructive");
-
-		await user.click(screen.getByText("Выйти"));
-
-		await waitFor(() => {
-			expect(localStorage.getItem("auth-access-token")).toBeNull();
-		});
-	});
-
-	test("Сменить тему toggles dark class and persists to localStorage", async () => {
-		renderMenu();
-		const user = userEvent.setup();
-
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
-
-		await waitFor(() => {
-			expect(screen.getAllByText("Сменить тему").length).toBeGreaterThan(0);
-		});
-
-		await user.click(screen.getAllByText("Сменить тему")[0]);
-
-		await waitFor(() => {
-			expect(document.documentElement.classList.contains("dark")).toBe(true);
-		});
-		expect(localStorage.getItem("theme")).toBe("dark");
-
-		document.documentElement.classList.remove("dark");
+		expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
 	});
 });

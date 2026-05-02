@@ -247,14 +247,18 @@ describe("Routing", () => {
 		expect(within(header).getByRole("button", { name: "Сменить тему" })).toBeInTheDocument();
 	});
 
-	test("sidebar avatar opens dropdown with 3 items", async () => {
+	test("sidebar avatar navigates directly to /settings/profile", async () => {
 		renderApp();
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: "Меню пользователя" }));
+		const trigger = screen.getByRole("link", { name: "Меню пользователя" });
+		expect(trigger).toHaveAttribute("href", "/settings/profile");
 
-		expect(screen.getByRole("menuitem", { name: "Мой профиль" })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: /Сменить тему/ })).toBeInTheDocument();
-		expect(screen.getByRole("menuitem", { name: "Выйти" })).toBeInTheDocument();
+		await user.click(trigger);
+
+		await waitFor(() => {
+			expect(screen.getByTestId("settings-layout")).toBeInTheDocument();
+		});
+		expect(screen.queryByRole("menuitem", { name: /Сменить тему/ })).not.toBeInTheDocument();
 	});
 
 	test("/register renders registration page with valid invitation", async () => {
@@ -484,7 +488,6 @@ describe("ProcurementPage", () => {
 
 		expect(screen.getByRole("heading", { name: "Создать тендер" })).toBeInTheDocument();
 
-		await user.type(screen.getByLabelText("Название тендера"), "Тестовый тендер из drawer");
 		await user.type(screen.getByLabelText("Дедлайн"), "2026-07-01");
 		await user.type(screen.getByLabelText("Название"), "Позиция А");
 
@@ -495,8 +498,9 @@ describe("ProcurementPage", () => {
 		await waitFor(() => {
 			expect(screen.queryByRole("heading", { name: "Создать тендер" })).not.toBeInTheDocument();
 		});
+		// Tender name is auto-derived from the first position when the user-facing field is omitted.
 		await waitFor(() => {
-			expect(screen.getByText("Тестовый тендер из drawer")).toBeInTheDocument();
+			expect(screen.getByText("Позиция А")).toBeInTheDocument();
 		});
 	});
 

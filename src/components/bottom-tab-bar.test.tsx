@@ -22,11 +22,11 @@ describe("BottomTabBar items", () => {
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
-	test("items link to /positions, /tasks, and /settings", () => {
+	test("items link to /positions, /tasks, and /settings/workspace", () => {
 		renderBar();
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
 		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
+		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings/workspace");
 	});
 
 	test("nav has aria-label", () => {
@@ -73,7 +73,7 @@ describe("BottomTabBar navigation", () => {
 				<BottomTabBar />
 				<Routes>
 					<Route path="/positions" element={<div>procurement-page</div>} />
-					<Route path="/settings" element={<div>settings-page</div>} />
+					<Route path="/settings/workspace" element={<div>settings-page</div>} />
 				</Routes>
 			</MemoryRouter>,
 		);

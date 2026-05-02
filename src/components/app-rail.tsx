@@ -13,6 +13,28 @@ const BOTTOM_NAV = NAV_ITEMS.filter((item) => item.placement === "bottom");
 const NAV_ITEM_CLASSES =
 	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-[background-color,color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
+type NavItem = (typeof NAV_ITEMS)[number];
+
+function NavLinkItem({ item, pathname }: { item: NavItem; pathname: string }) {
+	const Icon = item.icon;
+	const matchPath = "activePrefix" in item ? item.activePrefix : item.path;
+	const active = pathname.startsWith(matchPath);
+	return (
+		<Link
+			to={item.path}
+			aria-current={active ? "page" : undefined}
+			className={cn(
+				NAV_ITEM_CLASSES,
+				"text-sidebar-foreground",
+				active ? "bg-foreground/[0.06]" : "hover:bg-sidebar-accent/50",
+			)}
+		>
+			<Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden="true" />
+			<span className="flex-1 text-left">{item.label}</span>
+		</Link>
+	);
+}
+
 export function AppRail() {
 	const { pathname } = useLocation();
 	const [supportOpen, setSupportOpen] = useState(false);
@@ -29,46 +51,15 @@ export function AppRail() {
 					</Link>
 				</div>
 				<nav aria-label="Основная навигация" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-					{TOP_NAV.map(({ path, label, icon: Icon }) => {
-						const active = pathname.startsWith(path);
-						return (
-							<Link
-								key={path}
-								to={path}
-								aria-current={active ? "page" : undefined}
-								className={cn(
-									NAV_ITEM_CLASSES,
-									"text-sidebar-foreground",
-									active ? "bg-foreground/[0.06]" : "hover:bg-sidebar-accent/50",
-								)}
-							>
-								<Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden="true" />
-								<span className="flex-1 text-left">{label}</span>
-							</Link>
-						);
-					})}
+					{TOP_NAV.map((item) => (
+						<NavLinkItem key={item.path} item={item} pathname={pathname} />
+					))}
 				</nav>
 				<div className="flex flex-col px-2 py-2" data-testid="app-rail-bottom">
 					<div className="flex flex-col gap-0.5">
-						{BOTTOM_NAV.map(({ path, label, icon: Icon }) => {
-							const active = pathname.startsWith(path);
-							return (
-								<Link
-									key={path}
-									to={path}
-									aria-current={active ? "page" : undefined}
-									className={cn(
-										NAV_ITEM_CLASSES,
-										active
-											? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-											: "text-sidebar-foreground hover:bg-sidebar-accent/50",
-									)}
-								>
-									<Icon className="size-4 shrink-0" aria-hidden="true" />
-									<span className="flex-1 text-left">{label}</span>
-								</Link>
-							);
-						})}
+						{BOTTOM_NAV.map((item) => (
+							<NavLinkItem key={item.path} item={item} pathname={pathname} />
+						))}
 						<button
 							type="button"
 							className={cn(NAV_ITEM_CLASSES, "text-sidebar-foreground hover:bg-sidebar-accent/50")}
@@ -79,7 +70,7 @@ export function AppRail() {
 						</button>
 					</div>
 					<div className="mt-2 px-0.5">
-						<UserAvatarMenu side="right" align="end" />
+						<UserAvatarMenu />
 					</div>
 				</div>
 			</aside>

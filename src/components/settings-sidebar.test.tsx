@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SettingsSidebar } from "./settings-sidebar";
 
 function renderSidebar(initialPath = "/settings/profile") {
@@ -71,5 +72,35 @@ describe("SettingsSidebar active item", () => {
 		renderSidebar("/settings/profile");
 		const btn = screen.getByText("Компании").closest("button") as HTMLElement;
 		expect(btn.className).not.toContain("font-medium");
+	});
+});
+
+describe("SettingsSidebar logout", () => {
+	beforeEach(() => {
+		localStorage.clear();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	test("renders Выйти option", () => {
+		renderSidebar();
+		expect(screen.getByRole("button", { name: "Выйти" })).toBeInTheDocument();
+	});
+
+	test("Выйти uses destructive styling", () => {
+		renderSidebar();
+		const btn = screen.getByRole("button", { name: "Выйти" });
+		expect(btn.className).toContain("text-destructive");
+	});
+
+	test("clicking Выйти clears auth tokens", async () => {
+		localStorage.setItem("auth-access-token", "token");
+		renderSidebar();
+
+		await userEvent.setup().click(screen.getByRole("button", { name: "Выйти" }));
+
+		expect(localStorage.getItem("auth-access-token")).toBeNull();
 	});
 });

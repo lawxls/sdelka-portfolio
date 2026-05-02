@@ -1,5 +1,6 @@
-import { Building2, CreditCard, Mail, Settings, User, Users } from "lucide-react";
+import { Building2, CreditCard, LogOut, Mail, Settings, User, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
+import { clearTokens } from "@/data/auth";
 import { cn } from "@/lib/utils";
 
 interface NavItemDef {
@@ -54,6 +55,21 @@ function NavSection({ title, items, currentPath }: { title: string; items: NavIt
 	);
 }
 
+function LogoutItem() {
+	return (
+		<button
+			type="button"
+			className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
+			onClick={clearTokens}
+		>
+			<span className="shrink-0" aria-hidden="true">
+				<LogOut className="size-4" />
+			</span>
+			<span className="flex-1 text-left">Выйти</span>
+		</button>
+	);
+}
+
 export function SettingsSidebar() {
 	const location = useLocation();
 
@@ -66,6 +82,11 @@ export function SettingsSidebar() {
 				<NavSection title="Пользователь" items={USER_ITEMS} currentPath={location.pathname} />
 				<NavSection title="Рабочее пространство" items={WORKSPACE_ITEMS} currentPath={location.pathname} />
 				<NavSection title="Аккаунт" items={ACCOUNT_ITEMS} currentPath={location.pathname} />
+				<div className="mb-3">
+					<div className="space-y-0.5">
+						<LogoutItem />
+					</div>
+				</div>
 			</nav>
 		</aside>
 	);

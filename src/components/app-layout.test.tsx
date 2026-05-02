@@ -70,7 +70,7 @@ describe("AppLayout — global header", () => {
 
 	test("renders user avatar menu", () => {
 		renderLayout();
-		expect(screen.getByRole("button", { name: "Меню пользователя" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Меню пользователя" })).toBeInTheDocument();
 	});
 
 	test("renders child route content", () => {
