@@ -1,4 +1,4 @@
-import { Download, Loader2 } from "lucide-react";
+import { CircleHelp, Download, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -82,10 +82,11 @@ export function PositionsUploadDialog({ open, onOpenChange, onImport }: Position
 					{step === "upload" && (
 						<div className="flex flex-col gap-4">
 							<FileDropzone onFile={handleFile} />
-							<p className="text-center text-xs text-muted-foreground">
-								ИИ сам сформирует тендеры на&nbsp;основе загруженных позиций
-							</p>
-							<div className="flex items-center justify-end">
+							<div className="flex items-center justify-between gap-2">
+								<Button variant="ghost" onClick={() => {}}>
+									<CircleHelp className="size-4" aria-hidden="true" />
+									Как это работает
+								</Button>
 								<Button variant="ghost" onClick={() => {}}>
 									<Download className="size-4" aria-hidden="true" />
 									Скачать пример файла с&nbsp;позициями

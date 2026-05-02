@@ -1,4 +1,4 @@
-import { Archive, Plus, Power, Trash2 } from "lucide-react";
+import { Archive, Power, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddEmailSheet } from "@/components/add-email-sheet";
@@ -147,10 +147,9 @@ export function EmailsSettingsPage() {
 						<Button
 							type="button"
 							size="sm"
-							className="btn-cta rounded-full border-0"
+							className="btn-cta ml-2 rounded-full border-0"
 							onClick={() => setEmailsCreateOpen(true)}
 						>
-							<Plus data-icon="inline-start" aria-hidden="true" />
 							<span>Добавить почту</span>
 						</Button>
 					}

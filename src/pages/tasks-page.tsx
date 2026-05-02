@@ -119,12 +119,15 @@ function FilterChip({ icon: Icon, label, count, active, onClick }: FilterChipPro
 					onClick={onClick}
 					className={cn(
 						"inline-flex h-8 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm transition-colors",
-						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-						active ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
+						"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-foreground hover:bg-muted",
 					)}
 				>
-					<Icon className="size-4" aria-hidden="true" />
-					{typeof count === "number" && count > 0 && <span className="tabular-nums text-xs font-medium">{count}</span>}
+					<Icon className={cn("size-4", active && "text-highlight-foreground")} aria-hidden="true" />
+					{typeof count === "number" && count > 0 && (
+						<span className={cn("tabular-nums text-xs font-medium", active && "text-highlight-foreground")}>
+							{count}
+						</span>
+					)}
 				</button>
 			</TooltipTrigger>
 			<TooltipContent>{label}</TooltipContent>

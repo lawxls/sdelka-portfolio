@@ -1,4 +1,4 @@
-import { Archive, Plus, Trash2 } from "lucide-react";
+import { Archive, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -148,10 +148,9 @@ export function CompaniesSettingsPage() {
 						<Button
 							type="button"
 							size="sm"
-							className="btn-cta rounded-full border-0"
+							className="btn-cta ml-2 rounded-full border-0"
 							onClick={() => setCreationOpen(true)}
 						>
-							<Plus data-icon="inline-start" aria-hidden="true" />
 							<span>Добавить компанию</span>
 						</Button>
 					}

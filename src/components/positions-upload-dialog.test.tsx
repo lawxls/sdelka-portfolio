@@ -29,13 +29,18 @@ describe("PositionsUploadDialog", () => {
 		expect(screen.queryByRole("button", { name: /^Из файла$/ })).not.toBeInTheDocument();
 	});
 
-	test("renders the AI grouping hint under the dropzone", () => {
+	test("does not render the AI grouping hint", () => {
 		renderDialog();
 		expect(
-			screen.getByText((content) =>
+			screen.queryByText((content) =>
 				content.replace(/ /g, " ").includes("ИИ сам сформирует тендеры на основе загруженных позиций"),
 			),
-		).toBeInTheDocument();
+		).not.toBeInTheDocument();
+	});
+
+	test("renders «Как это работает» button next to the example file download", () => {
+		renderDialog();
+		expect(screen.getByRole("button", { name: "Как это работает" })).toBeInTheDocument();
 	});
 
 	test("renders «Скачать пример файла с позициями» button (renamed from «Скачать шаблон»)", () => {
