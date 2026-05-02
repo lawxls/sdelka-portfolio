@@ -1,11 +1,86 @@
 import { ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CompanySummary, TenderStatus } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
+import type { DeadlineFilter } from "./tenders-toolbar";
+
+function DateRangePicker({
+	from,
+	to,
+	onChange,
+	onPresetOverdue,
+	isOverdue,
+	onClear,
+}: {
+	from: string | undefined;
+	to: string | undefined;
+	onChange: (from: string | undefined, to: string | undefined) => void;
+	onPresetOverdue: () => void;
+	isOverdue: boolean;
+	onClear: () => void;
+}) {
+	const hasRange = Boolean(from) || Boolean(to);
+	return (
+		<div className="flex flex-col gap-1.5">
+			<div className="grid grid-cols-2 gap-1.5">
+				<div className="flex flex-col gap-0.5">
+					<label htmlFor="deadline-from" className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+						С
+					</label>
+					<DateField
+						id="deadline-from"
+						value={from ?? ""}
+						onChange={(v) => onChange(v || undefined, to)}
+						ariaLabel="Дедлайн с"
+						placeholder="—"
+						max={to}
+					/>
+				</div>
+				<div className="flex flex-col gap-0.5">
+					<label htmlFor="deadline-to" className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+						По
+					</label>
+					<DateField
+						id="deadline-to"
+						value={to ?? ""}
+						onChange={(v) => onChange(from, v || undefined)}
+						ariaLabel="Дедлайн по"
+						placeholder="—"
+						min={from}
+					/>
+				</div>
+			</div>
+			<div className="flex items-center justify-between gap-2">
+				<button
+					type="button"
+					onClick={onPresetOverdue}
+					data-testid="deadline-filter-overdue"
+					className={cn(
+						"rounded-md border border-transparent px-2 py-1 text-xs transition-colors hover:bg-muted",
+						isOverdue && "border-border bg-muted font-medium text-highlight-foreground",
+					)}
+				>
+					Просрочены
+				</button>
+				{(hasRange || isOverdue) && (
+					<button
+						type="button"
+						onClick={onClear}
+						data-testid="deadline-filter-all"
+						className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+					>
+						Сбросить
+					</button>
+				)}
+			</div>
+		</div>
+	);
+}
 
 const STATUS_PRESETS: { label: string; value: TenderStatus }[] = [
 	{ label: STATUS_LABELS.searching, value: "searching" },
@@ -22,6 +97,11 @@ const SECTION_LABEL = "px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foregroun
 interface TendersFiltersPopoverProps {
 	status: TenderStatus | undefined;
 	onStatusChange: (status: TenderStatus | undefined) => void;
+	deadline: DeadlineFilter;
+	onDeadlineChange: (deadline: DeadlineFilter) => void;
+	deadlineFrom?: string;
+	deadlineTo?: string;
+	onDeadlineRangeChange?: (from: string | undefined, to: string | undefined) => void;
 	companies?: CompanySummary[];
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
@@ -32,13 +112,23 @@ interface TendersFiltersPopoverProps {
 export function TendersFiltersPopover({
 	status,
 	onStatusChange,
+	deadline,
+	onDeadlineChange,
+	deadlineFrom,
+	deadlineTo,
+	onDeadlineRangeChange,
 	companies,
 	selectedCompany,
 	onCompanySelect,
 	showCompanies = false,
 	triggerVariant = "icon",
 }: TendersFiltersPopoverProps) {
-	const active = status !== undefined || (showCompanies && selectedCompany !== undefined);
+	const active =
+		status !== undefined ||
+		deadline !== "all" ||
+		Boolean(deadlineFrom) ||
+		Boolean(deadlineTo) ||
+		(showCompanies && selectedCompany !== undefined);
 	return (
 		<Popover>
 			{triggerVariant === "row" ? (
@@ -98,6 +188,28 @@ export function TendersFiltersPopover({
 							</button>
 						))}
 					</div>
+					{onDeadlineRangeChange && (
+						<>
+							<div className="my-1 h-px bg-border" />
+							<div data-testid="tenders-filters-section-deadline" className="flex flex-col gap-1.5 px-2 py-1.5">
+								<div className="text-xs font-medium text-muted-foreground">Дедлайн</div>
+								<DateRangePicker
+									from={deadlineFrom}
+									to={deadlineTo}
+									onChange={onDeadlineRangeChange}
+									onPresetOverdue={() => {
+										onDeadlineChange("overdue");
+										onDeadlineRangeChange(undefined, undefined);
+									}}
+									isOverdue={deadline === "overdue"}
+									onClear={() => {
+										onDeadlineChange("all");
+										onDeadlineRangeChange(undefined, undefined);
+									}}
+								/>
+							</div>
+						</>
+					)}
 				</div>
 			</PopoverContent>
 		</Popover>

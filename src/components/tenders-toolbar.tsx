@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, EllipsisVertical, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import { CategoriesPopover } from "@/components/categories-popover";
 import { TendersFiltersPopover } from "@/components/tenders-filters-popover";
@@ -14,17 +14,14 @@ import { cn } from "@/lib/utils";
 
 export type DeadlineFilter = "all" | "overdue" | "soon";
 
-const DEADLINE_PRESETS: { label: string; value: DeadlineFilter }[] = [
-	{ label: "Все", value: "all" },
-	{ label: "Просрочены", value: "overdue" },
-	{ label: "Ближайшие 7 дней", value: "soon" },
-];
-
 interface TendersToolbarProps {
 	status: TenderStatus | undefined;
 	onStatusChange: (status: TenderStatus | undefined) => void;
 	deadline: DeadlineFilter;
 	onDeadlineChange: (deadline: DeadlineFilter) => void;
+	deadlineFrom?: string;
+	deadlineTo?: string;
+	onDeadlineRangeChange?: (from: string | undefined, to: string | undefined) => void;
 	folders: Folder[];
 	folderCounts: Record<string, number>;
 	foldersLoading?: boolean;
@@ -48,6 +45,9 @@ export function TendersToolbar({
 	onStatusChange,
 	deadline,
 	onDeadlineChange,
+	deadlineFrom,
+	deadlineTo,
+	onDeadlineRangeChange,
 	folders,
 	folderCounts,
 	foldersLoading,
@@ -103,6 +103,11 @@ export function TendersToolbar({
 		<TendersFiltersPopover
 			status={status}
 			onStatusChange={onStatusChange}
+			deadline={deadline}
+			onDeadlineChange={onDeadlineChange}
+			deadlineFrom={deadlineFrom}
+			deadlineTo={deadlineTo}
+			onDeadlineRangeChange={onDeadlineRangeChange}
 			companies={companies}
 			selectedCompany={selectedCompany}
 			onCompanySelect={onCompanySelect}
@@ -114,32 +119,13 @@ export function TendersToolbar({
 	const hasActiveFilter =
 		status !== undefined ||
 		deadline !== "all" ||
+		Boolean(deadlineFrom) ||
+		Boolean(deadlineTo) ||
 		(activeFolder !== undefined && activeFolder !== "archive") ||
 		(showCompanies && selectedCompany !== undefined);
 
 	return (
 		<div className="flex flex-1 items-center justify-end gap-2">
-			<fieldset className="hidden items-center gap-1 border-0 p-0 md:flex" aria-label="Фильтр по дедлайну">
-				{DEADLINE_PRESETS.map((preset) => (
-					<button
-						key={preset.value}
-						type="button"
-						aria-pressed={deadline === preset.value}
-						onClick={() => onDeadlineChange(preset.value)}
-						className={cn(
-							"rounded-full border border-transparent px-3 py-1 text-xs transition-colors",
-							"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-							deadline === preset.value
-								? "border-border bg-muted font-medium text-highlight-foreground"
-								: "text-muted-foreground",
-						)}
-						data-testid={`deadline-filter-${preset.value}`}
-					>
-						{preset.label}
-					</button>
-				))}
-			</fieldset>
-
 			<ToolbarSearch
 				value={current}
 				onChange={setDebounced}
@@ -163,20 +149,6 @@ export function TendersToolbar({
 					</Tooltip>
 					<PopoverContent align="end" className="w-56 p-1">
 						<div className="flex flex-col gap-0.5">
-							<div className="px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foreground">Дедлайн</div>
-							{DEADLINE_PRESETS.map((preset) => (
-								<button
-									key={preset.value}
-									type="button"
-									aria-pressed={deadline === preset.value}
-									onClick={() => onDeadlineChange(preset.value)}
-									className={cn(OVERFLOW_ROW_BTN, deadline === preset.value && "font-medium text-highlight-foreground")}
-									data-testid={`deadline-filter-mobile-${preset.value}`}
-								>
-									{preset.label}
-								</button>
-							))}
-							<div className="my-1 h-px bg-border" />
 							{renderCategoriesPopover("row")}
 							{renderFiltersPopover("row")}
 							{onArchiveToggle && (
@@ -224,8 +196,7 @@ export function TendersToolbar({
 			)}
 
 			{onCreateTender && (
-				<Button type="button" size="sm" onClick={onCreateTender} className="btn-cta rounded-full border-0">
-					<Plus data-icon="inline-start" aria-hidden="true" />
+				<Button type="button" size="sm" onClick={onCreateTender} className="btn-cta ml-2 rounded-full border-0">
 					<span className="hidden sm:inline">Создать тендер</span>
 					<span className="sm:hidden">Создать</span>
 				</Button>

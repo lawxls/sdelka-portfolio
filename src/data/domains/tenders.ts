@@ -4,6 +4,11 @@
  */
 
 export type { CreateTenderInput } from "../tenders-mock/mutations";
-export type { ListTendersParams, TenderSummary } from "../tenders-mock/queries";
+export type {
+	ListTendersParams,
+	TenderSortDirection,
+	TenderSortField,
+	TenderSummary,
+} from "../tenders-mock/queries";
 export type { ProcurementInquiry } from "../types";
 export type { CursorPage } from "./shared";

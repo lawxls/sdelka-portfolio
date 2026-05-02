@@ -87,9 +87,9 @@ describe("TendersPage", () => {
 		const labels = headers.map((h) => h.textContent ?? "");
 		expect(labels[0]).toBe("№");
 		expect(labels[1]).toBe("НАЗВАНИЕ");
-		expect(labels[2]).toMatch(/БЮДЖЕТ/);
-		expect(labels[3]).toMatch(/КОЛ-ВО ПОЗИЦИЙ/);
-		expect(labels[4]).toMatch(/КОЛ-ВО КП/);
+		expect(labels[2]).toBe("БЮДЖЕТ");
+		expect(labels[3]).toBe("ВСЕГО ПОСТАВЩИКОВ");
+		expect(labels[4]).toBe("ПОЛУЧЕНО КП");
 		expect(labels[5]).toBe("ДАТА СОЗДАНИЯ");
 		expect(labels[6]).toBe("ДЕДЛАЙН");
 	});
@@ -121,11 +121,15 @@ describe("TendersPage", () => {
 		expect(screen.queryByText("С экономией")).not.toBeInTheDocument();
 	});
 
-	test("renders deadline filter chips on desktop", async () => {
+	test("deadline filter exposes a date range and a Просрочены preset inside the Фильтры popover", async () => {
 		renderPage();
-		expect(screen.getByTestId("deadline-filter-all")).toBeInTheDocument();
+		await screen.findByTestId("tender-row-T-001");
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: "Фильтры" }));
+		expect(screen.getByLabelText("Дедлайн с")).toBeInTheDocument();
+		expect(screen.getByLabelText("Дедлайн по")).toBeInTheDocument();
 		expect(screen.getByTestId("deadline-filter-overdue")).toBeInTheDocument();
-		expect(screen.getByTestId("deadline-filter-soon")).toBeInTheDocument();
+		expect(screen.queryByTestId("deadline-filter-soon")).not.toBeInTheDocument();
 	});
 
 	test("archive toggle button has aria-pressed and toggles folder=archive", async () => {

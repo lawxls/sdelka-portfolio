@@ -1,6 +1,7 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useTendersClient } from "./clients-context";
-import type { ListTendersParams } from "./domains/tenders";
+import type { ListTendersParams, ProcurementInquiry } from "./domains/tenders";
 
 export function useTenders(params: ListTendersParams = {}) {
 	const client = useTendersClient();
@@ -30,5 +31,35 @@ export function useTender(slug: string | null) {
 		queryKey: ["tenders", "detail", slug] as const,
 		queryFn: () => client.get(slug as string),
 		enabled: slug !== null,
+	});
+}
+
+interface UpdateTenderVars {
+	id: string;
+	patch: Partial<ProcurementInquiry>;
+}
+
+export function useUpdateTender() {
+	const client = useTendersClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ id, patch }: UpdateTenderVars) => client.update(id, patch),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+		},
+		onError: () => toast.error("Не удалось обновить тендер"),
+	});
+}
+
+export function useDeleteTender() {
+	const client = useTendersClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) => client.delete(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["items"] });
+		},
+		onError: () => toast.error("Не удалось удалить тендер"),
 	});
 }

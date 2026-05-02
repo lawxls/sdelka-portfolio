@@ -103,6 +103,12 @@ export interface SupplierFilterParams {
 	limit?: number;
 }
 
+/** Stable cross-item identity for a supplier company. ИНН is authoritative
+ * when present; companyName is the fallback for legacy/seed rows. */
+export function supplierIdentity(s: { inn: string; companyName: string }): string {
+	return s.inn || s.companyName;
+}
+
 export interface Supplier {
 	id: string;
 	itemId: string;

@@ -1,5 +1,6 @@
 import { _getAllItems } from "../items-mock-data";
 import { delay, paginate } from "../mock-utils";
+import { type Supplier, supplierIdentity } from "../supplier-types";
 import { ALL_ITEM_IDS, getSuppliersForItem } from "../suppliers-mock/store";
 import { getTenderStatus } from "../tenders/get-tender-status";
 import type { ProcurementInquiry, ProcurementItem, TenderStatus } from "../types";
@@ -16,10 +17,14 @@ export interface TenderSummary {
 	status: TenderStatus;
 	positionsCount: number;
 	kpCount: number;
+	suppliersCount: number;
 }
 
 /** "Все" (default — exclude archived) | "просрочены" | "ближайшие 7 дней". */
 export type DeadlineFilter = "all" | "overdue" | "soon";
+
+export type TenderSortField = "budget" | "suppliersCount" | "kpCount" | "createdAt" | "deadline";
+export type TenderSortDirection = "asc" | "desc";
 
 export interface ListTendersParams {
 	q?: string;
@@ -30,6 +35,12 @@ export interface ListTendersParams {
 	folder?: string;
 	status?: TenderStatus;
 	deadline?: DeadlineFilter;
+	/** Inclusive ISO date (YYYY-MM-DD). Filters by tender deadline ≥ this date. */
+	deadlineFrom?: string;
+	/** Inclusive ISO date (YYYY-MM-DD). Filters by tender deadline ≤ this date. */
+	deadlineTo?: string;
+	sort?: TenderSortField;
+	dir?: TenderSortDirection;
 	cursor?: string;
 	limit?: number;
 }
@@ -38,16 +49,15 @@ function itemsForTender(tenderId: string, allItems: readonly ProcurementItem[]):
 	return allItems.filter((i) => i.tenderId === tenderId);
 }
 
-function distinctKpCount(items: readonly ProcurementItem[]): number {
+function countDistinctSuppliers(items: readonly ProcurementItem[], predicate: (s: Supplier) => boolean): number {
 	const seen = new Set<string>();
 	for (const item of items) {
-		// Skip items whose supplier list isn't lazy-seeded yet to avoid materializing
-		// candidate pools just to read КП counts in tests with empty supplier seeds.
+		// Skip items whose supplier list isn't lazy-seeded yet — keeps tests with
+		// empty supplier seeds from materializing candidate pools just to count.
 		if (!ALL_ITEM_IDS.includes(item.id)) continue;
-		const suppliers = getSuppliersForItem(item.id);
-		for (const s of suppliers) {
-			if (s.status !== "получено_кп") continue;
-			seen.add(s.inn || s.companyName);
+		for (const s of getSuppliersForItem(item.id)) {
+			if (!predicate(s)) continue;
+			seen.add(supplierIdentity(s));
 		}
 	}
 	return seen.size;
@@ -65,7 +75,8 @@ function summarize(tender: ProcurementInquiry, allItems: readonly ProcurementIte
 		deadline: tender.deadline,
 		status: getTenderStatus(items),
 		positionsCount: items.length,
-		kpCount: distinctKpCount(items),
+		kpCount: countDistinctSuppliers(items, (s) => s.status === "получено_кп"),
+		suppliersCount: countDistinctSuppliers(items, (s) => !s.archived),
 	};
 }
 
@@ -87,6 +98,14 @@ function matchesDeadline(tender: ProcurementInquiry, filter: DeadlineFilter | un
 	return diff >= 0 && diff <= sevenDaysMs;
 }
 
+function matchesDeadlineRange(tender: ProcurementInquiry, from?: string, to?: string): boolean {
+	if (!from && !to) return true;
+	const deadline = tender.deadline?.slice(0, 10) ?? "";
+	if (from && deadline < from) return false;
+	if (to && deadline > to) return false;
+	return true;
+}
+
 function applyFilters(
 	tenders: ProcurementInquiry[],
 	params: ListTendersParams,
@@ -99,6 +118,7 @@ function applyFilters(
 		if (params.company && t.companyId !== params.company) return false;
 		if (q && !t.name.toLowerCase().includes(q)) return false;
 		if (!matchesDeadline(t, params.deadline, now)) return false;
+		if (!matchesDeadlineRange(t, params.deadlineFrom, params.deadlineTo)) return false;
 		if (params.status) {
 			const status = getTenderStatus(itemsForTender(t.id, allItems));
 			if (status !== params.status) return false;
@@ -111,6 +131,30 @@ function sortByCreatedAtDesc(tenders: ProcurementInquiry[]): ProcurementInquiry[
 	return [...tenders].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
 }
 
+function compareSummaries(a: TenderSummary, b: TenderSummary, field: TenderSortField): number {
+	switch (field) {
+		case "budget":
+			return a.budget - b.budget;
+		case "suppliersCount":
+			return a.suppliersCount - b.suppliersCount;
+		case "kpCount":
+			return a.kpCount - b.kpCount;
+		case "createdAt":
+			return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
+		case "deadline":
+			return a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0;
+	}
+}
+
+function sortSummaries(
+	summaries: TenderSummary[],
+	field: TenderSortField,
+	direction: TenderSortDirection,
+): TenderSummary[] {
+	const mul = direction === "asc" ? 1 : -1;
+	return [...summaries].sort((a, b) => compareSummaries(a, b, field) * mul);
+}
+
 export async function fetchTendersListMock(params: ListTendersParams): Promise<{
 	items: TenderSummary[];
 	nextCursor: string | null;
@@ -119,8 +163,12 @@ export async function fetchTendersListMock(params: ListTendersParams): Promise<{
 	const allItems = _getAllItems();
 	const filtered = sortByCreatedAtDesc(applyFilters(readTenders(), params, allItems, new Date()));
 	const page = paginate({ items: filtered, cursor: params.cursor, limit: params.limit, getId: (t) => t.id });
+	let summaries = page.items.map((t) => summarize(t, allItems));
+	if (params.sort && params.dir) {
+		summaries = sortSummaries(summaries, params.sort, params.dir);
+	}
 	return {
-		items: page.items.map((t) => summarize(t, allItems)),
+		items: summaries,
 		nextCursor: page.nextCursor,
 	};
 }
