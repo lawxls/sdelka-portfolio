@@ -9,11 +9,11 @@ import type {
 	Unit,
 	UnloadingType,
 } from "@/data/types";
-import { toNumberOrUndefined } from "@/lib/format";
+import { formatShortDate, toNumberOrUndefined } from "@/lib/format";
 
 export type WizardStep = 1 | 2 | 3;
 
-type AdvanceFocus = "company" | "name" | "tenderName" | "deadline" | "budget";
+type AdvanceFocus = "company" | "name" | "deadline" | "budget";
 type AdvanceResult = { advanced: boolean; focus?: AdvanceFocus; positionIndex?: number };
 
 export interface PositionDraft {
@@ -26,7 +26,6 @@ export interface PositionDraft {
 }
 
 interface Step1State {
-	tenderName: string;
 	budget: string;
 	deadline: string;
 	companyId: string;
@@ -66,7 +65,6 @@ interface PositionErrors {
 }
 
 interface Step1Errors {
-	tenderName?: string;
 	budget?: string;
 	deadline?: string;
 	company?: string;
@@ -90,7 +88,6 @@ function defaultPosition(): PositionDraft {
 
 function defaultStep1(): Step1State {
 	return {
-		tenderName: "",
 		budget: "",
 		deadline: "",
 		companyId: "",
@@ -190,9 +187,19 @@ function buildNewItemInput(
 	return payload;
 }
 
+function generateTenderName(step1: Step1State): string {
+	const firstNamed = step1.positions.find((p) => p.name.trim() !== "");
+	if (firstNamed) {
+		const base = firstNamed.name.trim();
+		const extra = step1.positions.filter((p) => p.name.trim() !== "").length - 1;
+		return extra > 0 ? `${base} +${extra}` : base;
+	}
+	return `Новый тендер ${formatShortDate(new Date().toISOString())}`;
+}
+
 function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInput {
 	const tender: CreateTenderInput = {
-		name: step1.tenderName.trim(),
+		name: generateTenderName(step1),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
 		budget: toNumberOrUndefined(step1.budget) ?? 0,
@@ -247,7 +254,6 @@ export function useCreateTenderForm() {
 	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
-		if (key === "tenderName") setStep1Errors((prev) => (prev.tenderName ? { ...prev, tenderName: undefined } : prev));
 		if (key === "deadline") setStep1Errors((prev) => (prev.deadline ? { ...prev, deadline: undefined } : prev));
 		if (key === "budget") setStep1Errors((prev) => (prev.budget ? { ...prev, budget: undefined } : prev));
 	}
@@ -308,7 +314,6 @@ export function useCreateTenderForm() {
 			p.name.trim() ? {} : { name: "Укажите название позиции" },
 		);
 		const errors: Step1Errors = { positions: positionErrors };
-		if (!step1.tenderName.trim()) errors.tenderName = "Укажите название тендера";
 		if (!step1.deadline) errors.deadline = "Укажите дедлайн";
 		const budget = step1.budget.trim();
 		if (budget && !BUDGET_PATTERN.test(budget)) errors.budget = "Бюджет должен быть целым числом";
@@ -325,11 +330,9 @@ export function useCreateTenderForm() {
 		if (step === 1) {
 			const errors = validateStep1();
 			const firstNameErrorIndex = errors.positions.findIndex((e) => e.name);
-			const blocked =
-				errors.tenderName || errors.deadline || errors.budget || errors.company || firstNameErrorIndex >= 0;
+			const blocked = errors.deadline || errors.budget || errors.company || firstNameErrorIndex >= 0;
 			if (blocked) {
 				setStep1Errors(errors);
-				if (errors.tenderName) return { advanced: false, focus: "tenderName" };
 				if (errors.deadline) return { advanced: false, focus: "deadline" };
 				if (errors.budget) return { advanced: false, focus: "budget" };
 				if (errors.company) return { advanced: false, focus: "company" };
@@ -374,7 +377,6 @@ export function useCreateTenderForm() {
 	}
 
 	const isDirty =
-		step1.tenderName !== "" ||
 		step1.budget !== "" ||
 		step1.deadline !== "" ||
 		step1.companyId !== "" ||

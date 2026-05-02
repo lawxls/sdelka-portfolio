@@ -8,7 +8,6 @@ function setup() {
 
 function fillStep1Required(result: { current: ReturnType<typeof useCreateTenderForm> }) {
 	act(() => {
-		result.current.update1("tenderName", "Тендер 1");
 		result.current.update1("deadline", "2026-06-01");
 		result.current.update1("companyId", "c1");
 		result.current.updatePosition(0, "name", "Арматура");
@@ -20,14 +19,13 @@ describe("useCreateTenderForm", () => {
 		const { result } = setup();
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions).toHaveLength(1);
-		expect(result.current.step1.tenderName).toBe("");
 		expect(result.current.step1.budget).toBe("");
 		expect(result.current.step1.deadline).toBe("");
 		expect(result.current.step1.companyId).toBe("");
 		expect(result.current.isDirty).toBe(false);
 	});
 
-	test("advance from step 1 blocked when tender meta + company + name missing — focus on tenderName first", () => {
+	test("advance from step 1 blocked when company + deadline + name missing — focus on deadline first", () => {
 		const { result } = setup();
 
 		let outcome: ReturnType<typeof result.current.advance> | undefined;
@@ -36,18 +34,16 @@ describe("useCreateTenderForm", () => {
 		});
 
 		expect(outcome?.advanced).toBe(false);
-		expect(outcome?.focus).toBe("tenderName");
+		expect(outcome?.focus).toBe("deadline");
 		expect(result.current.step).toBe(1);
-		expect(result.current.step1Errors.tenderName).toBeTruthy();
 		expect(result.current.step1Errors.deadline).toBeTruthy();
 		expect(result.current.step1Errors.company).toBeTruthy();
 		expect(result.current.step1Errors.positions[0]?.name).toBeTruthy();
 	});
 
-	test("advance blocked on missing deadline focuses deadline once tenderName + company filled", () => {
+	test("advance blocked on missing deadline focuses deadline once company + position filled", () => {
 		const { result } = setup();
 		act(() => {
-			result.current.update1("tenderName", "Тендер 1");
 			result.current.update1("companyId", "c1");
 			result.current.updatePosition(0, "name", "Арматура");
 		});
@@ -101,17 +97,6 @@ describe("useCreateTenderForm", () => {
 
 		expect(outcome?.advanced).toBe(true);
 		expect(result.current.step).toBe(2);
-	});
-
-	test("typing in errored tenderName clears error", () => {
-		const { result } = setup();
-		act(() => {
-			result.current.advance();
-		});
-		expect(result.current.step1Errors.tenderName).toBeTruthy();
-
-		act(() => result.current.update1("tenderName", "X"));
-		expect(result.current.step1Errors.tenderName).toBeFalsy();
 	});
 
 	test("typing in errored deadline clears error", () => {
@@ -168,7 +153,6 @@ describe("useCreateTenderForm", () => {
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions[0].name).toBe("Арматура");
 		expect(result.current.step1.positions[0].description).toBe("М500");
-		expect(result.current.step1.tenderName).toBe("Тендер 1");
 		expect(result.current.step2.companyName).toBe("МеталлТрейд");
 	});
 
@@ -186,19 +170,11 @@ describe("useCreateTenderForm", () => {
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions).toHaveLength(1);
 		expect(result.current.step1.positions[0].name).toBe("");
-		expect(result.current.step1.tenderName).toBe("");
 		expect(result.current.step1.budget).toBe("");
 		expect(result.current.step1.deadline).toBe("");
 		expect(result.current.step1.companyId).toBe("");
 		expect(result.current.step2.companyName).toBe("");
 		expect(result.current.isDirty).toBe(false);
-	});
-
-	test("isDirty flips true when tenderName is set", () => {
-		const { result } = setup();
-		expect(result.current.isDirty).toBe(false);
-		act(() => result.current.update1("tenderName", "X"));
-		expect(result.current.isDirty).toBe(true);
 	});
 
 	test("isDirty flips true when deadline is set", () => {
@@ -251,7 +227,8 @@ describe("useCreateTenderForm", () => {
 		const payload = result.current.toPayload();
 
 		expect(payload.tender).toMatchObject({
-			name: "Тендер 1",
+			// Name is auto-generated from the first position when the user-facing field is omitted.
+			name: "Арматура",
 			companyId: "c1",
 			folderId: "folder-metal",
 			budget: 1500000,

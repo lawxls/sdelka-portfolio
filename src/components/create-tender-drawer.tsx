@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
+import { DateField } from "@/components/ui/date-field";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { OptionalSegmentedControl, SegmentedControl } from "@/components/ui/segmented-control";
@@ -131,7 +132,6 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [step3Ready, setStep3Ready] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-	const tenderNameInputRef = useRef<HTMLInputElement>(null);
 	const deadlineInputRef = useRef<HTMLInputElement>(null);
 	const budgetInputRef = useRef<HTMLInputElement>(null);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
@@ -167,8 +167,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 		if (step === 1) {
 			const result = form.advance();
 			if (!result.advanced) {
-				if (result.focus === "tenderName") tenderNameInputRef.current?.focus();
-				else if (result.focus === "deadline") deadlineInputRef.current?.focus();
+				if (result.focus === "deadline") deadlineInputRef.current?.focus();
 				else if (result.focus === "budget") budgetInputRef.current?.focus();
 				else if (result.focus === "company") companyTriggerRef.current?.focus();
 				else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
@@ -287,7 +286,6 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 									nextFolderColor={nextFolderColor}
 									onCreateFolder={handleCreateFolder}
 									nameInputRefs={nameInputRefs}
-									tenderNameInputRef={tenderNameInputRef}
 									deadlineInputRef={deadlineInputRef}
 									budgetInputRef={budgetInputRef}
 									companyTriggerRef={companyTriggerRef}
@@ -563,7 +561,6 @@ interface Step1BodyProps {
 	nextFolderColor: string;
 	onCreateFolder: (name: string, color: string) => void;
 	nameInputRefs: React.RefObject<(HTMLInputElement | null)[]>;
-	tenderNameInputRef: React.RefObject<HTMLInputElement | null>;
 	deadlineInputRef: React.RefObject<HTMLInputElement | null>;
 	budgetInputRef: React.RefObject<HTMLInputElement | null>;
 	companyTriggerRef: React.RefObject<HTMLButtonElement | null>;
@@ -582,7 +579,6 @@ function Step1Body({
 	nextFolderColor,
 	onCreateFolder,
 	nameInputRefs,
-	tenderNameInputRef,
 	deadlineInputRef,
 	budgetInputRef,
 	companyTriggerRef,
@@ -599,28 +595,6 @@ function Step1Body({
 		<div className="flex flex-col gap-0 pt-3">
 			<SectionGroupHeader title="Тендер" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
-				<Field label="Название тендера" htmlFor="tender-name" required>
-					<Input
-						id="tender-name"
-						ref={tenderNameInputRef}
-						placeholder="Закупка металлопроката Q3"
-						value={step1.tenderName}
-						onChange={(e) => update1("tenderName", e.target.value)}
-						aria-required="true"
-						aria-invalid={step1Errors.tenderName ? true : undefined}
-						aria-describedby={step1Errors.tenderName ? "tender-name-error" : undefined}
-						className={step1Errors.tenderName ? "border-destructive" : undefined}
-						autoComplete="off"
-						spellCheck={false}
-						autoFocus
-					/>
-					{step1Errors.tenderName && (
-						<p id="tender-name-error" className="text-sm text-destructive">
-							{step1Errors.tenderName}
-						</p>
-					)}
-				</Field>
-
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Field label="Бюджет" htmlFor="tender-budget" className="flex-1">
 						<div className="flex items-center gap-1.5">
@@ -646,16 +620,15 @@ function Step1Body({
 					</Field>
 
 					<Field label="Дедлайн" htmlFor="tender-deadline" required className="flex-1">
-						<Input
+						<DateField
 							id="tender-deadline"
-							ref={deadlineInputRef}
-							type="date"
+							inputRef={deadlineInputRef}
 							value={step1.deadline}
-							onChange={(e) => update1("deadline", e.target.value)}
-							aria-required="true"
-							aria-invalid={step1Errors.deadline ? true : undefined}
-							aria-describedby={step1Errors.deadline ? "tender-deadline-error" : undefined}
-							className={step1Errors.deadline ? "border-destructive" : undefined}
+							onChange={(v) => update1("deadline", v)}
+							ariaRequired
+							ariaInvalid={!!step1Errors.deadline}
+							ariaDescribedBy={step1Errors.deadline ? "tender-deadline-error" : undefined}
+							hasError={!!step1Errors.deadline}
 						/>
 						{step1Errors.deadline && (
 							<p id="tender-deadline-error" className="text-sm text-destructive">
@@ -716,9 +689,6 @@ function Step1Body({
 
 			<SectionGroupHeader title="Позиции" />
 			<div className="flex flex-col gap-3 border-t border-border py-4">
-				<p className="text-sm text-pretty text-muted-foreground">
-					Добавьте позиции которые вы заказываете одной поставкой
-				</p>
 				{step1.positions.map((position, index) => (
 					<PositionCard
 						// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available

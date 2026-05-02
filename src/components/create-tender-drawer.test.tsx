@@ -78,8 +78,7 @@ function renderDrawer(
 	};
 }
 
-async function fillTenderMeta(user: ReturnType<typeof userEvent.setup>, name = "Закупка металлопроката") {
-	await user.type(screen.getByLabelText("Название тендера"), name);
+async function fillTenderMeta(user: ReturnType<typeof userEvent.setup>, _name = "Закупка металлопроката") {
 	await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
 }
 
@@ -142,34 +141,28 @@ describe("CreateTenderDrawer — wizard chrome", () => {
 	test("Назад preserves step 1 state including tender meta", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await fillTenderMeta(user, "Закупка №1");
+		await fillTenderMeta(user);
 		await fillFirstPositionName(user, "Арматура");
 		await advance(user);
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
-		expect(screen.getByLabelText("Название тендера")).toHaveValue("Закупка №1");
 		expect(screen.getByLabelText("Дедлайн")).toHaveValue("2026-06-15");
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура");
 	});
 });
 
 describe("CreateTenderDrawer — Step 1 tender meta", () => {
-	test("renders all tender-meta fields", () => {
+	test("renders all tender-meta fields (name field is auto-generated, not user-provided)", () => {
 		renderDrawer();
-		expect(screen.getByLabelText("Название тендера")).toBeInTheDocument();
+		expect(screen.queryByLabelText("Название тендера")).not.toBeInTheDocument();
 		expect(screen.getByLabelText("Бюджет")).toBeInTheDocument();
 		expect(screen.getByLabelText("Дедлайн")).toBeInTheDocument();
 		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
 	});
 
-	test("Дедлайн is required (aria-required=true)", () => {
+	test("Дедлайн is required (HTML required attribute)", () => {
 		renderDrawer();
-		expect(screen.getByLabelText("Дедлайн")).toHaveAttribute("aria-required", "true");
-	});
-
-	test("Название тендера is required (aria-required=true)", () => {
-		renderDrawer();
-		expect(screen.getByLabelText("Название тендера")).toHaveAttribute("aria-required", "true");
+		expect(screen.getByLabelText("Дедлайн")).toBeRequired();
 	});
 
 	test("Далее with empty tender meta surfaces all required errors and stays on step 1", async () => {
@@ -178,7 +171,6 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		const user = userEvent.setup();
 		await advance(user);
 
-		expect(screen.getByText("Укажите название тендера")).toBeInTheDocument();
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
 		expect(screen.getByText("Выберите компанию")).toBeInTheDocument();
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
@@ -188,7 +180,6 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 	test("Далее blocked on missing Дедлайн when other meta is filled", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await user.type(screen.getByLabelText("Название тендера"), "Тендер 1");
 		await fillFirstPositionName(user);
 		await advance(user);
 
@@ -216,16 +207,6 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "66");
 	});
 
-	test("typing in errored Название тендера clears the error", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		await advance(user);
-		expect(screen.getByText("Укажите название тендера")).toBeInTheDocument();
-
-		await user.type(screen.getByLabelText("Название тендера"), "X");
-		expect(screen.queryByText("Укажите название тендера")).not.toBeInTheDocument();
-	});
-
 	test("typing in errored Дедлайн clears the error", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -247,7 +228,6 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Название тендера"), "Тендер 1");
 		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-01");
 		await fillFirstPositionName(user);
 		await advance(user);
@@ -301,7 +281,7 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Название тендера"), "Drafty");
+		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -312,7 +292,7 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Название тендера"), "Drafty");
+		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
@@ -365,7 +345,6 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Название тендера"), "Закупка металлопроката Q3");
 		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
 		await user.type(screen.getByLabelText("Бюджет"), "1500000");
 		await fillFirstPositionName(user, "Арматура");
@@ -377,7 +356,8 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
 		expect(payload.tender).toMatchObject({
-			name: "Закупка металлопроката Q3",
+			// Auto-derived from the first position when no user-provided name exists.
+			name: "Арматура",
 			deadline: "2026-06-15",
 			budget: 1500000,
 			companyId: "company-1",
