@@ -14,15 +14,24 @@ interface ItemQueryParams {
 	sort: SortState | null;
 	folder?: string;
 	company?: string;
+	tender?: string;
 }
 
-export function buildFilterParams({ search, filters, folder, sort, company }: ItemQueryParams): ListItemsParams {
+export function buildFilterParams({
+	search,
+	filters,
+	folder,
+	sort,
+	company,
+	tender,
+}: ItemQueryParams): ListItemsParams {
 	return {
 		q: search || undefined,
 		status: filters.status !== "all" ? filters.status : undefined,
 		deviation: filters.deviation !== "all" ? filters.deviation : undefined,
 		folder,
 		company,
+		tender,
 		sort: sort?.field,
 		dir: sort?.direction,
 	};
@@ -144,6 +153,17 @@ export function useUpdateItem() {
 			mutation.mutate(vars);
 		},
 	};
+}
+
+export function useArchiveItem() {
+	const client = useItemsClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) => client.archive(id, isArchived),
+		onSettled: () => invalidateAfterItemListChange(queryClient),
+		onError: () => toast.error("Не удалось обновить статус архива"),
+	});
 }
 
 export function useDeleteItem() {

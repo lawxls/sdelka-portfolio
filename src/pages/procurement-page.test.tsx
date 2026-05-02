@@ -183,13 +183,13 @@ describe("ProcurementPage — item drawer", () => {
 	});
 });
 
-describe("ProcurementPage — no archive toggle", () => {
-	test("does not render an archive toggle button", async () => {
+describe("ProcurementPage — archive toggle", () => {
+	test("renders an archive toggle button in the toolbar", async () => {
 		setupHandlers(SINGLE_COMPANY);
 		renderPage();
 		await waitForToolbar();
 
-		expect(screen.queryByRole("button", { name: "Архив" })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
 	});
 });
 

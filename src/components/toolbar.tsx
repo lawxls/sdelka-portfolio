@@ -1,13 +1,4 @@
-import {
-	Archive,
-	ArchiveRestore,
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
-	Download,
-	EllipsisVertical,
-	Plus,
-} from "lucide-react";
+import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ArrowUpDown, Download, EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import { CategoriesPopover } from "@/components/categories-popover";
 import { FiltersPopover } from "@/components/filters-popover";
@@ -15,6 +6,7 @@ import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { TenderSummary } from "@/data/domains/tenders";
 import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
 import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -43,6 +35,9 @@ interface ToolbarProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
+	tenders?: TenderSummary[];
+	selectedTender?: string | undefined;
+	onTenderSelect?: (tenderId: string | undefined) => void;
 }
 
 const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
@@ -80,6 +75,9 @@ export function Toolbar({
 	selectedCompany,
 	onCompanySelect,
 	showCompanies,
+	tenders,
+	selectedTender,
+	onTenderSelect,
 }: ToolbarProps) {
 	const isMobile = useIsMobile();
 	const { current, setDebounced } = useDebouncedSearchParam("q", 300);
@@ -174,6 +172,9 @@ export function Toolbar({
 			selectedCompany={selectedCompany}
 			onCompanySelect={onCompanySelect}
 			showCompanies={showCompanies}
+			tenders={tenders}
+			selectedTender={selectedTender}
+			onTenderSelect={onTenderSelect}
 			triggerVariant={variant}
 		/>
 	);
@@ -182,6 +183,7 @@ export function Toolbar({
 		!!sort ||
 		filters.deviation !== "all" ||
 		filters.status !== "all" ||
+		!!selectedTender ||
 		(activeFolder !== undefined && activeFolder !== "archive");
 
 	return (
@@ -272,8 +274,7 @@ export function Toolbar({
 				<TooltipContent>Скачать таблицу</TooltipContent>
 			</Tooltip>
 
-			<Button type="button" size="sm" onClick={onAddPositions} className="btn-cta rounded-full border-0">
-				<Plus data-icon="inline-start" aria-hidden="true" />
+			<Button type="button" size="sm" onClick={onAddPositions} className="btn-cta ml-2 rounded-full border-0">
 				<span className="hidden sm:inline">Добавить позиции</span>
 				<span className="sm:hidden">Добавить</span>
 			</Button>

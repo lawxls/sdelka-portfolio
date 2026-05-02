@@ -21,7 +21,15 @@ import type {
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
-import { buildFilterParams, useDeleteItem, useExportItems, useItems, useTotals, useUpdateItem } from "@/data/use-items";
+import {
+	buildFilterParams,
+	useArchiveItem,
+	useDeleteItem,
+	useExportItems,
+	useItems,
+	useTotals,
+	useUpdateItem,
+} from "@/data/use-items";
 import { useTenders } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
@@ -70,6 +78,8 @@ export function ProcurementPage() {
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
 	const company = searchParams.get("company") ?? undefined;
+	const tender = searchParams.get("tender") ?? undefined;
+	const isArchiveView = folder === "archive";
 
 	const { data: companies = [] } = useProcurementCompanies();
 	const isMultiCompany = companies.length > 1;
@@ -89,9 +99,9 @@ export function ProcurementPage() {
 		isFetchingNextPage,
 		error: itemsError,
 		refetch: refetchItems,
-	} = useItems({ search, filters, sort, folder, company });
+	} = useItems({ search, filters, sort, folder, company, tender });
 
-	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder, company });
+	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder, company, tender });
 
 	const { data: folders = [], isLoading: foldersLoading } = useFolders(company);
 	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats(company);
@@ -108,6 +118,7 @@ export function ProcurementPage() {
 
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
+	const archiveItemMutation = useArchiveItem();
 	const createTenderWithItemsMutation = useCreateTenderWithItems();
 	const exportItemsMutation = useExportItems();
 
@@ -257,6 +268,24 @@ export function ProcurementPage() {
 		}
 	}
 
+	function handleArchiveToggle() {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (next.get("folder") === "archive") next.delete("folder");
+			else next.set("folder", "archive");
+			return next;
+		});
+	}
+
+	function handleTenderSelect(tenderId: string | undefined) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (tenderId) next.set("tender", tenderId);
+			else next.delete("tender");
+			return next;
+		});
+	}
+
 	const toolbar = (
 		<Toolbar
 			filters={filters}
@@ -265,6 +294,8 @@ export function ProcurementPage() {
 			onSort={handleSort}
 			onAddPositions={handleAddPositions}
 			onExport={handleExport}
+			isArchiveView={isArchiveView}
+			onArchiveToggle={handleArchiveToggle}
 			folders={folders}
 			folderCounts={counts}
 			foldersLoading={foldersLoading || statsLoading}
@@ -278,6 +309,9 @@ export function ProcurementPage() {
 			selectedCompany={company}
 			onCompanySelect={handleCompanySelect}
 			showCompanies={isMultiCompany}
+			tenders={tenderRows}
+			selectedTender={tender}
+			onTenderSelect={handleTenderSelect}
 		/>
 	);
 
@@ -330,6 +364,8 @@ export function ProcurementPage() {
 					onRowClick={handleRowClick}
 					onRenameItem={(id, name) => updateItemMutation.mutate({ id, name })}
 					onDeleteItem={(id) => deleteItemMutation.mutate(id)}
+					onArchiveItem={(id, isArchived) => archiveItemMutation.mutate({ id, isArchived })}
+					isArchiveView={isArchiveView}
 					isLoading={itemsLoading}
 					isFetchingNextPage={isFetchingNextPage}
 					error={itemsError}

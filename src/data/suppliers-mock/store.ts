@@ -5,6 +5,10 @@ import { ITEM as ITEM_5, SUPPLIERS as SUPPLIERS_5 } from "../items/item-5";
 import { ITEM as ITEM_6, SUPPLIERS as SUPPLIERS_6 } from "../items/item-6";
 import { ITEM as ITEM_7, SUPPLIERS as SUPPLIERS_7 } from "../items/item-7";
 import { ITEM as ITEM_8, SUPPLIERS as SUPPLIERS_8 } from "../items/item-8";
+import { SUPPLIERS as SUPPLIERS_9 } from "../items/item-9";
+import { ITEM as ITEM_10, SUPPLIERS as SUPPLIERS_10 } from "../items/item-10";
+import { ITEM as ITEM_11, SUPPLIERS as SUPPLIERS_11 } from "../items/item-11";
+import { ITEM as ITEM_12, SUPPLIERS as SUPPLIERS_12 } from "../items/item-12";
 import { _getItem } from "../items-mock-data";
 import { ORMATEK_SUPPLIERS } from "../seeds/suppliers-ormatek";
 import type { Supplier, SupplierSeed } from "../supplier-types";
@@ -28,6 +32,10 @@ const SUPPLIERS_BY_ITEM: Record<string, readonly SupplierSeed[]> = {
 	[ITEM_6.id]: SUPPLIERS_6,
 	[ITEM_7.id]: SUPPLIERS_7,
 	[ITEM_8.id]: SUPPLIERS_8,
+	"item-9": SUPPLIERS_9,
+	[ITEM_10.id]: SUPPLIERS_10,
+	[ITEM_11.id]: SUPPLIERS_11,
+	[ITEM_12.id]: SUPPLIERS_12,
 };
 
 export const ALL_ITEM_IDS: readonly string[] = Object.keys(SUPPLIERS_BY_ITEM);
@@ -87,6 +95,11 @@ function makeYourSupplier(itemId: string): Supplier | null {
 	const tender = item?.tenderId ? _getTender(item.tenderId) : null;
 	const cs = tender?.currentSupplier;
 	if (!cs?.inn) return null;
+	// Multi-item tenders share one tender-level pricePerUnit; prefer the item's
+	// own buyer reference price so «Ваш поставщик» reflects per-position spread.
+	// Items with currentPrice=0 opt out so X/N coverage stays accurate.
+	const perItemPrice = item && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;
+	if (perItemPrice == null || perItemPrice <= 0) return null;
 	const identityHash = hash(cs.inn);
 	const profile = makeIdentityProfile(identityHash);
 	const perRowHash = hash(`${itemId}:current`);
@@ -104,8 +117,8 @@ function makeYourSupplier(itemId: string): Supplier | null {
 		companyType: inferCompanyType(cs.companyName),
 		email: `info@${domain}`,
 		website: `https://${domain}`,
-		pricePerUnit: cs.pricePerUnit,
-		tco: cs.pricePerUnit,
+		pricePerUnit: perItemPrice,
+		tco: perItemPrice,
 		rating: 90,
 		deliveryCost: null,
 		paymentType: cs.paymentType ?? "prepayment",

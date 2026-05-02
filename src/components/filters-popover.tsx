@@ -1,7 +1,10 @@
-import { ListFilter } from "lucide-react";
+import { ListFilter, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { TenderSummary } from "@/data/domains/tenders";
 import type { CompanySummary, DeviationFilter, FilterState, StatusFilter } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
@@ -24,8 +27,8 @@ const ROW_BTN =
 const ROW_BTN_ACTIVE = "font-medium text-highlight-foreground";
 const SECTION_LABEL = "px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foreground";
 
-function hasActiveFilter(filters: FilterState): boolean {
-	return filters.deviation !== "all" || filters.status !== "all";
+function hasActiveFilter(filters: FilterState, selectedTender?: string): boolean {
+	return filters.deviation !== "all" || filters.status !== "all" || Boolean(selectedTender);
 }
 
 interface FiltersPopoverProps {
@@ -35,6 +38,9 @@ interface FiltersPopoverProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
+	tenders?: TenderSummary[];
+	selectedTender?: string | undefined;
+	onTenderSelect?: (tenderId: string | undefined) => void;
 	triggerVariant?: "icon" | "row";
 }
 
@@ -45,9 +51,13 @@ export function FiltersPopover({
 	selectedCompany,
 	onCompanySelect,
 	showCompanies = false,
+	tenders,
+	selectedTender,
+	onTenderSelect,
 	triggerVariant = "icon",
 }: FiltersPopoverProps) {
-	const active = hasActiveFilter(filters);
+	const active = hasActiveFilter(filters, selectedTender);
+	const showTenders = !!onTenderSelect && (tenders?.length ?? 0) > 0;
 	return (
 		<Popover>
 			{triggerVariant === "row" ? (
@@ -83,12 +93,75 @@ export function FiltersPopover({
 							<Divider />
 						</>
 					)}
+					{showTenders && onTenderSelect && (
+						<>
+							<TenderSection tenders={tenders ?? []} selectedTender={selectedTender} onTenderSelect={onTenderSelect} />
+							<Divider />
+						</>
+					)}
 					<DeviationSection filters={filters} onFiltersChange={onFiltersChange} />
 					<Divider />
 					<StatusSection filters={filters} onFiltersChange={onFiltersChange} />
 				</div>
 			</PopoverContent>
 		</Popover>
+	);
+}
+
+function TenderSection({
+	tenders,
+	selectedTender,
+	onTenderSelect,
+}: {
+	tenders: TenderSummary[];
+	selectedTender: string | undefined;
+	onTenderSelect: (tenderId: string | undefined) => void;
+}) {
+	const [query, setQuery] = useState("");
+	const filtered = useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return tenders;
+		return tenders.filter((t) => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+	}, [tenders, query]);
+	return (
+		<div data-testid="filters-section-tender" className="flex flex-col gap-1">
+			<div className={SECTION_LABEL}>Тендер</div>
+			<div className="relative px-1">
+				<Search
+					aria-hidden="true"
+					className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+				/>
+				<Input
+					value={query}
+					onChange={(e) => setQuery(e.target.value)}
+					placeholder="Поиск по названию или ID"
+					aria-label="Поиск по тендерам"
+					className="h-8 pl-7 text-sm"
+				/>
+			</div>
+			<div className="flex flex-col gap-0.5 pt-0.5">
+				{filtered.length === 0 ? (
+					<div className="px-2 py-2 text-xs text-muted-foreground">Ничего не найдено</div>
+				) : (
+					filtered.map((tender) => {
+						const isActive = selectedTender === tender.id;
+						return (
+							<button
+								key={tender.id}
+								type="button"
+								className={cn(ROW_BTN, isActive && ROW_BTN_ACTIVE)}
+								onClick={() => onTenderSelect(isActive ? undefined : tender.id)}
+							>
+								<span className="flex min-w-0 flex-col items-start">
+									<span className="truncate text-sm">{tender.name}</span>
+									<span className="truncate font-mono text-[0.65rem] text-muted-foreground">{tender.id}</span>
+								</span>
+							</button>
+						);
+					})
+				)}
+			</div>
+		</div>
 	);
 }
 

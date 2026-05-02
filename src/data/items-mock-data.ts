@@ -56,6 +56,7 @@ export interface FilterParams {
 	deviation?: string;
 	folder?: string;
 	company?: string;
+	tender?: string;
 	sort?: string;
 	dir?: string;
 	cursor?: string;
@@ -105,6 +106,7 @@ function applyFilters(items: ProcurementItem[], params: FilterParams): Procureme
 	return items.filter((item) => {
 		if (!matchesFolder(item, params.folder, isEffectivelyArchived(item))) return false;
 		if (params.company && tenderCompanyId(item) !== params.company) return false;
+		if (params.tender && item.tenderId !== params.tender) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
