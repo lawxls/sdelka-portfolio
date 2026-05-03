@@ -9,7 +9,7 @@ function TasksCountDot({ count }: { count: number }) {
 		<span
 			data-testid="nav-tasks-count"
 			aria-hidden="true"
-			className="absolute -top-1.5 left-full ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground leading-none"
+			className="absolute -top-0.5 left-full ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground leading-none"
 		>
 			{count}
 		</span>

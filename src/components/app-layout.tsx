@@ -1,9 +1,11 @@
-import { Moon, Sun } from "lucide-react";
+import { LifeBuoy, Moon, Sun } from "lucide-react";
+import { useState } from "react";
 import { Outlet } from "react-router";
 import { AppRail } from "@/components/app-rail";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { GlobalSearch } from "@/components/global-search";
 import { NotificationsPopover } from "@/components/notifications-popover";
+import { SupportDialog } from "@/components/support-dialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -13,6 +15,7 @@ function handleToggleTheme() {
 }
 
 export function AppLayout() {
+	const [supportOpen, setSupportOpen] = useState(false);
 	return (
 		<div className="flex h-svh w-full flex-col bg-sidebar text-foreground" data-testid="app-layout">
 			<div className="flex min-h-0 flex-1">
@@ -40,6 +43,21 @@ export function AppLayout() {
 								</TooltipTrigger>
 								<TooltipContent>Сменить тему</TooltipContent>
 							</Tooltip>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										aria-label="Помощь"
+										onClick={() => setSupportOpen(true)}
+										className="text-muted-foreground hover:text-foreground md:hidden"
+									>
+										<LifeBuoy className="size-5" aria-hidden="true" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>Помощь</TooltipContent>
+							</Tooltip>
 							<NotificationsPopover />
 						</div>
 					</header>
@@ -49,6 +67,7 @@ export function AppLayout() {
 				</div>
 			</div>
 			<BottomTabBar />
+			<SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
 		</div>
 	);
 }
