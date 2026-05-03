@@ -1,9 +1,10 @@
 import { LifeBuoy } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { LogoWordmark } from "@/components/logo-wordmark";
 import { SupportDialog } from "@/components/support-dialog";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
+import { useActiveTasksCount } from "@/data/use-tasks";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ const NAV_ITEM_CLASSES =
 
 type NavItem = (typeof NAV_ITEMS)[number];
 
-function NavLinkItem({ item, pathname }: { item: NavItem; pathname: string }) {
+function NavLinkItem({ item, pathname, badge }: { item: NavItem; pathname: string; badge?: ReactNode }) {
 	const Icon = item.icon;
 	const matchPath = "activePrefix" in item ? item.activePrefix : item.path;
 	const active = pathname.startsWith(matchPath);
@@ -31,13 +32,28 @@ function NavLinkItem({ item, pathname }: { item: NavItem; pathname: string }) {
 		>
 			<Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden="true" />
 			<span className="flex-1 text-left">{item.label}</span>
+			{badge}
 		</Link>
+	);
+}
+
+function TasksCountBadge({ count }: { count: number }) {
+	if (count === 0) return null;
+	return (
+		<span
+			data-testid="nav-tasks-count"
+			aria-hidden="true"
+			className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-foreground/[0.08] px-1.5 text-xs font-medium tabular-nums text-muted-foreground"
+		>
+			{count}
+		</span>
 	);
 }
 
 export function AppRail() {
 	const { pathname } = useLocation();
 	const [supportOpen, setSupportOpen] = useState(false);
+	const activeTasksCount = useActiveTasksCount();
 	return (
 		<>
 			<aside
@@ -52,7 +68,12 @@ export function AppRail() {
 				</div>
 				<nav aria-label="Основная навигация" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
 					{TOP_NAV.map((item) => (
-						<NavLinkItem key={item.path} item={item} pathname={pathname} />
+						<NavLinkItem
+							key={item.path}
+							item={item}
+							pathname={pathname}
+							badge={item.path === "/tasks" ? <TasksCountBadge count={activeTasksCount} /> : undefined}
+						/>
 					))}
 				</nav>
 				<div className="flex flex-col px-2 py-2" data-testid="app-rail-bottom">

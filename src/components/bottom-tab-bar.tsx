@@ -1,9 +1,24 @@
 import { Link, useLocation } from "react-router";
+import { useActiveTasksCount } from "@/data/use-tasks";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
+function TasksCountDot({ count }: { count: number }) {
+	if (count === 0) return null;
+	return (
+		<span
+			data-testid="nav-tasks-count"
+			aria-hidden="true"
+			className="absolute -top-1.5 left-full ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium tabular-nums text-primary-foreground leading-none"
+		>
+			{count}
+		</span>
+	);
+}
+
 export function BottomTabBar() {
 	const { pathname } = useLocation();
+	const activeTasksCount = useActiveTasksCount();
 	return (
 		<nav
 			aria-label="Основная навигация"
@@ -25,7 +40,10 @@ export function BottomTabBar() {
 							active ? "font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground",
 						)}
 					>
-						<Icon className="size-5" aria-hidden="true" />
+						<span className="relative">
+							<Icon className="size-5" aria-hidden="true" />
+							{path === "/tasks" && <TasksCountDot count={activeTasksCount} />}
+						</span>
 						<span>{label}</span>
 					</Link>
 				);

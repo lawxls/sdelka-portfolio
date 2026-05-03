@@ -1,16 +1,23 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, test } from "vitest";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import type { Task } from "@/data/task-types";
+import { TestClientsProvider } from "@/data/test-clients-provider";
+import { createTestQueryClient, makeTask } from "@/test-utils";
 import { BottomTabBar } from "./bottom-tab-bar";
 
-function renderBar(initialPath = "/positions") {
+function renderBar(initialPath = "/positions", tasksSeed: Task[] = []) {
+	const queryClient = createTestQueryClient();
 	return render(
-		<MemoryRouter initialEntries={[initialPath]}>
-			<Routes>
-				<Route path="*" element={<BottomTabBar />} />
-			</Routes>
-		</MemoryRouter>,
+		<TestClientsProvider queryClient={queryClient} clients={{ tasks: createInMemoryTasksClient({ seed: tasksSeed }) }}>
+			<MemoryRouter initialEntries={[initialPath]}>
+				<Routes>
+					<Route path="*" element={<BottomTabBar />} />
+				</Routes>
+			</MemoryRouter>
+		</TestClientsProvider>,
 	);
 }
 
@@ -68,16 +75,38 @@ describe("BottomTabBar visibility", () => {
 
 describe("BottomTabBar navigation", () => {
 	test("clicking an item navigates", async () => {
+		const queryClient = createTestQueryClient();
 		render(
-			<MemoryRouter initialEntries={["/positions"]}>
-				<BottomTabBar />
-				<Routes>
-					<Route path="/positions" element={<div>procurement-page</div>} />
-					<Route path="/settings/workspace" element={<div>settings-page</div>} />
-				</Routes>
-			</MemoryRouter>,
+			<TestClientsProvider queryClient={queryClient} clients={{ tasks: createInMemoryTasksClient({ seed: [] }) }}>
+				<MemoryRouter initialEntries={["/positions"]}>
+					<BottomTabBar />
+					<Routes>
+						<Route path="/positions" element={<div>procurement-page</div>} />
+						<Route path="/settings/workspace" element={<div>settings-page</div>} />
+					</Routes>
+				</MemoryRouter>
+			</TestClientsProvider>,
 		);
 		await userEvent.setup().click(screen.getByRole("link", { name: "Настройки" }));
 		expect(screen.getByText("settings-page")).toBeInTheDocument();
+	});
+});
+
+describe("BottomTabBar task count badge", () => {
+	test("shows count of active tasks (assigned + in_progress) on Задачи", async () => {
+		renderBar("/positions", [
+			makeTask("t-1", { status: "assigned" }),
+			makeTask("t-2", { status: "in_progress" }),
+			makeTask("t-3", { status: "completed" }),
+			makeTask("t-4", { status: "archived" }),
+		]);
+		const tasksLink = screen.getByRole("link", { name: "Задачи" });
+		expect(await within(tasksLink).findByTestId("nav-tasks-count")).toHaveTextContent("2");
+	});
+
+	test("hides badge when there are no active tasks", async () => {
+		renderBar("/positions", [makeTask("t-1", { status: "completed" })]);
+		expect(await screen.findByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.queryByTestId("nav-tasks-count")).not.toBeInTheDocument();
 	});
 });

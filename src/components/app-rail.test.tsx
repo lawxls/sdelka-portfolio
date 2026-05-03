@@ -3,16 +3,21 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, test } from "vitest";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import type { Task } from "@/data/task-types";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
+import { createTestQueryClient, makeSettings, makeTask, TooltipWrapper } from "@/test-utils";
 import { AppRail } from "./app-rail";
 
-function renderRail(initialPath = "/positions") {
+function renderRail(initialPath = "/positions", tasksSeed: Task[] = []) {
 	const queryClient = createTestQueryClient();
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
-			clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+			clients={{
+				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				tasks: createInMemoryTasksClient({ seed: tasksSeed }),
+			}}
 		>
 			<TooltipWrapper>
 				<MemoryRouter initialEntries={[initialPath]}>
@@ -124,13 +129,44 @@ describe("AppRail visibility", () => {
 	});
 });
 
+describe("AppRail task count badge", () => {
+	test("shows count of active tasks (assigned + in_progress) next to Задачи", async () => {
+		renderRail("/positions", [
+			makeTask("t-1", { status: "assigned" }),
+			makeTask("t-2", { status: "in_progress" }),
+			makeTask("t-3", { status: "in_progress" }),
+			makeTask("t-4", { status: "completed" }),
+			makeTask("t-5", { status: "archived" }),
+		]);
+		const tasksLink = screen.getByRole("link", { name: "Задачи" });
+		expect(await within(tasksLink).findByTestId("nav-tasks-count")).toHaveTextContent("3");
+	});
+
+	test("hides badge when there are no active tasks", async () => {
+		renderRail("/positions", [makeTask("t-1", { status: "completed" }), makeTask("t-2", { status: "archived" })]);
+		// Wait for query settle so a missing badge isn't a race
+		expect(await screen.findByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.queryByTestId("nav-tasks-count")).not.toBeInTheDocument();
+	});
+
+	test("badge is hidden from accessible name", async () => {
+		renderRail("/positions", [makeTask("t-1", { status: "assigned" })]);
+		const tasksLink = await screen.findByRole("link", { name: "Задачи" });
+		const badge = await within(tasksLink).findByTestId("nav-tasks-count");
+		expect(badge).toHaveAttribute("aria-hidden", "true");
+	});
+});
+
 describe("AppRail navigation", () => {
 	test("clicking an item navigates", async () => {
 		const queryClient = createTestQueryClient();
 		render(
 			<TestClientsProvider
 				queryClient={queryClient}
-				clients={{ profile: createInMemoryProfileClient({ settings: makeSettings() }) }}
+				clients={{
+					profile: createInMemoryProfileClient({ settings: makeSettings() }),
+					tasks: createInMemoryTasksClient({ seed: [] }),
+				}}
 			>
 				<TooltipWrapper>
 					<MemoryRouter initialEntries={["/positions"]}>

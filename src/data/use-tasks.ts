@@ -156,6 +156,12 @@ export function useTasksCount(params?: TasksListParams) {
 	return query.data?.count ?? 0;
 }
 
+const ACTIVE_TASKS_PARAMS: TasksListParams = { statuses: ["assigned", "in_progress"] };
+
+export function useActiveTasksCount() {
+	return useTasksCount(ACTIVE_TASKS_PARAMS);
+}
+
 export function useTask(id: string | null) {
 	const tasks = useTasksClient();
 	return useQuery({
