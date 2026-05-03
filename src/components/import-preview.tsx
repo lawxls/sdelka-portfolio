@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { NewItemInput } from "@/data/types";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { pluralizeRu } from "@/lib/format";
 import { ImportItemCard } from "./import-item-card";
@@ -15,13 +15,8 @@ interface ImportPreviewProps {
 }
 
 export function ImportPreview({ items, onBack, onImport }: ImportPreviewProps) {
-	const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
-	const visibleItems = items.slice(0, visibleCount);
-	const hasMore = visibleCount < items.length;
-
-	const sentinelRef = useIntersectionObserver(() => {
-		setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, items.length));
-	});
+	const { visible: visibleItems, hasNextPage: hasMore, loadMore } = useClientPagination(items, BATCH_SIZE);
+	const sentinelRef = useIntersectionObserver(loadMore);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -35,7 +30,7 @@ export function ImportPreview({ items, onBack, onImport }: ImportPreviewProps) {
 
 			<span className="text-center text-xs text-muted-foreground tabular-nums">
 				{items.length > BATCH_SIZE
-					? `Показано ${visibleCount >= items.length ? items.length : visibleCount} из ${items.length}`
+					? `Показано ${visibleItems.length} из ${items.length}`
 					: `${pluralizeRu(items.length, "позицию", "позиции", "позиций")}`}
 			</span>
 

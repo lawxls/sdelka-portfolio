@@ -294,7 +294,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 const SEARCH_IN_PROGRESS_SINGLE = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
 const SEARCH_IN_PROGRESS_BATCH = "Дождитесь завершения поиска поставщиков чтобы отправить запросы";
 
-export function SuppliersTabPanel({
+function SuppliersTabPanel({
 	itemId,
 	onSupplierClick,
 	kpRequestEnabled = true,
@@ -528,7 +528,7 @@ export function SuppliersTabPanel({
 	);
 }
 
-export function OffersTabPanel({
+function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
@@ -599,10 +599,8 @@ export function OffersTabPanel({
 
 	const serverTotal = query.data?.pages[0]?.total ?? suppliers.length;
 	const hasClientFilters = activePaymentTypes.length > 0 || activeDeliveryFilters.length > 0;
-	let totalCount: number;
-	if (hasClientFilters) totalCount = suppliers.length;
-	else if (currentSupplierInList) totalCount = Math.max(0, serverTotal - 1);
-	else totalCount = serverTotal;
+	// +1 for the pinned «Ваш поставщик» row, which is excluded from `suppliers` but rendered.
+	const totalCount = hasClientFilters ? suppliers.length + (currentSupplierInList ? 1 : 0) : serverTotal;
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {

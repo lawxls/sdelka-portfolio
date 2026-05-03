@@ -139,7 +139,11 @@ export function SuppliersTable({
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
 	const searchExpanded = search.length > 0 || searchUserExpanded;
-	const sentinelRef = useIntersectionObserver(() => loadMore?.());
+	// Sentinel sits inside an overflow:auto ancestor; observe that, not the viewport.
+	const sentinelRef = useIntersectionObserver(() => loadMore?.(), {
+		useClosestScrollRoot: true,
+		rootMargin: "0px 0px 200px 0px",
+	});
 
 	const hasSelection = selectedIds.size > 0;
 	const supplierNamesById = useMemo(() => {

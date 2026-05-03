@@ -6,7 +6,6 @@ import { DataTable, type DataTableColumn, type DataTableSort } from "@/component
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
-import { OffersTabPanel, SuppliersTabPanel } from "@/components/procurement-item-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
@@ -39,6 +38,7 @@ import {
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useTender } from "@/data/use-tenders";
+import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
 	formatCurrency,
@@ -60,6 +60,8 @@ const TABS: { key: TenderDetailTab; label: string; mobileLabel?: string }[] = [
 
 const DEFAULT_TAB: TenderDetailTab = "suppliers";
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
+
+const CONSOLIDATED_PAGE_SIZE = 30;
 
 /** Pipeline-priority rank used when collapsing duplicate supplier rows: the
  * row with the most-advanced status wins so a received-КП entry isn't shadowed
@@ -459,13 +461,6 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 
 function TenderSuppliersTab({ items }: { items: readonly ProcurementItem[] }) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
-	if (items.length === 1) {
-		return (
-			<div data-testid="tender-tab-suppliers" className="flex flex-col gap-4">
-				<SuppliersTabPanel itemId={items[0].id} onSupplierClick={() => {}} />
-			</div>
-		);
-	}
 	return <TenderConsolidatedSuppliersPanel items={items} />;
 }
 
@@ -525,6 +520,11 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 	}, [dedupedSuppliers, search, activeCompanyTypes, activeStatuses]);
 
 	const sortedSuppliers = useMemo(() => sortConsolidatedSuppliers(filteredSuppliers, sort), [filteredSuppliers, sort]);
+	const {
+		visible: visibleSuppliers,
+		hasNextPage,
+		loadMore,
+	} = useClientPagination(sortedSuppliers, CONSOLIDATED_PAGE_SIZE);
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -545,7 +545,7 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 	function handleSelectionChange(idOrAll: string) {
 		if (idOrAll === "all") {
 			setSelectedIds((prev) =>
-				prev.size === sortedSuppliers.length ? new Set() : new Set(sortedSuppliers.map((s) => s.id)),
+				prev.size === visibleSuppliers.length ? new Set() : new Set(visibleSuppliers.map((s) => s.id)),
 			);
 			return;
 		}
@@ -624,9 +624,12 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 	return (
 		<div data-testid="tender-tab-suppliers" className="h-full">
 			<SuppliersTable
-				suppliers={sortedSuppliers}
+				suppliers={visibleSuppliers}
 				totalCount={sortedSuppliers.length}
 				isLoading={isLoading}
+				hasNextPage={hasNextPage}
+				loadMore={loadMore}
+				isFetchingNextPage={false}
 				search={search}
 				onSearchChange={setSearch}
 				sort={sort}
@@ -657,13 +660,6 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 
 function TenderOffersTab({ tenderId, items }: { tenderId: string; items: readonly ProcurementItem[] }) {
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
-	if (items.length === 1) {
-		return (
-			<div data-testid="tender-tab-offers" className="flex flex-col gap-4">
-				<OffersTabPanel itemId={items[0].id} onSupplierClick={() => {}} />
-			</div>
-		);
-	}
 	return <TenderConsolidatedOffersPanel tenderId={tenderId} items={items} />;
 }
 
@@ -750,6 +746,11 @@ function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; 
 	}, [dedupedSuppliers, search, activePaymentTypes, activeDeliveryFilters, currentSupplierInn, currentSupplierName]);
 
 	const sortedSuppliers = useMemo(() => sortConsolidatedSuppliers(filteredSuppliers, sort), [filteredSuppliers, sort]);
+	const {
+		visible: visibleSuppliers,
+		hasNextPage,
+		loadMore,
+	} = useClientPagination(sortedSuppliers, CONSOLIDATED_PAGE_SIZE);
 	const totalCount = sortedSuppliers.length + (currentSupplierRowId ? 1 : 0);
 
 	function handleSort(field: SupplierSortField) {
@@ -775,7 +776,7 @@ function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; 
 	function handleSelectionChange(idOrAll: string) {
 		if (idOrAll === "all") {
 			setSelectedIds((prev) =>
-				prev.size === sortedSuppliers.length ? new Set() : new Set(sortedSuppliers.map((s) => s.id)),
+				prev.size === visibleSuppliers.length ? new Set() : new Set(visibleSuppliers.map((s) => s.id)),
 			);
 			return;
 		}
@@ -806,13 +807,16 @@ function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; 
 	return (
 		<div data-testid="tender-tab-offers" className="h-full">
 			<OffersTable
-				suppliers={sortedSuppliers}
+				suppliers={visibleSuppliers}
 				totalCount={totalCount}
 				// Multi-item: no single batch quantity, so СТОИМОСТЬ renders «—».
 				item={{ quantityPerDelivery: undefined }}
 				currentSupplier={currentSupplier}
 				currentSupplierRowId={currentSupplierRowId}
 				isLoading={isLoading}
+				hasNextPage={hasNextPage}
+				loadMore={loadMore}
+				isFetchingNextPage={false}
 				search={search}
 				onSearchChange={setSearch}
 				sort={sort}
