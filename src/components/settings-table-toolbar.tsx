@@ -1,8 +1,10 @@
-import { Archive, X } from "lucide-react";
+import { Archive, ArchiveRestore, EllipsisVertical, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,10 @@ interface SettingsTableToolbarProps {
 	};
 	/** Optional filter slot rendered between search and the archive toggle. */
 	filter?: ReactNode;
+	/** Optional row-style content rendered inside a mobile-only "Ещё" Popover. When provided,
+	 * the desktop filter and archive toggle are hidden on mobile and these rows + an archive row
+	 * take their place. Use `triggerVariant="row"` on nested popovers to match the row layout. */
+	mobileMore?: ReactNode;
 	archiveActive: boolean;
 	onToggleArchive: () => void;
 	selectedCount: number;
@@ -43,6 +49,7 @@ export function SettingsTableToolbar({
 	primaryAction,
 	search,
 	filter,
+	mobileMore,
 	archiveActive,
 	onToggleArchive,
 	selectedCount,
@@ -103,23 +110,64 @@ export function SettingsTableToolbar({
 							expanded={search.expanded}
 							onExpandedChange={search.onExpandedChange}
 						/>
-						{filter}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon-sm"
-									aria-label={archiveActive ? "Скрыть архив" : "Показать архив"}
-									aria-pressed={archiveActive}
-									onClick={onToggleArchive}
-									className={cn(archiveActive && "bg-accent text-accent-foreground")}
-								>
-									<Archive aria-hidden="true" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>{archiveActive ? "Скрыть архив" : "Архив"}</TooltipContent>
-						</Tooltip>
+						<div className={cn("flex items-center gap-xs", mobileMore && "hidden md:flex")}>
+							{filter}
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon-sm"
+										aria-label={archiveActive ? "Скрыть архив" : "Показать архив"}
+										aria-pressed={archiveActive}
+										onClick={onToggleArchive}
+										className={cn(archiveActive && "bg-accent text-accent-foreground")}
+									>
+										<Archive aria-hidden="true" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>{archiveActive ? "Скрыть архив" : "Архив"}</TooltipContent>
+							</Tooltip>
+						</div>
+						{mobileMore && (
+							<Popover>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<PopoverTrigger asChild>
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon-sm"
+												aria-label="Ещё"
+												className="relative md:hidden"
+											>
+												<EllipsisVertical aria-hidden="true" />
+											</Button>
+										</PopoverTrigger>
+									</TooltipTrigger>
+									<TooltipContent>Ещё</TooltipContent>
+								</Tooltip>
+								<PopoverContent align="end" className="w-52 p-1">
+									<div className="flex flex-col gap-0.5">
+										{mobileMore}
+										<button
+											type="button"
+											aria-label={archiveActive ? "Скрыть архив" : "Архив"}
+											aria-pressed={archiveActive}
+											onClick={onToggleArchive}
+											className={cn(OVERFLOW_ROW_BTN, archiveActive && "font-medium text-highlight-foreground")}
+										>
+											{archiveActive ? (
+												<ArchiveRestore className="size-4" aria-hidden="true" />
+											) : (
+												<Archive className="size-4" aria-hidden="true" />
+											)}
+											<span>{archiveActive ? "Скрыть архив" : "Архив"}</span>
+										</button>
+									</div>
+								</PopoverContent>
+							</Popover>
+						)}
 						{primaryAction}
 					</div>
 				</>

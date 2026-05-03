@@ -8,6 +8,7 @@ import { includesCI } from "@/components/global-search-matcher";
 import { useSettingsOutletContext } from "@/components/settings-layout";
 import { SettingsTableToolbar } from "@/components/settings-table-toolbar";
 import { TableEmptyState } from "@/components/table-empty-state";
+import { TruncatedName } from "@/components/truncated-name";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/companies";
@@ -186,34 +187,47 @@ export function CompaniesSettingsPage() {
 				{archiveActive ? (
 					<TableEmptyState message="В архиве пусто" />
 				) : isMobile ? (
-					<div className="flex flex-col gap-2 p-3">
-						{visibleCompanies.map((company) => {
+					<div className="flex flex-col gap-3 p-4">
+						{visibleCompanies.map((company, index) => {
 							const isSelected = selected.has(company.id);
 							return (
 								<article
 									key={company.id}
 									data-testid={`company-card-${company.id}`}
 									className={cn(
-										"flex items-start gap-2 rounded-lg border bg-background p-3 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
+										"rounded-lg border bg-background p-4 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out has-[button:active]:scale-[0.96] motion-reduce:has-[button:active]:scale-100",
 										isSelected ? "border-primary/60 bg-accent/40" : "hover:bg-muted/50 has-[button:active]:bg-muted/50",
 									)}
 								>
-									<div className="pt-0.5">
-										<Checkbox
-											checked={isSelected}
-											onCheckedChange={() => toggleRow(company.id)}
-											aria-label={`Выбрать ${company.name}`}
-										/>
+									<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												checked={isSelected}
+												onCheckedChange={() => toggleRow(company.id)}
+												aria-label={`Выбрать ${company.name}`}
+											/>
+											<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+										</div>
 									</div>
-									<button type="button" onClick={() => handleRowClick(company)} className="flex-1 min-w-0 text-left">
-										<div className="truncate font-medium">{company.name}</div>
-										<dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-											<dt className="text-xs text-muted-foreground">Адреса</dt>
-											<dd className="tabular-nums">{company.addresses.length}</dd>
-											<dt className="text-xs text-muted-foreground">Сотрудники</dt>
-											<dd className="tabular-nums">{company.employeeCount}</dd>
-											<dt className="text-xs text-muted-foreground">Позиции</dt>
-											<dd className="tabular-nums">{company.procurementItemCount}</dd>
+									<button
+										type="button"
+										onClick={() => handleRowClick(company)}
+										className="mt-2 flex w-full flex-col items-start text-left"
+									>
+										<TruncatedName name={company.name} className="font-medium text-sm" />
+										<dl className="mt-3 grid w-full grid-cols-3 gap-x-4 gap-y-2 text-sm">
+											<div>
+												<dt className="text-xs text-muted-foreground">Адреса</dt>
+												<dd className="tabular-nums">{company.addresses.length}</dd>
+											</div>
+											<div>
+												<dt className="text-xs text-muted-foreground">Сотрудники</dt>
+												<dd className="tabular-nums">{company.employeeCount}</dd>
+											</div>
+											<div>
+												<dt className="text-xs text-muted-foreground">Позиции</dt>
+												<dd className="tabular-nums">{company.procurementItemCount}</dd>
+											</div>
 										</dl>
 									</button>
 								</article>

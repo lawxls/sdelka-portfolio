@@ -17,6 +17,7 @@ import {
 	type WorkspaceEmail,
 } from "@/data/emails-mock-data";
 import { useAddEmail, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatInteger, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ function StatusLabel({ status }: { status: WorkspaceEmail["status"] }) {
 }
 
 export function EmailsSettingsPage() {
+	const isMobile = useIsMobile();
 	const { emailsCreateOpen, setEmailsCreateOpen } = useSettingsOutletContext();
 	const { emails, isLoading } = useEmails();
 	const addMutation = useAddEmail();
@@ -60,6 +62,30 @@ export function EmailsSettingsPage() {
 
 	const allSelected = visibleEmails.length > 0 && visibleEmails.every((e) => selected.has(e.id));
 	const someSelected = selected.size > 0;
+
+	const emailFilterSections = useMemo(
+		() => [
+			{
+				title: "Статус",
+				options: (["active", "disabled"] as const).map((v) => ({
+					value: v,
+					label: v === "active" ? "Активна" : "Отключена",
+					isActive: statusFilter === v,
+					onSelect: () => setStatusFilter(statusFilter === v ? null : v),
+				})),
+			},
+			{
+				title: "Тип",
+				options: (["service", "corporate"] as const).map((v) => ({
+					value: v,
+					label: EMAIL_TYPE_LABELS[v],
+					isActive: typeFilter === v,
+					onSelect: () => setTypeFilter(typeFilter === v ? null : v),
+				})),
+			},
+		],
+		[statusFilter, typeFilter],
+	);
 
 	function toggleRow(id: string) {
 		setSelected((prev) => {
@@ -161,30 +187,13 @@ export function EmailsSettingsPage() {
 						ariaLabel: "Поиск почт",
 						placeholder: "Адрес почты…",
 					}}
-					filter={
+					filter={<ToolbarFilterPopover ariaLabel="Фильтр почт" tooltip="Фильтры" sections={emailFilterSections} />}
+					mobileMore={
 						<ToolbarFilterPopover
 							ariaLabel="Фильтр почт"
 							tooltip="Фильтры"
-							sections={[
-								{
-									title: "Статус",
-									options: (["active", "disabled"] as const).map((v) => ({
-										value: v,
-										label: v === "active" ? "Активна" : "Отключена",
-										isActive: statusFilter === v,
-										onSelect: () => setStatusFilter(statusFilter === v ? null : v),
-									})),
-								},
-								{
-									title: "Тип",
-									options: (["service", "corporate"] as const).map((v) => ({
-										value: v,
-										label: EMAIL_TYPE_LABELS[v],
-										isActive: typeFilter === v,
-										onSelect: () => setTypeFilter(typeFilter === v ? null : v),
-									})),
-								},
-							]}
+							triggerVariant="row"
+							sections={emailFilterSections}
 						/>
 					}
 					archiveActive={archiveActive}
@@ -215,6 +224,51 @@ export function EmailsSettingsPage() {
 				/>
 				{archiveActive ? (
 					<TableEmptyState message="В архиве пусто" />
+				) : isMobile ? (
+					<div className="flex flex-col gap-3 p-4">
+						{visibleEmails.map((email, index) => {
+							const isSelected = selected.has(email.id);
+							return (
+								<article
+									key={email.id}
+									data-testid={`email-card-${email.id}`}
+									className={cn(
+										"rounded-lg border bg-background p-4 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out",
+										isSelected ? "border-primary/60 bg-accent/40" : "hover:bg-muted/50",
+										email.status === "disabled" && !isSelected && "opacity-70",
+									)}
+								>
+									<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												checked={isSelected}
+												onCheckedChange={() => toggleRow(email.id)}
+												aria-label={`Выбрать ${email.email}`}
+											/>
+											<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+										</div>
+										<span className="text-xs text-muted-foreground">{EMAIL_TYPE_LABELS[email.type]}</span>
+									</div>
+									<div className="mt-2 truncate font-medium text-sm">{email.email}</div>
+									<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+										<div>
+											<dt className="text-xs text-muted-foreground">Статус</dt>
+											<dd>
+												<StatusLabel status={email.status} />
+											</dd>
+										</div>
+										<div>
+											<dt className="text-xs text-muted-foreground">Отправлено</dt>
+											<dd className="tabular-nums">{formatInteger(email.sentCount)}</dd>
+										</div>
+									</dl>
+								</article>
+							);
+						})}
+						{!isLoading && visibleEmails.length === 0 && (
+							<TableEmptyState message={search ? "Ничего не нашли" : "Пока нет добавленных почт"} />
+						)}
+					</div>
 				) : (
 					<table className="w-full text-sm">
 						<thead className="sticky top-0 z-10 bg-background border-b border-border">

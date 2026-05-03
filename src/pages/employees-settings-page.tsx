@@ -57,6 +57,21 @@ export function EmployeesSettingsPage() {
 
 	const allSelected = visibleEmployees.length > 0 && visibleEmployees.every((e) => selected.has(e.id));
 
+	const roleFilterSections = useMemo(
+		() => [
+			{
+				title: "Роль",
+				options: ASSIGNABLE_ROLES.map((r) => ({
+					value: r,
+					label: ROLE_LABELS[r],
+					isActive: roleFilter === r,
+					onSelect: () => setRoleFilter(roleFilter === r ? null : r),
+				})),
+			},
+		],
+		[roleFilter],
+	);
+
 	function toggleRow(id: number) {
 		setSelected((prev) => {
 			const next = new Set(prev);
@@ -152,17 +167,17 @@ export function EmployeesSettingsPage() {
 						<ToolbarFilterPopover
 							ariaLabel="Фильтр по роли"
 							tooltip="Фильтр по роли"
-							sections={[
-								{
-									title: "Роль",
-									options: ASSIGNABLE_ROLES.map((r) => ({
-										value: r,
-										label: ROLE_LABELS[r],
-										isActive: roleFilter === r,
-										onSelect: () => setRoleFilter(roleFilter === r ? null : r),
-									})),
-								},
-							]}
+							rowLabel="Фильтр по роли"
+							sections={roleFilterSections}
+						/>
+					}
+					mobileMore={
+						<ToolbarFilterPopover
+							ariaLabel="Фильтр по роли"
+							tooltip="Фильтр по роли"
+							rowLabel="Фильтр по роли"
+							triggerVariant="row"
+							sections={roleFilterSections}
 						/>
 					}
 					archiveActive={archiveActive}
@@ -189,38 +204,65 @@ export function EmployeesSettingsPage() {
 				{archiveActive ? (
 					<TableEmptyState message="В архиве пусто" />
 				) : isMobile ? (
-					<div className="flex flex-col gap-2 p-3">
-						{visibleEmployees.map((employee) => {
+					<div className="flex flex-col gap-3 p-4">
+						{visibleEmployees.map((employee, index) => {
 							const isSelected = selected.has(employee.id);
 							const fullName = formatFullName(employee.lastName, employee.firstName, employee.patronymic);
+							const displayName = fullName || "Без имени";
 							return (
 								<article
 									key={employee.id}
 									data-testid={`employee-card-${employee.id}`}
 									className={cn(
-										"flex items-start gap-2 rounded-lg border bg-background p-3 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out has-[button:active]:scale-[0.99] motion-reduce:has-[button:active]:scale-100",
+										"rounded-lg border bg-background p-4 touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out has-[button:active]:scale-[0.96] motion-reduce:has-[button:active]:scale-100",
 										isSelected ? "border-primary/60 bg-accent/40" : "hover:bg-muted/50 has-[button:active]:bg-muted/50",
 									)}
 								>
-									<div className="pt-0.5">
-										<Checkbox
-											checked={isSelected}
-											onCheckedChange={() => toggleRow(employee.id)}
-											aria-label={`Выбрать ${fullName}`}
-										/>
+									<div className="flex items-center justify-between gap-2">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												checked={isSelected}
+												onCheckedChange={() => toggleRow(employee.id)}
+												aria-label={`Выбрать ${displayName}`}
+											/>
+											<span className="text-xs text-muted-foreground tabular-nums">{index + 1}</span>
+										</div>
 									</div>
-									<button type="button" onClick={() => handleRowClick(employee)} className="flex-1 min-w-0 text-left">
-										<div className="truncate font-medium">{fullName || "Без имени"}</div>
-										{employee.position && (
-											<div className="mt-0.5 truncate text-xs text-muted-foreground">{employee.position}</div>
-										)}
-										<dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-											<dt className="text-xs text-muted-foreground">Почта</dt>
-											<dd className="truncate">{employee.email}</dd>
-											<dt className="text-xs text-muted-foreground">Роль</dt>
-											<dd>{ROLE_LABELS[employee.role]}</dd>
-											<dt className="text-xs text-muted-foreground">Регистрация</dt>
-											<dd className="tabular-nums">{formatRegistrationDate(employee.registeredAt)}</dd>
+									<button
+										type="button"
+										onClick={() => handleRowClick(employee)}
+										className="mt-2 flex w-full flex-col items-start text-left"
+									>
+										<div className="flex w-full items-center gap-3">
+											<span
+												aria-hidden="true"
+												className={cn(
+													"flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white",
+													getAvatarColorForId(employee.id),
+												)}
+											>
+												{getInitials(employee.firstName, employee.lastName)}
+											</span>
+											<div className="flex min-w-0 flex-1 flex-col leading-tight">
+												<span className="truncate font-medium text-sm">{displayName}</span>
+												{employee.position && (
+													<span className="mt-0.5 truncate text-xs text-muted-foreground">{employee.position}</span>
+												)}
+											</div>
+										</div>
+										<dl className="mt-3 grid w-full grid-cols-2 gap-x-4 gap-y-2 text-sm">
+											<div className="col-span-2 min-w-0">
+												<dt className="text-xs text-muted-foreground">Почта</dt>
+												<dd className="truncate">{employee.email}</dd>
+											</div>
+											<div>
+												<dt className="text-xs text-muted-foreground">Роль</dt>
+												<dd>{ROLE_LABELS[employee.role]}</dd>
+											</div>
+											<div>
+												<dt className="text-xs text-muted-foreground">Регистрация</dt>
+												<dd className="tabular-nums">{formatRegistrationDate(employee.registeredAt)}</dd>
+											</div>
 										</dl>
 									</button>
 								</article>

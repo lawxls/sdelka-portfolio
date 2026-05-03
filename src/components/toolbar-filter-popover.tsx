@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
 
 const ROW_BTN =
@@ -19,29 +20,43 @@ interface ToolbarFilterPopoverProps {
 	ariaLabel?: string;
 	tooltip?: string;
 	sections: FilterSection[];
+	triggerVariant?: "icon" | "row";
+	rowLabel?: string;
 }
 
 export function ToolbarFilterPopover({
 	ariaLabel = "Фильтры",
 	tooltip = "Фильтры",
 	sections,
+	triggerVariant = "icon",
+	rowLabel = "Фильтры",
 }: ToolbarFilterPopoverProps) {
 	const active = sections.some((s) => s.options.some((o) => o.isActive));
 	return (
 		<Popover>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<PopoverTrigger asChild>
-						<Button type="button" variant="ghost" size="icon-sm" aria-label={ariaLabel} className="relative">
-							<ListFilter aria-hidden="true" />
-							{active && (
-								<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" aria-hidden="true" />
-							)}
-						</Button>
-					</PopoverTrigger>
-				</TooltipTrigger>
-				<TooltipContent>{tooltip}</TooltipContent>
-			</Tooltip>
+			{triggerVariant === "row" ? (
+				<PopoverTrigger asChild>
+					<button type="button" className={cn(OVERFLOW_ROW_BTN, "relative")}>
+						<ListFilter className="size-4" aria-hidden="true" />
+						<span>{rowLabel}</span>
+						{active && <span className="ml-auto size-2 rounded-full bg-primary" aria-hidden="true" />}
+					</button>
+				</PopoverTrigger>
+			) : (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<PopoverTrigger asChild>
+							<Button type="button" variant="ghost" size="icon-sm" aria-label={ariaLabel} className="relative">
+								<ListFilter aria-hidden="true" />
+								{active && (
+									<span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-primary" aria-hidden="true" />
+								)}
+							</Button>
+						</PopoverTrigger>
+					</TooltipTrigger>
+					<TooltipContent>{tooltip}</TooltipContent>
+				</Tooltip>
+			)}
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="flex max-h-[70vh] flex-col overflow-y-auto p-1.5">
 					{sections.map((section, idx) => (
