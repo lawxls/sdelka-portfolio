@@ -62,7 +62,7 @@ export function AppRail() {
 				data-testid="app-rail"
 			>
 				<div className="flex h-12 shrink-0 items-center px-3">
-					<Link to="/tenders" aria-label="На главную" className="flex shrink-0 items-center">
+					<Link to="/inquiries" aria-label="На главную" className="flex shrink-0 items-center">
 						<LogoWordmark className="h-5 w-auto" />
 					</Link>
 				</div>

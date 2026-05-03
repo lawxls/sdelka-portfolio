@@ -51,11 +51,11 @@ import { cn } from "@/lib/utils";
 
 type TenderDetailTab = "suppliers" | "offers" | "tasks" | "details";
 
-const TABS: { key: TenderDetailTab; label: string }[] = [
+const TABS: { key: TenderDetailTab; label: string; mobileLabel?: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "offers", label: "Предложения" },
 	{ key: "tasks", label: "Задачи" },
-	{ key: "details", label: "Информация" },
+	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
 const DEFAULT_TAB: TenderDetailTab = "suppliers";
@@ -120,7 +120,7 @@ export function TenderDetailPage() {
 	const { data: items = [] } = useTenderItems(slug || undefined);
 
 	function handleClose() {
-		navigate({ pathname: "/tenders", search: searchParams.toString() });
+		navigate({ pathname: "/inquiries", search: searchParams.toString() });
 	}
 
 	function handleTaskOpen(id: string) {
@@ -265,7 +265,7 @@ function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTa
 			<SheetHeader>
 				<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
 					<span className="font-heading text-base font-medium text-foreground tabular-nums">
-						{formatInquiryNumber(tender.id)}
+						№{formatInquiryNumber(tender.id)}
 					</span>
 					<span aria-hidden="true" className="font-heading text-base font-medium text-foreground">
 						•
@@ -325,7 +325,14 @@ function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTa
 							)}
 							onClick={() => onTabChange(tab.key)}
 						>
-							{tab.label}
+							{tab.mobileLabel ? (
+								<>
+									<span className="md:hidden">{tab.mobileLabel}</span>
+									<span className="hidden md:inline">{tab.label}</span>
+								</>
+							) : (
+								tab.label
+							)}
 							{count != null && count > 0 && (
 								<span
 									className={cn(

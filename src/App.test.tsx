@@ -165,14 +165,14 @@ afterEach(() => {
 // ---- Route tests (TDD) ----
 
 describe("Routing", () => {
-	test("/ redirects to /tenders", async () => {
+	test("/ redirects to /inquiries", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
 		});
 	});
 
-	test("/ preserves query params when redirecting to /tenders", async () => {
+	test("/ preserves query params when redirecting to /inquiries", async () => {
 		renderApp(["/?company=c1"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
@@ -480,8 +480,8 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("«Создать запрос» on /tenders opens the create-tender drawer and submitting persists the tender + items", async () => {
-		await renderAppReady(["/tenders"]);
+	test("«Создать запрос» on /inquiries opens the create-tender drawer and submitting persists the tender + items", async () => {
+		await renderAppReady(["/inquiries"]);
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Создать запрос/ }));
@@ -526,7 +526,7 @@ describe("ProcurementPage", () => {
 			).not.toBeInTheDocument();
 		});
 
-		// Two AI-grouped tenders should land on /tenders: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
+		// Two AI-grouped tenders should land on /inquiries: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
 		const rail = screen.getByTestId("app-rail");
 		await user.click(within(rail).getByRole("link", { name: /Запросы/ }));
 		await waitFor(() => {

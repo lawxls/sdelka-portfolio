@@ -59,10 +59,10 @@ function renderPage({ tenders = [], items = [], slug }: RenderOpts) {
 			}}
 		>
 			<TooltipProvider>
-				<MemoryRouter initialEntries={[`/tenders/${slug}`]}>
+				<MemoryRouter initialEntries={[`/inquiries/${slug}`]}>
 					<Routes>
-						<Route path="/tenders/:slug" element={<TenderDetailPage />} />
-						<Route path="/tenders" element={<div data-testid="tenders-list">Запросы</div>} />
+						<Route path="/inquiries/:slug" element={<TenderDetailPage />} />
+						<Route path="/inquiries" element={<div data-testid="tenders-list">Запросы</div>} />
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
@@ -89,7 +89,7 @@ describe("TenderDetailPage", () => {
 		});
 
 		await screen.findByRole("heading", { name: "Упаковочные материалы Q2" });
-		expect(screen.getByText("1")).toBeInTheDocument();
+		expect(screen.getByText("№1")).toBeInTheDocument();
 
 		const tabs = screen.getAllByRole("tab");
 		expect(tabs.map((t) => t.getAttribute("aria-label"))).toEqual([
@@ -145,10 +145,10 @@ describe("TenderDetailPage", () => {
 				}}
 			>
 				<TooltipProvider>
-					<MemoryRouter initialEntries={["/tenders/T-001"]}>
+					<MemoryRouter initialEntries={["/inquiries/T-001"]}>
 						<Routes>
-							<Route path="/tenders/:slug" element={<TenderDetailPage />} />
-							<Route path="/tenders" element={<div data-testid="tenders-list">Запросы</div>} />
+							<Route path="/inquiries/:slug" element={<TenderDetailPage />} />
+							<Route path="/inquiries" element={<div data-testid="tenders-list">Запросы</div>} />
 						</Routes>
 					</MemoryRouter>
 				</TooltipProvider>
@@ -179,7 +179,7 @@ describe("TenderDetailPage", () => {
 		});
 
 		await screen.findByRole("heading", { name: "Упаковочные материалы Q2" });
-		expect(screen.getByText("1")).toBeInTheDocument();
+		expect(screen.getByText("№1")).toBeInTheDocument();
 		expect(screen.queryByTestId("tender-tco-headline")).not.toBeInTheDocument();
 		expect(screen.getByTestId("tender-metric-contacted")).toBeInTheDocument();
 		expect(screen.getByTestId("tender-metric-quotes")).toBeInTheDocument();

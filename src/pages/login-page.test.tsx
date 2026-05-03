@@ -17,7 +17,7 @@ function renderLogin(initialEntries = ["/login"]) {
 					<Route element={<AuthLayout />}>
 						<Route path="/login" element={<LoginPage />} />
 					</Route>
-					<Route path="/tenders" element={<div>Tenders Page</div>} />
+					<Route path="/inquiries" element={<div>Tenders Page</div>} />
 					<Route path="/positions" element={<div>Positions Page</div>} />
 					<Route path="/analytics" element={<div>Analytics Page</div>} />
 					<Route path="/forgot-password" element={<div>Forgot Password</div>} />
@@ -59,7 +59,7 @@ describe("LoginPage", () => {
 		expect(screen.getByText("Forgot Password")).toBeInTheDocument();
 	});
 
-	test("submits login with any credentials and redirects to /tenders", async () => {
+	test("submits login with any credentials and redirects to /inquiries", async () => {
 		renderLogin();
 		const user = userEvent.setup();
 

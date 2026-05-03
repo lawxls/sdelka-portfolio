@@ -47,11 +47,11 @@ describe("AppRail items", () => {
 		expect(links[1]).toHaveAccessibleName("Позиции");
 	});
 
-	test("items link to /positions, /tasks, and /settings/workspace", () => {
+	test("items link to /positions, /tasks, and /settings", () => {
 		renderRail();
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
 		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings/workspace");
+		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
 	});
 
 	test("nav has aria-label", () => {

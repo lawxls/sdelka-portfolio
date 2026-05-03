@@ -31,7 +31,7 @@ function TendersOutletHost() {
 
 function RootRedirect() {
 	const { search, hash } = useLocation();
-	return <Navigate to={`/tenders${search}${hash}`} replace />;
+	return <Navigate to={`/inquiries${search}${hash}`} replace />;
 }
 
 function ProcurementRedirect() {
@@ -57,7 +57,7 @@ function App() {
 				<Route path="/procurement" element={<ProcurementRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path="/tenders" element={<TendersOutletHost />}>
+					<Route path="/inquiries" element={<TendersOutletHost />}>
 						<Route path=":slug" element={<TenderDetailPage />} />
 					</Route>
 					<Route path="/positions" element={<ProcurementPage />} />

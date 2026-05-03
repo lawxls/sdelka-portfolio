@@ -40,7 +40,7 @@ const TENDERS: ProcurementInquiry[] = [
 	},
 ];
 
-function renderPage(initialEntries: string[] = ["/tenders"], tenders: ProcurementInquiry[] = TENDERS) {
+function renderPage(initialEntries: string[] = ["/inquiries"], tenders: ProcurementInquiry[] = TENDERS) {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -57,7 +57,7 @@ function renderPage(initialEntries: string[] = ["/tenders"], tenders: Procuremen
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries}>
 					<Routes>
-						<Route path="/tenders" element={<TendersPage />} />
+						<Route path="/inquiries" element={<TendersPage />} />
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
@@ -162,7 +162,7 @@ describe("TendersPage", () => {
 				isArchived: true,
 			},
 		];
-		renderPage(["/tenders"], SEED);
+		renderPage(["/inquiries"], SEED);
 		await screen.findByTestId("tender-row-T-001");
 		expect(screen.queryByTestId("tender-row-T-099")).not.toBeInTheDocument();
 

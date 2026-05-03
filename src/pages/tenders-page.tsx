@@ -1,10 +1,21 @@
-import { Archive, ArchiveRestore, ArrowDown, ArrowUp, ArrowUpDown, FolderInput, Pencil, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	ArrowDown,
+	ArrowUp,
+	ArrowUpDown,
+	FolderInput,
+	Inbox,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CreateTenderDrawer } from "@/components/create-tender-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { InlineRenameInput } from "@/components/inline-rename-input";
+import { InquiryCard } from "@/components/inquiry-card";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
 import { type DeadlineFilter, TendersToolbar } from "@/components/tenders-toolbar";
@@ -36,6 +47,7 @@ import type { Folder, TenderStatus } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
 import { useDeleteTender, useTenders, useUpdateTender } from "@/data/use-tenders";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatCurrency, formatDayMonthShort, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -278,6 +290,7 @@ function TenderRow({
 export function TendersPage() {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
+	const isMobile = useIsMobile();
 
 	const search = searchParams.get("q") ?? "";
 	const status = parseStatus(searchParams);
@@ -446,7 +459,7 @@ export function TendersPage() {
 	);
 
 	function handleRowClick(tender: TenderSummary) {
-		navigate({ pathname: `/tenders/${tender.id}`, search: searchParams.toString() });
+		navigate({ pathname: `/inquiries/${tender.id}`, search: searchParams.toString() });
 	}
 
 	function handleArchive(id: string, isArchived: boolean) {
@@ -512,73 +525,126 @@ export function TendersPage() {
 				middle={toolbar}
 			/>
 			<main className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/50">
-				<div className="flex flex-1 flex-col overflow-auto [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								{COLUMNS.map((col) =>
-									col.field ? (
-										<TableHead
-											key={col.label}
-											className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
-										>
-											<SortableHeaderButton
-												col={col as ColumnDef & { field: TenderSortField }}
-												sort={sort}
-												onSort={handleSort}
-											/>
-										</TableHead>
-									) : (
-										<TableHead
-											key={col.label}
-											className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
-										>
-											{col.label}
-										</TableHead>
-									),
-								)}
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{isLoading
-								? SKELETON_KEYS.map((key) => (
-										<TableRow key={key} data-testid="tenders-skeleton-row">
-											{COLUMNS.map((col) => (
-												<TableCell
-													key={col.label}
-													className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
-												>
-													<Skeleton
+				{isMobile ? (
+					<div className="flex flex-1 flex-col overflow-auto touch-manipulation">
+						{isLoading && (
+							<div className="flex flex-col gap-3 p-4">
+								{SKELETON_KEYS.map((key) => (
+									<div key={key} data-testid="tenders-skeleton-card" className="rounded-lg border bg-background p-4">
+										<Skeleton className="h-3 w-6" />
+										<Skeleton className="mt-2 h-4 w-48" />
+										<Skeleton className="mt-1 h-3 w-24" />
+										<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+											<Skeleton className="h-8 w-full" />
+											<Skeleton className="h-8 w-full" />
+											<Skeleton className="h-8 w-full" />
+											<Skeleton className="h-8 w-full" />
+										</div>
+									</div>
+								))}
+							</div>
+						)}
+						{!isLoading && items.length === 0 && (
+							<div className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
+								<Inbox className="size-8" aria-hidden="true" />
+								<p className="text-sm">Запросов нет</p>
+							</div>
+						)}
+						{!isLoading && items.length > 0 && (
+							<div className="flex flex-col gap-3 p-4">
+								{items.map((tender, index) => (
+									<InquiryCard
+										key={tender.id}
+										tender={tender}
+										folders={folders}
+										folder={folders.find((f) => f.id === tender.folderId)}
+										index={index}
+										isEditing={editingTenderId === tender.id}
+										isArchiveView={isArchiveView}
+										onClick={handleRowClick}
+										onArchive={handleArchive}
+										onRename={handleRename}
+										onSaveRename={handleSaveRename}
+										onCancelRename={handleCancelRename}
+										onMoveToFolder={handleMoveToFolder}
+										onDelete={setDeletingTender}
+									/>
+								))}
+							</div>
+						)}
+					</div>
+				) : (
+					<div className="flex flex-1 flex-col overflow-auto [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									{COLUMNS.map((col) =>
+										col.field ? (
+											<TableHead
+												key={col.label}
+												className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
+											>
+												<SortableHeaderButton
+													col={col as ColumnDef & { field: TenderSortField }}
+													sort={sort}
+													onSort={handleSort}
+												/>
+											</TableHead>
+										) : (
+											<TableHead
+												key={col.label}
+												className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
+											>
+												{col.label}
+											</TableHead>
+										),
+									)}
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{isLoading
+									? SKELETON_KEYS.map((key) => (
+											<TableRow key={key} data-testid="tenders-skeleton-row">
+												{COLUMNS.map((col) => (
+													<TableCell
+														key={col.label}
 														className={cn(
-															"h-4 w-20",
-															col.align === "right" && "ml-auto",
-															col.align === "center" && "mx-auto",
+															col.align === "right" && "text-right",
+															col.align === "center" && "text-center",
 														)}
-													/>
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								: items.map((tender, index) => (
-										<TenderRow
-											key={tender.id}
-											tender={tender}
-											rowNumber={index + 1}
-											folders={folders}
-											onClick={() => handleRowClick(tender)}
-											onArchive={handleArchive}
-											onRename={handleRename}
-											onMoveToFolder={handleMoveToFolder}
-											onDelete={setDeletingTender}
-											isArchiveView={isArchiveView}
-											isEditing={editingTenderId === tender.id}
-											onSaveRename={handleSaveRename}
-											onCancelRename={handleCancelRename}
-										/>
-									))}
-						</TableBody>
-					</Table>
-				</div>
+													>
+														<Skeleton
+															className={cn(
+																"h-4 w-20",
+																col.align === "right" && "ml-auto",
+																col.align === "center" && "mx-auto",
+															)}
+														/>
+													</TableCell>
+												))}
+											</TableRow>
+										))
+									: items.map((tender, index) => (
+											<TenderRow
+												key={tender.id}
+												tender={tender}
+												rowNumber={index + 1}
+												folders={folders}
+												onClick={() => handleRowClick(tender)}
+												onArchive={handleArchive}
+												onRename={handleRename}
+												onMoveToFolder={handleMoveToFolder}
+												onDelete={setDeletingTender}
+												isArchiveView={isArchiveView}
+												isEditing={editingTenderId === tender.id}
+												onSaveRename={handleSaveRename}
+												onCancelRename={handleCancelRename}
+											/>
+										))}
+							</TableBody>
+						</Table>
+					</div>
+				)}
 			</main>
 			<CreateTenderDrawer
 				open={drawerOpen}
