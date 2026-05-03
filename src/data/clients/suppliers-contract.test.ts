@@ -40,7 +40,6 @@ function makeSeed(id: string, overrides: Partial<SupplierSeed> = {}): SupplierSe
 		address: "г. Москва, ул. Тестовая, д. 1",
 		pricePerUnit: null,
 		tco: null,
-		rating: null,
 		deliveryCost: null,
 		paymentType: "prepayment",
 		deferralDays: 0,
@@ -55,7 +54,7 @@ function makeSeed(id: string, overrides: Partial<SupplierSeed> = {}): SupplierSe
 const SEEDS: SupplierSeed[] = [
 	makeSeed("supplier-x-1", { companyName: "Альфа" }),
 	makeSeed("supplier-x-2", { companyName: "Бета" }),
-	makeSeed("supplier-x-3", { companyName: "Гамма", status: "получено_кп", pricePerUnit: 100, tco: 110, rating: 80 }),
+	makeSeed("supplier-x-3", { companyName: "Гамма", status: "получено_кп", pricePerUnit: 100, tco: 110 }),
 ];
 
 interface Adapter {

@@ -119,7 +119,6 @@ function makeYourSupplier(itemId: string): Supplier | null {
 		website: `https://${domain}`,
 		pricePerUnit: perItemPrice,
 		tco: perItemPrice,
-		rating: 90,
 		deliveryCost: null,
 		paymentType: cs.paymentType ?? "prepayment",
 		deferralDays: cs.deferralDays,

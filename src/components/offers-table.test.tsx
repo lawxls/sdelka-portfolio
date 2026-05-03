@@ -23,7 +23,6 @@ const defaultSuppliers = [
 		status: "получено_кп",
 		pricePerUnit: 1000,
 		tco: 2700,
-		rating: 85,
 		email: "alfa@test.ru",
 		website: "https://alfa.ru",
 		deliveryCost: 1500,

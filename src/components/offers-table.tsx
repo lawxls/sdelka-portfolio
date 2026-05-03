@@ -110,7 +110,6 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier, rowId: string): S
 		// «Ваш поставщик» has no real TCO — surface the buyer's per-unit price in that
 		// column so the row is comparable against quotes.
 		tco: currentSupplier.pricePerUnit,
-		rating: null,
 		deliveryCost: null,
 		paymentType: currentSupplier.paymentType ?? "prepayment",
 		deferralDays: currentSupplier.deferralDays,

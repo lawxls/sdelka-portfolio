@@ -343,7 +343,6 @@ export function generateCandidates(itemId: string, count: number): Supplier[] {
 			website: `https://${pool.domain}`,
 			pricePerUnit: null,
 			tco: null,
-			rating: null,
 			deliveryCost: null,
 			paymentType: "prepayment" as const,
 			deferralDays: 0,

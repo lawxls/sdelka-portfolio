@@ -126,7 +126,6 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 		postalCode: "101000",
 		pricePerUnit: null,
 		tco: null,
-		rating: null,
 		deliveryCost: 1500,
 		paymentType: "deferred",
 		deferralDays: 14,

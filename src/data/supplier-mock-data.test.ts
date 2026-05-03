@@ -71,26 +71,22 @@ describe("supplier mock store", () => {
 		expect(kpCount).toBe(ITEM_1_KP_COUNT + 1);
 	});
 
-	it("получено_кп suppliers have non-null price, tco, and rating", async () => {
+	it("получено_кп suppliers have non-null price and tco", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
 		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
 		for (const s of kpSuppliers) {
 			expect(s.pricePerUnit).toBeTypeOf("number");
 			expect(s.tco).toBeTypeOf("number");
-			expect(s.rating).toBeTypeOf("number");
-			expect(s.rating).toBeGreaterThanOrEqual(0);
-			expect(s.rating).toBeLessThanOrEqual(100);
 		}
 	});
 
-	it("non-КП suppliers have null price, tco, and rating", async () => {
+	it("non-КП suppliers have null price and tco", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
 		const nonKp = suppliers.filter((s) => s.status !== "получено_кп");
 		expect(nonKp.length).toBeGreaterThan(0);
 		for (const s of nonKp) {
 			expect(s.pricePerUnit).toBeNull();
 			expect(s.tco).toBeNull();
-			expect(s.rating).toBeNull();
 		}
 	});
 

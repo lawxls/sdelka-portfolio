@@ -36,7 +36,6 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			deliveryCost: 1500,
 			tco: 2700,
 			deferralDays: 30,
-			rating: 85,
 			agentComment: "Надёжный поставщик с конкурентными ценами.\n\nРекомендуется для долгосрочного сотрудничества.",
 			documents: [
 				{ name: "Коммерческое предложение.pdf", type: "pdf", size: 245_000 },

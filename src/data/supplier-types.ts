@@ -131,7 +131,6 @@ export interface Supplier {
 	postalCode: string;
 	pricePerUnit: number | null;
 	tco: number | null;
-	rating: number | null;
 	deliveryCost: number | null;
 	paymentType: PaymentType;
 	deferralDays: number;
