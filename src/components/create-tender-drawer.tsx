@@ -53,7 +53,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
 const STEP_TITLES: Record<WizardStep, string> = {
-	1: "Заполните данные по тендеру",
+	1: "Заполните данные по запросу",
 	2: "Заполните данные по текущему поставщику",
 	3: "Дополнительные вопросы",
 };
@@ -250,7 +250,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 					className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 				>
 					<SheetHeader className="border-b pb-4">
-						<SheetTitle>Создать тендер</SheetTitle>
+						<SheetTitle>Создать запрос</SheetTitle>
 						<SheetDescription className="sr-only">{STEP_TITLES[step]}</SheetDescription>
 						<div className="mt-3 flex flex-col gap-2">
 							<div
@@ -593,7 +593,7 @@ function Step1Body({
 
 	return (
 		<div className="flex flex-col gap-0 pt-3">
-			<SectionGroupHeader title="Тендер" />
+			<SectionGroupHeader title="Запрос" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Field label="Бюджет" htmlFor="tender-budget" className="flex-1">

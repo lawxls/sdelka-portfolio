@@ -215,8 +215,8 @@ describe("TasksPage", () => {
 	it("shows tender name under task name in the same cell", async () => {
 		renderPage();
 		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
-		// Tender is rendered via makeTask as "Тендер арматуры" — should appear inline.
-		expect(screen.getAllByText("Тендер арматуры").length).toBeGreaterThan(0);
+		// Tender is rendered via makeTask as "Запрос арматуры" — should appear inline.
+		expect(screen.getAllByText("Запрос арматуры").length).toBeGreaterThan(0);
 	});
 
 	it("renders Скачать таблицу button", async () => {

@@ -47,7 +47,7 @@ export function useUpdateTender() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["tenders"] });
 		},
-		onError: () => toast.error("Не удалось обновить тендер"),
+		onError: () => toast.error("Не удалось обновить запрос"),
 	});
 }
 
@@ -60,6 +60,6 @@ export function useDeleteTender() {
 			queryClient.invalidateQueries({ queryKey: ["tenders"] });
 			queryClient.invalidateQueries({ queryKey: ["items"] });
 		},
-		onError: () => toast.error("Не удалось удалить тендер"),
+		onError: () => toast.error("Не удалось удалить запрос"),
 	});
 }

@@ -26,19 +26,19 @@ function renderRail(initialPath = "/positions") {
 }
 
 describe("AppRail items", () => {
-	test("renders Тендеры, Позиции, Задачи, and Настройки with aria-labels", () => {
+	test("renders Запросы, Позиции, Задачи, and Настройки with aria-labels", () => {
 		renderRail();
-		expect(screen.getByRole("link", { name: "Тендеры" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Запросы" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
-	test("Тендеры is the first top-nav item, above Позиции", () => {
+	test("Запросы is the first top-nav item, above Позиции", () => {
 		renderRail();
 		const mainNav = screen.getByRole("navigation", { name: "Основная навигация" });
 		const links = within(mainNav).getAllByRole("link");
-		expect(links[0]).toHaveAccessibleName("Тендеры");
+		expect(links[0]).toHaveAccessibleName("Запросы");
 		expect(links[1]).toHaveAccessibleName("Позиции");
 	});
 

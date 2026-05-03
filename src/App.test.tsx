@@ -168,14 +168,14 @@ describe("Routing", () => {
 	test("/ redirects to /tenders", async () => {
 		renderApp(["/"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
 		});
 	});
 
 	test("/ preserves query params when redirecting to /tenders", async () => {
 		renderApp(["/?company=c1"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
 		});
 	});
 
@@ -480,13 +480,13 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("«Создать тендер» on /tenders opens the create-tender drawer and submitting persists the tender + items", async () => {
+	test("«Создать запрос» on /tenders opens the create-tender drawer and submitting persists the tender + items", async () => {
 		await renderAppReady(["/tenders"]);
 		const user = userEvent.setup();
 
-		await user.click(screen.getByRole("button", { name: /Создать тендер/ }));
+		await user.click(screen.getByRole("button", { name: /Создать запрос/ }));
 
-		expect(screen.getByRole("heading", { name: "Создать тендер" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
 
 		await user.type(screen.getByLabelText("Дедлайн"), "2026-07-01");
 		await user.type(screen.getByLabelText("Название"), "Позиция А");
@@ -496,7 +496,7 @@ describe("ProcurementPage", () => {
 		await user.click(screen.getByRole("button", { name: "Создать" }));
 
 		await waitFor(() => {
-			expect(screen.queryByRole("heading", { name: "Создать тендер" })).not.toBeInTheDocument();
+			expect(screen.queryByRole("heading", { name: "Создать запрос" })).not.toBeInTheDocument();
 		});
 		// Tender name is auto-derived from the first position when the user-facing field is omitted.
 		await waitFor(() => {
@@ -528,7 +528,7 @@ describe("ProcurementPage", () => {
 
 		// Two AI-grouped tenders should land on /tenders: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
 		const rail = screen.getByTestId("app-rail");
-		await user.click(within(rail).getByRole("link", { name: /Тендеры/ }));
+		await user.click(within(rail).getByRole("link", { name: /Запросы/ }));
 		await waitFor(() => {
 			expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument();
 			expect(screen.getByText("Розетка серая")).toBeInTheDocument();

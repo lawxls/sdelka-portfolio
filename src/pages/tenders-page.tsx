@@ -149,6 +149,7 @@ function SortableHeaderButton({
 
 interface TenderRowProps {
 	tender: TenderSummary;
+	rowNumber: number;
 	folders: Folder[];
 	onClick: () => void;
 	onArchive: (id: string, isArchived: boolean) => void;
@@ -163,6 +164,7 @@ interface TenderRowProps {
 
 function TenderRow({
 	tender,
+	rowNumber,
 	folders,
 	onClick,
 	onArchive,
@@ -183,7 +185,7 @@ function TenderRow({
 			onClick={isEditing ? undefined : onClick}
 			className={isEditing ? "" : "cursor-pointer"}
 		>
-			<TableCell className="font-mono text-xs text-muted-foreground">{tender.id}</TableCell>
+			<TableCell className="tabular-nums text-xs text-muted-foreground">{rowNumber}</TableCell>
 			<TableCell className="font-medium">
 				<div className="max-w-[350px]">
 					<div className="flex items-center gap-2 min-w-0">
@@ -471,7 +473,7 @@ export function TendersPage() {
 	function handleConfirmDelete() {
 		if (!deletingTender) return;
 		deleteTenderMutation.mutate(deletingTender.id, {
-			onSuccess: () => toast.success(`Тендер ${deletingTender.id} удалён`),
+			onSuccess: () => toast.success(`Запрос ${deletingTender.id} удалён`),
 		});
 		setDeletingTender(null);
 	}
@@ -481,12 +483,12 @@ export function TendersPage() {
 			<PageToolbar
 				left={
 					<>
-						<h1 className="text-sm font-semibold leading-none">Тендеры</h1>
+						<h1 className="text-sm font-semibold leading-none">Запросы</h1>
 						<span aria-hidden="true" className="text-sm leading-none text-border">
 							/
 						</span>
 						<span className="text-sm font-normal leading-none text-muted-foreground tabular-nums">
-							{isLoading ? "…" : formatRussianPlural(items.length, ["тендер", "тендера", "тендеров"])}
+							{isLoading ? "…" : formatRussianPlural(items.length, ["запрос", "запроса", "запросов"])}
 						</span>
 						{companyChipLabel && (
 							<FilterChip
@@ -557,10 +559,11 @@ export function TendersPage() {
 											))}
 										</TableRow>
 									))
-								: items.map((tender) => (
+								: items.map((tender, index) => (
 										<TenderRow
 											key={tender.id}
 											tender={tender}
+											rowNumber={index + 1}
 											folders={folders}
 											onClick={() => handleRowClick(tender)}
 											onArchive={handleArchive}
@@ -583,7 +586,7 @@ export function TendersPage() {
 				onSubmit={(payload) => {
 					createTenderMutation.mutate(payload, {
 						onSuccess: ({ tender }) => {
-							toast.success(`Тендер ${tender.id} создан`);
+							toast.success(`Запрос ${tender.id} создан`);
 						},
 					});
 				}}
@@ -592,7 +595,7 @@ export function TendersPage() {
 				<AlertDialog open onOpenChange={(open) => !open && setDeletingTender(null)}>
 					<AlertDialogContent size="sm">
 						<AlertDialogHeader>
-							<AlertDialogTitle>Удалить тендер?</AlertDialogTitle>
+							<AlertDialogTitle>Удалить запрос?</AlertDialogTitle>
 							<AlertDialogDescription className="text-pretty">
 								«{deletingTender.name}» будет удалён вместе с привязанными позициями.
 							</AlertDialogDescription>

@@ -26,7 +26,7 @@ const FOLDERS: Folder[] = [{ id: "folder-packaging", name: "Упаковка", c
 function makeTender(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
 	return {
 		id,
-		name: `Тендер ${id}`,
+		name: `Запрос ${id}`,
 		companyId: "company-1",
 		folderId: "folder-packaging",
 		budget: 1_000_000,
@@ -62,7 +62,7 @@ function renderPage({ tenders = [], items = [], slug }: RenderOpts) {
 				<MemoryRouter initialEntries={[`/tenders/${slug}`]}>
 					<Routes>
 						<Route path="/tenders/:slug" element={<TenderDetailPage />} />
-						<Route path="/tenders" element={<div data-testid="tenders-list">Тендеры</div>} />
+						<Route path="/tenders" element={<div data-testid="tenders-list">Запросы</div>} />
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
@@ -89,7 +89,7 @@ describe("TenderDetailPage", () => {
 		});
 
 		await screen.findByRole("heading", { name: "Упаковочные материалы Q2" });
-		expect(screen.getByText("T-001")).toBeInTheDocument();
+		expect(screen.getByText("1")).toBeInTheDocument();
 
 		const tabs = screen.getAllByRole("tab");
 		expect(tabs.map((t) => t.getAttribute("aria-label"))).toEqual([
@@ -110,7 +110,7 @@ describe("TenderDetailPage", () => {
 			slug: "T-001",
 		});
 
-		await screen.findByRole("heading", { name: "Тендер T-001" });
+		await screen.findByRole("heading", { name: "Запрос T-001" });
 		expect(screen.getByTestId("tender-tab-suppliers")).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
@@ -130,7 +130,7 @@ describe("TenderDetailPage", () => {
 		});
 		const taskForOther = makeTask("task-other", {
 			name: "Не наша задача",
-			tender: { id: "T-002", name: "Другой тендер", companyId: "company-1" },
+			tender: { id: "T-002", name: "Другой запрос", companyId: "company-1" },
 		});
 		render(
 			<TestClientsProvider
@@ -148,14 +148,14 @@ describe("TenderDetailPage", () => {
 					<MemoryRouter initialEntries={["/tenders/T-001"]}>
 						<Routes>
 							<Route path="/tenders/:slug" element={<TenderDetailPage />} />
-							<Route path="/tenders" element={<div data-testid="tenders-list">Тендеры</div>} />
+							<Route path="/tenders" element={<div data-testid="tenders-list">Запросы</div>} />
 						</Routes>
 					</MemoryRouter>
 				</TooltipProvider>
 			</TestClientsProvider>,
 		);
 
-		await screen.findByRole("heading", { name: "Тендер T-001" });
+		await screen.findByRole("heading", { name: "Запрос T-001" });
 		fireEvent.click(screen.getByRole("tab", { name: "Задачи" }));
 
 		await waitFor(() => expect(screen.getByTestId("tender-tab-tasks")).toBeInTheDocument());
@@ -171,7 +171,7 @@ describe("TenderDetailPage", () => {
 		});
 	});
 
-	test("header shows tender id beside name and supplier metrics in place of TCO", async () => {
+	test("header shows inquiry number beside name and supplier metrics in place of TCO", async () => {
 		renderPage({
 			tenders: [makeTender("T-001", { name: "Упаковочные материалы Q2" })],
 			items: [makeItem("item-1", { tenderId: "T-001", currentPrice: 1776, annualQuantity: 100 })],
@@ -179,18 +179,18 @@ describe("TenderDetailPage", () => {
 		});
 
 		await screen.findByRole("heading", { name: "Упаковочные материалы Q2" });
-		expect(screen.getByText("T-001")).toBeInTheDocument();
+		expect(screen.getByText("1")).toBeInTheDocument();
 		expect(screen.queryByTestId("tender-tco-headline")).not.toBeInTheDocument();
 		expect(screen.getByTestId("tender-metric-contacted")).toBeInTheDocument();
 		expect(screen.getByTestId("tender-metric-quotes")).toBeInTheDocument();
 		expect(screen.getByTestId("tender-metric-refusals")).toBeInTheDocument();
 	});
 
-	test("renders «Тендер не найден» on unknown slug", async () => {
+	test("renders «Запрос не найден» on unknown slug", async () => {
 		renderPage({ tenders: [makeTender("T-001")], slug: "T-999" });
 
 		await waitFor(() => expect(screen.getByTestId("tender-not-found")).toBeInTheDocument());
-		expect(screen.getByText("Тендер не найден")).toBeInTheDocument();
+		expect(screen.getByText("Запрос не найден")).toBeInTheDocument();
 	});
 
 	test("archived tender still shows its positions in detail (cascade does not hide them here)", async () => {
@@ -203,7 +203,7 @@ describe("TenderDetailPage", () => {
 			slug: "T-001",
 		});
 
-		await screen.findByRole("heading", { name: "Тендер T-001" });
+		await screen.findByRole("heading", { name: "Запрос T-001" });
 		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
 
 		await waitFor(() => expect(screen.getByTestId("tender-tab-details")).toBeInTheDocument());

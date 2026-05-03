@@ -165,7 +165,7 @@ function csvEscape(value: string): string {
 }
 
 function downloadTasksCsv(tasks: Task[]) {
-	const header = ["Задача", "Тендер", "Назначена", "Вопросы", "Дедлайн", "Дата и время создания"];
+	const header = ["Задача", "Запрос", "Назначена", "Вопросы", "Дедлайн", "Дата и время создания"];
 	const rows = tasks.map((t) => [
 		csvEscape(t.name),
 		csvEscape(t.tender.name),
@@ -219,7 +219,7 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 					<PopoverTrigger asChild>
 						<button
 							type="button"
-							aria-label={activeTenderName ? `Фильтр: ${activeTenderName}` : "Фильтр по тендеру"}
+							aria-label={activeTenderName ? `Фильтр: ${activeTenderName}` : "Фильтр по запросу"}
 							className={cn(
 								"relative inline-flex h-8 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm transition-colors",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -231,13 +231,13 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 						</button>
 					</PopoverTrigger>
 				</TooltipTrigger>
-				<TooltipContent>{activeTenderName ? `Тендер: ${activeTenderName}` : "Фильтр по тендеру"}</TooltipContent>
+				<TooltipContent>{activeTenderName ? `Запрос: ${activeTenderName}` : "Фильтр по запросу"}</TooltipContent>
 			</Tooltip>
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="border-b p-2">
 					<Input
 						type="search"
-						placeholder="Поиск тендера…"
+						placeholder="Поиск запроса…"
 						value={searchInput}
 						onChange={(e) => handleSearchChange(e.target.value)}
 						spellCheck={false}

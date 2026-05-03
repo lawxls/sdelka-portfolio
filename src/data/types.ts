@@ -119,7 +119,7 @@ export interface ProcurementItem {
 	searchCompleted?: boolean;
 }
 
-/** Тендер — primary procurement container that bundles a 1:N collection of
+/** Запрос — primary procurement container that bundles a 1:N collection of
  * `ProcurementItem`s sharing one budget, deadline, company, and category.
  * Slug `id` (e.g. `T-001`) doubles as URL param. */
 export interface ProcurementInquiry {
@@ -250,7 +250,7 @@ export const PERMISSION_MODULE_KEYS = ["tenders", "positions", "tasks", "compani
 export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
 
 export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
-	tenders: "Тендеры",
+	tenders: "Запросы",
 	positions: "Позиции",
 	tasks: "Задачи",
 	companies: "Компании",

@@ -22,7 +22,7 @@ const FOLDERS: Folder[] = [
 const TENDERS: ProcurementInquiry[] = [
 	{
 		id: "T-001",
-		name: "Тестовый тендер 1",
+		name: "Тестовый запрос 1",
 		companyId: "company-1",
 		folderId: "folder-packaging",
 		budget: 10_000_000,
@@ -31,7 +31,7 @@ const TENDERS: ProcurementInquiry[] = [
 	},
 	{
 		id: "T-002",
-		name: "Тестовый тендер 2",
+		name: "Тестовый запрос 2",
 		companyId: "company-1",
 		folderId: "folder-fillings",
 		budget: 5_000_000,
@@ -75,9 +75,9 @@ afterEach(() => {
 });
 
 describe("TendersPage", () => {
-	test("renders the «Тендеры» heading", async () => {
+	test("renders the «Запросы» heading", async () => {
 		renderPage();
-		expect(screen.getByRole("heading", { name: "Тендеры" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
 	});
 
 	test("renders all 7 column headers", async () => {
@@ -103,11 +103,12 @@ describe("TendersPage", () => {
 		expect(rows.map((r) => r.getAttribute("data-testid"))).toEqual(["tender-row-T-002", "tender-row-T-001"]);
 	});
 
-	test("each row exposes id, name, and category badge", async () => {
+	test("each row exposes row number, name, and category badge", async () => {
 		renderPage();
+		// Sorted by createdAt desc: T-002 is row #1, T-001 is row #2.
 		const row = await screen.findByTestId("tender-row-T-001");
-		expect(within(row).getByText("T-001")).toBeInTheDocument();
-		expect(within(row).getByText("Тестовый тендер 1")).toBeInTheDocument();
+		expect(within(row).getByText("2")).toBeInTheDocument();
+		expect(within(row).getByText("Тестовый запрос 1")).toBeInTheDocument();
 		expect(within(row).getByText("Упаковка")).toBeInTheDocument();
 	});
 
@@ -152,7 +153,7 @@ describe("TendersPage", () => {
 			...TENDERS,
 			{
 				id: "T-099",
-				name: "Архивный тендер",
+				name: "Архивный запрос",
 				companyId: "company-1",
 				folderId: null,
 				budget: 0,

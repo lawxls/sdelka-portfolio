@@ -76,7 +76,7 @@ export function TendersToolbar({
 				<ToolbarSearch
 					value={current}
 					onChange={setDebounced}
-					ariaLabel="Поиск тендеров"
+					ariaLabel="Поиск запросов"
 					expanded={userExpanded}
 					onExpandedChange={setUserExpanded}
 				/>
@@ -129,7 +129,7 @@ export function TendersToolbar({
 			<ToolbarSearch
 				value={current}
 				onChange={setDebounced}
-				ariaLabel="Поиск тендеров"
+				ariaLabel="Поиск запросов"
 				expanded={userExpanded}
 				onExpandedChange={setUserExpanded}
 			/>
@@ -197,7 +197,7 @@ export function TendersToolbar({
 
 			{onCreateTender && (
 				<Button type="button" size="sm" onClick={onCreateTender} className="btn-cta ml-2 rounded-full border-0">
-					<span className="hidden sm:inline">Создать тендер</span>
+					<span className="hidden sm:inline">Создать запрос</span>
 					<span className="sm:hidden">Создать</span>
 				</Button>
 			)}

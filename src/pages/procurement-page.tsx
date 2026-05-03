@@ -211,7 +211,7 @@ export function ProcurementPage() {
 		).then((results) => {
 			const created = results.filter((r) => r.status === "fulfilled").length;
 			if (created === 0) return;
-			toast.success(created === 1 ? "Создан 1 тендер" : `Создано тендеров: ${created}`);
+			toast.success(created === 1 ? "Создан 1 запрос" : `Создано запросов: ${created}`);
 		});
 	}
 

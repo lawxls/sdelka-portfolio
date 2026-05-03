@@ -38,7 +38,7 @@ export function useCreateTenderWithItems() {
 			invalidateAfterItemListChange(queryClient);
 		},
 		onError: () => {
-			toast.error("Не удалось создать тендер");
+			toast.error("Не удалось создать запрос");
 		},
 	});
 }
@@ -54,7 +54,7 @@ export function useArchiveTenderCascade() {
 			invalidateAfterItemListChange(queryClient);
 		},
 		onError: () => {
-			toast.error("Не удалось переместить тендер");
+			toast.error("Не удалось переместить запрос");
 		},
 	});
 }

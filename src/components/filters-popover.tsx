@@ -125,7 +125,7 @@ function TenderSection({
 	}, [tenders, query]);
 	return (
 		<div data-testid="filters-section-tender" className="flex flex-col gap-1">
-			<div className={SECTION_LABEL}>Тендер</div>
+			<div className={SECTION_LABEL}>Запрос</div>
 			<div className="relative px-1">
 				<Search
 					aria-hidden="true"
@@ -135,7 +135,7 @@ function TenderSection({
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
 					placeholder="Поиск по названию или ID"
-					aria-label="Поиск по тендерам"
+					aria-label="Поиск по запросам"
 					className="h-8 pl-7 text-sm"
 				/>
 			</div>

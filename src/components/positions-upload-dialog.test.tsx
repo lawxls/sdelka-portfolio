@@ -33,7 +33,7 @@ describe("PositionsUploadDialog", () => {
 		renderDialog();
 		expect(
 			screen.queryByText((content) =>
-				content.replace(/ /g, " ").includes("ИИ сам сформирует тендеры на основе загруженных позиций"),
+				content.replace(/ /g, " ").includes("ИИ сам сформирует запросы на основе загруженных позиций"),
 			),
 		).not.toBeInTheDocument();
 	});

@@ -95,16 +95,16 @@ async function create(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("CreateTenderDrawer — wizard chrome", () => {
-	test("renders «Создать тендер» title and step 1 progress", () => {
+	test("renders «Создать запрос» title and step 1 progress", () => {
 		renderDrawer();
-		expect(screen.getByRole("heading", { name: "Создать тендер" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
 		expect(screen.getByText(/Шаг 1 из 3/)).toBeInTheDocument();
 		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
 	});
 
 	test("does not render when closed", () => {
 		renderDrawer({ open: false });
-		expect(screen.queryByRole("heading", { name: "Создать тендер" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("heading", { name: "Создать запрос" })).not.toBeInTheDocument();
 	});
 
 	test("step 1 footer has Отмена + Далее only", () => {
@@ -154,7 +154,7 @@ describe("CreateTenderDrawer — wizard chrome", () => {
 describe("CreateTenderDrawer — Step 1 tender meta", () => {
 	test("renders all tender-meta fields (name field is auto-generated, not user-provided)", () => {
 		renderDrawer();
-		expect(screen.queryByLabelText("Название тендера")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Название запроса")).not.toBeInTheDocument();
 		expect(screen.getByLabelText("Бюджет")).toBeInTheDocument();
 		expect(screen.getByLabelText("Дедлайн")).toBeInTheDocument();
 		expect(screen.getByLabelText("Компания")).toBeInTheDocument();

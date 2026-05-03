@@ -194,7 +194,7 @@ function generateTenderName(step1: Step1State): string {
 		const extra = step1.positions.filter((p) => p.name.trim() !== "").length - 1;
 		return extra > 0 ? `${base} +${extra}` : base;
 	}
-	return `Новый тендер ${formatShortDate(new Date().toISOString())}`;
+	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
 }
 
 function buildTenderInput(step1: Step1State, step2: Step2State): CreateTenderInput {

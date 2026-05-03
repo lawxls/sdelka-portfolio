@@ -102,6 +102,11 @@ function formatDate(iso: string): string {
 	return dateFormatter.format(d);
 }
 
+function formatInquiryNumber(id: string): string {
+	const match = id.match(/\d+/);
+	return match ? String(Number(match[0])) : id;
+}
+
 export function TenderDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
@@ -171,7 +176,7 @@ export function TenderDetailPage() {
 					{isLoading && (
 						<div className="flex h-full flex-col gap-4 p-6">
 							<SheetHeader className="sr-only">
-								<SheetTitle>Загрузка тендера</SheetTitle>
+								<SheetTitle>Загрузка запроса</SheetTitle>
 							</SheetHeader>
 							<Skeleton className="h-6 w-64" data-testid="tender-detail-skeleton" />
 							<Skeleton className="h-4 w-40" />
@@ -180,15 +185,15 @@ export function TenderDetailPage() {
 					{!isLoading && (isError || !tender) && (
 						<div className="flex h-full flex-col p-6">
 							<SheetHeader className="sr-only">
-								<SheetTitle>Тендер недоступен</SheetTitle>
+								<SheetTitle>Запрос недоступен</SheetTitle>
 							</SheetHeader>
 							<div
 								className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
 								data-testid="tender-not-found"
 							>
-								<p className="text-sm font-medium">Тендер не найден</p>
+								<p className="text-sm font-medium">Запрос не найден</p>
 								<p className="max-w-[20rem] text-pretty text-sm text-muted-foreground">
-									Возможно, ссылка устарела или тендер был удалён.
+									Возможно, ссылка устарела или запрос был удалён.
 								</p>
 							</div>
 						</div>
@@ -259,13 +264,15 @@ function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTa
 		<div className="flex h-full flex-col overflow-hidden">
 			<SheetHeader>
 				<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-					<span className="font-heading text-base font-medium text-foreground">{tender.id}</span>
+					<span className="font-heading text-base font-medium text-foreground tabular-nums">
+						{formatInquiryNumber(tender.id)}
+					</span>
 					<span aria-hidden="true" className="font-heading text-base font-medium text-foreground">
 						•
 					</span>
 					<SheetTitle className="leading-snug">{tender.name}</SheetTitle>
 				</div>
-				<SheetDescription className="sr-only">Детали тендера</SheetDescription>
+				<SheetDescription className="sr-only">Детали запроса</SheetDescription>
 				<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
 					<span className={cn("inline-flex items-center gap-1.5 font-normal", statusCfg.className)}>
 						<ProcurementStatusIcon status={status} iconClassName="size-3.5" />
@@ -379,8 +386,8 @@ function HeaderMetric({
 function NoItemsHint({ tab }: { tab: "suppliers" | "offers" }) {
 	const message =
 		tab === "suppliers"
-			? "В этом тендере пока нет позиций — поставщиков нет."
-			: "В этом тендере пока нет позиций — предложений нет.";
+			? "В этом запросе пока нет позиций — поставщиков нет."
+			: "В этом запросе пока нет позиций — предложений нет.";
 	return <p className="text-pretty py-8 text-center text-sm text-muted-foreground">{message}</p>;
 }
 

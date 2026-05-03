@@ -143,7 +143,7 @@ export function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 		id,
 		name: `Task ${id}`,
 		status: "assigned",
-		tender: { id: "T-001", name: "Тендер арматуры", companyId: "company-1" },
+		tender: { id: "T-001", name: "Запрос арматуры", companyId: "company-1" },
 		assignee: { id: "user-1", firstName: "Алексей", lastName: "Иванов", email: "ivanov@test.com", avatarIcon: "blue" },
 		createdAt: "2026-03-15T10:00:00.000Z",
 		deadlineAt: "2026-04-01T18:00:00.000Z",
