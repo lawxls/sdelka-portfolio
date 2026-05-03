@@ -57,20 +57,24 @@ export function SettingsLayout() {
 		const crumb = BREADCRUMBS[location.pathname];
 		if (isMobile && crumb) {
 			return (
-				<nav className="flex items-center gap-1 text-sm leading-none" aria-label="breadcrumb">
+				<nav className="flex min-w-0 items-center gap-1 text-sm leading-none" aria-label="breadcrumb">
 					<Button
 						type="button"
 						asChild
 						variant="ghost"
 						size="icon-sm"
 						aria-label="Назад к настройкам"
-						className="relative after:absolute after:inset-[-4px] after:content-['']"
+						className="relative shrink-0 after:absolute after:inset-[-4px] after:content-['']"
 					>
 						<Link to="/settings">
 							<ArrowLeft aria-hidden="true" />
 						</Link>
 					</Button>
-					<span className="font-semibold text-foreground">{crumb[1]}</span>
+					<span className="min-w-0 truncate text-muted-foreground">{crumb[0]}</span>
+					<span aria-hidden="true" className="shrink-0 text-border">
+						/
+					</span>
+					<span className="min-w-0 truncate font-semibold text-foreground">{crumb[1]}</span>
 				</nav>
 			);
 		}
