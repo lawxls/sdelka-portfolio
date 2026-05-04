@@ -108,11 +108,11 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		throw await mapStatusToError(res);
 	}
 
-	async function request<T>(method: string, path: string, opts: BodyOptions = {}): Promise<T> {
+	async function withRefreshOnAuth<T>(exec: () => Promise<T>, skipRefresh?: boolean): Promise<T> {
 		try {
-			return await rawRequest<T>(method, path, opts);
+			return await exec();
 		} catch (err) {
-			if (opts.skipRefresh) throw err;
+			if (skipRefresh) throw err;
 			if (!(err instanceof AuthError) || err.status !== 401) throw err;
 			const refresh = options.refresh ?? defaultRefresh;
 			if (!refresh) throw err;
@@ -131,13 +131,17 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 				throw err;
 			}
 
-			return await rawRequest<T>(method, path, opts);
+			return await exec();
 		}
 	}
 
-	async function requestBinary(
+	function request<T>(method: string, path: string, opts: BodyOptions = {}): Promise<T> {
+		return withRefreshOnAuth(() => rawRequest<T>(method, path, opts), opts.skipRefresh);
+	}
+
+	async function rawBinary(
 		path: string,
-		opts: RequestOptions & { fallbackFilename?: string } = {},
+		opts: RequestOptions & { fallbackFilename?: string },
 	): Promise<BinaryDownload> {
 		const url = baseUrl ? `${baseUrl}${path}` : path;
 		const headers = buildHeaders("GET", false);
@@ -153,6 +157,13 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		const blob = await res.blob();
 		const filename = filenameFrom(res.headers.get("content-disposition"), path, opts.fallbackFilename);
 		return { blob, filename };
+	}
+
+	function requestBinary(
+		path: string,
+		opts: RequestOptions & { fallbackFilename?: string } = {},
+	): Promise<BinaryDownload> {
+		return withRefreshOnAuth(() => rawBinary(path, opts));
 	}
 
 	return {

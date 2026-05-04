@@ -20,8 +20,8 @@ export function LoginPage() {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [throttleStartSeconds, setThrottleStartSeconds] = useState(0);
-	const throttleSecondsLeft = useCountdown(throttleStartSeconds);
+	const [throttleUntil, setThrottleUntil] = useState<number | null>(null);
+	const throttleSecondsLeft = useCountdown(throttleUntil);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -41,7 +41,7 @@ export function LoginPage() {
 			setError(result.error);
 			setFieldErrors(result.fieldErrors);
 			if (err instanceof TooManyRequestsError && err.retryAfter && err.retryAfter > 0) {
-				setThrottleStartSeconds(err.retryAfter);
+				setThrottleUntil(Date.now() + err.retryAfter * 1000);
 			}
 		}
 	}

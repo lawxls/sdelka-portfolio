@@ -463,4 +463,25 @@ describe("httpClient — getBinary", () => {
 
 		await expect(http.getBinary("/items/export")).rejects.toBeInstanceOf(NetworkError);
 	});
+
+	it("401 triggers refresh-and-retry just like JSON requests", async () => {
+		let unauthed = true;
+		const fetchSpy = vi.fn().mockImplementation(async () => {
+			if (unauthed) return new Response(null, { status: 401 });
+			return new Response("bytes", {
+				status: 200,
+				headers: { "content-disposition": 'attachment; filename="r.xlsx"' },
+			});
+		});
+		const refresh = vi.fn().mockImplementation(async () => {
+			unauthed = false;
+		});
+
+		const http = setup(fetchSpy, { refresh });
+		const result = await http.getBinary("/items/export");
+
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(result.filename).toBe("r.xlsx");
+		expect(await result.blob.text()).toBe("bytes");
+	});
 });

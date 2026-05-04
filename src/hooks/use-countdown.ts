@@ -2,28 +2,30 @@
 import { useEffect, useState } from "react";
 
 /**
- * Counts down from `seconds` to 0 once per second. Pass a positive number to
- * (re)start the countdown; passing 0 leaves the hook idle. Used by the login
- * page to disable submit while the backend's `Retry-After` window is in
- * effect.
+ * Counts down to a deadline timestamp (`Date.now()`-style ms), updated once
+ * per second. Pass `null` to leave idle. The deadline-based API guarantees a
+ * fresh value on every restart — two consecutive 429s with identical
+ * `Retry-After` produce different `until` timestamps, so the effect re-runs
+ * and the countdown actually restarts.
  */
-export function useCountdown(seconds: number): number {
-	const [remaining, setRemaining] = useState(seconds);
+export function useCountdown(until: number | null): number {
+	const [remaining, setRemaining] = useState(() => secondsUntil(until));
 
 	useEffect(() => {
-		setRemaining(seconds);
-		if (seconds <= 0) return;
+		setRemaining(secondsUntil(until));
+		if (!until) return;
 		const id = window.setInterval(() => {
-			setRemaining((s) => {
-				if (s <= 1) {
-					window.clearInterval(id);
-					return 0;
-				}
-				return s - 1;
-			});
+			const left = secondsUntil(until);
+			setRemaining(left);
+			if (left <= 0) window.clearInterval(id);
 		}, 1000);
 		return () => window.clearInterval(id);
-	}, [seconds]);
+	}, [until]);
 
 	return remaining;
+}
+
+function secondsUntil(until: number | null): number {
+	if (!until) return 0;
+	return Math.max(0, Math.ceil((until - Date.now()) / 1000));
 }

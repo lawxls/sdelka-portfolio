@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -8,7 +8,9 @@ import { AuthLayout } from "@/components/auth-layout";
 import type { SessionClient } from "@/data/clients/session-client";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { DataClientsProvider } from "@/data/clients-context";
+import { TooManyRequestsError } from "@/data/errors";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
+import { fakeSessionClient } from "@/data/test-clients-provider";
 import { mockHostname } from "@/test-utils";
 import { LoginPage } from "./login-page";
 
@@ -203,6 +205,50 @@ describe("LoginPage", () => {
 		});
 		expect(currentLocation?.search).toBe("?folder=none");
 		expect(currentLocation?.hash).toBe("#details");
+	});
+
+	test("repeat 429 with the same Retry-After restarts the throttle countdown", async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		try {
+			const login = vi
+				.fn()
+				.mockRejectedValueOnce(new TooManyRequestsError(2))
+				.mockRejectedValueOnce(new TooManyRequestsError(2));
+			const session = fakeSessionClient({ login });
+
+			render(
+				<QueryClientProvider client={queryClient}>
+					<DataClientsProvider clients={{ session }}>
+						<MemoryRouter initialEntries={["/login"]}>
+							<Routes>
+								<Route element={<AuthLayout />}>
+									<Route path="/login" element={<LoginPage />} />
+								</Route>
+							</Routes>
+						</MemoryRouter>
+					</DataClientsProvider>
+				</QueryClientProvider>,
+			);
+			const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+			await user.type(screen.getByLabelText("Email"), "a@b.com");
+			await user.type(screen.getByLabelText("Пароль"), "pass1234");
+			await user.click(screen.getByRole("button", { name: "Войти" }));
+
+			await waitFor(() => expect(screen.getByRole("button", { name: /Подождите 2 с/ })).toBeInTheDocument());
+
+			// Run the countdown to zero so the button re-enables.
+			await act(async () => {
+				vi.advanceTimersByTime(2000);
+			});
+			await waitFor(() => expect(screen.getByRole("button", { name: "Войти" })).toBeEnabled());
+
+			// Second 429 with the same retryAfter must restart the countdown.
+			await user.click(screen.getByRole("button", { name: "Войти" }));
+			await waitFor(() => expect(screen.getByRole("button", { name: /Подождите 2 с/ })).toBeInTheDocument());
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	test("all text is in Russian", () => {
