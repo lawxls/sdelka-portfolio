@@ -1,17 +1,32 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
+import type { SessionClient } from "@/data/clients/session-client";
+import { fakeSessionClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { mockHostname } from "@/test-utils";
 import { ForgotPasswordPage } from "./forgot-password-page";
 
 let queryClient: QueryClient;
 
-function renderForgotPassword(initialEntries = ["/forgot-password"]) {
+function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
+	return fakeSessionClient({
+		forgotPassword: vi.fn().mockResolvedValue(undefined),
+		...overrides,
+	});
+}
+
+function renderForgotPassword({
+	initialEntries = ["/forgot-password"],
+	session = buildSession(),
+}: {
+	initialEntries?: string[];
+	session?: SessionClient;
+} = {}) {
 	return render(
-		<QueryClientProvider client={queryClient}>
+		<TestClientsProvider queryClient={queryClient} clients={{ session }}>
 			<MemoryRouter initialEntries={initialEntries}>
 				<Routes>
 					<Route element={<AuthLayout />}>
@@ -20,7 +35,7 @@ function renderForgotPassword(initialEntries = ["/forgot-password"]) {
 					<Route path="/login" element={<div>Login Page</div>} />
 				</Routes>
 			</MemoryRouter>
-		</QueryClientProvider>,
+		</TestClientsProvider>,
 	);
 }
 
@@ -51,7 +66,21 @@ describe("ForgotPasswordPage", () => {
 		expect(screen.getByText("Login Page")).toBeInTheDocument();
 	});
 
-	test("shows back to login link after submission", async () => {
+	test("submitting fires forgotPassword with the email", async () => {
+		const forgotPassword = vi.fn().mockResolvedValue(undefined);
+		const session = buildSession({ forgotPassword });
+		renderForgotPassword({ session });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByLabelText("Email"), "user@example.com");
+		await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+		await waitFor(() => {
+			expect(forgotPassword).toHaveBeenCalledWith({ email: "user@example.com" });
+		});
+	});
+
+	test("shows the anti-enumeration success copy after submission", async () => {
 		renderForgotPassword();
 		const user = userEvent.setup();
 
@@ -61,28 +90,23 @@ describe("ForgotPasswordPage", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Проверьте почту")).toBeInTheDocument();
 		});
-		await user.click(screen.getByRole("link", { name: "Назад к входу" }));
-		expect(screen.getByText("Login Page")).toBeInTheDocument();
-	});
-
-	test("all text is in Russian", () => {
-		renderForgotPassword();
-		expect(screen.getByRole("heading", { name: "Восстановление пароля" })).toBeInTheDocument();
-		expect(screen.getByText("Введите email для восстановления доступа")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Отправить" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Назад к входу" })).toBeInTheDocument();
-	});
-
-	test("submits email and shows confirmation message", async () => {
-		renderForgotPassword();
-		const user = userEvent.setup();
-
-		await user.type(screen.getByLabelText("Email"), "user@example.com");
-		await user.click(screen.getByRole("button", { name: "Отправить" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("Проверьте почту")).toBeInTheDocument();
-		});
+		expect(
+			screen.getByText("Если аккаунт существует, мы отправили ссылку для восстановления пароля"),
+		).toBeInTheDocument();
 		expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+	});
+
+	test("backend rejection still surfaces the success copy (anti-enumeration: defense-in-depth)", async () => {
+		const forgotPassword = vi.fn().mockRejectedValue(new Error("network blip"));
+		const session = buildSession({ forgotPassword });
+		renderForgotPassword({ session });
+		const user = userEvent.setup();
+
+		await user.type(screen.getByLabelText("Email"), "user@example.com");
+		await user.click(screen.getByRole("button", { name: "Отправить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Проверьте почту")).toBeInTheDocument();
+		});
 	});
 });

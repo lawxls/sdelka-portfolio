@@ -120,6 +120,8 @@ describe("SettingsSidebar logout", () => {
 			confirmEmail: () => Promise.reject(new Error("not used")),
 			checkEmail: () => Promise.reject(new Error("not used")),
 			resendConfirmation: () => Promise.reject(new Error("not used")),
+			forgotPassword: () => Promise.reject(new Error("not used")),
+			resetPassword: () => Promise.reject(new Error("not used")),
 		};
 		renderSidebar("/settings/profile", session);
 

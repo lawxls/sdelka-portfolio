@@ -2,11 +2,13 @@ import type {
 	CheckEmailResult,
 	ConfirmEmailInput,
 	ConfirmEmailResult,
+	ForgotPasswordInput,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
 	RegisterInput,
 	RegisterResult,
+	ResetPasswordInput,
 } from "../domains/session";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { SessionClient } from "./session-client";
@@ -41,5 +43,11 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 
 		resendConfirmation: (email: string) =>
 			http.post<void>(`/auth/resend-confirmation/`, { body: { email }, skipRefresh: true }),
+
+		forgotPassword: (input: ForgotPasswordInput) =>
+			http.post<void>(`/auth/forgot-password/`, { body: input, skipRefresh: true }),
+
+		resetPassword: (input: ResetPasswordInput) =>
+			http.post<void>(`/auth/reset-password/`, { body: input, skipRefresh: true }),
 	};
 }

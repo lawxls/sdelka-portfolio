@@ -2,28 +2,31 @@ import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
-import { extractFormErrors, resetPassword } from "@/data/auth-api";
+import { extractFormErrors } from "@/data/auth-errors";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
+import { useResetPassword } from "@/data/use-session";
 
 export function ResetPasswordPage() {
 	const [searchParams] = useSearchParams();
+	const uid = searchParams.get("uid");
 	const token = searchParams.get("token");
 
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [submitting, setSubmitting] = useState(false);
 	const [success, setSuccess] = useState(false);
 
-	if (!token) {
+	const resetPassword = useResetPassword();
+
+	if (!uid || !token) {
 		return (
 			<>
-				<h1 className="text-2xl font-semibold">Ошибка</h1>
-				<p className="mt-2 text-sm text-muted-foreground">Ссылка недействительна</p>
+				<h1 className="text-2xl font-semibold">Ссылка недействительна</h1>
+				<p className="mt-2 text-sm text-muted-foreground">Запросите новую ссылку для восстановления пароля</p>
 				<p className="mt-4 text-sm">
-					<Link to="/login" className="text-foreground hover:underline">
-						Перейти к входу
+					<Link to="/forgot-password" className="text-foreground hover:underline">
+						Запросить ссылку
 					</Link>
 				</p>
 			</>
@@ -37,21 +40,29 @@ export function ResetPasswordPage() {
 
 		const validationErrors = validatePasswordWithConfirm(password, confirmPassword);
 		if (validationErrors) {
-			setFieldErrors(validationErrors);
+			// validatePasswordWithConfirm emits keys `password` / `password_confirm`;
+			// remap to the API field names so backend ValidationError responses
+			// (which key by `new_password` / `new_password_confirm`) blend without
+			// a remap layer in the JSX.
+			const remapped: Record<string, string> = {};
+			if (validationErrors.password) remapped.new_password = validationErrors.password;
+			if (validationErrors.password_confirm) remapped.new_password_confirm = validationErrors.password_confirm;
+			setFieldErrors(remapped);
 			return;
 		}
 
-		setSubmitting(true);
-
 		try {
-			await resetPassword(token as string, password);
+			await resetPassword.mutateAsync({
+				uid: uid as string,
+				token: token as string,
+				new_password: password,
+				new_password_confirm: confirmPassword,
+			});
 			setSuccess(true);
 		} catch (err: unknown) {
 			const result = extractFormErrors(err);
 			setError(result.error);
 			setFieldErrors(result.fieldErrors);
-		} finally {
-			setSubmitting(false);
 		}
 	}
 
@@ -78,32 +89,37 @@ export function ResetPasswordPage() {
 				{error && (
 					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
 						{error}
+						<p className="mt-2">
+							<Link to="/forgot-password" className="font-medium text-foreground hover:underline">
+								Запросить новую ссылку
+							</Link>
+						</p>
 					</div>
 				)}
 
 				<FloatingInput
 					label="Пароль"
-					name="password"
+					name="new_password"
 					type="password"
 					value={password}
 					onChange={(e) => setPassword(e.target.value)}
-					error={fieldErrors.password}
+					error={fieldErrors.new_password}
 					autoComplete="new-password"
 					required
 				/>
 
 				<FloatingInput
 					label="Подтвердите пароль"
-					name="confirmPassword"
+					name="new_password_confirm"
 					type="password"
 					value={confirmPassword}
 					onChange={(e) => setConfirmPassword(e.target.value)}
-					error={fieldErrors.password_confirm}
+					error={fieldErrors.new_password_confirm}
 					autoComplete="new-password"
 					required
 				/>
 
-				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
+				<Button type="submit" size="xl" className="w-full" disabled={resetPassword.isPending}>
 					Сохранить
 				</Button>
 			</form>

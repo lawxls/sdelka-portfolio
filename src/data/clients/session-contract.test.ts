@@ -150,6 +150,34 @@ function httpAdapter(): Adapter {
 			// Anti-enumeration: identical 200 regardless of email validity.
 			respond: () => ({ status: 200 }),
 		},
+		{
+			method: "POST",
+			path: /^\/auth\/forgot-password\/$/,
+			// Anti-enumeration: identical 200 regardless of email validity.
+			respond: () => ({ status: 200 }),
+		},
+		{
+			method: "POST",
+			path: /^\/auth\/reset-password\/$/,
+			respond: ({ init }) => {
+				const data = JSON.parse(init?.body as string) as {
+					uid: string;
+					token: string;
+					new_password: string;
+					new_password_confirm: string;
+				};
+				if (data.new_password !== data.new_password_confirm) {
+					return {
+						status: 400,
+						body: { new_password_confirm: [{ code: "passwords_do_not_match", message: "Mismatch" }] },
+					};
+				}
+				if (data.uid === "good-uid" && data.token === "good-token") {
+					return { status: 204 };
+				}
+				return { status: 400, body: { code: "invalid_or_expired_link" } };
+			},
+		},
 	];
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
@@ -299,6 +327,46 @@ describe.each(adapters.map((make) => [make().name, make]))("SessionClient contra
 	it("resendConfirmation resolves for an already-verified email (anti-enumeration: 200)", async () => {
 		await expect(client.resendConfirmation("valid@example.com")).resolves.toBeUndefined();
 	});
+
+	it("forgotPassword resolves for a known email (anti-enumeration: 200)", async () => {
+		await expect(client.forgotPassword({ email: "valid@example.com" })).resolves.toBeUndefined();
+	});
+
+	it("forgotPassword resolves for an unknown email (anti-enumeration: 200)", async () => {
+		await expect(client.forgotPassword({ email: "nobody@example.com" })).resolves.toBeUndefined();
+	});
+
+	it("resetPassword with mismatched passwords throws ValidationError carrying passwords_do_not_match", async () => {
+		try {
+			await client.resetPassword({
+				uid: "any-uid",
+				token: "any-token",
+				new_password: "newSecure1",
+				new_password_confirm: "different",
+			});
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(ValidationError);
+			const body = (err as ValidationError).body as { new_password_confirm?: Array<{ code: string }> };
+			expect(body.new_password_confirm?.[0]?.code).toBe("passwords_do_not_match");
+		}
+	});
+
+	it("resetPassword with invalid uid/token throws ValidationError carrying invalid_or_expired_link", async () => {
+		try {
+			await client.resetPassword({
+				uid: "wrong-uid",
+				token: "wrong-token",
+				new_password: "newSecure1",
+				new_password_confirm: "newSecure1",
+			});
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(ValidationError);
+			const body = (err as ValidationError).body as { code?: string };
+			expect(body.code).toBe("invalid_or_expired_link");
+		}
+	});
 });
 
 /**
@@ -360,6 +428,43 @@ describe("InMemorySessionClient — refresh-unavailable branch", () => {
 		// confirming with the rotated token succeeds (auto-login)
 		const confirmed = await client.confirmEmail({ uid: String(registered.user.id), token: "second-token" });
 		expect(confirmed.user.email).toBe("newuser@example.com");
+	});
+
+	it("forgotPassword → resetPassword round-trip rotates the password so the user can log in with the new one", async () => {
+		const RESET_TOKEN = "reset-abc";
+		const client = createInMemorySessionClient({
+			users: SEED_USERS,
+			generateConfirmationToken: () => RESET_TOKEN,
+		});
+
+		// Mint a reset token for the verified user.
+		await client.forgotPassword({ email: "valid@example.com" });
+
+		// Reset with the wrong token: rejects.
+		await expect(
+			client.resetPassword({
+				uid: "7",
+				token: "wrong-token",
+				new_password: "newSecure1",
+				new_password_confirm: "newSecure1",
+			}),
+		).rejects.toBeInstanceOf(ValidationError);
+
+		// Reset with the right token: succeeds.
+		await expect(
+			client.resetPassword({
+				uid: "7",
+				token: RESET_TOKEN,
+				new_password: "newSecure1",
+				new_password_confirm: "newSecure1",
+			}),
+		).resolves.toBeUndefined();
+
+		// The old password no longer works.
+		await expect(client.login({ email: "valid@example.com", password: "good-pass" })).rejects.toBeInstanceOf(AuthError);
+		// The new password does.
+		const session = await client.login({ email: "valid@example.com", password: "newSecure1" });
+		expect(session.user.email).toBe("valid@example.com");
 	});
 
 	it("register followed by confirmEmail flips verified and returns access + user (auto-login)", async () => {
@@ -433,5 +538,17 @@ describe("HTTP-only error branches", () => {
 		const result = await client.confirmEmail({ uid: "good-uid", token: "good-token" });
 		expect(result.user.email).toBe("confirmed@example.com");
 		expect(result.access).toBe("access-confirmed");
+	});
+
+	it("resetPassword with the documented good uid/token resolves with no body (204)", async () => {
+		const client = httpAdapter().build();
+		await expect(
+			client.resetPassword({
+				uid: "good-uid",
+				token: "good-token",
+				new_password: "newSecure1",
+				new_password_confirm: "newSecure1",
+			}),
+		).resolves.toBeUndefined();
 	});
 });

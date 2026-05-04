@@ -2,11 +2,13 @@ import type {
 	CheckEmailResult,
 	ConfirmEmailInput,
 	ConfirmEmailResult,
+	ForgotPasswordInput,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
 	RegisterInput,
 	RegisterResult,
+	ResetPasswordInput,
 	SessionUser,
 } from "../domains/session";
 import { AuthError, ValidationError } from "../errors";
@@ -23,6 +25,10 @@ interface SessionUserSeed {
 	 * real backend issues opaque uid+token pairs in the email link; this stand-in
 	 * just uses the user id and a generated token so tests can drive the flow. */
 	confirmationToken?: string;
+	/** Pending password-reset token. Minted by `forgotPassword`, consumed by
+	 * `resetPassword`. Same uid-as-stringified-id convention as confirmation
+	 * tokens — keeps the round-trip drivable from a test. */
+	passwordResetToken?: string;
 }
 
 const DEFAULT_SEED: SessionUserSeed[] = [
@@ -131,6 +137,35 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			if (match && match.verified === false) {
 				match.confirmationToken = genToken();
 			}
+		},
+
+		async forgotPassword(input: ForgotPasswordInput): Promise<void> {
+			await delay();
+			// Anti-enumeration: succeed regardless of whether the email exists.
+			// If the user does exist, mint a reset token so a test can drive the
+			// round-trip into resetPassword.
+			const match = users.find((u) => u.email === input.email);
+			if (match) {
+				match.passwordResetToken = genToken();
+			}
+		},
+
+		async resetPassword(input: ResetPasswordInput): Promise<void> {
+			await delay();
+			if (input.new_password !== input.new_password_confirm) {
+				throw new ValidationError(
+					{},
+					{
+						new_password_confirm: [{ code: "passwords_do_not_match", message: "Passwords do not match" }],
+					},
+				);
+			}
+			const match = findByUid(input.uid);
+			if (!match || match.passwordResetToken !== input.token) {
+				throw new ValidationError({}, { code: "invalid_or_expired_link" });
+			}
+			match.password = input.new_password;
+			match.passwordResetToken = undefined;
 		},
 	};
 }

@@ -2,27 +2,25 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
-import { forgotPassword } from "@/data/auth-api";
+import { useForgotPassword } from "@/data/use-session";
 
 export function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
 	const [submitted, setSubmitted] = useState(false);
-	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+
+	const forgotPassword = useForgotPassword();
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		setError(null);
-		setSubmitting(true);
-
 		try {
-			await forgotPassword(email);
-			setSubmitted(true);
+			await forgotPassword.mutateAsync({ email });
 		} catch {
-			setError("Не удалось отправить запрос. Попробуйте позже");
-		} finally {
-			setSubmitting(false);
+			// Anti-enumeration: render the same success copy regardless of whether
+			// the backend matched the email. Defense-in-depth — the HTTP backend
+			// returns 200 either way, but a network blip / in-memory adapter quirk
+			// shouldn't tell the user the email is unknown.
 		}
+		setSubmitted(true);
 	}
 
 	if (submitted) {
@@ -30,7 +28,7 @@ export function ForgotPasswordPage() {
 			<>
 				<h1 className="text-2xl font-semibold">Проверьте почту</h1>
 				<p className="mt-2 text-sm text-muted-foreground">
-					Мы отправили инструкции по восстановлению пароля на {email}
+					Если аккаунт существует, мы отправили ссылку для восстановления пароля
 				</p>
 				<p className="mt-6 text-sm">
 					<Link to="/login" className="text-foreground hover:underline">
@@ -47,12 +45,6 @@ export function ForgotPasswordPage() {
 			<p className="mt-1 text-sm text-muted-foreground">Введите email для восстановления доступа</p>
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
-				{error && (
-					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-						{error}
-					</div>
-				)}
-
 				<FloatingInput
 					label="Email"
 					name="email"
@@ -63,7 +55,7 @@ export function ForgotPasswordPage() {
 					required
 				/>
 
-				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
+				<Button type="submit" size="xl" className="w-full" disabled={forgotPassword.isPending}>
 					Отправить
 				</Button>
 			</form>

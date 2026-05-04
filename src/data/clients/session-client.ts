@@ -2,11 +2,13 @@ import type {
 	CheckEmailResult,
 	ConfirmEmailInput,
 	ConfirmEmailResult,
+	ForgotPasswordInput,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
 	RegisterInput,
 	RegisterResult,
+	ResetPasswordInput,
 } from "../domains/session";
 
 /**
@@ -15,8 +17,7 @@ import type {
  * through context, so swapping adapters is a one-line change in the
  * composition root.
  *
- * Subsequent slices add `forgotPassword`, `resetPassword`,
- * `requestPasswordChange`, and `resendConfirmation`.
+ * Subsequent slices add `requestPasswordChange`.
  */
 export interface SessionClient {
 	login(input: LoginInput): Promise<LoginResult>;
@@ -44,4 +45,13 @@ export interface SessionClient {
 	 * already verified, or has never been seen — the UI never tells the user
 	 * which case applies. */
 	resendConfirmation(email: string): Promise<void>;
+	/** Request a password-reset email. Anti-enumeration: the backend always
+	 * responds 200, regardless of whether the email matches a known account —
+	 * the UI surfaces the same generic "если аккаунт существует, мы отправили
+	 * письмо" success copy in either case. */
+	forgotPassword(input: ForgotPasswordInput): Promise<void>;
+	/** Consume a password-reset uid+token pair from the email link, validate
+	 * the new password, and persist it. The user is NOT auto-logged-in — they
+	 * land on a "пароль изменён" success screen and re-enter via /login. */
+	resetPassword(input: ResetPasswordInput): Promise<void>;
 }

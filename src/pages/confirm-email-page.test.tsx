@@ -20,6 +20,8 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		confirmEmail: vi.fn(),
 		checkEmail: vi.fn(),
 		resendConfirmation: vi.fn(),
+		forgotPassword: vi.fn(),
+		resetPassword: vi.fn(),
 		...overrides,
 	};
 }

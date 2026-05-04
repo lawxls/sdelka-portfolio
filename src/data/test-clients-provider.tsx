@@ -259,6 +259,8 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 		confirmEmail: notImplemented("confirmEmail"),
 		checkEmail: notImplemented("checkEmail"),
 		resendConfirmation: notImplemented("resendConfirmation"),
+		forgotPassword: notImplemented("forgotPassword"),
+		resetPassword: notImplemented("resetPassword"),
 		...overrides,
 	};
 }

@@ -10,10 +10,12 @@ import { fakeSessionClient, TestClientsProvider } from "./test-clients-provider"
 import {
 	useCheckEmail,
 	useConfirmEmail,
+	useForgotPassword,
 	useLogin,
 	useLogout,
 	useRegister,
 	useResendConfirmation,
+	useResetPassword,
 	useSessionBootstrap,
 } from "./use-session";
 
@@ -272,6 +274,81 @@ describe("useResendConfirmation", () => {
 		});
 
 		expect(resendConfirmation).toHaveBeenCalledOnce();
+	});
+});
+
+describe("useForgotPassword", () => {
+	test("calls client.forgotPassword with the email and resolves", async () => {
+		const forgotPassword = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ forgotPassword });
+
+		const { result } = renderHook(() => useForgotPassword(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync({ email: "user@example.com" });
+		});
+
+		expect(forgotPassword).toHaveBeenCalledWith({ email: "user@example.com" });
+	});
+
+	test("propagates errors so the page can swallow them in onError (anti-enumeration)", async () => {
+		const forgotPassword = vi.fn().mockRejectedValue(new Error("network blip"));
+		const client = fakeSessionClient({ forgotPassword });
+
+		const { result } = renderHook(() => useForgotPassword(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(result.current.mutateAsync({ email: "user@example.com" })).rejects.toThrow();
+		});
+
+		expect(forgotPassword).toHaveBeenCalledOnce();
+	});
+});
+
+describe("useResetPassword", () => {
+	test("calls client.resetPassword with the full payload and resolves on success", async () => {
+		const resetPassword = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ resetPassword });
+
+		const { result } = renderHook(() => useResetPassword(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync({
+				uid: "good-uid",
+				token: "good-token",
+				new_password: "newSecure1",
+				new_password_confirm: "newSecure1",
+			});
+		});
+
+		expect(resetPassword).toHaveBeenCalledWith({
+			uid: "good-uid",
+			token: "good-token",
+			new_password: "newSecure1",
+			new_password_confirm: "newSecure1",
+		});
+		// Reset is not an auto-login flow — the user re-enters via /login.
+		expect(getAccessToken()).toBeNull();
+	});
+
+	test("does not store any token when resetPassword throws (auth-related errors only flow through extractFormErrors)", async () => {
+		const resetPassword = vi.fn().mockRejectedValue(new ValidationError({}, { code: "invalid_or_expired_link" }));
+		const client = fakeSessionClient({ resetPassword });
+
+		const { result } = renderHook(() => useResetPassword(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(
+				result.current.mutateAsync({
+					uid: "bad-uid",
+					token: "bad-token",
+					new_password: "newSecure1",
+					new_password_confirm: "newSecure1",
+				}),
+			).rejects.toBeInstanceOf(ValidationError);
+		});
+
+		expect(getAccessToken()).toBeNull();
 	});
 });
 

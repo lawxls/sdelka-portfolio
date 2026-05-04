@@ -7,10 +7,12 @@ import type {
 	CheckEmailResult,
 	ConfirmEmailInput,
 	ConfirmEmailResult,
+	ForgotPasswordInput,
 	LoginInput,
 	LoginResult,
 	RegisterInput,
 	RegisterResult,
+	ResetPasswordInput,
 } from "./domains/session";
 
 /**
@@ -116,6 +118,36 @@ export function useResendConfirmation() {
 
 	return useMutation({
 		mutationFn: async (email: string): Promise<void> => client.resendConfirmation(email),
+	});
+}
+
+/**
+ * Mutation hook for the forgot-password page. Anti-enumeration: the backend
+ * always returns 200 regardless of whether the email matches a known account,
+ * so the page renders the same generic success copy on success and on
+ * (unexpected) failure. The hook surfaces errors normally — the page swallows
+ * them in `onError` to keep the user-facing surface opaque.
+ */
+export function useForgotPassword() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (input: ForgotPasswordInput): Promise<void> => client.forgotPassword(input),
+	});
+}
+
+/**
+ * Mutation hook for the reset-password page. Submits uid + token + new password
+ * + confirmation; on success the user is NOT auto-logged-in (they re-enter via
+ * /login with the new password). Errors propagate untouched so the caller can
+ * pivot through `extractFormErrors` for a `invalid_or_expired_link` banner or
+ * password-validator field errors.
+ */
+export function useResetPassword() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (input: ResetPasswordInput): Promise<void> => client.resetPassword(input),
 	});
 }
 

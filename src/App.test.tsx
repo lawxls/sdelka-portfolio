@@ -296,7 +296,7 @@ describe("Routing", () => {
 	test("/reset-password renders reset password page", async () => {
 		localStorage.clear();
 		sessionStorage.clear(); // no auth token — public route
-		renderApp(["/reset-password?token=test-token"]);
+		renderApp(["/reset-password?uid=42&token=test-token"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Новый пароль" })).toBeInTheDocument();
 		});

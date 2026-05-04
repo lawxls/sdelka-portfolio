@@ -160,6 +160,8 @@ describe("RegisterPage", () => {
 			confirmEmail: vi.fn(),
 			checkEmail,
 			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -205,6 +207,8 @@ describe("RegisterPage", () => {
 			confirmEmail: vi.fn(),
 			checkEmail,
 			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -241,6 +245,8 @@ describe("RegisterPage", () => {
 			confirmEmail: vi.fn(),
 			checkEmail,
 			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
 		};
 
 		renderRegister({ session });

@@ -53,3 +53,14 @@ export type ConfirmEmailResult = LoginResult;
 export interface CheckEmailResult {
 	exists: boolean;
 }
+
+export interface ForgotPasswordInput {
+	email: string;
+}
+
+export interface ResetPasswordInput {
+	uid: string;
+	token: string;
+	new_password: string;
+	new_password_confirm: string;
+}
