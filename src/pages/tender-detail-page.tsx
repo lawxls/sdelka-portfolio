@@ -836,6 +836,7 @@ function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; 
 				tenderQuotesByIdentity={tenderQuotesByIdentity}
 				activeItemIds={activeItemIds}
 				onItemFilter={handleItemFilter}
+				showSavings={false}
 			/>
 		</div>
 	);

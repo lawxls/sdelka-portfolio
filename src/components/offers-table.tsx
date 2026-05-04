@@ -83,6 +83,8 @@ interface OffersTableProps {
 	 * suppliers that quoted at least one of the selected items. */
 	activeItemIds?: string[];
 	onItemFilter?: (itemId: string) => void;
+	/** Hide the «ЭКОНОМИЯ» column (and its mobile-card row). Default: true. */
+	showSavings?: boolean;
 }
 
 const FILTER_BTN =
@@ -152,6 +154,7 @@ export function OffersTable({
 	tenderQuotesByIdentity,
 	activeItemIds,
 	onItemFilter,
+	showSavings = true,
 }: OffersTableProps) {
 	const isMobile = useIsMobile();
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
@@ -425,17 +428,21 @@ export function OffersTable({
 				);
 			},
 		},
-		{
-			id: "savings",
-			header: "ЭКОНОМИЯ",
-			sortable: true,
-			align: "right",
-			cell: (s, { isPinned }) => {
-				if (isPinned) return <span className="text-muted-foreground">{"\u2014"}</span>;
-				const value = savingsPercent(s, currentSupplier ?? null, item);
-				return <span className={savingsClassName(value)}>{formatPercent(value)}</span>;
-			},
-		},
+		...(showSavings
+			? ([
+					{
+						id: "savings",
+						header: "ЭКОНОМИЯ",
+						sortable: true,
+						align: "right",
+						cell: (s, { isPinned }) => {
+							if (isPinned) return <span className="text-muted-foreground">{"\u2014"}</span>;
+							const value = savingsPercent(s, currentSupplier ?? null, item);
+							return <span className={savingsClassName(value)}>{formatPercent(value)}</span>;
+						},
+					},
+				] as DataTableColumn<Supplier>[])
+			: []),
 	];
 
 	// Only pin when we have a real Supplier row backing the click target. Legacy items without
@@ -507,12 +514,14 @@ export function OffersTable({
 						<div className="text-muted-foreground">ТСО/ед.</div>
 						<div className="tabular-nums">{formatCurrency(s.tco)}</div>
 					</div>
-					<div>
-						<div className="text-muted-foreground">Экономия</div>
-						<div className={cn("tabular-nums", !ctx.isPinned && savingsClassName(savings))}>
-							{ctx.isPinned ? "\u2014" : formatPercent(savings)}
+					{showSavings && (
+						<div>
+							<div className="text-muted-foreground">Экономия</div>
+							<div className={cn("tabular-nums", !ctx.isPinned && savingsClassName(savings))}>
+								{ctx.isPinned ? "\u2014" : formatPercent(savings)}
+							</div>
 						</div>
-					</div>
+					)}
 				</div>
 			</button>
 		);
