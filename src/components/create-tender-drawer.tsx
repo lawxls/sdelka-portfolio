@@ -814,6 +814,8 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 			className={cn(
 				"relative flex flex-col gap-4 rounded-xl border border-border/60 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none",
 				SURFACE_TINT,
+				"[&_input]:bg-background [&_textarea]:bg-background [&_[data-slot=select-trigger]]:bg-background",
+				"dark:[&_input]:bg-input/30 dark:[&_textarea]:bg-input/30 dark:[&_[data-slot=select-trigger]]:bg-input/30",
 			)}
 		>
 			{onRemove && (
