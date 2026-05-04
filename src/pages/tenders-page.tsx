@@ -49,7 +49,7 @@ import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdate
 import { useDeleteTender, useTenders, useUpdateTender } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
-import { formatCurrency, formatDayMonthShort, formatRussianPlural } from "@/lib/format";
+import { formatDayMonthShort, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface ColumnDef {
@@ -59,9 +59,8 @@ interface ColumnDef {
 }
 
 const COLUMNS: readonly ColumnDef[] = [
-	{ label: "№", align: "left" },
+	{ label: "№", align: "center" },
 	{ label: "НАЗВАНИЕ", align: "left" },
-	{ label: "БЮДЖЕТ", align: "right", field: "budget" },
 	{ label: "ВСЕГО ПОСТАВЩИКОВ", align: "right", field: "suppliersCount" },
 	{ label: "ПОЛУЧЕНО КП", align: "right", field: "kpCount" },
 	{ label: "ДАТА СОЗДАНИЯ", align: "right", field: "createdAt" },
@@ -70,13 +69,7 @@ const COLUMNS: readonly ColumnDef[] = [
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"] as const;
 
-const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set([
-	"budget",
-	"suppliersCount",
-	"kpCount",
-	"createdAt",
-	"deadline",
-]);
+const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set(["suppliersCount", "kpCount", "createdAt", "deadline"]);
 
 interface TenderSortState {
 	field: TenderSortField;
@@ -197,7 +190,7 @@ function TenderRow({
 			onClick={isEditing ? undefined : onClick}
 			className={isEditing ? "" : "cursor-pointer"}
 		>
-			<TableCell className="tabular-nums text-xs text-muted-foreground">{rowNumber}</TableCell>
+			<TableCell className="text-center tabular-nums text-muted-foreground">{rowNumber}</TableCell>
 			<TableCell className="font-medium">
 				<div className="max-w-[350px]">
 					<div className="flex items-center gap-2 min-w-0">
@@ -220,7 +213,6 @@ function TenderRow({
 					</div>
 				</div>
 			</TableCell>
-			<TableCell className="text-right tabular-nums">{formatCurrency(tender.budget)}</TableCell>
 			<TableCell className="text-right tabular-nums">{tender.suppliersCount}</TableCell>
 			<TableCell className="text-right tabular-nums">{tender.kpCount}</TableCell>
 			<TableCell className="text-right tabular-nums">{formatDayMonthShort(tender.createdAt)}</TableCell>
@@ -577,13 +569,15 @@ export function TendersPage() {
 					<div className="flex flex-1 flex-col overflow-auto [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg">
 						<Table>
 							<TableHeader>
-								<TableRow>
-									{COLUMNS.map((col) =>
-										col.field ? (
-											<TableHead
-												key={col.label}
-												className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
-											>
+								<TableRow className="hover:!bg-background">
+									{COLUMNS.map((col) => {
+										const headClass = cn(
+											col.label === "№" && "w-12",
+											col.align === "right" && "text-right",
+											col.align === "center" && "text-center",
+										);
+										return col.field ? (
+											<TableHead key={col.label} className={headClass}>
 												<SortableHeaderButton
 													col={col as ColumnDef & { field: TenderSortField }}
 													sort={sort}
@@ -591,14 +585,11 @@ export function TendersPage() {
 												/>
 											</TableHead>
 										) : (
-											<TableHead
-												key={col.label}
-												className={cn(col.align === "right" && "text-right", col.align === "center" && "text-center")}
-											>
+											<TableHead key={col.label} className={headClass}>
 												{col.label}
 											</TableHead>
-										),
-									)}
+										);
+									})}
 								</TableRow>
 							</TableHeader>
 							<TableBody>

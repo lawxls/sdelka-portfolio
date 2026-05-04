@@ -80,18 +80,17 @@ describe("TendersPage", () => {
 		expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
 	});
 
-	test("renders all 7 column headers", async () => {
+	test("renders all 6 column headers", async () => {
 		renderPage();
 		const headers = await screen.findAllByRole("columnheader");
-		expect(headers).toHaveLength(7);
+		expect(headers).toHaveLength(6);
 		const labels = headers.map((h) => h.textContent ?? "");
 		expect(labels[0]).toBe("№");
 		expect(labels[1]).toBe("НАЗВАНИЕ");
-		expect(labels[2]).toBe("БЮДЖЕТ");
-		expect(labels[3]).toBe("ВСЕГО ПОСТАВЩИКОВ");
-		expect(labels[4]).toBe("ПОЛУЧЕНО КП");
-		expect(labels[5]).toBe("ДАТА СОЗДАНИЯ");
-		expect(labels[6]).toBe("ДЕДЛАЙН");
+		expect(labels[2]).toBe("ВСЕГО ПОСТАВЩИКОВ");
+		expect(labels[3]).toBe("ПОЛУЧЕНО КП");
+		expect(labels[4]).toBe("ДАТА СОЗДАНИЯ");
+		expect(labels[5]).toBe("ДЕДЛАЙН");
 	});
 
 	test("renders one row per seeded tender, sorted by createdAt desc", async () => {
