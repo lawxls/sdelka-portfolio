@@ -82,6 +82,11 @@ function httpAdapter(): Adapter {
 				return { status: 200, body: { access: `access-refresh-${refreshCount}` } };
 			},
 		},
+		{
+			method: "POST",
+			path: /^\/auth\/logout\/$/,
+			respond: () => ({ status: 205 }),
+		},
 	];
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
@@ -164,6 +169,10 @@ describe.each(adapters.map((make) => [make().name, make]))("SessionClient contra
 		const b = await client.refresh();
 		expect(a.access).not.toBe(b.access);
 	});
+
+	it("logout resolves with no body on success", async () => {
+		await expect(client.logout()).resolves.toBeUndefined();
+	});
 });
 
 /**
@@ -197,6 +206,12 @@ describe("InMemorySessionClient — refresh-unavailable branch", () => {
 		await client.login({ email: "valid@example.com", password: "good-pass" });
 		const result = await client.refresh();
 		expect(typeof result.access).toBe("string");
+	});
+
+	it("logout flips refresh-available off, so a subsequent refresh fails", async () => {
+		const client = createInMemorySessionClient({ users: SEED_USERS, refreshAvailable: true });
+		await client.logout();
+		await expect(client.refresh()).rejects.toBeInstanceOf(AuthError);
 	});
 });
 

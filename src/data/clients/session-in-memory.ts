@@ -51,5 +51,10 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			if (!refreshAvailable) throw new AuthError(401, { code: "refresh_invalid" });
 			return { access: nextId("access") };
 		},
+
+		async logout(): Promise<void> {
+			await delay();
+			refreshAvailable = false;
+		},
 	};
 }

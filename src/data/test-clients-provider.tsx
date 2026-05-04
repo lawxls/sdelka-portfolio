@@ -254,6 +254,7 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 	return {
 		login: notImplemented("login"),
 		refresh: notImplemented("refresh"),
+		logout: notImplemented("logout"),
 		...overrides,
 	};
 }

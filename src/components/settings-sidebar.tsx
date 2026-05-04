@@ -1,6 +1,6 @@
 import { Building2, CreditCard, LogOut, Mail, Settings, User, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
-import { clearTokens } from "@/data/auth";
+import { useLogout } from "@/data/use-session";
 import { cn } from "@/lib/utils";
 
 interface NavItemDef {
@@ -56,11 +56,13 @@ function NavSection({ title, items, currentPath }: { title: string; items: NavIt
 }
 
 function LogoutItem() {
+	const logout = useLogout();
 	return (
 		<button
 			type="button"
-			className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
-			onClick={clearTokens}
+			className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
+			onClick={() => logout.mutate()}
+			disabled={logout.isPending}
 		>
 			<span className="shrink-0" aria-hidden="true">
 				<LogOut className="size-4" />

@@ -6,9 +6,9 @@ import type { LoginInput, LoginResult, RefreshResult } from "../domains/session"
  * through context, so swapping adapters is a one-line change in the
  * composition root.
  *
- * This slice ships only `login` and `refresh`. Subsequent slices add
- * `register`, `confirmEmail`, `forgotPassword`, `resetPassword`, `logout`,
- * `requestPasswordChange`, `resendConfirmation`, and `checkEmail`.
+ * Subsequent slices add `register`, `confirmEmail`, `forgotPassword`,
+ * `resetPassword`, `requestPasswordChange`, `resendConfirmation`, and
+ * `checkEmail`.
  */
 export interface SessionClient {
 	login(input: LoginInput): Promise<LoginResult>;
@@ -16,4 +16,9 @@ export interface SessionClient {
 	 * itself never enters JS — Django reads it from the httpOnly cookie and
 	 * sets a rotated cookie on the response. */
 	refresh(): Promise<RefreshResult>;
+	/** Tell the backend to blacklist the refresh cookie. The hook layer
+	 * (`useLogout`) handles the local cleanup (sessionStorage + query cache +
+	 * `AUTH_CLEARED_EVENT`) and tolerates errors so a network blip on the way
+	 * out still drops the user back to /login. */
+	logout(): Promise<void>;
 }

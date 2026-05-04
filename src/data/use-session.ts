@@ -1,7 +1,7 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { AUTH_CLEARED_EVENT, getAccessToken, setTokens } from "./auth";
+import { AUTH_CLEARED_EVENT, clearTokens, getAccessToken, setTokens } from "./auth";
 import { useSessionClient } from "./clients-context";
 import type { LoginInput, LoginResult } from "./domains/session";
 
@@ -20,6 +20,33 @@ export function useLogin() {
 			const result = await client.login(input);
 			setTokens(result.access);
 			return result;
+		},
+	});
+}
+
+/**
+ * Sign the user out. Local cleanup runs unconditionally — even if the backend
+ * call fails (network down, refresh cookie already expired) we still drop the
+ * access token, wipe the cached query data, and dispatch `AUTH_CLEARED_EVENT`.
+ * The next interaction in any open tab transitions to /login because
+ * `useSessionBootstrap` listens to the same event.
+ */
+export function useLogout() {
+	const client = useSessionClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (): Promise<void> => {
+			try {
+				await client.logout();
+			} catch {
+				// Backend rejected the call (cookie missing, throttled, server down).
+				// We still want the user logged out locally — the refresh cookie may
+				// linger until expiry, but this tab can't use it without an access
+				// token, and the next refresh attempt will hit a 401 and redirect.
+			}
+			clearTokens();
+			queryClient.clear();
 		},
 	});
 }

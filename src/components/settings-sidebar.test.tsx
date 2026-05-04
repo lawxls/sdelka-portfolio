@@ -1,16 +1,27 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { SessionClient } from "@/data/clients/session-client";
+import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
+import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
+import { TestClientsProvider } from "@/data/test-clients-provider";
+import { createTestQueryClient } from "@/test-utils";
 import { SettingsSidebar } from "./settings-sidebar";
 
-function renderSidebar(initialPath = "/settings/profile") {
+function renderSidebar(
+	initialPath = "/settings/profile",
+	session: SessionClient = createInMemorySessionClient({ refreshAvailable: true }),
+) {
+	const queryClient = createTestQueryClient();
 	return render(
-		<MemoryRouter initialEntries={[initialPath]}>
-			<Routes>
-				<Route path="*" element={<SettingsSidebar />} />
-			</Routes>
-		</MemoryRouter>,
+		<TestClientsProvider queryClient={queryClient} clients={{ session }}>
+			<MemoryRouter initialEntries={[initialPath]}>
+				<Routes>
+					<Route path="*" element={<SettingsSidebar />} />
+				</Routes>
+			</MemoryRouter>
+		</TestClientsProvider>,
 	);
 }
 
@@ -77,10 +88,13 @@ describe("SettingsSidebar active item", () => {
 
 describe("SettingsSidebar logout", () => {
 	beforeEach(() => {
+		_setMockDelay(0, 0);
 		localStorage.clear();
+		sessionStorage.clear();
 	});
 
 	afterEach(() => {
+		_resetMockDelay();
 		vi.restoreAllMocks();
 	});
 
@@ -95,12 +109,23 @@ describe("SettingsSidebar logout", () => {
 		expect(btn.className).toContain("text-destructive");
 	});
 
-	test("clicking Выйти clears auth tokens", async () => {
+	test("clicking Выйти invokes the logout flow and clears the access token", async () => {
 		sessionStorage.setItem("auth-access-token", "token");
-		renderSidebar();
+		const logout = vi.fn().mockResolvedValue(undefined);
+		const session: SessionClient = {
+			login: () => Promise.reject(new Error("not used")),
+			refresh: () => Promise.reject(new Error("not used")),
+			logout,
+		};
+		renderSidebar("/settings/profile", session);
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Выйти" }));
 
-		expect(sessionStorage.getItem("auth-access-token")).toBeNull();
+		await waitFor(() => {
+			expect(logout).toHaveBeenCalledOnce();
+		});
+		await waitFor(() => {
+			expect(sessionStorage.getItem("auth-access-token")).toBeNull();
+		});
 	});
 });

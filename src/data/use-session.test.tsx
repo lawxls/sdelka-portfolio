@@ -3,11 +3,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestQueryClient } from "@/test-utils";
-import { AUTH_CLEARED_EVENT, getAccessToken } from "./auth";
+import { AUTH_CLEARED_EVENT, getAccessToken, setTokens } from "./auth";
 import type { SessionClient } from "./clients/session-client";
-import { AuthError } from "./errors";
+import { AuthError, NetworkError } from "./errors";
 import { fakeSessionClient, TestClientsProvider } from "./test-clients-provider";
-import { useLogin, useSessionBootstrap } from "./use-session";
+import { useLogin, useLogout, useSessionBootstrap } from "./use-session";
 
 let queryClient: QueryClient;
 
@@ -55,6 +55,75 @@ describe("useLogin", () => {
 			await expect(result.current.mutateAsync({ email: "a@b.com", password: "wrong" })).rejects.toBeInstanceOf(
 				AuthError,
 			);
+		});
+
+		expect(getAccessToken()).toBeNull();
+	});
+});
+
+describe("useLogout", () => {
+	test("calls client.logout, clears the access token, and dispatches AUTH_CLEARED_EVENT", async () => {
+		setTokens("existing-access");
+		const logout = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ logout });
+		const onCleared = vi.fn();
+		window.addEventListener(AUTH_CLEARED_EVENT, onCleared);
+
+		const { result } = renderHook(() => useLogout(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
+		});
+
+		expect(logout).toHaveBeenCalledOnce();
+		expect(getAccessToken()).toBeNull();
+		expect(onCleared).toHaveBeenCalledOnce();
+
+		window.removeEventListener(AUTH_CLEARED_EVENT, onCleared);
+	});
+
+	test("clears the react-query cache so the next signed-in user starts fresh", async () => {
+		setTokens("existing-access");
+		queryClient.setQueryData(["me"], { id: 1, email: "a@b.com" });
+		queryClient.setQueryData(["companies"], [{ id: "company-1" }]);
+
+		const logout = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ logout });
+
+		const { result } = renderHook(() => useLogout(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
+		});
+
+		expect(queryClient.getQueryData(["me"])).toBeUndefined();
+		expect(queryClient.getQueryData(["companies"])).toBeUndefined();
+	});
+
+	test("still cleans up locally when the backend logout call rejects", async () => {
+		setTokens("existing-access");
+		const logout = vi.fn().mockRejectedValue(new NetworkError(new Error("offline")));
+		const client = fakeSessionClient({ logout });
+
+		const { result } = renderHook(() => useLogout(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
+		});
+
+		expect(logout).toHaveBeenCalledOnce();
+		expect(getAccessToken()).toBeNull();
+	});
+
+	test("tolerates a 4xx from /auth/logout/ (already logged out elsewhere)", async () => {
+		setTokens("existing-access");
+		const logout = vi.fn().mockRejectedValue(new AuthError(401, { code: "refresh_invalid" }));
+		const client = fakeSessionClient({ logout });
+
+		const { result } = renderHook(() => useLogout(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
 		});
 
 		expect(getAccessToken()).toBeNull();

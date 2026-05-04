@@ -7,6 +7,7 @@ import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
 import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
@@ -94,6 +95,7 @@ function renderPage(initialPath = "/settings/companies") {
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
 				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				session: createInMemorySessionClient(),
 			}}
 		>
 			<TooltipProvider>
@@ -121,6 +123,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
 				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				session: createInMemorySessionClient(),
 			}}
 		>
 			<TooltipProvider>
