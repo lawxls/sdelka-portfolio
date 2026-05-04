@@ -76,6 +76,9 @@ describe("ProtectedRoute", () => {
 			login: () => Promise.reject(new Error("not used")),
 			refresh: () => new Promise(() => {}),
 			logout: () => Promise.resolve(),
+			register: () => Promise.reject(new Error("not used")),
+			confirmEmail: () => Promise.reject(new Error("not used")),
+			checkEmail: () => Promise.reject(new Error("not used")),
 		};
 		renderWithRouter(["/app"], session);
 

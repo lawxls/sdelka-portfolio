@@ -16,6 +16,11 @@ describe("extractFormErrors — top-level codes", () => {
 		expect(extractFormErrors(err).error).toBe("Подтвердите почту, чтобы войти");
 	});
 
+	test("invalid_or_expired_link on confirm-email/reset-password failures", () => {
+		const err = new ValidationError({}, { code: "invalid_or_expired_link" });
+		expect(extractFormErrors(err).error).toBe("Ссылка недействительна или истекла");
+	});
+
 	test("AuthError with unknown code falls back to a generic Russian banner", () => {
 		const err = new AuthError(401, { code: "weird_unknown_code" });
 		expect(extractFormErrors(err).error).toBe("Произошла ошибка. Попробуйте ещё раз.");

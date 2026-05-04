@@ -25,6 +25,7 @@ const TOP_LEVEL_CODES: Record<string, string> = {
 	invalid_credentials: "Неверный пароль или почта",
 	email_not_verified: "Подтвердите почту, чтобы войти",
 	authentication_failed: "Не удалось войти. Попробуйте ещё раз.",
+	invalid_or_expired_link: "Ссылка недействительна или истекла",
 };
 
 const FIELD_CODES: Record<string, string> = {

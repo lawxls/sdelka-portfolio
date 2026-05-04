@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestQueryClient } from "@/test-utils";
 import { AUTH_CLEARED_EVENT, getAccessToken, setTokens } from "./auth";
 import type { SessionClient } from "./clients/session-client";
-import { AuthError, NetworkError } from "./errors";
+import { AuthError, NetworkError, ValidationError } from "./errors";
 import { fakeSessionClient, TestClientsProvider } from "./test-clients-provider";
-import { useLogin, useLogout, useSessionBootstrap } from "./use-session";
+import { useCheckEmail, useConfirmEmail, useLogin, useLogout, useRegister, useSessionBootstrap } from "./use-session";
 
 let queryClient: QueryClient;
 
@@ -127,6 +127,111 @@ describe("useLogout", () => {
 		});
 
 		expect(getAccessToken()).toBeNull();
+	});
+});
+
+describe("useRegister", () => {
+	test("calls client.register and resolves with the new user record without storing tokens", async () => {
+		const register = vi.fn().mockResolvedValue({ user: { id: 99, email: "newuser@example.com" } });
+		const client = fakeSessionClient({ register });
+
+		const { result } = renderHook(() => useRegister(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			const res = await result.current.mutateAsync({
+				email: "newuser@example.com",
+				password: "fresh-pass-1",
+				password_confirm: "fresh-pass-1",
+				first_name: "Иван",
+				last_name: "Иванов",
+				phone: "+79991234567",
+				company_name: "ООО Пример",
+			});
+			expect(res.user.email).toBe("newuser@example.com");
+		});
+
+		expect(register).toHaveBeenCalledWith(
+			expect.objectContaining({
+				email: "newuser@example.com",
+				password_confirm: "fresh-pass-1",
+				company_name: "ООО Пример",
+			}),
+		);
+		// Register does not auto-login — the user must confirm their email first.
+		expect(getAccessToken()).toBeNull();
+	});
+
+	test("does not store token when register throws", async () => {
+		const register = vi
+			.fn()
+			.mockRejectedValue(new ValidationError({}, { email: [{ code: "unique", message: "Already taken" }] }));
+		const client = fakeSessionClient({ register });
+
+		const { result } = renderHook(() => useRegister(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(
+				result.current.mutateAsync({
+					email: "taken@example.com",
+					password: "fresh-pass-1",
+					password_confirm: "fresh-pass-1",
+					first_name: "Иван",
+					last_name: "Иванов",
+					phone: "+79991234567",
+					company_name: "ООО Пример",
+				}),
+			).rejects.toBeInstanceOf(ValidationError);
+		});
+
+		expect(getAccessToken()).toBeNull();
+	});
+});
+
+describe("useConfirmEmail", () => {
+	test("calls client.confirmEmail and stores access token on success (auto-login)", async () => {
+		const confirmEmail = vi.fn().mockResolvedValue({ access: "confirmed-access", user: { id: 5, email: "x@y.z" } });
+		const client = fakeSessionClient({ confirmEmail });
+
+		const { result } = renderHook(() => useConfirmEmail(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			const res = await result.current.mutateAsync({ uid: "good-uid", token: "good-token" });
+			expect(res.access).toBe("confirmed-access");
+		});
+
+		expect(confirmEmail).toHaveBeenCalledWith({ uid: "good-uid", token: "good-token" });
+		expect(getAccessToken()).toBe("confirmed-access");
+	});
+
+	test("does not store token when confirmEmail throws", async () => {
+		const confirmEmail = vi.fn().mockRejectedValue(new ValidationError({}, { code: "invalid_or_expired_link" }));
+		const client = fakeSessionClient({ confirmEmail });
+
+		const { result } = renderHook(() => useConfirmEmail(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(result.current.mutateAsync({ uid: "bad-uid", token: "bad-token" })).rejects.toBeInstanceOf(
+				ValidationError,
+			);
+		});
+
+		expect(getAccessToken()).toBeNull();
+	});
+});
+
+describe("useCheckEmail", () => {
+	test("calls client.checkEmail and resolves with the existence flag", async () => {
+		const checkEmail = vi.fn().mockResolvedValue({ exists: true });
+		const client = fakeSessionClient({ checkEmail });
+
+		const { result } = renderHook(() => useCheckEmail(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			const res = await result.current.mutateAsync("taken@example.com");
+			expect(res.exists).toBe(true);
+		});
+
+		expect(checkEmail).toHaveBeenCalledWith("taken@example.com");
 	});
 });
 

@@ -1,12 +1,21 @@
-import type { LoginInput, LoginResult, RefreshResult } from "../domains/session";
+import type {
+	CheckEmailResult,
+	ConfirmEmailInput,
+	ConfirmEmailResult,
+	LoginInput,
+	LoginResult,
+	RefreshResult,
+	RegisterInput,
+	RegisterResult,
+} from "../domains/session";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { SessionClient } from "./session-client";
 
 /**
  * HTTP adapter for the session domain. All endpoints pass `skipRefresh: true`
  * so the http-client's 401-refresh interceptor never recurses through them:
- * - login: a 401 here means "wrong credentials"; retrying after a refresh
- *   wouldn't change the answer, so propagate it directly.
+ * - login / register / confirm-email / check-email: the user has no session
+ *   yet, so a 401-refresh dance is meaningless.
  * - refresh: a 401 here means the refresh cookie is gone or expired; calling
  *   refresh from the refresh path would loop forever.
  * - logout: a 401 here means the refresh cookie is already gone; the local
@@ -20,5 +29,14 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 		refresh: () => http.post<RefreshResult>(`/auth/refresh/`, { body: {}, skipRefresh: true }),
 
 		logout: () => http.post<void>(`/auth/logout/`, { body: {}, skipRefresh: true }),
+
+		register: (input: RegisterInput) =>
+			http.post<RegisterResult>(`/auth/register/`, { body: input, skipRefresh: true }),
+
+		confirmEmail: (input: ConfirmEmailInput) =>
+			http.post<ConfirmEmailResult>(`/auth/confirm-email/`, { body: input, skipRefresh: true }),
+
+		checkEmail: (email: string) =>
+			http.post<CheckEmailResult>(`/auth/check-email/`, { body: { email }, skipRefresh: true }),
 	};
 }

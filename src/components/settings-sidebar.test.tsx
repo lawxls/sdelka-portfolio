@@ -116,6 +116,9 @@ describe("SettingsSidebar logout", () => {
 			login: () => Promise.reject(new Error("not used")),
 			refresh: () => Promise.reject(new Error("not used")),
 			logout,
+			register: () => Promise.reject(new Error("not used")),
+			confirmEmail: () => Promise.reject(new Error("not used")),
+			checkEmail: () => Promise.reject(new Error("not used")),
 		};
 		renderSidebar("/settings/profile", session);
 

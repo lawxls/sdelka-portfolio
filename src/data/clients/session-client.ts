@@ -1,4 +1,13 @@
-import type { LoginInput, LoginResult, RefreshResult } from "../domains/session";
+import type {
+	CheckEmailResult,
+	ConfirmEmailInput,
+	ConfirmEmailResult,
+	LoginInput,
+	LoginResult,
+	RefreshResult,
+	RegisterInput,
+	RegisterResult,
+} from "../domains/session";
 
 /**
  * Public seam for the auth/session domain. Implementations are in-memory
@@ -6,9 +15,8 @@ import type { LoginInput, LoginResult, RefreshResult } from "../domains/session"
  * through context, so swapping adapters is a one-line change in the
  * composition root.
  *
- * Subsequent slices add `register`, `confirmEmail`, `forgotPassword`,
- * `resetPassword`, `requestPasswordChange`, `resendConfirmation`, and
- * `checkEmail`.
+ * Subsequent slices add `forgotPassword`, `resetPassword`,
+ * `requestPasswordChange`, and `resendConfirmation`.
  */
 export interface SessionClient {
 	login(input: LoginInput): Promise<LoginResult>;
@@ -21,4 +29,14 @@ export interface SessionClient {
 	 * `AUTH_CLEARED_EVENT`) and tolerates errors so a network blip on the way
 	 * out still drops the user back to /login. */
 	logout(): Promise<void>;
+	/** Self-signup. Returns the new user record without tokens — the user must
+	 * confirm their email (and then `confirmEmail` auto-logs them in). */
+	register(input: RegisterInput): Promise<RegisterResult>;
+	/** Confirm an email-link uid+token pair; on success the backend issues an
+	 * access token + sets the refresh cookie, so the user lands signed in. */
+	confirmEmail(input: ConfirmEmailInput): Promise<ConfirmEmailResult>;
+	/** Pre-check whether an email is already registered, so the register form
+	 * can surface a "this email is taken" hint before the user fills out the
+	 * rest of the details stage. */
+	checkEmail(email: string): Promise<CheckEmailResult>;
 }

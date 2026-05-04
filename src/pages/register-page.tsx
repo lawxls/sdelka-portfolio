@@ -1,53 +1,40 @@
 import { useState } from "react";
-import { Link, Navigate, useSearchParams } from "react-router";
+import { Link } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
+import { PhoneInput } from "@/components/phone-input";
 import { Button } from "@/components/ui/button";
-import { clearInvitationCode, getInvitationCode, setInvitationCode } from "@/data/auth";
-import { checkEmail, extractFormErrors, register } from "@/data/auth-api";
+import { extractFormErrors } from "@/data/auth-errors";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
-import { useVerifyInvitationCode } from "@/data/use-invitations";
-import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useCheckEmail, useRegister } from "@/data/use-session";
 
 type Stage = "email" | "details" | "confirmation";
 
 export function RegisterPage() {
-	const [searchParams] = useSearchParams();
 	const [stage, setStage] = useState<Stage>("email");
-	const [submitting, setSubmitting] = useState(false);
 
-	// Form state
 	const [email, setEmail] = useState("");
 	const [firstName, setFirstName] = useState("");
+	const [lastName, setLastName] = useState("");
+	const [patronymic, setPatronymic] = useState("");
 	const [phone, setPhone] = useState("");
+	const [companyName, setCompanyName] = useState("");
 	const [password, setPassword] = useState("");
-	const [confirmPassword, setConfirmPassword] = useState("");
+	const [passwordConfirm, setPasswordConfirm] = useState("");
 
-	// Error state
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-	// Sync URL ?code= into localStorage on mount so reloads keep working.
-	useMountEffect(() => {
-		const urlCode = searchParams.get("code");
-		if (urlCode) setInvitationCode(urlCode);
-		return undefined;
-	});
-
-	const code = searchParams.get("code") ?? getInvitationCode();
-	const verify = useVerifyInvitationCode(code);
-
-	if (!code) return <Navigate to="/login" replace />;
-	if (verify.isError) return <Navigate to="/login" replace />;
-	if (verify.isSuccess && !verify.data.valid) return <Navigate to="/login" replace />;
-	if (!verify.isSuccess) return null;
+	const checkEmail = useCheckEmail();
+	const register = useRegister();
+	const submitting = checkEmail.isPending || register.isPending;
 
 	async function handleEmailSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		setError(null);
 		setFieldErrors({});
-		setSubmitting(true);
 
 		try {
-			const result = await checkEmail(email);
+			const result = await checkEmail.mutateAsync(email);
 			if (result.exists) {
 				setFieldErrors({ email: "Этот email уже зарегистрирован" });
 			} else {
@@ -55,8 +42,6 @@ export function RegisterPage() {
 			}
 		} catch {
 			setError("Произошла ошибка. Попробуйте ещё раз.");
-		} finally {
-			setSubmitting(false);
 		}
 	}
 
@@ -65,31 +50,28 @@ export function RegisterPage() {
 		setError(null);
 		setFieldErrors({});
 
-		const validationErrors = validatePasswordWithConfirm(password, confirmPassword);
-		if (validationErrors) {
-			setFieldErrors(validationErrors);
+		const localErrors = validatePasswordWithConfirm(password, passwordConfirm);
+		if (localErrors) {
+			setFieldErrors(localErrors);
 			return;
 		}
 
-		setSubmitting(true);
-
 		try {
-			const invitationCode = getInvitationCode();
-			await register({
+			await register.mutateAsync({
 				email,
 				password,
+				password_confirm: passwordConfirm,
 				first_name: firstName,
-				phone: `+7${phone}`,
-				invitation_code: invitationCode ?? "",
+				last_name: lastName,
+				patronymic: patronymic || undefined,
+				phone,
+				company_name: companyName,
 			});
-			clearInvitationCode();
 			setStage("confirmation");
 		} catch (err: unknown) {
 			const result = extractFormErrors(err);
 			setError(result.error);
 			setFieldErrors(result.fieldErrors);
-		} finally {
-			setSubmitting(false);
 		}
 	}
 
@@ -158,14 +140,45 @@ export function RegisterPage() {
 					/>
 
 					<FloatingInput
-						label="Телефон"
-						name="phone"
-						value={phone}
-						onChange={(e) => setPhone(e.target.value)}
-						error={fieldErrors.phone}
-						autoComplete="tel"
-						prefix="+7"
-						inputMode="tel"
+						label="Фамилия"
+						name="lastName"
+						value={lastName}
+						onChange={(e) => setLastName(e.target.value)}
+						error={fieldErrors.last_name}
+						autoComplete="family-name"
+						required
+					/>
+
+					<FloatingInput
+						label="Отчество"
+						name="patronymic"
+						value={patronymic}
+						onChange={(e) => setPatronymic(e.target.value)}
+						error={fieldErrors.patronymic}
+						autoComplete="additional-name"
+					/>
+
+					<div className="space-y-1.5">
+						<label htmlFor="phone" className="text-sm font-medium text-foreground">
+							Телефон
+						</label>
+						<PhoneInput
+							id="phone"
+							value={phone}
+							onChange={setPhone}
+							aria-label="Телефон"
+							aria-invalid={Boolean(fieldErrors.phone)}
+						/>
+						{fieldErrors.phone && <p className="mt-1 text-xs text-destructive">{fieldErrors.phone}</p>}
+					</div>
+
+					<FloatingInput
+						label="Название компании"
+						name="companyName"
+						value={companyName}
+						onChange={(e) => setCompanyName(e.target.value)}
+						error={fieldErrors.company_name}
+						autoComplete="organization"
 						required
 					/>
 
@@ -182,11 +195,11 @@ export function RegisterPage() {
 
 					<FloatingInput
 						label="Подтвердите пароль"
-						name="confirmPassword"
+						name="passwordConfirm"
 						type="password"
-						value={confirmPassword}
-						onChange={(e) => setConfirmPassword(e.target.value)}
-						error={fieldErrors.confirmPassword}
+						value={passwordConfirm}
+						onChange={(e) => setPasswordConfirm(e.target.value)}
+						error={fieldErrors.password_confirm}
 						autoComplete="new-password"
 						required
 					/>

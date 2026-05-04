@@ -264,23 +264,23 @@ describe("Routing", () => {
 		expect(screen.queryByRole("menuitem", { name: /Сменить тему/ })).not.toBeInTheDocument();
 	});
 
-	test("/register renders registration page with valid invitation", async () => {
+	test("/register renders registration page (no invitation gate)", async () => {
 		localStorage.clear();
 		sessionStorage.clear(); // no auth token — public route
 
-		renderApp(["/register?code=ABC12"]);
+		renderApp(["/register"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
 		});
 	});
 
-	test("/confirm-email renders confirmation page", async () => {
+	test("/confirm-email renders pending state while confirming", async () => {
 		localStorage.clear();
 		sessionStorage.clear(); // no auth token — public route
 
-		renderApp(["/confirm-email?token=test-token"]);
+		renderApp(["/confirm-email?uid=test-uid&token=test-token"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Email подтверждён" })).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Подтверждение email" })).toBeInTheDocument();
 		});
 	});
 

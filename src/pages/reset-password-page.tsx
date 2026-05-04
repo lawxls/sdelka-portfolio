@@ -98,7 +98,7 @@ export function ResetPasswordPage() {
 					type="password"
 					value={confirmPassword}
 					onChange={(e) => setConfirmPassword(e.target.value)}
-					error={fieldErrors.confirmPassword}
+					error={fieldErrors.password_confirm}
 					autoComplete="new-password"
 					required
 				/>

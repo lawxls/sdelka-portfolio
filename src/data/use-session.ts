@@ -3,7 +3,15 @@ import { useState } from "react";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { AUTH_CLEARED_EVENT, clearTokens, getAccessToken, setTokens } from "./auth";
 import { useSessionClient } from "./clients-context";
-import type { LoginInput, LoginResult } from "./domains/session";
+import type {
+	CheckEmailResult,
+	ConfirmEmailInput,
+	ConfirmEmailResult,
+	LoginInput,
+	LoginResult,
+	RegisterInput,
+	RegisterResult,
+} from "./domains/session";
 
 /**
  * Mutation hook for the login form. On success stores the access token in
@@ -48,6 +56,52 @@ export function useLogout() {
 			clearTokens();
 			queryClient.clear();
 		},
+	});
+}
+
+/**
+ * Mutation hook for the register form. Resolves with the new user record but
+ * does NOT store tokens — the user must confirm their email before they can
+ * sign in (auto-login happens in `useConfirmEmail`). Errors propagate untouched
+ * so the caller can pivot through `extractFormErrors` for field-level UI.
+ */
+export function useRegister() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (input: RegisterInput): Promise<RegisterResult> => client.register(input),
+	});
+}
+
+/**
+ * Mutation hook for the email-confirmation page. On success stores the access
+ * token in `sessionStorage` (the refresh cookie is set server-side) so the
+ * caller can navigate the user straight into the protected app — they land
+ * signed in without ever seeing the login form.
+ */
+export function useConfirmEmail() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (input: ConfirmEmailInput): Promise<ConfirmEmailResult> => {
+			const result = await client.confirmEmail(input);
+			setTokens(result.access);
+			return result;
+		},
+	});
+}
+
+/**
+ * Pre-check whether an email is already registered, so the register form's
+ * stage 1 can surface a "this email is taken" hint before the user fills out
+ * the rest of the details. Modeled as a mutation because the form fires it
+ * imperatively on submit, not on every keystroke.
+ */
+export function useCheckEmail() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (email: string): Promise<CheckEmailResult> => client.checkEmail(email),
 	});
 }
 
