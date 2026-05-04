@@ -494,6 +494,7 @@ describe("ProcurementPage", () => {
 		await user.type(screen.getByLabelText("Название"), "Позиция А");
 
 		await user.click(screen.getByRole("button", { name: "Далее" }));
+		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Создать" }));
 
 		await waitFor(() => {

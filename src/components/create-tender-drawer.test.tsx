@@ -97,11 +97,11 @@ async function create(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("CreateTenderDrawer — wizard chrome", () => {
-	test("renders «Создать запрос» title and step 1 progress (50%)", () => {
+	test("renders «Создать запрос» title and step 1 progress (33%)", () => {
 		renderDrawer();
 		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
-		expect(screen.getByText(/Шаг 1 из 2/)).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+		expect(screen.getByText(/Шаг 1 из 3/)).toBeInTheDocument();
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
 	});
 
 	test("does not render when closed", () => {
@@ -116,13 +116,25 @@ describe("CreateTenderDrawer — wizard chrome", () => {
 		expect(screen.queryByRole("button", { name: "Назад" })).not.toBeInTheDocument();
 	});
 
-	test("step 2 footer has Назад + Создать (no Отмена)", async () => {
+	test("step 2 footer has Назад + Далее (no Отмена) at 66%", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await fillFirstPositionName(user);
 		await advance(user);
 
 		expect(screen.queryByRole("button", { name: "Отмена" })).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Далее" })).toBeInTheDocument();
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "66");
+	});
+
+	test("step 3 footer has Назад + Создать at 100%", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+		await advance(user);
+
 		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Создать" })).toBeInTheDocument();
 		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
@@ -169,7 +181,7 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
 		expect(screen.getByText("Выберите компанию")).toBeInTheDocument();
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
 	});
 
 	test("Далее blocked on cleared Дедлайн when other meta is filled", async () => {
@@ -180,7 +192,7 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		await advance(user);
 
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
 	});
 
 	test("typing in errored Дедлайн clears the error", async () => {
@@ -216,7 +228,7 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 		await advance(user);
 
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "66");
 	});
 });
 
@@ -241,6 +253,7 @@ describe("CreateTenderDrawer — multi-position cards", () => {
 		await user.click(screen.getByRole("button", { name: "Добавить позицию" }));
 		await user.type(screen.getAllByLabelText("Название")[1], "Цемент");
 
+		await advance(user);
 		await advance(user);
 		await create(user);
 
@@ -300,6 +313,7 @@ describe("CreateTenderDrawer — Position-level supplier INN", () => {
 		await user.type(await screen.findByLabelText("ИНН текущего поставщика"), "1234567890");
 
 		await advance(user);
+		await advance(user);
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
@@ -316,6 +330,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		await setDeadline(user, "2026-06-15");
 		await fillFirstPositionName(user, "Арматура");
 
+		await advance(user);
 		await advance(user);
 		await create(user);
 
@@ -339,6 +354,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 
 		await fillFirstPositionName(user);
 		await advance(user);
+		await advance(user);
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
@@ -352,8 +368,90 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 
 		await fillFirstPositionName(user);
 		await advance(user);
+		await advance(user);
 		await create(user);
 
 		expect(onOpenChange).toHaveBeenCalledWith(false);
+	});
+});
+
+describe("CreateTenderDrawer — Step 3 supplier email", () => {
+	async function reachStep3(user: ReturnType<typeof userEvent.setup>) {
+		await fillFirstPositionName(user, "Арматура");
+		await advance(user);
+		await advance(user);
+		await screen.findByLabelText("Текст письма");
+	}
+
+	test("renders Текст письма after the brief loader", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		expect(screen.getByLabelText("Текст письма")).toBeInTheDocument();
+		expect(screen.queryByLabelText("Тема")).not.toBeInTheDocument();
+		expect(screen.queryByText("Кому")).not.toBeInTheDocument();
+	});
+
+	test("body is seeded with position name on first entry", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const body = screen.getByLabelText("Текст письма") as HTMLTextAreaElement;
+		expect(body.value).toContain("Арматура");
+	});
+
+	test("Автоотправка checkbox is off by default and toggles on click", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const checkbox = screen.getByRole("checkbox", { name: "Автоотправка запросов" });
+		expect(checkbox).not.toBeChecked();
+
+		await user.click(checkbox);
+		expect(checkbox).toBeChecked();
+	});
+
+	test("Перегенерировать swaps the body to a different variant", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		const body = screen.getByLabelText("Текст письма") as HTMLTextAreaElement;
+		const initialBody = body.value;
+
+		await user.click(screen.getByRole("button", { name: "Перегенерировать письмо" }));
+
+		await vi.waitFor(() => {
+			expect((screen.getByLabelText("Текст письма") as HTMLTextAreaElement).value).not.toBe(initialBody);
+		});
+	});
+
+	test("submit payload carries sendMode='manual' by default with email body", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
+		expect(payload.tender.sendMode).toBe("manual");
+		expect(payload.tender.email?.body).toContain("Арматура");
+	});
+
+	test("checking Автоотправка flips sendMode to 'auto' on submit", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ onSubmit });
+		const user = userEvent.setup();
+		await reachStep3(user);
+
+		await user.click(screen.getByRole("checkbox", { name: "Автоотправка запросов" }));
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
+		expect(payload.tender.sendMode).toBe("auto");
 	});
 });

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleHelp, Info, LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, CircleHelp, Info, LoaderCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -50,7 +50,16 @@ const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 const STEP_TITLES: Record<WizardStep, string> = {
 	1: "Заполните данные по запросу",
 	2: "Дополнительные вопросы",
+	3: "Письмо для поставщиков",
 };
+
+const STEP_PROGRESS: Record<WizardStep, number> = {
+	1: 33,
+	2: 66,
+	3: 100,
+};
+
+const TOTAL_STEPS = 3;
 
 const DEADLINE_TOOLTIP =
 	"По истечении дедлайна запрос автоматически перейдёт в статус «Переговоры завершены». При необходимости его можно будет вернуть в работу вручную.";
@@ -133,9 +142,26 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 
 	const [showConfirm, setShowConfirm] = useState(false);
 	const [step2Ready, setStep2Ready] = useState(false);
+	const [step3Ready, setStep3Ready] = useState(false);
+	const [emailRegenerating, setEmailRegenerating] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const deadlineInputRef = useRef<HTMLInputElement>(null);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
+	const regenerateTimerRef = useRef<number | null>(null);
+
+	function clearRegenerateTimer() {
+		if (regenerateTimerRef.current !== null) {
+			window.clearTimeout(regenerateTimerRef.current);
+			regenerateTimerRef.current = null;
+		}
+	}
+
+	useMountEffect(() => clearRegenerateTimer);
+
+	const selectedFolderName = useMemo(() => {
+		if (!step1.folderId) return null;
+		return folders.find((f) => f.id === step1.folderId)?.name ?? null;
+	}, [folders, step1.folderId]);
 
 	const lockedCompany = companies.length === 1 ? companies[0] : undefined;
 	const selectedCompany = step1.companyId ? companiesById.get(step1.companyId) : undefined;
@@ -173,12 +199,29 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 			}
 			return;
 		}
+		if (step === 2) {
+			form.advance();
+			return;
+		}
 		handleSubmit();
 	}
 
+	function handleRegenerateEmail() {
+		if (emailRegenerating) return;
+		setEmailRegenerating(true);
+		regenerateTimerRef.current = window.setTimeout(() => {
+			form.regenerateEmail(selectedFolderName);
+			setEmailRegenerating(false);
+			regenerateTimerRef.current = null;
+		}, 600);
+	}
+
 	function resetForm() {
+		clearRegenerateTimer();
 		form.reset();
 		setStep2Ready(false);
+		setStep3Ready(false);
+		setEmailRegenerating(false);
 		nameInputRefs.current = [];
 	}
 
@@ -212,7 +255,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 		queueMicrotask(() => nameInputRefs.current[newIndex]?.focus());
 	}
 
-	const progressPercent = step === 1 ? 50 : 100;
+	const progressPercent = STEP_PROGRESS[step];
 
 	return (
 		<>
@@ -239,7 +282,9 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 								/>
 							</div>
 							<p className="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
-								<span className="font-medium text-foreground">Шаг {step} из 2</span>
+								<span className="font-medium text-foreground">
+									Шаг {step} из {TOTAL_STEPS}
+								</span>
 								<span className="mx-1.5 opacity-40">·</span>
 								<span>{STEP_TITLES[step]}</span>
 							</p>
@@ -265,6 +310,16 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 							</TooltipProvider>
 						)}
 						{step === 2 && <Step2Body form={form} ready={step2Ready} onReady={() => setStep2Ready(true)} />}
+						{step === 3 && (
+							<Step3Body
+								form={form}
+								folderName={selectedFolderName}
+								ready={step3Ready}
+								onReady={() => setStep3Ready(true)}
+								regenerating={emailRegenerating}
+								onRegenerate={handleRegenerateEmail}
+							/>
+						)}
 					</div>
 
 					<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
@@ -281,7 +336,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 							)}
 						</div>
 						<Button type="button" onClick={handleAdvance}>
-							{step === 2 ? "Создать" : "Далее"}
+							{step === 3 ? "Создать" : "Далее"}
 						</Button>
 					</SheetFooter>
 				</SheetContent>
@@ -390,6 +445,107 @@ function Step2Body({
 					</section>
 				);
 			})}
+		</div>
+	);
+}
+
+function Step3Body({
+	form,
+	folderName,
+	ready,
+	onReady,
+	regenerating,
+	onRegenerate,
+}: {
+	form: ReturnType<typeof useCreateTenderForm>;
+	folderName: string | null;
+	ready: boolean;
+	onReady: () => void;
+	regenerating: boolean;
+	onRegenerate: () => void;
+}) {
+	const { step3, update3, seedEmail } = form;
+	const bodyId = "tender-email-body";
+
+	useMountEffect(() => {
+		seedEmail(folderName);
+		if (ready) return undefined;
+		const id = window.setTimeout(onReady, 600);
+		return () => window.clearTimeout(id);
+	});
+
+	if (!ready) {
+		return (
+			<div
+				role="status"
+				aria-live="polite"
+				className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground"
+			>
+				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary motion-reduce:animate-none" />
+				<p className="text-sm">Генерируем письмо…</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col gap-0 pt-3">
+			<SectionGroupHeader title="RFQ" />
+			<div className="flex flex-col gap-4 border-t border-border py-4">
+				<div className="flex flex-col gap-1.5">
+					<div className="flex items-center justify-between gap-2">
+						<label htmlFor={bodyId} className="text-sm font-medium">
+							Текст письма
+						</label>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							onClick={onRegenerate}
+							disabled={regenerating}
+							aria-label="Перегенерировать письмо"
+						>
+							<span aria-hidden="true" className="relative inline-flex size-4 items-center justify-center">
+								<RefreshCw
+									className={cn(
+										"absolute size-4 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none",
+										regenerating ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-0",
+									)}
+								/>
+								<LoaderCircle
+									className={cn(
+										"absolute size-4 animate-spin transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:animate-none motion-reduce:transition-none",
+										regenerating ? "scale-100 opacity-100 blur-0" : "scale-[0.25] opacity-0 blur-[4px]",
+									)}
+								/>
+							</span>
+							Перегенерировать
+						</Button>
+					</div>
+					<Textarea
+						id={bodyId}
+						value={step3.body}
+						onChange={(e) => update3("body", e.target.value)}
+						spellCheck={false}
+						rows={10}
+						className="font-normal"
+					/>
+				</div>
+			</div>
+
+			<SectionGroupHeader title="Отправка" />
+			<div className="flex flex-col gap-2 border-t border-border py-4">
+				<CheckboxBadge
+					id="tender-email-autosend"
+					checked={step3.autoSend}
+					onChange={(v) => update3("autoSend", v)}
+					ariaLabel="Автоотправка запросов"
+				>
+					Автоотправка запросов
+				</CheckboxBadge>
+				<p className="text-pretty text-xs text-muted-foreground">
+					Включите, чтобы разослать запросы всем поставщикам сразу после их нахождения
+				</p>
+			</div>
 		</div>
 	);
 }

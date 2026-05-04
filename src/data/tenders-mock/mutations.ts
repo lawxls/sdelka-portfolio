@@ -3,6 +3,13 @@ import { generateTenderSlug } from "../tenders/generate-tender-slug";
 import type { AttachedFile, CurrentSupplier, PaymentMethod, ProcurementInquiry, UnloadingType } from "../types";
 import { findTenderIndex, listSlugs, pushTender, readTenders, removeTender, writeTenderAt } from "./store";
 
+export type TenderSendMode = "auto" | "manual";
+
+export interface TenderEmailDraft {
+	subject: string;
+	body: string;
+}
+
 export interface CreateTenderInput {
 	name: string;
 	companyId: string;
@@ -19,6 +26,8 @@ export interface CreateTenderInput {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	attachedFiles?: AttachedFile[];
+	email?: TenderEmailDraft;
+	sendMode?: TenderSendMode;
 }
 
 export async function createTenderMock(input: CreateTenderInput): Promise<ProcurementInquiry> {

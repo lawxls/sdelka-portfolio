@@ -2,8 +2,9 @@ import { useState } from "react";
 import type { CreateTenderInput } from "@/data/domains/tenders";
 import type { GeneratedAnswer, NewItemInput, Unit, UnloadingType } from "@/data/types";
 import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
+import { buildEmailVariant } from "./tender-email-templates";
 
-export type WizardStep = 1 | 2;
+export type WizardStep = 1 | 2 | 3;
 
 type AdvanceFocus = "company" | "name" | "deadline";
 type AdvanceResult = { advanced: boolean; focus?: AdvanceFocus; positionIndex?: number };
@@ -41,6 +42,14 @@ interface Step2Answer {
 
 interface Step2State {
 	answers: Record<string, Step2Answer>;
+}
+
+interface Step3State {
+	autoSend: boolean;
+	subject: string;
+	body: string;
+	generated: boolean;
+	regenerateIndex: number;
 }
 
 interface PositionErrors {
@@ -82,6 +91,16 @@ function defaultStep1(initialDeadline: string): Step1State {
 
 function defaultStep2(): Step2State {
 	return { answers: {} };
+}
+
+function defaultStep3(): Step3State {
+	return {
+		autoSend: false,
+		subject: "",
+		body: "",
+		generated: false,
+		regenerateIndex: 0,
+	};
 }
 
 function defaultStep1Errors(): Step1Errors {
@@ -138,7 +157,7 @@ function generateTenderName(step1: Step1State): string {
 	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
 }
 
-function buildTenderInput(step1: Step1State): CreateTenderInput {
+function buildTenderInput(step1: Step1State, step3: Step3State): CreateTenderInput {
 	const tender: CreateTenderInput = {
 		name: generateTenderName(step1),
 		companyId: step1.companyId,
@@ -167,6 +186,12 @@ function buildTenderInput(step1: Step1State): CreateTenderInput {
 		};
 	}
 
+	const subject = step3.subject.trim();
+	const body = step3.body.trim();
+	if (subject || body) tender.email = { subject, body };
+
+	tender.sendMode = step3.autoSend ? "auto" : "manual";
+
 	return tender;
 }
 
@@ -182,6 +207,7 @@ export function useCreateTenderForm() {
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(() => defaultStep1(initialDeadline));
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
+	const [step3, setStep3] = useState<Step3State>(defaultStep3);
 	const [step1Errors, setStep1Errors] = useState<Step1Errors>(defaultStep1Errors);
 
 	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
@@ -231,6 +257,45 @@ export function useCreateTenderForm() {
 		});
 	}
 
+	function update3<K extends keyof Step3State>(key: K, value: Step3State[K]) {
+		setStep3((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
+	}
+
+	function buildEmailContext(folderName: string | null) {
+		return {
+			folderName,
+			deadline: step1.deadline,
+			positions: step1.positions.map((p) => ({
+				name: p.name,
+				quantityPerDelivery: p.quantityPerDelivery,
+				annualQuantity: p.annualQuantity,
+				unit: p.unit,
+			})),
+		};
+	}
+
+	function seedEmail(folderName: string | null) {
+		setStep3((prev) => {
+			if (prev.generated) return prev;
+			const variant = buildEmailVariant(0, buildEmailContext(folderName));
+			return { ...prev, subject: variant.subject, body: variant.body, generated: true, regenerateIndex: 0 };
+		});
+	}
+
+	function regenerateEmail(folderName: string | null) {
+		setStep3((prev) => {
+			const nextIndex = prev.regenerateIndex + 1;
+			const variant = buildEmailVariant(nextIndex, buildEmailContext(folderName));
+			return {
+				...prev,
+				subject: variant.subject,
+				body: variant.body,
+				generated: true,
+				regenerateIndex: nextIndex,
+			};
+		});
+	}
+
 	function validateStep1(): Step1Errors {
 		const positionErrors: PositionErrors[] = step1.positions.map((p) =>
 			p.name.trim() ? {} : { name: "Укажите название позиции" },
@@ -256,17 +321,23 @@ export function useCreateTenderForm() {
 			setStep(2);
 			return { advanced: true };
 		}
+		if (step === 2) {
+			setStep(3);
+			return { advanced: true };
+		}
 		return { advanced: false };
 	}
 
 	function goBack() {
-		if (step === 2) setStep(1);
+		if (step === 3) setStep(2);
+		else if (step === 2) setStep(1);
 	}
 
 	function reset() {
 		setStep(1);
 		setStep1(defaultStep1(initialDeadline));
 		setStep2(defaultStep2());
+		setStep3(defaultStep3());
 		setStep1Errors(defaultStep1Errors());
 	}
 
@@ -294,7 +365,9 @@ export function useCreateTenderForm() {
 		step1.analoguesNotAllowed ||
 		step1.additionalInfo !== "" ||
 		step1.files.length > 0 ||
-		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText);
+		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText) ||
+		step3.autoSend ||
+		step3.generated;
 
 	const canAddPosition = (() => {
 		const last = step1.positions[step1.positions.length - 1];
@@ -302,7 +375,7 @@ export function useCreateTenderForm() {
 	})();
 
 	function toPayload(): CreateTenderPayload {
-		const tender = buildTenderInput(step1);
+		const tender = buildTenderInput(step1, step3);
 		const items = step1.positions.map((p) => buildNewItemInput(p, step2));
 		return { tender, items };
 	}
@@ -311,12 +384,16 @@ export function useCreateTenderForm() {
 		step,
 		step1,
 		step2,
+		step3,
 		step1Errors,
 		update1,
 		updatePosition,
 		addPosition,
 		removePosition,
 		update2,
+		update3,
+		seedEmail,
+		regenerateEmail,
 		advance,
 		goBack,
 		reset,

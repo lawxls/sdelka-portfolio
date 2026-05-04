@@ -72,6 +72,37 @@ describe("useCreateTenderForm", () => {
 		expect(result.current.step).toBe(2);
 	});
 
+	test("advance from step 2 to step 3 needs no validation", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => {
+			result.current.advance();
+		});
+		act(() => {
+			result.current.advance();
+		});
+
+		expect(result.current.step).toBe(3);
+	});
+
+	test("goBack from step 3 returns to step 2 then to step 1", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => {
+			result.current.advance();
+		});
+		act(() => {
+			result.current.advance();
+		});
+		expect(result.current.step).toBe(3);
+
+		act(() => result.current.goBack());
+		expect(result.current.step).toBe(2);
+
+		act(() => result.current.goBack());
+		expect(result.current.step).toBe(1);
+	});
+
 	test("typing in errored deadline clears error", () => {
 		const { result } = setup();
 		act(() => result.current.update1("deadline", ""));
@@ -249,5 +280,73 @@ describe("useCreateTenderForm", () => {
 
 		act(() => result.current.update1("cashPaymentAllowed", true));
 		expect(result.current.toPayload().tender.paymentMethod).toBe("cash");
+	});
+
+	// --- Step 3 — supplier email ---
+
+	test("seedEmail fills subject + body once based on positions and folder", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => result.current.seedEmail("Металлопрокат"));
+
+		expect(result.current.step3.subject).toContain("Металлопрокат");
+		expect(result.current.step3.body).toContain("Арматура");
+		expect(result.current.step3.generated).toBe(true);
+	});
+
+	test("seedEmail is idempotent — second call doesn't overwrite", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => result.current.seedEmail("Металлопрокат"));
+		act(() => result.current.update3("subject", "Custom subject"));
+		act(() => result.current.seedEmail("Металлопрокат"));
+
+		expect(result.current.step3.subject).toBe("Custom subject");
+	});
+
+	test("regenerateEmail cycles to next variant and overwrites subject + body", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => result.current.seedEmail("Металлопрокат"));
+		const firstSubject = result.current.step3.subject;
+
+		act(() => result.current.regenerateEmail("Металлопрокат"));
+		expect(result.current.step3.subject).not.toBe(firstSubject);
+		expect(result.current.step3.regenerateIndex).toBe(1);
+	});
+
+	test("toPayload defaults sendMode='manual' and includes email when seeded", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => result.current.seedEmail("Металлопрокат"));
+
+		const payload = result.current.toPayload();
+		expect(payload.tender.sendMode).toBe("manual");
+		expect(payload.tender.email?.subject).toContain("Металлопрокат");
+	});
+
+	test("toPayload reports sendMode='auto' when autoSend is checked", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+		act(() => result.current.update3("autoSend", true));
+
+		const payload = result.current.toPayload();
+		expect(payload.tender.sendMode).toBe("auto");
+	});
+
+	test("toPayload omits email block when subject and body are empty", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+
+		const payload = result.current.toPayload();
+		expect(payload.tender.email).toBeUndefined();
+	});
+
+	test("isDirty flips true when autoSend toggled on", () => {
+		const { result } = setup();
+		expect(result.current.isDirty).toBe(false);
+
+		act(() => result.current.update3("autoSend", true));
+		expect(result.current.isDirty).toBe(true);
 	});
 });
