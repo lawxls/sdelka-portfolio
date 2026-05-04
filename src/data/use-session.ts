@@ -105,6 +105,20 @@ export function useCheckEmail() {
 	});
 }
 
+/**
+ * Mutation hook for the resend-confirmation page and the /login → 403
+ * `email_not_verified` recovery flow. Anti-enumeration: the backend always
+ * returns 200, so callers should always render the same generic "если аккаунт
+ * существует, мы отправили письмо" success copy regardless of outcome.
+ */
+export function useResendConfirmation() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (email: string): Promise<void> => client.resendConfirmation(email),
+	});
+}
+
 export type SessionStatus = "pending" | "authed" | "anon";
 
 /**

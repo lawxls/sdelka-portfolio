@@ -39,4 +39,9 @@ export interface SessionClient {
 	 * can surface a "this email is taken" hint before the user fills out the
 	 * rest of the details stage. */
 	checkEmail(email: string): Promise<CheckEmailResult>;
+	/** Re-issue an email-confirmation link. Anti-enumeration: the backend
+	 * responds with the same 200 regardless of whether the email exists, is
+	 * already verified, or has never been seen — the UI never tells the user
+	 * which case applies. */
+	resendConfirmation(email: string): Promise<void>;
 }

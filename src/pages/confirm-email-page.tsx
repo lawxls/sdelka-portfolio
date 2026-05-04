@@ -50,7 +50,12 @@ export function ConfirmEmailPage() {
 			<h1 className="text-2xl font-semibold">Ошибка</h1>
 			<p className="mt-2 text-sm text-muted-foreground">{errorMessage}</p>
 			<p className="mt-4 text-sm">
-				<Link to="/login" className="text-foreground hover:underline">
+				<Link to="/resend-confirmation" className="text-foreground hover:underline">
+					Отправить ссылку ещё раз
+				</Link>
+			</p>
+			<p className="mt-2 text-sm">
+				<Link to="/login" className="text-muted-foreground hover:text-foreground">
 					Перейти к входу
 				</Link>
 			</p>

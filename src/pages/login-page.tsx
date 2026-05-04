@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
-import { TooManyRequestsError } from "@/data/errors";
+import { AuthError, TooManyRequestsError } from "@/data/errors";
 import { useLogin } from "@/data/use-session";
 import { useCountdown } from "@/hooks/use-countdown";
 
@@ -32,6 +32,16 @@ export function LoginPage() {
 			await login.mutateAsync({ email, password });
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
+			if (
+				err instanceof AuthError &&
+				err.status === 403 &&
+				typeof err.body === "object" &&
+				err.body !== null &&
+				(err.body as { code?: unknown }).code === "email_not_verified"
+			) {
+				navigate(`/resend-confirmation?email=${encodeURIComponent(email)}`);
+				return;
+			}
 			const result = extractFormErrors(err);
 			setError(result.error);
 			setFieldErrors(result.fieldErrors);

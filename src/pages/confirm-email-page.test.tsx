@@ -19,6 +19,7 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		register: vi.fn(),
 		confirmEmail: vi.fn(),
 		checkEmail: vi.fn(),
+		resendConfirmation: vi.fn(),
 		...overrides,
 	};
 }
@@ -92,6 +93,18 @@ describe("ConfirmEmailPage", () => {
 		});
 		expect(screen.getByRole("link", { name: "Перейти к входу" })).toBeInTheDocument();
 		expect(sessionStorage.getItem("auth-access-token")).toBeNull();
+	});
+
+	test("error state surfaces a link to /resend-confirmation so the user can request a fresh link", async () => {
+		const confirmEmail = vi.fn().mockRejectedValue(new ValidationError({}, { code: "invalid_or_expired_link" }));
+		const session = buildSession({ confirmEmail });
+		renderConfirmEmail(["/confirm-email?uid=bad-uid&token=bad-token"], session);
+
+		await waitFor(() => {
+			const resendLink = screen.getByRole("link", { name: "Отправить ссылку ещё раз" });
+			expect(resendLink).toBeInTheDocument();
+			expect(resendLink).toHaveAttribute("href", "/resend-confirmation");
+		});
 	});
 
 	test("renders pending state while confirmEmail is in flight", () => {

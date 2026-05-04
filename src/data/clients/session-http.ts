@@ -38,5 +38,8 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 
 		checkEmail: (email: string) =>
 			http.post<CheckEmailResult>(`/auth/check-email/`, { body: { email }, skipRefresh: true }),
+
+		resendConfirmation: (email: string) =>
+			http.post<void>(`/auth/resend-confirmation/`, { body: { email }, skipRefresh: true }),
 	};
 }

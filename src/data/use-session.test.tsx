@@ -7,7 +7,15 @@ import { AUTH_CLEARED_EVENT, getAccessToken, setTokens } from "./auth";
 import type { SessionClient } from "./clients/session-client";
 import { AuthError, NetworkError, ValidationError } from "./errors";
 import { fakeSessionClient, TestClientsProvider } from "./test-clients-provider";
-import { useCheckEmail, useConfirmEmail, useLogin, useLogout, useRegister, useSessionBootstrap } from "./use-session";
+import {
+	useCheckEmail,
+	useConfirmEmail,
+	useLogin,
+	useLogout,
+	useRegister,
+	useResendConfirmation,
+	useSessionBootstrap,
+} from "./use-session";
 
 let queryClient: QueryClient;
 
@@ -232,6 +240,38 @@ describe("useCheckEmail", () => {
 		});
 
 		expect(checkEmail).toHaveBeenCalledWith("taken@example.com");
+	});
+});
+
+describe("useResendConfirmation", () => {
+	test("calls client.resendConfirmation with the email and resolves", async () => {
+		const resendConfirmation = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ resendConfirmation });
+
+		const { result } = renderHook(() => useResendConfirmation(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync("unverified@example.com");
+		});
+
+		expect(resendConfirmation).toHaveBeenCalledWith("unverified@example.com");
+	});
+
+	test("resolves even when the backend rejects (anti-enumeration: caller is shielded from outcome)", async () => {
+		// The HTTP adapter would translate a real 200 to a resolved promise; this
+		// test simulates a hypothetical adapter quirk to pin the contract that
+		// errors propagate untouched (the page swallows them in onError to keep
+		// the success copy generic).
+		const resendConfirmation = vi.fn().mockRejectedValue(new Error("network blip"));
+		const client = fakeSessionClient({ resendConfirmation });
+
+		const { result } = renderHook(() => useResendConfirmation(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(result.current.mutateAsync("unverified@example.com")).rejects.toThrow();
+		});
+
+		expect(resendConfirmation).toHaveBeenCalledOnce();
 	});
 });
 

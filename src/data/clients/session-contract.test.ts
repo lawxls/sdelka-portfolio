@@ -144,6 +144,12 @@ function httpAdapter(): Adapter {
 				return { status: 200, body: { exists } };
 			},
 		},
+		{
+			method: "POST",
+			path: /^\/auth\/resend-confirmation\/$/,
+			// Anti-enumeration: identical 200 regardless of email validity.
+			respond: () => ({ status: 200 }),
+		},
 	];
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
@@ -281,6 +287,18 @@ describe.each(adapters.map((make) => [make().name, make]))("SessionClient contra
 		const result = await client.checkEmail("nobody@example.com");
 		expect(result.exists).toBe(false);
 	});
+
+	it("resendConfirmation resolves for a known unverified email (anti-enumeration: 200)", async () => {
+		await expect(client.resendConfirmation("unverified@example.com")).resolves.toBeUndefined();
+	});
+
+	it("resendConfirmation resolves for an unknown email (anti-enumeration: 200)", async () => {
+		await expect(client.resendConfirmation("nobody@example.com")).resolves.toBeUndefined();
+	});
+
+	it("resendConfirmation resolves for an already-verified email (anti-enumeration: 200)", async () => {
+		await expect(client.resendConfirmation("valid@example.com")).resolves.toBeUndefined();
+	});
 });
 
 /**
@@ -321,6 +339,27 @@ describe("InMemorySessionClient — refresh-unavailable branch", () => {
 		const client = createInMemorySessionClient({ users: SEED_USERS, refreshAvailable: true });
 		await client.logout();
 		await expect(client.refresh()).rejects.toBeInstanceOf(AuthError);
+	});
+
+	it("resendConfirmation re-issues a token an unverified user can confirm with", async () => {
+		const tokens = ["first-token", "second-token"];
+		let i = 0;
+		const client = createInMemorySessionClient({
+			users: SEED_USERS,
+			generateConfirmationToken: () => tokens[i++] ?? "fallback-token",
+		});
+
+		// register -> first token
+		const registered = await client.register(validRegisterInput());
+		// resendConfirmation rotates to the second token
+		await client.resendConfirmation("newuser@example.com");
+		// confirming with the original token now fails (rotated)
+		await expect(client.confirmEmail({ uid: String(registered.user.id), token: "first-token" })).rejects.toBeInstanceOf(
+			ValidationError,
+		);
+		// confirming with the rotated token succeeds (auto-login)
+		const confirmed = await client.confirmEmail({ uid: String(registered.user.id), token: "second-token" });
+		expect(confirmed.user.email).toBe("newuser@example.com");
 	});
 
 	it("register followed by confirmEmail flips verified and returns access + user (auto-login)", async () => {

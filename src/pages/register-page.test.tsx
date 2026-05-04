@@ -159,6 +159,7 @@ describe("RegisterPage", () => {
 			register,
 			confirmEmail: vi.fn(),
 			checkEmail,
+			resendConfirmation: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -203,6 +204,7 @@ describe("RegisterPage", () => {
 			register,
 			confirmEmail: vi.fn(),
 			checkEmail,
+			resendConfirmation: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -238,6 +240,7 @@ describe("RegisterPage", () => {
 			register,
 			confirmEmail: vi.fn(),
 			checkEmail,
+			resendConfirmation: vi.fn(),
 		};
 
 		renderRegister({ session });

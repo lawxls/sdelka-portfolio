@@ -121,5 +121,16 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			await delay();
 			return { exists: users.some((u) => u.email === email) };
 		},
+
+		async resendConfirmation(email: string): Promise<void> {
+			await delay();
+			// Anti-enumeration: succeed regardless of whether the email exists or
+			// is already verified. If the user does exist and is unverified, mint
+			// a fresh confirmation token so a test can drive the round-trip.
+			const match = users.find((u) => u.email === email);
+			if (match && match.verified === false) {
+				match.confirmationToken = genToken();
+			}
+		},
 	};
 }
