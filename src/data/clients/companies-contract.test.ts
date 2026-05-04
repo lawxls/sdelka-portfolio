@@ -69,7 +69,7 @@ function httpAdapter(seed: Company[]): HttpHarness {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/companies\/all$/,
+			path: /^\/companies\/all$/,
 			respond: () =>
 				Promise.resolve({
 					status: 200,
@@ -78,7 +78,7 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/companies(\?|$)/,
+			path: /^\/companies(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
@@ -89,9 +89,9 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/companies\/([^/]+)$/,
+			path: /^\/companies\/([^/]+)$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/api\/companies\/([^/]+)$/);
+				const id = idFromPath(url, /^\/companies\/([^/]+)$/);
 				const c = store.get(id);
 				if (!c) return { status: 404 };
 				return { status: 200, body: c };
@@ -99,7 +99,7 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/companies$/,
+			path: /^\/companies$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string);
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
@@ -123,9 +123,9 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/companies\/([^/]+)$/,
+			path: /^\/companies\/([^/]+)$/,
 			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/api\/companies\/([^/]+)$/);
+				const id = idFromPath(url, /^\/companies\/([^/]+)$/);
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
 				const data = JSON.parse(init?.body as string);
@@ -137,18 +137,18 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "DELETE",
-			path: /^\/api\/companies\/([^/]+)$/,
+			path: /^\/companies\/([^/]+)$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/api\/companies\/([^/]+)$/);
+				const id = idFromPath(url, /^\/companies\/([^/]+)$/);
 				store.delete(id);
 				return { status: 204 };
 			},
 		},
 		{
 			method: "POST",
-			path: /^\/api\/companies\/([^/]+)\/addresses$/,
+			path: /^\/companies\/([^/]+)\/addresses$/,
 			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/api\/companies\/([^/]+)\/addresses$/);
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/addresses$/);
 				const c = store.get(id);
 				if (!c) return { status: 404 };
 				const data = JSON.parse(init?.body as string);
@@ -165,9 +165,9 @@ function httpAdapter(seed: Company[]): HttpHarness {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/companies\/([^/]+)\/employees$/,
+			path: /^\/companies\/([^/]+)\/employees$/,
 			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/api\/companies\/([^/]+)\/employees$/);
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/employees$/);
 				const c = store.get(id);
 				if (!c) return { status: 404 };
 				const data = JSON.parse(init?.body as string);

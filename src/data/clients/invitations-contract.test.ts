@@ -41,7 +41,7 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "POST",
-			path: /^\/api\/invitations\/verify$/,
+			path: /^\/invitations\/verify$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { code: string };
 				if (data.code === "") return { status: 400, body: { fieldErrors: { code: ["required"] } } };

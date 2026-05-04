@@ -9,8 +9,10 @@ import {
 	ValidationError,
 } from "./errors";
 
-/** Build-time API base URL. Empty in tests / dev when absent. */
-const BASE_URL = (import.meta.env?.VITE_API_BASE_URL ?? "") as string;
+/** Build-time API base URL. Defaults to `/api/v1` so all adapter paths join
+ * onto the Django v1 namespace; override with `VITE_API_BASE_URL` (e.g. an
+ * absolute URL when the SPA is served from a different origin). */
+const BASE_URL = (import.meta.env?.VITE_API_BASE_URL ?? "/api/v1") as string;
 
 interface RequestOptions {
 	signal?: AbortSignal;

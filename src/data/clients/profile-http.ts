@@ -4,14 +4,14 @@ import type { ProfileClient } from "./profile-client";
 
 export function createHttpProfileClient(http: HttpClient = defaultHttpClient): ProfileClient {
 	return {
-		me: () => http.get<CurrentEmployee>(`/api/me`),
+		me: () => http.get<CurrentEmployee>(`/me`),
 
-		settings: () => http.get<UserSettings>(`/api/profile/settings`),
+		settings: () => http.get<UserSettings>(`/profile/settings`),
 
-		update: (patch) => http.patch<UserSettings>(`/api/profile/settings`, { body: patch }),
+		update: (patch) => http.patch<UserSettings>(`/profile/settings`, { body: patch }),
 
 		changePassword: (currentPassword, newPassword) =>
-			http.post<ChangePasswordResponse>(`/api/profile/password`, {
+			http.post<ChangePasswordResponse>(`/profile/password`, {
 				body: { currentPassword, newPassword },
 			}),
 	};

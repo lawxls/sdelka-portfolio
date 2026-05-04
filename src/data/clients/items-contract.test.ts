@@ -56,7 +56,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/items\/all$/,
+			path: /^\/items\/all$/,
 			respond: () => ({
 				status: 200,
 				body: Array.from(store.values()).filter((i) => !archived.has(i.id)),
@@ -64,7 +64,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/items\/totals(\?|$)/,
+			path: /^\/items\/totals(\?|$)/,
 			respond: () => ({
 				status: 200,
 				body: { itemCount: store.size, totalOverpayment: 0, totalSavings: 0, totalDeviation: 0 },
@@ -72,7 +72,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/items(\?|$)/,
+			path: /^\/items(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
@@ -86,9 +86,9 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/items\/([^/]+)$/,
+			path: /^\/items\/([^/]+)$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/api\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/items\/([^/]+)$/);
 				const item = store.get(id);
 				if (!item) return { status: 404 };
 				return { status: 200, body: item };
@@ -96,7 +96,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/items$/,
+			path: /^\/items$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { items: { name: string }[] };
 				const created = data.items.map((input) => {
@@ -110,9 +110,9 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/items\/([^/]+)$/,
+			path: /^\/items\/([^/]+)$/,
 			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/api\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/items\/([^/]+)$/);
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
 				const data = JSON.parse(init?.body as string);
@@ -125,9 +125,9 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/api\/items\/([^/]+)$/,
+			path: /^\/items\/([^/]+)$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/api\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/items\/([^/]+)$/);
 				store.delete(id);
 				archived.delete(id);
 				return { status: 204 };
@@ -135,10 +135,10 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/items\/([^/]+)\/(archive|unarchive)$/,
+			path: /^\/items\/([^/]+)\/(archive|unarchive)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/api\/items\/([^/]+)\/(archive|unarchive)$/);
+				const match = path.match(/^\/items\/([^/]+)\/(archive|unarchive)$/);
 				if (!match) return { status: 400 };
 				const id = decodeURIComponent(match[1]);
 				const action = match[2];
@@ -151,7 +151,7 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 	];
 
-	const exportRoute = /^\/api\/items\/export(\?|$)/;
+	const exportRoute = /^\/items\/export(\?|$)/;
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = input;

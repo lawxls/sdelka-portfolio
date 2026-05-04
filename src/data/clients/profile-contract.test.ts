@@ -55,17 +55,17 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/me$/,
+			path: /^\/me$/,
 			respond: () => ({ status: 200, body: me }),
 		},
 		{
 			method: "GET",
-			path: /^\/api\/profile\/settings$/,
+			path: /^\/profile\/settings$/,
 			respond: () => ({ status: 200, body: settings }),
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/profile\/settings$/,
+			path: /^\/profile\/settings$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as Partial<UserSettings>;
 				if (data.first_name === "__validation__") {
@@ -77,7 +77,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/profile\/password$/,
+			path: /^\/profile\/password$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { currentPassword: string; newPassword: string };
 				if (data.currentPassword === "__wrong__") return { status: 409, body: { detail: "wrong password" } };

@@ -4,6 +4,6 @@ import type { InvitationsClient } from "./invitations-client";
 
 export function createHttpInvitationsClient(http: HttpClient = defaultHttpClient): InvitationsClient {
 	return {
-		verify: (code) => http.post<VerifyInvitationCodeResponse>(`/api/invitations/verify`, { body: { code } }),
+		verify: (code) => http.post<VerifyInvitationCodeResponse>(`/invitations/verify`, { body: { code } }),
 	};
 }

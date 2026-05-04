@@ -20,15 +20,15 @@ const enc = encodeURIComponent;
 
 export function createHttpTasksClient(http: HttpClient = defaultHttpClient): TasksClient {
 	return {
-		listAll: () => http.get<Task[]>(`/api/tasks/all`),
+		listAll: () => http.get<Task[]>(`/tasks/all`),
 
-		list: (params) => http.get<TaskListResponse>(`/api/tasks${buildQuery(params ?? {})}`),
+		list: (params) => http.get<TaskListResponse>(`/tasks${buildQuery(params ?? {})}`),
 
-		board: (params) => http.get<TaskBoardResponse>(`/api/tasks/board${buildQuery(params ?? {})}`),
+		board: (params) => http.get<TaskBoardResponse>(`/tasks/board${buildQuery(params ?? {})}`),
 
-		get: (id) => http.get<Task>(`/api/tasks/${enc(id)}`),
+		get: (id) => http.get<Task>(`/tasks/${enc(id)}`),
 
-		changeStatus: (id, data: ChangeStatusData) => http.post<Task>(`/api/tasks/${enc(id)}/status`, { body: data }),
+		changeStatus: (id, data: ChangeStatusData) => http.post<Task>(`/tasks/${enc(id)}/status`, { body: data }),
 
 		uploadAttachments: async (_id: string, _files: File[]): Promise<Attachment[]> => {
 			// Attachment upload is multipart/form-data; the shared httpClient is JSON-only
@@ -38,6 +38,6 @@ export function createHttpTasksClient(http: HttpClient = defaultHttpClient): Tas
 			throw new Error("HTTP uploadAttachments not implemented yet");
 		},
 
-		deleteAttachment: (id, attachmentId) => http.delete<void>(`/api/tasks/${enc(id)}/attachments/${enc(attachmentId)}`),
+		deleteAttachment: (id, attachmentId) => http.delete<void>(`/tasks/${enc(id)}/attachments/${enc(attachmentId)}`),
 	};
 }

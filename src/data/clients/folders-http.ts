@@ -22,15 +22,14 @@ const enc = encodeURIComponent;
 
 export function createHttpFoldersClient(http: HttpClient = defaultHttpClient): FoldersClient {
 	return {
-		list: () => http.get<Folder[]>(`/api/folders`),
+		list: () => http.get<Folder[]>(`/folders`),
 
-		stats: (params?: FolderStatsParams) =>
-			http.get<FolderStatsResponse>(`/api/folders/stats${buildQuery(params ?? {})}`),
+		stats: (params?: FolderStatsParams) => http.get<FolderStatsResponse>(`/folders/stats${buildQuery(params ?? {})}`),
 
-		create: (data: CreateFolderData) => http.post<Folder>(`/api/folders`, { body: data }),
+		create: (data: CreateFolderData) => http.post<Folder>(`/folders`, { body: data }),
 
-		update: (id, data: UpdateFolderData) => http.patch<Folder>(`/api/folders/${enc(id)}`, { body: data }),
+		update: (id, data: UpdateFolderData) => http.patch<Folder>(`/folders/${enc(id)}`, { body: data }),
 
-		delete: (id) => http.delete<void>(`/api/folders/${enc(id)}`),
+		delete: (id) => http.delete<void>(`/folders/${enc(id)}`),
 	};
 }

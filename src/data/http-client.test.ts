@@ -199,7 +199,7 @@ describe("httpClient — getBinary", () => {
 		);
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export?company=c1");
+		const result = await http.getBinary("/items/export?company=c1");
 
 		expect(result.filename).toBe("report.xlsx");
 		expect(await result.blob.text()).toBe("bytes");
@@ -217,7 +217,7 @@ describe("httpClient — getBinary", () => {
 		);
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export");
+		const result = await http.getBinary("/items/export");
 
 		expect(result.filename).toBe("items тест.xlsx");
 	});
@@ -226,7 +226,7 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export?a=1", { fallbackFilename: "items.xlsx" });
+		const result = await http.getBinary("/items/export?a=1", { fallbackFilename: "items.xlsx" });
 
 		expect(result.filename).toBe("items.xlsx");
 	});
@@ -235,7 +235,7 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
 		const http = setup(fetchSpy, { token: "abc" });
 
-		await http.getBinary("/api/items/export");
+		await http.getBinary("/items/export");
 
 		const init = fetchSpy.mock.calls[0][1] as RequestInit;
 		expect((init.headers as Headers).get("Authorization")).toBe("Bearer abc");
@@ -245,13 +245,13 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
 		const http = setup(fetchSpy);
 
-		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NotFoundError);
+		await expect(http.getBinary("/items/export")).rejects.toBeInstanceOf(NotFoundError);
 	});
 
 	it("fetch rejection → NetworkError", async () => {
 		const fetchSpy = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = setup(fetchSpy);
 
-		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NetworkError);
+		await expect(http.getBinary("/items/export")).rejects.toBeInstanceOf(NetworkError);
 	});
 });
