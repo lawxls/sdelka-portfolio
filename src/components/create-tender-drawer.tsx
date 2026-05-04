@@ -1,4 +1,4 @@
-import { CircleHelp, LoaderCircle, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, CircleHelp, Info, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -16,25 +16,20 @@ import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { DateField } from "@/components/ui/date-field";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
-import { OptionalSegmentedControl, SegmentedControl } from "@/components/ui/segmented-control";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { OptionalSegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import {
-	DELIVERY_COST_TYPE_LABELS,
-	PAYMENT_METHOD_LABELS,
-	PAYMENT_METHODS,
-	PAYMENT_TYPE_LABELS,
-	PAYMENT_TYPES,
-	UNITS,
-	UNLOADING_LABELS,
-} from "@/data/types";
+import { UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
+import { useCreateAddress } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatFileSize, formatGroupedInteger } from "@/lib/format";
+import { formatFileSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
 	type CreateTenderPayload,
@@ -54,9 +49,16 @@ const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
 const STEP_TITLES: Record<WizardStep, string> = {
 	1: "Заполните данные по запросу",
-	2: "Заполните данные по текущему поставщику",
-	3: "Дополнительные вопросы",
+	2: "Дополнительные вопросы",
 };
+
+const DEADLINE_TOOLTIP =
+	"По истечении дедлайна запрос автоматически перейдёт в статус «Переговоры завершены». При необходимости его можно будет вернуть в работу вручную.";
+
+/** Subtle surface tint used for header, footer, and position cards — slightly darker than `--muted`
+ * so chrome reads as a layer above the popover body in both themes. */
+const SURFACE_TINT =
+	"bg-[color-mix(in_oklch,var(--muted)_99%,var(--foreground)_0.4%)] dark:bg-[color-mix(in_oklch,var(--muted)_95%,var(--foreground)_1.5%)]";
 
 function SectionGroupHeader({ title }: { title: string }) {
 	return (
@@ -130,12 +132,10 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 	const { step, step1 } = form;
 
 	const [showConfirm, setShowConfirm] = useState(false);
-	const [step3Ready, setStep3Ready] = useState(false);
+	const [step2Ready, setStep2Ready] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const deadlineInputRef = useRef<HTMLInputElement>(null);
-	const budgetInputRef = useRef<HTMLInputElement>(null);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const lockedCompany = companies.length === 1 ? companies[0] : undefined;
 	const selectedCompany = step1.companyId ? companiesById.get(step1.companyId) : undefined;
@@ -168,14 +168,9 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 			const result = form.advance();
 			if (!result.advanced) {
 				if (result.focus === "deadline") deadlineInputRef.current?.focus();
-				else if (result.focus === "budget") budgetInputRef.current?.focus();
 				else if (result.focus === "company") companyTriggerRef.current?.focus();
 				else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
 			}
-			return;
-		}
-		if (step === 2) {
-			form.advance();
 			return;
 		}
 		handleSubmit();
@@ -183,7 +178,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 
 	function resetForm() {
 		form.reset();
-		setStep3Ready(false);
+		setStep2Ready(false);
 		nameInputRefs.current = [];
 	}
 
@@ -217,30 +212,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 		queueMicrotask(() => nameInputRefs.current[newIndex]?.focus());
 	}
 
-	function handleFilesAdd(newFiles: FileList | null) {
-		if (!newFiles) return;
-		const currentTotal = step1.files.reduce((sum, f) => sum + f.size, 0);
-		const toAdd: File[] = [];
-		let runningTotal = currentTotal;
-		for (const file of newFiles) {
-			if (file.size > MAX_FILE_SIZE) continue;
-			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
-			toAdd.push(file);
-			runningTotal += file.size;
-		}
-		if (toAdd.length > 0) {
-			form.update1("files", [...step1.files, ...toAdd]);
-		}
-	}
-
-	function handleFileRemove(index: number) {
-		form.update1(
-			"files",
-			step1.files.filter((_, i) => i !== index),
-		);
-	}
-
-	const progressPercent = Math.floor((step * 100) / 3);
+	const progressPercent = step === 1 ? 50 : 100;
 
 	return (
 		<>
@@ -249,7 +221,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 					showCloseButton={false}
 					className="flex flex-col gap-0 max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
 				>
-					<SheetHeader className="border-b pb-4">
+					<SheetHeader className={cn("border-b pb-4", SURFACE_TINT)}>
 						<SheetTitle>Создать запрос</SheetTitle>
 						<SheetDescription className="sr-only">{STEP_TITLES[step]}</SheetDescription>
 						<div className="mt-3 flex flex-col gap-2">
@@ -267,7 +239,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 								/>
 							</div>
 							<p className="text-sm text-muted-foreground" aria-live="polite" aria-atomic="true">
-								<span className="font-medium text-foreground">Шаг {step} из 3</span>
+								<span className="font-medium text-foreground">Шаг {step} из 2</span>
 								<span className="mx-1.5 opacity-40">·</span>
 								<span>{STEP_TITLES[step]}</span>
 							</p>
@@ -287,20 +259,15 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 									onCreateFolder={handleCreateFolder}
 									nameInputRefs={nameInputRefs}
 									deadlineInputRef={deadlineInputRef}
-									budgetInputRef={budgetInputRef}
 									companyTriggerRef={companyTriggerRef}
-									fileInputRef={fileInputRef}
-									onFilesAdd={handleFilesAdd}
-									onFileRemove={handleFileRemove}
 									onAddPosition={handleAddPosition}
 								/>
 							</TooltipProvider>
 						)}
-						{step === 2 && <Step2Body form={form} />}
-						{step === 3 && <Step3Body form={form} ready={step3Ready} onReady={() => setStep3Ready(true)} />}
+						{step === 2 && <Step2Body form={form} ready={step2Ready} onReady={() => setStep2Ready(true)} />}
 					</div>
 
-					<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
+					<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
 						<div className="flex gap-2">
 							{step === 1 && (
 								<Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -314,7 +281,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 							)}
 						</div>
 						<Button type="button" onClick={handleAdvance}>
-							{step === 3 ? "Создать" : "Далее"}
+							{step === 2 ? "Создать" : "Далее"}
 						</Button>
 					</SheetFooter>
 				</SheetContent>
@@ -338,129 +305,7 @@ export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTende
 	);
 }
 
-function Step2Body({ form }: { form: ReturnType<typeof useCreateTenderForm> }) {
-	const { step2, step2Errors, update2, blurInn } = form;
-	const deliveryCostVisible = step2.deliveryCostType === "paid";
-	const supplierBaseFilled = step2.companyName.trim() !== "" && step2.inn.trim() !== "";
-
-	return (
-		<div className="flex flex-col gap-4 pt-4">
-			<Field label="Название поставщика" htmlFor="supplier-name">
-				<Input
-					id="supplier-name"
-					placeholder="ООО «МеталлТрейд»"
-					value={step2.companyName}
-					onChange={(e) => update2("companyName", e.target.value)}
-					autoComplete="organization"
-					aria-label="Название текущего поставщика"
-				/>
-			</Field>
-
-			<Field label="ИНН" htmlFor="supplier-inn">
-				<Input
-					id="supplier-inn"
-					placeholder="7712345678"
-					value={step2.inn}
-					onChange={(e) => update2("inn", e.target.value)}
-					onBlur={blurInn}
-					inputMode="numeric"
-					autoComplete="off"
-					spellCheck={false}
-					aria-invalid={step2Errors.inn ? true : undefined}
-					aria-describedby={step2Errors.inn ? "inn-error" : undefined}
-					className={cn("w-full sm:w-1/2", step2Errors.inn && "border-destructive")}
-				/>
-				{step2Errors.inn && (
-					<p id="inn-error" className="text-sm text-destructive">
-						{step2Errors.inn}
-					</p>
-				)}
-			</Field>
-
-			<Field label="Условия оплаты">
-				<div className="flex flex-wrap items-center gap-3">
-					<SegmentedControl
-						options={PAYMENT_TYPES}
-						labels={PAYMENT_TYPE_LABELS}
-						value={step2.paymentType}
-						onChange={(v) => update2("paymentType", v)}
-						disabled={!supplierBaseFilled}
-					/>
-					{step2.paymentType === "deferred" && (
-						<div className="flex items-center gap-1.5">
-							<Input
-								type="number"
-								inputMode="numeric"
-								min={0}
-								placeholder="30"
-								value={step2.deferralDays}
-								onChange={(e) => update2("deferralDays", e.target.value)}
-								aria-label="Дней отсрочки"
-								autoComplete="off"
-								className="w-24"
-								disabled={!supplierBaseFilled}
-							/>
-							<span className="text-sm text-muted-foreground">дней</span>
-						</div>
-					)}
-					{step2.paymentType === "prepayment" && (
-						<div className="flex items-center gap-1.5">
-							<Input
-								type="number"
-								inputMode="numeric"
-								min={1}
-								max={100}
-								value={step2.prepaymentPercent}
-								onChange={(e) => update2("prepaymentPercent", e.target.value)}
-								aria-label="Размер предоплаты"
-								autoComplete="off"
-								className="w-20 tabular-nums"
-								disabled={!supplierBaseFilled}
-							/>
-							<span className="text-sm text-muted-foreground">%</span>
-						</div>
-					)}
-				</div>
-			</Field>
-
-			<Field label="Доставка">
-				<div className="flex flex-wrap items-center gap-3">
-					<Select
-						value={step2.deliveryCostType ?? undefined}
-						onValueChange={(v) => update2("deliveryCostType", v as typeof step2.deliveryCostType)}
-						disabled={!supplierBaseFilled}
-					>
-						<SelectTrigger aria-label="Доставка" className="w-44">
-							<SelectValue placeholder="Выберите тип" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="free">{DELIVERY_COST_TYPE_LABELS.free}</SelectItem>
-							<SelectItem value="paid">{DELIVERY_COST_TYPE_LABELS.paid}</SelectItem>
-							<SelectItem value="pickup">{DELIVERY_COST_TYPE_LABELS.pickup}</SelectItem>
-						</SelectContent>
-					</Select>
-					{deliveryCostVisible && (
-						<div className="flex items-center gap-1.5">
-							<Input
-								inputMode="numeric"
-								placeholder="15 000"
-								value={formatGroupedInteger(step2.deliveryCost)}
-								onChange={(e) => update2("deliveryCost", e.target.value.replace(/\D/g, ""))}
-								aria-label="Стоимость доставки"
-								autoComplete="off"
-								className="w-32"
-								disabled={!supplierBaseFilled}
-							/>
-							<span className="text-sm text-muted-foreground">₽</span>
-						</div>
-					)}
-				</div>
-			</Field>
-		</div>
-	);
-}
-
-function Step3Body({
+function Step2Body({
 	form,
 	ready,
 	onReady,
@@ -469,7 +314,7 @@ function Step3Body({
 	ready: boolean;
 	onReady: () => void;
 }) {
-	const { step3, update3 } = form;
+	const { step2, update2 } = form;
 
 	useMountEffect(() => {
 		if (ready) return undefined;
@@ -493,7 +338,7 @@ function Step3Body({
 	return (
 		<div className="flex flex-col gap-3 pt-4 pb-2">
 			{CREATION_QUESTIONS.map((question, index) => {
-				const answer = step3.answers[question.id] ?? {};
+				const answer = step2.answers[question.id] ?? {};
 				const freeTextId = `q-${question.id}-free`;
 				return (
 					<section
@@ -518,7 +363,7 @@ function Step3Body({
 										type="button"
 										aria-pressed={selected}
 										onClick={() =>
-											update3(question.id, {
+											update2(question.id, {
 												selectedOption: selected ? undefined : option,
 											})
 										}
@@ -538,7 +383,7 @@ function Step3Body({
 							id={freeTextId}
 							placeholder="Введите свой вариант"
 							value={answer.freeText ?? ""}
-							onChange={(e) => update3(question.id, { freeText: e.target.value })}
+							onChange={(e) => update2(question.id, { freeText: e.target.value })}
 							aria-label={`Свой вариант: ${question.label}`}
 							className="h-8 bg-background/60 text-sm"
 						/>
@@ -562,11 +407,7 @@ interface Step1BodyProps {
 	onCreateFolder: (name: string, color: string) => void;
 	nameInputRefs: React.RefObject<(HTMLInputElement | null)[]>;
 	deadlineInputRef: React.RefObject<HTMLInputElement | null>;
-	budgetInputRef: React.RefObject<HTMLInputElement | null>;
 	companyTriggerRef: React.RefObject<HTMLButtonElement | null>;
-	fileInputRef: React.RefObject<HTMLInputElement | null>;
-	onFilesAdd: (files: FileList | null) => void;
-	onFileRemove: (index: number) => void;
 	onAddPosition: () => void;
 }
 
@@ -580,46 +421,40 @@ function Step1Body({
 	onCreateFolder,
 	nameInputRefs,
 	deadlineInputRef,
-	budgetInputRef,
 	companyTriggerRef,
-	fileInputRef,
-	onFilesAdd,
-	onFileRemove,
 	onAddPosition,
 }: Step1BodyProps) {
 	const { step1, step1Errors, update1, updatePosition, removePosition, canAddPosition } = form;
 	const companyDisabled = !!lockedCompany;
 	const showRemove = step1.positions.length > 1;
 
+	function handleFilesAdd(newFiles: FileList | null) {
+		if (!newFiles) return;
+		const currentTotal = step1.files.reduce((sum, f) => sum + f.size, 0);
+		const toAdd: File[] = [];
+		let runningTotal = currentTotal;
+		for (const file of newFiles) {
+			if (file.size > MAX_FILE_SIZE) continue;
+			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
+			toAdd.push(file);
+			runningTotal += file.size;
+		}
+		if (toAdd.length > 0) update1("files", [...step1.files, ...toAdd]);
+	}
+
+	function handleFileRemove(index: number) {
+		update1(
+			"files",
+			step1.files.filter((_, i) => i !== index),
+		);
+	}
+
 	return (
 		<div className="flex flex-col gap-0 pt-3">
 			<SectionGroupHeader title="Запрос" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-					<Field label="Бюджет" htmlFor="tender-budget" className="flex-1">
-						<div className="flex items-center gap-1.5">
-							<Input
-								id="tender-budget"
-								ref={budgetInputRef}
-								placeholder="1 500 000"
-								value={formatGroupedInteger(step1.budget)}
-								onChange={(e) => update1("budget", e.target.value.replace(/\D/g, ""))}
-								inputMode="numeric"
-								autoComplete="off"
-								aria-invalid={step1Errors.budget ? true : undefined}
-								aria-describedby={step1Errors.budget ? "tender-budget-error" : undefined}
-								className={cn("flex-1 tabular-nums", step1Errors.budget && "border-destructive")}
-							/>
-							<span className="text-sm text-muted-foreground">₽</span>
-						</div>
-						{step1Errors.budget && (
-							<p id="tender-budget-error" className="text-sm text-destructive">
-								{step1Errors.budget}
-							</p>
-						)}
-					</Field>
-
-					<Field label="Дедлайн" htmlFor="tender-deadline" required className="flex-1">
+					<Field label="Дедлайн" htmlFor="tender-deadline" hint={DEADLINE_TOOLTIP} required className="flex-1">
 						<DateField
 							id="tender-deadline"
 							inputRef={deadlineInputRef}
@@ -636,9 +471,7 @@ function Step1Body({
 							</p>
 						)}
 					</Field>
-				</div>
 
-				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
 					<Field label="Компания" required className="flex-1">
 						<Select
 							value={step1.companyId || undefined}
@@ -674,21 +507,22 @@ function Step1Body({
 							</p>
 						)}
 					</Field>
-
-					<Field label="Категория" className="flex-1">
-						<FolderSelect
-							folders={folders}
-							value={step1.folderId}
-							onChange={(id) => update1("folderId", id)}
-							onCreateFolder={onCreateFolder}
-							nextFolderColor={nextFolderColor}
-						/>
-					</Field>
 				</div>
+
+				<Field label="Категория">
+					<FolderSelect
+						folders={folders}
+						value={step1.folderId}
+						onChange={(id) => update1("folderId", id)}
+						onCreateFolder={onCreateFolder}
+						nextFolderColor={nextFolderColor}
+					/>
+				</Field>
 			</div>
 
 			<SectionGroupHeader title="Позиции" />
 			<div className="flex flex-col gap-3 border-t border-border py-4">
+				<SingleSupplierBanner />
 				{step1.positions.map((position, index) => (
 					<PositionCard
 						// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
@@ -701,7 +535,11 @@ function Step1Body({
 						nameInputRef={(el) => {
 							nameInputRefs.current[index] = el;
 						}}
-					/>
+					>
+						{index === 0 && (
+							<FilesField files={step1.files} onFilesAdd={handleFilesAdd} onFileRemove={handleFileRemove} />
+						)}
+					</PositionCard>
 				))}
 				<div>
 					<Button
@@ -731,80 +569,16 @@ function Step1Body({
 						rows={3}
 					/>
 				</Field>
-
-				<Field
-					label="Прикрепить файлы"
-					hint="Прикрепите макеты, спецификации и другие документы — это поможет поставщикам сделать точный расчёт"
-				>
-					<button
-						type="button"
-						aria-label="Прикрепить файлы"
-						className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
-						onClick={() => fileInputRef.current?.click()}
-						onDragOver={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-						}}
-						onDrop={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							onFilesAdd(e.dataTransfer.files);
-						}}
-					>
-						<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
-						<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
-					</button>
-					<input
-						ref={fileInputRef}
-						type="file"
-						multiple
-						className="hidden"
-						onChange={(e) => {
-							onFilesAdd(e.target.files);
-							e.target.value = "";
-						}}
-					/>
-					{step1.files.length > 0 && (
-						<ul className="mt-1 flex flex-col gap-1">
-							{step1.files.map((file, i) => (
-								<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
-									<span className="min-w-0 flex-1 truncate">{file.name}</span>
-									<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-									<Button
-										type="button"
-										variant="ghost"
-										size="icon-xs"
-										onClick={() => onFileRemove(i)}
-										aria-label={`Удалить ${file.name}`}
-									>
-										<X aria-hidden="true" />
-									</Button>
-								</li>
-							))}
-						</ul>
-					)}
-				</Field>
 			</div>
 
-			<SectionGroupHeader title="Логистика и Финансы" />
+			<SectionGroupHeader title="Логистика" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<Field label="Адрес доставки">
-					<Select
-						value={step1.addressIds[0] ?? undefined}
-						onValueChange={(v) => update1("addressIds", v ? [v] : [])}
-						disabled={!selectedCompany || (selectedCompany?.addresses.length ?? 0) === 0}
-					>
-						<SelectTrigger aria-label="Адрес доставки" className="w-full">
-							<SelectValue placeholder={selectedCompany ? "Выберите адрес" : "Сначала выберите компанию"} />
-						</SelectTrigger>
-						<SelectContent>
-							{(selectedCompany?.addresses ?? []).map((a) => (
-								<SelectItem key={a.id} value={a.id}>
-									{a.address}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<AddressSelect
+						company={selectedCompany}
+						value={step1.addressIds[0] ?? null}
+						onChange={(id) => update1("addressIds", id ? [id] : [])}
+					/>
 				</Field>
 
 				<Field label="Разгрузка">
@@ -815,44 +589,44 @@ function Step1Body({
 						onChange={(v) => update1("unloading", v)}
 					/>
 				</Field>
-
-				<Field label="Оплата">
-					<SegmentedControl
-						options={PAYMENT_METHODS}
-						labels={PAYMENT_METHOD_LABELS}
-						value={step1.paymentMethod}
-						onChange={(v) => update1("paymentMethod", v)}
-					/>
-				</Field>
-
-				<CheckboxBadge
-					id="deferral-required"
-					checked={step1.deferralRequired}
-					onChange={(v) => update1("deferralRequired", v)}
-					ariaLabel="Отсрочка нужна"
-				>
-					Отсрочка нужна
-				</CheckboxBadge>
 			</div>
 
 			<SectionGroupHeader title="Дополнительно" />
 			<div className="flex flex-wrap gap-2 border-t border-border py-3">
 				<CheckboxBadge
-					id="sample-required"
-					checked={step1.sampleRequired}
-					onChange={(v) => update1("sampleRequired", v)}
-					ariaLabel="Нужен образец"
+					id="cash-payment-allowed"
+					checked={step1.cashPaymentAllowed}
+					onChange={(v) => update1("cashPaymentAllowed", v)}
+					ariaLabel="Допускается оплата наличными"
 				>
-					Нужен образец
+					Допускается оплата наличными
 				</CheckboxBadge>
 				<CheckboxBadge
-					id="analogues-allowed"
-					checked={step1.analoguesAllowed}
-					onChange={(v) => update1("analoguesAllowed", v)}
-					ariaLabel="Аналоги допускаются"
+					id="analogues-not-allowed"
+					checked={step1.analoguesNotAllowed}
+					onChange={(v) => update1("analoguesNotAllowed", v)}
+					ariaLabel="Аналоги не допускаются"
 				>
-					Допускаются аналоги
+					Аналоги не допускаются
 				</CheckboxBadge>
+			</div>
+		</div>
+	);
+}
+
+function SingleSupplierBanner() {
+	return (
+		<div
+			role="note"
+			className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-100"
+		>
+			<Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+			<div className="flex flex-col gap-1.5">
+				<p className="text-balance font-semibold">Важно: один запрос&nbsp;— один поставщик</p>
+				<p className="text-pretty">
+					Все позиции в рамках одного запроса должны поставляться одним поставщиком. Для товаров из разных категорий
+					создавайте отдельные запросы.
+				</p>
 			</div>
 		</div>
 	);
@@ -865,20 +639,26 @@ interface PositionCardProps {
 	onChange: <K extends keyof PositionDraft>(key: K, value: PositionDraft[K]) => void;
 	onRemove?: () => void;
 	nameInputRef: (el: HTMLInputElement | null) => void;
+	children?: React.ReactNode;
 }
 
-function PositionCard({ index, position, error, onChange, onRemove, nameInputRef }: PositionCardProps) {
+function PositionCard({ index, position, error, onChange, onRemove, nameInputRef, children }: PositionCardProps) {
 	const nameId = `position-${index}-name`;
 	const descId = `position-${index}-description`;
 	const qtyId = `position-${index}-qty`;
 	const annualId = `position-${index}-annual`;
 	const priceId = `position-${index}-price`;
+	const innId = `position-${index}-inn`;
 	const nameError = error?.name;
+	const innEnabled = position.pricePerUnit.trim() !== "";
 
 	return (
 		<section
 			aria-label={`Позиция ${index + 1}`}
-			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none"
+			className={cn(
+				"relative flex flex-col gap-4 rounded-xl border border-border/60 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none",
+				SURFACE_TINT,
+			)}
 		>
 			{onRemove && (
 				<Button
@@ -912,17 +692,6 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 						{nameError}
 					</p>
 				)}
-			</Field>
-
-			<Field label="Спецификация" hint="Описание позиции" htmlFor={descId}>
-				<Input
-					id={descId}
-					placeholder="По ГОСТ 34028-2016"
-					value={position.description}
-					onChange={(e) => onChange("description", e.target.value)}
-					spellCheck={false}
-					autoComplete="off"
-				/>
 			</Field>
 
 			<div className="flex flex-wrap gap-3">
@@ -970,21 +739,229 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 				</Field>
 			</div>
 
-			<Field label="Текущая цена без НДС" htmlFor={priceId}>
-				<div className="flex items-center gap-1.5">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+				<Field label="Текущая цена без НДС" htmlFor={priceId} className="flex-1 min-w-0">
+					<div className="flex items-center gap-1.5">
+						<Input
+							id={priceId}
+							placeholder="1250"
+							value={position.pricePerUnit}
+							onChange={(e) => onChange("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
+							inputMode="decimal"
+							autoComplete="off"
+							aria-label="Текущая цена без НДС"
+							className="flex-1 tabular-nums"
+						/>
+						<span className="text-sm text-muted-foreground">₽</span>
+					</div>
+				</Field>
+				<Field label="ИНН текущего поставщика" htmlFor={innId} className="flex-1 min-w-0">
 					<Input
-						id={priceId}
-						placeholder="1250"
-						value={position.pricePerUnit}
-						onChange={(e) => onChange("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
-						inputMode="decimal"
+						id={innId}
+						value={position.currentSupplierInn}
+						onChange={(e) => onChange("currentSupplierInn", e.target.value.replace(/\D/g, ""))}
+						inputMode="numeric"
 						autoComplete="off"
-						aria-label="Текущая цена без НДС"
-						className="flex-1 tabular-nums"
+						spellCheck={false}
+						aria-label="ИНН текущего поставщика"
+						disabled={!innEnabled}
+						className="tabular-nums"
 					/>
-					<span className="text-sm text-muted-foreground">₽</span>
-				</div>
+				</Field>
+			</div>
+
+			<Field label="Спецификация" hint="Описание позиции" htmlFor={descId}>
+				<Input
+					id={descId}
+					placeholder="По ГОСТ 34028-2016"
+					value={position.description}
+					onChange={(e) => onChange("description", e.target.value)}
+					spellCheck={false}
+					autoComplete="off"
+				/>
 			</Field>
+
+			{children}
 		</section>
+	);
+}
+
+interface FilesFieldProps {
+	files: File[];
+	onFilesAdd: (files: FileList | null) => void;
+	onFileRemove: (index: number) => void;
+}
+
+function FilesField({ files, onFilesAdd, onFileRemove }: FilesFieldProps) {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	return (
+		<Field
+			label="Прикрепить файлы"
+			hint="Прикрепите макеты, спецификации и другие документы — это поможет поставщикам сделать точный расчёт"
+		>
+			<button
+				type="button"
+				aria-label="Прикрепить файлы"
+				className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input bg-background/40 p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
+				onClick={() => fileInputRef.current?.click()}
+				onDragOver={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
+				onDrop={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					onFilesAdd(e.dataTransfer.files);
+				}}
+			>
+				<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
+				<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
+			</button>
+			<input
+				ref={fileInputRef}
+				type="file"
+				multiple
+				className="hidden"
+				onChange={(e) => {
+					onFilesAdd(e.target.files);
+					e.target.value = "";
+				}}
+			/>
+			{files.length > 0 && (
+				<ul className="mt-1 flex flex-col gap-1">
+					{files.map((file, i) => (
+						<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
+							<span className="min-w-0 flex-1 truncate">{file.name}</span>
+							<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-xs"
+								onClick={() => onFileRemove(i)}
+								aria-label={`Удалить ${file.name}`}
+							>
+								<X aria-hidden="true" />
+							</Button>
+						</li>
+					))}
+				</ul>
+			)}
+		</Field>
+	);
+}
+
+interface AddressSelectProps {
+	company: CompanyList[number] | undefined;
+	value: string | null;
+	onChange: (id: string | null) => void;
+}
+
+function AddressSelect({ company, value, onChange }: AddressSelectProps) {
+	const [open, setOpen] = useState(false);
+	const [creating, setCreating] = useState(false);
+	const createMutation = useCreateAddress(company?.id ?? "");
+
+	const addresses = company?.addresses ?? [];
+	const selected = value ? addresses.find((a) => a.id === value) : undefined;
+	const disabled = !company;
+
+	function handleSelect(id: string | null) {
+		onChange(id);
+		setCreating(false);
+		setOpen(false);
+	}
+
+	function handleCreate(text: string) {
+		if (!company) return;
+		const trimmed = text.trim();
+		if (!trimmed) {
+			setCreating(false);
+			return;
+		}
+		createMutation.mutate(
+			{ name: trimmed.slice(0, 32), address: trimmed, phone: "", isMain: false },
+			{
+				onSuccess: (created) => {
+					onChange(created.id);
+				},
+			},
+		);
+		setCreating(false);
+		setOpen(false);
+	}
+
+	return (
+		<Popover
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (!next) setCreating(false);
+			}}
+		>
+			<PopoverTrigger asChild>
+				<Button
+					type="button"
+					variant="outline"
+					aria-label="Адрес доставки"
+					disabled={disabled}
+					className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
+				>
+					<span className="min-w-0 flex-1 truncate text-left">
+						{selected?.address ?? (company ? "Выберите адрес" : "Сначала выберите компанию")}
+					</span>
+					<ChevronDown aria-hidden="true" className="ml-2 size-4 opacity-60" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent align="start" className="w-(--radix-popover-trigger-width) gap-1 p-1">
+				{addresses.map((a) => (
+					<button
+						key={a.id}
+						type="button"
+						onClick={() => handleSelect(a.id)}
+						className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-hidden"
+					>
+						<span className="truncate">{a.address}</span>
+						{a.id === value && <Check aria-hidden="true" className="ml-auto size-3.5 opacity-70" />}
+					</button>
+				))}
+				{addresses.length > 0 && <div className="my-1 border-t border-border" />}
+				{creating ? (
+					<CreateAddressRow onSave={handleCreate} onCancel={() => setCreating(false)} />
+				) : (
+					<button
+						type="button"
+						onClick={() => setCreating(true)}
+						className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-primary hover:bg-accent focus-visible:bg-accent focus-visible:outline-hidden"
+					>
+						<Plus className="size-3.5" aria-hidden="true" />
+						<span>Добавить адрес</span>
+					</button>
+				)}
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+function CreateAddressRow({ onSave, onCancel }: { onSave: (text: string) => void; onCancel: () => void }) {
+	const { inputRef, handleKeyDown, handleBlur } = useInlineEdit({
+		onSave,
+		onCancel,
+		deferFocus: true,
+	});
+
+	return (
+		<div className="flex items-center gap-2 rounded-md px-2 py-1.5">
+			<input
+				ref={inputRef}
+				type="text"
+				className="h-5 flex-1 bg-transparent text-sm outline-none"
+				placeholder="г. Москва, ул. Ленина, 1"
+				aria-label="Новый адрес доставки"
+				autoComplete="street-address"
+				spellCheck={false}
+				onKeyDown={handleKeyDown}
+				onBlur={handleBlur}
+			/>
+		</div>
 	);
 }

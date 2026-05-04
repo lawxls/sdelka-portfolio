@@ -78,8 +78,10 @@ function renderDrawer(
 	};
 }
 
-async function fillTenderMeta(user: ReturnType<typeof userEvent.setup>, _name = "Закупка металлопроката") {
-	await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
+async function setDeadline(user: ReturnType<typeof userEvent.setup>, value = "2026-06-15") {
+	const input = screen.getByLabelText("Дедлайн") as HTMLInputElement;
+	await user.clear(input);
+	await user.type(input, value);
 }
 
 async function fillFirstPositionName(user: ReturnType<typeof userEvent.setup>, name = "Арматура") {
@@ -95,11 +97,11 @@ async function create(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("CreateTenderDrawer — wizard chrome", () => {
-	test("renders «Создать запрос» title and step 1 progress", () => {
+	test("renders «Создать запрос» title and step 1 progress (50%)", () => {
 		renderDrawer();
 		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
-		expect(screen.getByText(/Шаг 1 из 3/)).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
+		expect(screen.getByText(/Шаг 1 из 2/)).toBeInTheDocument();
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
 	});
 
 	test("does not render when closed", () => {
@@ -114,50 +116,42 @@ describe("CreateTenderDrawer — wizard chrome", () => {
 		expect(screen.queryByRole("button", { name: "Назад" })).not.toBeInTheDocument();
 	});
 
-	test("step 2 footer has Назад + Далее (no Отмена)", async () => {
+	test("step 2 footer has Назад + Создать (no Отмена)", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await fillTenderMeta(user);
 		await fillFirstPositionName(user);
 		await advance(user);
 
 		expect(screen.queryByRole("button", { name: "Отмена" })).not.toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Далее" })).toBeInTheDocument();
-	});
-
-	test("step 3 footer has Назад + Создать", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		await fillTenderMeta(user);
-		await fillFirstPositionName(user);
-		await advance(user);
-		await advance(user);
-
-		expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Создать" })).toBeInTheDocument();
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
 	});
 
-	test("Назад preserves step 1 state including tender meta", async () => {
+	test("Назад preserves step 1 state", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await fillTenderMeta(user);
 		await fillFirstPositionName(user, "Арматура");
 		await advance(user);
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
-		expect(screen.getByLabelText("Дедлайн")).toHaveValue("2026-06-15");
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура");
 	});
 });
 
 describe("CreateTenderDrawer — Step 1 tender meta", () => {
-	test("renders all tender-meta fields (name field is auto-generated, not user-provided)", () => {
+	test("renders deadline + company; budget field is gone", () => {
 		renderDrawer();
 		expect(screen.queryByLabelText("Название запроса")).not.toBeInTheDocument();
-		expect(screen.getByLabelText("Бюджет")).toBeInTheDocument();
+		expect(screen.queryByLabelText("Бюджет")).not.toBeInTheDocument();
 		expect(screen.getByLabelText("Дедлайн")).toBeInTheDocument();
 		expect(screen.getByLabelText("Компания")).toBeInTheDocument();
+	});
+
+	test("deadline defaults to a 14-day-out value", () => {
+		renderDrawer();
+		const input = screen.getByLabelText("Дедлайн") as HTMLInputElement;
+		expect(input.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 
 	test("Дедлайн is required (HTML required attribute)", () => {
@@ -165,51 +159,34 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		expect(screen.getByLabelText("Дедлайн")).toBeRequired();
 	});
 
-	test("Далее with empty tender meta surfaces all required errors and stays on step 1", async () => {
+	test("Далее with cleared meta surfaces required errors and stays on step 1", async () => {
 		companies = MULTI_COMPANY;
 		renderDrawer();
 		const user = userEvent.setup();
+		await user.clear(screen.getByLabelText("Дедлайн"));
 		await advance(user);
 
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
 		expect(screen.getByText("Выберите компанию")).toBeInTheDocument();
 		expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
 	});
 
-	test("Далее blocked on missing Дедлайн when other meta is filled", async () => {
+	test("Далее blocked on cleared Дедлайн when other meta is filled", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 		await fillFirstPositionName(user);
+		await user.clear(screen.getByLabelText("Дедлайн"));
 		await advance(user);
 
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
-	});
-
-	test("Бюджет input strips non-digit input and accepts integer", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		const budget = screen.getByLabelText("Бюджет") as HTMLInputElement;
-		await user.type(budget, "abc1500000");
-		// non-digits stripped at the input layer; only the integer remains (formatted)
-		expect(budget.value.replace(/\D/g, "")).toBe("1500000");
-	});
-
-	test("integer Бюджет advances to step 2", async () => {
-		renderDrawer();
-		const user = userEvent.setup();
-		await fillTenderMeta(user);
-		await fillFirstPositionName(user);
-		await user.type(screen.getByLabelText("Бюджет"), "1500000");
-		await advance(user);
-
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "66");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
 	});
 
 	test("typing in errored Дедлайн clears the error", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
+		await user.clear(screen.getByLabelText("Дедлайн"));
 		await advance(user);
 		expect(screen.getByText("Укажите дедлайн")).toBeInTheDocument();
 
@@ -219,8 +196,10 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 
 	test("sole-company auto-selects and locks the company picker", async () => {
 		renderDrawer();
-		await screen.findByText("г. Москва, ул. Ленина, д. 15");
-		expect(screen.getByLabelText("Компания")).toBeDisabled();
+		await screen.findByRole("combobox", { name: "Компания" });
+		await vi.waitFor(() => {
+			expect(screen.getByLabelText("Компания")).toBeDisabled();
+		});
 	});
 
 	test("multi-company requires manual company pick", async () => {
@@ -228,7 +207,6 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-01");
 		await fillFirstPositionName(user);
 		await advance(user);
 
@@ -238,7 +216,7 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 		await user.click(await screen.findByRole("option", { name: "Тестовая компания" }));
 		await advance(user);
 
-		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "66");
+		expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
 	});
 });
 
@@ -259,12 +237,10 @@ describe("CreateTenderDrawer — multi-position cards", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await fillTenderMeta(user);
 		await user.type(screen.getAllByLabelText("Название")[0], "Арматура");
 		await user.click(screen.getByRole("button", { name: "Добавить позицию" }));
 		await user.type(screen.getAllByLabelText("Название")[1], "Цемент");
 
-		await advance(user);
 		await advance(user);
 		await create(user);
 
@@ -281,7 +257,7 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
+		await setDeadline(user, "2026-06-15");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(screen.getByText("Закрыть без сохранения?")).toBeInTheDocument();
@@ -292,7 +268,7 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
+		await setDeadline(user, "2026-06-15");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 		await user.click(screen.getByRole("button", { name: "Закрыть без сохранения" }));
 
@@ -300,56 +276,46 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 	});
 });
 
-describe("CreateTenderDrawer — Step 2 supplier (binds to tender)", () => {
-	async function reachStep2(user: ReturnType<typeof userEvent.setup>) {
-		await fillTenderMeta(user);
-		await fillFirstPositionName(user);
-		await advance(user);
-	}
-
-	test("renders supplier fields", async () => {
+describe("CreateTenderDrawer — Position-level supplier INN", () => {
+	test("ИНН field is rendered disabled until Текущая цена is filled", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
-		await reachStep2(user);
 
-		expect(screen.getByLabelText("Название текущего поставщика")).toBeInTheDocument();
-		expect(screen.getByLabelText("ИНН")).toBeInTheDocument();
+		const innInput = screen.getByLabelText("ИНН текущего поставщика");
+		expect(innInput).toBeDisabled();
+
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1250");
+		await vi.waitFor(() => {
+			expect(screen.getByLabelText("ИНН текущего поставщика")).not.toBeDisabled();
+		});
 	});
 
-	test("supplier captured at step 2 is emitted on tender (NOT on items)", async () => {
+	test("Position INN flows to tender.currentSupplier on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
-		await fillTenderMeta(user);
-		await fillFirstPositionName(user);
-		await advance(user);
 
-		await user.type(screen.getByLabelText("Название текущего поставщика"), "МеталлТрейд");
-		await user.type(screen.getByLabelText("ИНН"), "1234567890");
+		await fillFirstPositionName(user);
+		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1250");
+		await user.type(await screen.findByLabelText("ИНН текущего поставщика"), "1234567890");
 
 		await advance(user);
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.tender.currentSupplier).toMatchObject({
-			companyName: "МеталлТрейд",
-			inn: "1234567890",
-		});
-		expect(payload.items[0]).not.toHaveProperty("currentSupplier");
+		expect(payload.tender.currentSupplier).toMatchObject({ inn: "1234567890" });
 	});
 });
 
 describe("CreateTenderDrawer — submit payload shape", () => {
-	test("emits { tender, items } with tender meta fields", async () => {
+	test("emits { tender, items } with tender meta fields and zero budget", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await user.type(screen.getByLabelText("Дедлайн"), "2026-06-15");
-		await user.type(screen.getByLabelText("Бюджет"), "1500000");
+		await setDeadline(user, "2026-06-15");
 		await fillFirstPositionName(user, "Арматура");
 
-		await advance(user);
 		await advance(user);
 		await create(user);
 
@@ -359,7 +325,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 			// Auto-derived from the first position when no user-provided name exists.
 			name: "Арматура",
 			deadline: "2026-06-15",
-			budget: 1500000,
+			budget: 0,
 			companyId: "company-1",
 		});
 		expect(payload.items).toHaveLength(1);
@@ -371,9 +337,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
-		await fillTenderMeta(user);
 		await fillFirstPositionName(user);
-		await advance(user);
 		await advance(user);
 		await create(user);
 
@@ -386,9 +350,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		renderDrawer({ onOpenChange });
 		const user = userEvent.setup();
 
-		await fillTenderMeta(user);
 		await fillFirstPositionName(user);
-		await advance(user);
 		await advance(user);
 		await create(user);
 

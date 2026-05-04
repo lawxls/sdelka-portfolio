@@ -488,10 +488,11 @@ describe("ProcurementPage", () => {
 
 		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
 
-		await user.type(screen.getByLabelText("Дедлайн"), "2026-07-01");
+		const deadlineInput = screen.getByLabelText("Дедлайн") as HTMLInputElement;
+		await user.clear(deadlineInput);
+		await user.type(deadlineInput, "2026-07-01");
 		await user.type(screen.getByLabelText("Название"), "Позиция А");
 
-		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Далее" }));
 		await user.click(screen.getByRole("button", { name: "Создать" }));
 

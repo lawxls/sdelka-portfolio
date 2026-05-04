@@ -32,6 +32,7 @@ import {
 } from "@/data/use-items";
 import { useTenders } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { isoDateInDays } from "@/lib/format";
 
 const SORT_FIELDS = new Set<string>([
 	"annualCost",
@@ -60,12 +61,6 @@ function parseStatus(params: URLSearchParams): StatusFilter {
 }
 
 const DEFAULT_IMPORT_DEADLINE_DAYS = 14;
-
-function defaultImportDeadline(): string {
-	const d = new Date();
-	d.setDate(d.getDate() + DEFAULT_IMPORT_DEADLINE_DAYS);
-	return d.toISOString().slice(0, 10);
-}
 
 export function ProcurementPage() {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -194,7 +189,7 @@ export function ProcurementPage() {
 			return;
 		}
 		const folderId = folder && folder !== "none" ? folder : null;
-		const deadline = defaultImportDeadline();
+		const deadline = isoDateInDays(DEFAULT_IMPORT_DEADLINE_DAYS);
 		Promise.allSettled(
 			groups.map((group) =>
 				createTenderWithItemsMutation.mutateAsync({

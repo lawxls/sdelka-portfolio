@@ -68,13 +68,6 @@ export function formatInteger(value: number): string {
 	return integerFormatter.format(value);
 }
 
-/** Format a raw digit string as a grouped integer (e.g. "1234567" → "1 234 567"). */
-export function formatGroupedInteger(raw: string): string {
-	const digits = raw.replace(/\D/g, "");
-	if (!digits) return "";
-	return integerFormatter.format(Number(digits));
-}
-
 /** Parse a user-facing string as a number, returning undefined for empty/blank/non-finite input. */
 export function toNumberOrUndefined(value: string): number | undefined {
 	const trimmed = value.trim();
@@ -130,6 +123,13 @@ const shortDateFormatter = new Intl.DateTimeFormat("ru-RU", {
 /** Numeric short date: «22.04.2026». */
 export function formatShortDate(iso: string): string {
 	return shortDateFormatter.format(new Date(iso));
+}
+
+/** ISO `YYYY-MM-DD` for today + N days, suitable for `<input type="date">` defaults. */
+export function isoDateInDays(daysFromNow: number): string {
+	const d = new Date();
+	d.setDate(d.getDate() + daysFromNow);
+	return d.toISOString().slice(0, 10);
 }
 
 const datetimeFormatter = new Intl.DateTimeFormat("ru-RU", {

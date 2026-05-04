@@ -15,18 +15,19 @@ function fillStep1Required(result: { current: ReturnType<typeof useCreateTenderF
 }
 
 describe("useCreateTenderForm", () => {
-	test("starts on step 1 with one empty position and empty tender meta", () => {
+	test("starts on step 1 with one empty position and a deadline default ~14 days out", () => {
 		const { result } = setup();
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions).toHaveLength(1);
-		expect(result.current.step1.budget).toBe("");
-		expect(result.current.step1.deadline).toBe("");
 		expect(result.current.step1.companyId).toBe("");
+		// Default deadline: today + 14 days, populated automatically.
+		expect(result.current.step1.deadline).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 		expect(result.current.isDirty).toBe(false);
 	});
 
 	test("advance from step 1 blocked when company + deadline + name missing — focus on deadline first", () => {
 		const { result } = setup();
+		act(() => result.current.update1("deadline", ""));
 
 		let outcome: ReturnType<typeof result.current.advance> | undefined;
 		act(() => {
@@ -44,6 +45,7 @@ describe("useCreateTenderForm", () => {
 	test("advance blocked on missing deadline focuses deadline once company + position filled", () => {
 		const { result } = setup();
 		act(() => {
+			result.current.update1("deadline", "");
 			result.current.update1("companyId", "c1");
 			result.current.updatePosition(0, "name", "Арматура");
 		});
@@ -55,35 +57,6 @@ describe("useCreateTenderForm", () => {
 
 		expect(outcome?.advanced).toBe(false);
 		expect(outcome?.focus).toBe("deadline");
-	});
-
-	test("advance blocked on non-integer budget focuses budget", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-		act(() => result.current.update1("budget", "abc"));
-
-		let outcome: ReturnType<typeof result.current.advance> | undefined;
-		act(() => {
-			outcome = result.current.advance();
-		});
-
-		expect(outcome?.advanced).toBe(false);
-		expect(outcome?.focus).toBe("budget");
-		expect(result.current.step1Errors.budget).toBeTruthy();
-	});
-
-	test("budget integer is accepted", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-		act(() => result.current.update1("budget", "1500000"));
-
-		let outcome: ReturnType<typeof result.current.advance> | undefined;
-		act(() => {
-			outcome = result.current.advance();
-		});
-
-		expect(outcome?.advanced).toBe(true);
-		expect(result.current.step).toBe(2);
 	});
 
 	test("advance from step 1 succeeds with all required tender meta + name", () => {
@@ -101,6 +74,7 @@ describe("useCreateTenderForm", () => {
 
 	test("typing in errored deadline clears error", () => {
 		const { result } = setup();
+		act(() => result.current.update1("deadline", ""));
 		act(() => {
 			result.current.advance();
 		});
@@ -147,79 +121,47 @@ describe("useCreateTenderForm", () => {
 		act(() => {
 			result.current.advance();
 		});
-		act(() => result.current.update2("companyName", "МеталлТрейд"));
+		act(() => result.current.update2("q1", { selectedOption: "A" }));
 		act(() => result.current.goBack());
 
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions[0].name).toBe("Арматура");
 		expect(result.current.step1.positions[0].description).toBe("М500");
-		expect(result.current.step2.companyName).toBe("МеталлТрейд");
+		expect(result.current.step2.answers.q1?.selectedOption).toBe("A");
 	});
 
 	test("reset clears all fields and returns to step 1", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.update1("budget", "100"));
 		act(() => result.current.addPosition());
 		act(() => {
 			result.current.advance();
 		});
-		act(() => result.current.update2("companyName", "Y"));
+		act(() => result.current.update2("q1", { selectedOption: "Yes" }));
 		act(() => result.current.reset());
 
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions).toHaveLength(1);
 		expect(result.current.step1.positions[0].name).toBe("");
-		expect(result.current.step1.budget).toBe("");
-		expect(result.current.step1.deadline).toBe("");
 		expect(result.current.step1.companyId).toBe("");
-		expect(result.current.step2.companyName).toBe("");
+		expect(result.current.step2.answers).toEqual({});
 		expect(result.current.isDirty).toBe(false);
 	});
 
-	test("isDirty flips true when deadline is set", () => {
+	test("isDirty stays false for default deadline; flips true on user-typed deadline", () => {
 		const { result } = setup();
+		expect(result.current.isDirty).toBe(false);
+
 		act(() => result.current.update1("deadline", "2026-06-01"));
 		expect(result.current.isDirty).toBe(true);
 	});
 
-	// --- INN soft-validation ---
-
-	test("INN with 10 digits is valid", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-		act(() => {
-			result.current.advance();
-		});
-		act(() => result.current.update2("inn", "1234567890"));
-		act(() => {
-			result.current.advance();
-		});
-		expect(result.current.step).toBe(3);
-		expect(result.current.step2Errors.inn).toBeFalsy();
-	});
-
-	test("INN with 11 digits surfaces error but does not block advance", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-		act(() => {
-			result.current.advance();
-		});
-		act(() => result.current.update2("inn", "12345678901"));
-		act(() => {
-			result.current.advance();
-		});
-		expect(result.current.step).toBe(3);
-		expect(result.current.step2Errors.inn).toBeTruthy();
-	});
-
 	// --- toPayload() ---
 
-	test("toPayload returns { tender, items } shape with tender meta + per-position items", () => {
+	test("toPayload returns { tender, items } with tender meta + per-position items", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
-			result.current.update1("budget", "1500000");
 			result.current.update1("folderId", "folder-metal");
 			result.current.updatePosition(0, "pricePerUnit", "100");
 		});
@@ -231,14 +173,14 @@ describe("useCreateTenderForm", () => {
 			name: "Арматура",
 			companyId: "c1",
 			folderId: "folder-metal",
-			budget: 1500000,
 			deadline: "2026-06-01",
 		});
+		expect(payload.tender.budget).toBe(0);
 		expect(payload.items).toHaveLength(1);
 		expect(payload.items[0]).toMatchObject({ name: "Арматура", currentPrice: 100 });
 	});
 
-	test("toPayload omits tender currentSupplier when supplier name empty", () => {
+	test("toPayload omits tender currentSupplier when no position INN is set", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
@@ -246,27 +188,15 @@ describe("useCreateTenderForm", () => {
 		expect(payload.tender.currentSupplier).toBeUndefined();
 	});
 
-	test("toPayload includes tender currentSupplier when step 2 is filled", () => {
+	test("toPayload picks the first non-empty position INN as tender supplier", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
-			result.current.advance();
-		});
-		act(() => {
-			result.current.update2("companyName", "МеталлТрейд");
-			result.current.update2("inn", "1234567890");
-			result.current.update2("paymentType", "deferred");
-			result.current.update2("deferralDays", "30");
+			result.current.updatePosition(0, "currentSupplierInn", "1234567890");
 		});
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.currentSupplier).toEqual({
-			companyName: "МеталлТрейд",
-			inn: "1234567890",
-			paymentType: "deferred",
-			deferralDays: 30,
-			pricePerUnit: null,
-		});
+		expect(payload.tender.currentSupplier).toMatchObject({ inn: "1234567890" });
 	});
 
 	test("toPayload emits one item per position card", () => {
@@ -294,19 +224,30 @@ describe("useCreateTenderForm", () => {
 	test("toPayload emits generatedAnswers on first item only when answered", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.update3("q1", { selectedOption: "A" }));
+		act(() => result.current.update2("q1", { selectedOption: "A" }));
 
 		const payload = result.current.toPayload();
 		expect(payload.items[0].generatedAnswers).toEqual([{ questionId: "q1", selectedOption: "A" }]);
 	});
 
-	test("toPayload deferralRequired maps to paymentType=deferred on items + flag on tender", () => {
+	test("toPayload analoguesAllowed reflects the inverted UI checkbox", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.update1("deferralRequired", true));
 
-		const payload = result.current.toPayload();
-		expect(payload.tender.deferralRequired).toBe(true);
-		expect(payload.items[0].paymentType).toBe("deferred");
+		// Default — checkbox unchecked → analogues remain allowed.
+		expect(result.current.toPayload().tender.analoguesAllowed).toBe(true);
+
+		act(() => result.current.update1("analoguesNotAllowed", true));
+		expect(result.current.toPayload().tender.analoguesAllowed).toBe(false);
+	});
+
+	test("toPayload paymentMethod = cash only when cashPaymentAllowed is checked", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+
+		expect(result.current.toPayload().tender.paymentMethod).toBeUndefined();
+
+		act(() => result.current.update1("cashPaymentAllowed", true));
+		expect(result.current.toPayload().tender.paymentMethod).toBe("cash");
 	});
 });

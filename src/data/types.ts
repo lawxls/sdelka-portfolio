@@ -75,7 +75,6 @@ export const UNLOADING_LABELS: Record<UnloadingType, string> = {
 };
 
 export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
-export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
 export interface CurrentSupplier {
 	companyName: string;
