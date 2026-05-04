@@ -36,6 +36,7 @@ function renderPage(profile?: ProfileClient) {
 
 beforeEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	mockHostname("acme.localhost");
 	setTokens("test-access");
 	queryClient = new QueryClient({

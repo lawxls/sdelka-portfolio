@@ -128,7 +128,7 @@ function renderPageWithSpy(initialPath = "/settings/employees") {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 });
 
 afterEach(() => {

@@ -7,6 +7,7 @@ import type { InvitationsClient } from "./clients/invitations-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
+import type { SessionClient } from "./clients/session-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { TendersClient } from "./clients/tenders-client";
@@ -30,6 +31,7 @@ export interface DataClients {
 	workspaceEmployees?: WorkspaceEmployeesClient;
 	invitations?: InvitationsClient;
 	companyInfo?: CompanyInfoClient;
+	session?: SessionClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -120,4 +122,10 @@ export function useCompanyInfoClient(): CompanyInfoClient {
 	const { companyInfo } = useClients();
 	if (!companyInfo) throw new Error("company-info client not provided");
 	return companyInfo;
+}
+
+export function useSessionClient(): SessionClient {
+	const { session } = useClients();
+	if (!session) throw new Error("session client not provided");
+	return session;
 }

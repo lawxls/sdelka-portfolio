@@ -1,4 +1,4 @@
-import { getAccessToken } from "./auth";
+import { getAccessToken, readCsrfToken } from "./auth";
 import {
 	AuthError,
 	ConflictError,
@@ -6,6 +6,7 @@ import {
 	HttpError,
 	NetworkError,
 	NotFoundError,
+	TooManyRequestsError,
 	ValidationError,
 } from "./errors";
 
@@ -14,12 +15,18 @@ import {
  * absolute URL when the SPA is served from a different origin). */
 const BASE_URL = (import.meta.env?.VITE_API_BASE_URL ?? "/api/v1") as string;
 
+const STATE_CHANGING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
 interface RequestOptions {
 	signal?: AbortSignal;
 }
 
 interface BodyOptions extends RequestOptions {
 	body?: unknown;
+	/** Internal: when true, a 401 response throws AuthError directly instead of
+	 * triggering the refresh-and-retry interceptor. The `/auth/refresh/` and
+	 * `/auth/login/` endpoints use this to avoid infinite recursion. */
+	skipRefresh?: boolean;
 }
 
 export interface BinaryDownload {
@@ -43,27 +50,56 @@ interface CreateOptions {
 	baseUrl?: string;
 	fetch?: FetchLike;
 	getToken?: () => string | null;
+	getCsrfToken?: () => string | null;
+	/** Called when a request gets 401: the http-client awaits this once across
+	 * concurrent failing requests, then retries the original on success. */
+	refresh?: () => Promise<void>;
+	/** Called when refresh itself fails. The default singleton wires this to
+	 * `clearTokens()` which dispatches `AUTH_CLEARED_EVENT`. */
+	onAuthCleared?: () => void;
+}
+
+let defaultRefresh: (() => Promise<void>) | null = null;
+let defaultOnAuthCleared: (() => void) | null = null;
+
+/** Boot-time injection point for the singleton http-client. The composition
+ * root calls this once after constructing the SessionClient so the 401-refresh
+ * interceptor knows how to recover. */
+export function installAuthHandlers(
+	handlers: { refresh?: () => Promise<void>; onAuthCleared?: () => void } | null,
+): void {
+	defaultRefresh = handlers?.refresh ?? null;
+	defaultOnAuthCleared = handlers?.onAuthCleared ?? null;
 }
 
 export function createHttpClient(options: CreateOptions = {}): HttpClient {
 	const baseUrl = options.baseUrl ?? BASE_URL;
 	const fetchImpl: FetchLike = options.fetch ?? ((input, init) => fetch(input, init));
 	const tokenSource = options.getToken ?? getAccessToken;
+	const csrfSource = options.getCsrfToken ?? readCsrfToken;
+	let inflightRefresh: Promise<void> | null = null;
 
-	async function request<T>(method: string, path: string, opts: BodyOptions = {}): Promise<T> {
-		const url = baseUrl ? `${baseUrl}${path}` : path;
+	function buildHeaders(method: string, hasBody: boolean): Headers {
 		const headers = new Headers();
 		const token = tokenSource();
 		if (token) headers.set("Authorization", `Bearer ${token}`);
-		let body: BodyInit | undefined;
-		if (opts.body !== undefined) {
-			headers.set("Content-Type", "application/json");
-			body = JSON.stringify(opts.body);
+		if (hasBody) headers.set("Content-Type", "application/json");
+		if (STATE_CHANGING_METHODS.has(method)) {
+			const csrf = csrfSource();
+			if (csrf) headers.set("X-CSRFToken", csrf);
 		}
+		return headers;
+	}
+
+	async function rawRequest<T>(method: string, path: string, opts: BodyOptions = {}): Promise<T> {
+		const url = baseUrl ? `${baseUrl}${path}` : path;
+		const hasBody = opts.body !== undefined;
+		const headers = buildHeaders(method, hasBody);
+		const body: BodyInit | undefined = hasBody ? JSON.stringify(opts.body) : undefined;
 
 		let res: Response;
 		try {
-			res = await fetchImpl(url, { method, headers, body, signal: opts.signal });
+			res = await fetchImpl(url, { method, headers, body, signal: opts.signal, credentials: "include" });
 		} catch (cause) {
 			throw new NetworkError(cause);
 		}
@@ -72,18 +108,43 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		throw await mapStatusToError(res);
 	}
 
+	async function request<T>(method: string, path: string, opts: BodyOptions = {}): Promise<T> {
+		try {
+			return await rawRequest<T>(method, path, opts);
+		} catch (err) {
+			if (opts.skipRefresh) throw err;
+			if (!(err instanceof AuthError) || err.status !== 401) throw err;
+			const refresh = options.refresh ?? defaultRefresh;
+			if (!refresh) throw err;
+
+			if (!inflightRefresh) {
+				inflightRefresh = refresh().finally(() => {
+					inflightRefresh = null;
+				});
+			}
+
+			try {
+				await inflightRefresh;
+			} catch {
+				const onCleared = options.onAuthCleared ?? defaultOnAuthCleared;
+				onCleared?.();
+				throw err;
+			}
+
+			return await rawRequest<T>(method, path, opts);
+		}
+	}
+
 	async function requestBinary(
 		path: string,
 		opts: RequestOptions & { fallbackFilename?: string } = {},
 	): Promise<BinaryDownload> {
 		const url = baseUrl ? `${baseUrl}${path}` : path;
-		const headers = new Headers();
-		const token = tokenSource();
-		if (token) headers.set("Authorization", `Bearer ${token}`);
+		const headers = buildHeaders("GET", false);
 
 		let res: Response;
 		try {
-			res = await fetchImpl(url, { method: "GET", headers, signal: opts.signal });
+			res = await fetchImpl(url, { method: "GET", headers, signal: opts.signal, credentials: "include" });
 		} catch (cause) {
 			throw new NetworkError(cause);
 		}
@@ -133,7 +194,15 @@ async function mapStatusToError(res: Response): Promise<HttpError> {
 	if (res.status === 403) return new AuthError(403, body);
 	if (res.status === 404) return new NotFoundError(body);
 	if (res.status === 409) return new ConflictError(body);
+	if (res.status === 429) return new TooManyRequestsError(parseRetryAfter(res.headers.get("retry-after")), body);
 	return new HttpError(res.status, `HTTP ${res.status}`, body);
+}
+
+function parseRetryAfter(header: string | null): number | null {
+	if (!header) return null;
+	const seconds = Number(header);
+	if (Number.isFinite(seconds) && seconds >= 0) return seconds;
+	return null;
 }
 
 async function safeJson(res: Response): Promise<unknown> {

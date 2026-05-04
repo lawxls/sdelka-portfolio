@@ -40,6 +40,7 @@ function renderProfile(opts: { initialEntries?: string[]; profile?: ProfileClien
 
 beforeEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	mockHostname("acme.localhost");
 	setTokens("test-access");
 	queryClient = new QueryClient({

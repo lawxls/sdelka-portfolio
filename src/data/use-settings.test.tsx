@@ -24,6 +24,7 @@ function wrapperFactory(client: ProfileClient) {
 
 beforeEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	mockHostname("acme.localhost");
 	setTokens("test-access");
 	queryClient = createTestQueryClient();

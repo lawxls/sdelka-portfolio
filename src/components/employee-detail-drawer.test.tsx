@@ -93,7 +93,7 @@ function renderWithUrl(initialPath: string) {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 	workspaceEmployees = createInMemoryWorkspaceEmployeesClient({
 		seed: [MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING],
 	});

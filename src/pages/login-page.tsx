@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
-import { setTokens } from "@/data/auth";
-import { extractFormErrors, login } from "@/data/auth-api";
+import { extractFormErrors } from "@/data/auth-errors";
+import { TooManyRequestsError } from "@/data/errors";
+import { useLogin } from "@/data/use-session";
+import { useCountdown } from "@/hooks/use-countdown";
 
 export function LoginPage() {
 	const navigate = useNavigate();
@@ -11,36 +13,36 @@ export function LoginPage() {
 	const from =
 		(location.state as { from?: { pathname: string; search?: string; hash?: string } })?.from ?? "/inquiries";
 
+	const login = useLogin();
+
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [submitting, setSubmitting] = useState(false);
+	const [throttleStartSeconds, setThrottleStartSeconds] = useState(0);
+	const throttleSecondsLeft = useCountdown(throttleStartSeconds);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		if (throttleSecondsLeft > 0 || login.isPending) return;
 		setError(null);
 		setFieldErrors({});
-		setSubmitting(true);
 
 		try {
-			const result = await login(email, password);
-			setTokens(result.access);
+			await login.mutateAsync({ email, password });
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
 			const result = extractFormErrors(err);
-			const msg = result.error?.toLowerCase();
-			const translated = msg?.includes("invalid email or password")
-				? "Неверный пароль или почта"
-				: msg?.includes("you don't have access to this workspace")
-					? "У вас нет доступа к этому рабочему пространству"
-					: result.error;
-			setError(translated);
+			setError(result.error);
 			setFieldErrors(result.fieldErrors);
-		} finally {
-			setSubmitting(false);
+			if (err instanceof TooManyRequestsError && err.retryAfter && err.retryAfter > 0) {
+				setThrottleStartSeconds(err.retryAfter);
+			}
 		}
 	}
+
+	const submitDisabled = login.isPending || throttleSecondsLeft > 0;
+	const submitLabel = throttleSecondsLeft > 0 ? `Подождите ${throttleSecondsLeft} с` : "Войти";
 
 	return (
 		<>
@@ -82,8 +84,8 @@ export function LoginPage() {
 					</Link>
 				</div>
 
-				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
-					Войти
+				<Button type="submit" size="xl" className="w-full" disabled={submitDisabled}>
+					{submitLabel}
 				</Button>
 			</form>
 		</>

@@ -14,6 +14,8 @@ import { createHttpNotificationsClient } from "./clients/notifications-http";
 import { createInMemoryNotificationsClient } from "./clients/notifications-in-memory";
 import { createHttpProfileClient } from "./clients/profile-http";
 import { createInMemoryProfileClient } from "./clients/profile-in-memory";
+import { createHttpSessionClient } from "./clients/session-http";
+import { createInMemorySessionClient } from "./clients/session-in-memory";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
 import { createInMemorySuppliersClient } from "./clients/suppliers-in-memory";
 import { createHttpTasksClient } from "./clients/tasks-http";
@@ -39,6 +41,7 @@ interface AdapterConfig {
 	workspaceEmployees: AdapterMode;
 	invitations: AdapterMode;
 	companyInfo: AdapterMode;
+	session: AdapterMode;
 }
 
 /**
@@ -64,6 +67,7 @@ function resolveConfig(): AdapterConfig {
 		workspaceEmployees: read("VITE_DATA_WORKSPACE_EMPLOYEES"),
 		invitations: read("VITE_DATA_INVITATIONS"),
 		companyInfo: read("VITE_DATA_COMPANY_INFO"),
+		session: read("VITE_DATA_SESSION"),
 	};
 }
 
@@ -103,5 +107,6 @@ export function buildDataClients(): DataClients {
 					}),
 		invitations: config.invitations === "http" ? createHttpInvitationsClient() : createInMemoryInvitationsClient(),
 		companyInfo: config.companyInfo === "http" ? createHttpCompanyInfoClient() : createInMemoryCompanyInfoClient(),
+		session: config.session === "http" ? createHttpSessionClient() : createInMemorySessionClient(),
 	};
 }

@@ -96,11 +96,11 @@ describe("SettingsSidebar logout", () => {
 	});
 
 	test("clicking Выйти clears auth tokens", async () => {
-		localStorage.setItem("auth-access-token", "token");
+		sessionStorage.setItem("auth-access-token", "token");
 		renderSidebar();
 
 		await userEvent.setup().click(screen.getByRole("button", { name: "Выйти" }));
 
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
+		expect(sessionStorage.getItem("auth-access-token")).toBeNull();
 	});
 });
