@@ -1,14 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-	clearInvitationCode,
-	clearTokens,
-	getAccessToken,
-	getInvitationCode,
-	isAuthenticated,
-	readCsrfToken,
-	setInvitationCode,
-	setTokens,
-} from "./auth";
+import { clearTokens, getAccessToken, isAuthenticated, readCsrfToken, setTokens } from "./auth";
 
 afterEach(() => {
 	localStorage.clear();
@@ -57,28 +48,6 @@ describe("auth tokens", () => {
 
 	test("isAuthenticated returns false when no access token", () => {
 		expect(isAuthenticated()).toBe(false);
-	});
-});
-
-describe("invitation code", () => {
-	test("setInvitationCode stores code in localStorage", () => {
-		setInvitationCode("ABC12");
-		expect(localStorage.getItem("auth-invitation-code")).toBe("ABC12");
-	});
-
-	test("getInvitationCode returns stored code", () => {
-		localStorage.setItem("auth-invitation-code", "XYZ99");
-		expect(getInvitationCode()).toBe("XYZ99");
-	});
-
-	test("getInvitationCode returns null when no code stored", () => {
-		expect(getInvitationCode()).toBeNull();
-	});
-
-	test("clearInvitationCode removes code from localStorage", () => {
-		setInvitationCode("ABC12");
-		clearInvitationCode();
-		expect(localStorage.getItem("auth-invitation-code")).toBeNull();
 	});
 });
 

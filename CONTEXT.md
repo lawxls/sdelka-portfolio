@@ -56,14 +56,12 @@ it when the codebase makes it self-evident.
   (the current tenant's identity). Backs `useCompanyInfo` only. Surface is a
   single `get()` returning `{ name }` today; branding/plan fields are a
   forward extension on the same client.
-- **Invitation** — an outstanding invite to join the workspace. Two halves:
-  *creation* (an admin invites a new employee) lives on
-  `WorkspaceEmployeesClient.invite()` — a row with `registeredAt: null` is a
-  pending invitation in the workspace-employees list. *Acceptance* (a recipient
-  registers with the code) lives on the auth adapter (out of scope per PRD).
-  The seam in between — looking up an invitation by code to confirm it's
-  still valid before showing the registration form — is `InvitationsClient`.
-  Backs `useVerifyInvitationCode`.
+- **Invitation** — an outstanding invite to join the workspace. Created by an
+  admin via `WorkspaceEmployeesClient.invite()` — a row with
+  `registeredAt: null` is a pending invitation in the workspace-employees
+  list. Acceptance (a recipient registers and confirms email) lives on
+  `SessionClient.register` + `SessionClient.confirmEmail`; the backend does
+  not gate self-signup with an invitation code today.
 
 ## Architectural primitives
 
@@ -80,10 +78,9 @@ it when the codebase makes it self-evident.
   `createInMemoryEmailsClient(seed)`,
   `createInMemoryProfileClient({ me, settings })`,
   `createInMemoryWorkspaceEmployeesClient({ seed })`,
-  `createInMemoryInvitationsClient({ isValid })`,
   `createInMemoryCompanyInfoClient({ info })`,
   `createInMemoryTendersClient({ seed })`. Companies', emails',
-  invitations', profile's, company-info's, and workspace-employees' adapters
+  profile's, company-info's, and workspace-employees' adapters
   are closure-isolated — every call to the factory produces an independent
   store with its own seed. Items', suppliers', tasks', folders', and
   notifications' adapters wrap the module-level singletons
@@ -127,7 +124,6 @@ it when the codebase makes it self-evident.
   `createHttpFoldersClient(http?)`, `createHttpNotificationsClient(http?)`,
   `createHttpEmailsClient(http?)`, `createHttpProfileClient(http?)`,
   `createHttpWorkspaceEmployeesClient(http?)`,
-  `createHttpInvitationsClient(http?)`,
   `createHttpCompanyInfoClient(http?)`,
   `createHttpTendersClient(http?)`.
 - **httpClient** — the shared HTTP utility. Attaches the bearer token, parses
@@ -141,7 +137,7 @@ it when the codebase makes it self-evident.
   `useCompaniesClient()`, `useItemsClient()`, `useSuppliersClient()`,
   `useTasksClient()`, `useFoldersClient()`, `useNotificationsClient()`,
   `useEmailsClient()`, `useProfileClient()`,
-  `useWorkspaceEmployeesClient()`, `useInvitationsClient()`,
+  `useWorkspaceEmployeesClient()`,
   `useCompanyInfoClient()`, `useTendersClient()` (and future friends) read
   from it. Missing client throws `"<name> client not provided"`.
 - **Composition root** — `buildDataClients()` instantiates every migrated
@@ -230,7 +226,6 @@ The data layer has three distinct test layers; tests live in exactly one.
   `src/data/clients/emails-contract.test.ts`,
   `src/data/clients/profile-contract.test.ts`,
   `src/data/clients/workspace-employees-contract.test.ts`,
-  `src/data/clients/invitations-contract.test.ts`,
   `src/data/clients/company-info-contract.test.ts`,
   `src/data/clients/tenders-contract.test.ts`.
 - **Layer C — `httpClient` unit tests.** Verb construction, URL/header

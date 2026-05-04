@@ -8,7 +8,6 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
-import { createInMemoryInvitationsClient } from "@/data/clients/invitations-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
@@ -129,7 +128,6 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient(),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
-				invitations: createInMemoryInvitationsClient(),
 				session: createInMemorySessionClient({ refreshAvailable: true }),
 			}}
 		>

@@ -1,7 +1,6 @@
 export const AUTH_CLEARED_EVENT = "auth:cleared";
 
 const ACCESS_KEY = "auth-access-token";
-const INVITATION_KEY = "auth-invitation-code";
 
 /** Access token lives in `sessionStorage` — scoped to the tab so closing the
  * window logs the user out, while a refresh cookie set by Django survives
@@ -36,16 +35,4 @@ export function readCsrfToken(): string | null {
 		if (name === "csrftoken") return decodeURIComponent(raw.slice(eq + 1).trim());
 	}
 	return null;
-}
-
-export function getInvitationCode(): string | null {
-	return localStorage.getItem(INVITATION_KEY);
-}
-
-export function setInvitationCode(code: string): void {
-	localStorage.setItem(INVITATION_KEY, code);
-}
-
-export function clearInvitationCode(): void {
-	localStorage.removeItem(INVITATION_KEY);
 }
