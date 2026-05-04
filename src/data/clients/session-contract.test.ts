@@ -13,12 +13,14 @@ import { createInMemorySessionClient } from "./session-in-memory";
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
  *
- * Slice #270 grew the surface to register, confirmEmail, and checkEmail. The
- * adapter behavior covered: login success/401/403; refresh success/no-cookie;
- * register success returns the user without tokens; register with mismatched
- * passwords / taken email throws ValidationError with codes the translator can
- * pivot on; confirmEmail with invalid uid+token throws ValidationError; check-
- * Email reports existence; throttled responses throw TooManyRequestsError.
+ * Slice #270 grew the surface to register, confirmEmail, and checkEmail. Slice
+ * #273 added requestPasswordChange (authed-only no-body call backing the
+ * settings "send reset link" CTA). The adapter behavior covered: login
+ * success/401/403; refresh success/no-cookie; register success returns the
+ * user without tokens; register with mismatched passwords / taken email
+ * throws ValidationError; confirmEmail with invalid uid+token throws
+ * ValidationError; checkEmail reports existence; throttled responses throw
+ * TooManyRequestsError; requestPasswordChange resolves with no body.
  */
 
 const SEED_USERS = [
@@ -154,6 +156,11 @@ function httpAdapter(): Adapter {
 			method: "POST",
 			path: /^\/auth\/forgot-password\/$/,
 			// Anti-enumeration: identical 200 regardless of email validity.
+			respond: () => ({ status: 200 }),
+		},
+		{
+			method: "POST",
+			path: /^\/auth\/request-password-change\/$/,
 			respond: () => ({ status: 200 }),
 		},
 		{
@@ -350,6 +357,10 @@ describe.each(adapters.map((make) => [make().name, make]))("SessionClient contra
 			const body = (err as ValidationError).body as { new_password_confirm?: Array<{ code: string }> };
 			expect(body.new_password_confirm?.[0]?.code).toBe("passwords_do_not_match");
 		}
+	});
+
+	it("requestPasswordChange resolves with no body on the happy path", async () => {
+		await expect(client.requestPasswordChange()).resolves.toBeUndefined();
 	});
 
 	it("resetPassword with invalid uid/token throws ValidationError carrying invalid_or_expired_link", async () => {

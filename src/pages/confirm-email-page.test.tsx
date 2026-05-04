@@ -22,6 +22,7 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		resendConfirmation: vi.fn(),
 		forgotPassword: vi.fn(),
 		resetPassword: vi.fn(),
+		requestPasswordChange: vi.fn(),
 		...overrides,
 	};
 }

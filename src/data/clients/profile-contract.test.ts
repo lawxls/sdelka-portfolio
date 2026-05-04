@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CurrentEmployee, UserSettings } from "../domains/profile";
-import { ConflictError, NetworkError, ValidationError } from "../errors";
+import { NetworkError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import type { ProfileClient } from "./profile-client";
@@ -13,9 +13,10 @@ import { createInMemoryProfileClient } from "./profile-in-memory";
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
  *
- * Profile is a single-row domain — `me`, `settings`, `update`, and
- * `changePassword` all operate on the active session's user record. There is
- * no list shape.
+ * Profile is a single-row domain — `me`, `settings`, and `update` all operate
+ * on the active session's user record. Password changes live on
+ * `SessionClient.requestPasswordChange` (email-link flow); see the session
+ * contract test.
  */
 
 const SEED_ME: CurrentEmployee = { id: 7, role: "admin" };
@@ -73,16 +74,6 @@ function httpAdapter(): Adapter {
 				}
 				settings = { ...settings, ...data };
 				return { status: 200, body: settings };
-			},
-		},
-		{
-			method: "POST",
-			path: /^\/profile\/password$/,
-			respond: ({ init }) => {
-				const data = JSON.parse(init?.body as string) as { currentPassword: string; newPassword: string };
-				if (data.currentPassword === "__wrong__") return { status: 409, body: { detail: "wrong password" } };
-				if (data.newPassword === "") return { status: 400, body: { fieldErrors: { newPassword: ["required"] } } };
-				return { status: 200, body: { detail: "Пароль успешно изменён" } };
 			},
 		},
 	];
@@ -150,16 +141,11 @@ describe.each(adapters.map((make) => [make().name, make]))("ProfileClient contra
 		const re = await client.settings();
 		expect(re.phone).toBe("+71112223344");
 	});
-
-	it("changePassword resolves with success detail on the happy path", async () => {
-		const result = await client.changePassword("old", "new123");
-		expect(result.detail).toMatch(/успеш/i);
-	});
 });
 
 /**
- * HTTP-only error branches. The in-memory adapter doesn't surface validation /
- * conflict errors so they're tested only against the HTTP adapter.
+ * HTTP-only error branches. The in-memory adapter doesn't surface validation
+ * errors so they're tested only against the HTTP adapter.
  */
 describe("HTTP-only error branches", () => {
 	it("update with sentinel name throws ValidationError with fieldErrors", async () => {
@@ -170,22 +156,6 @@ describe("HTTP-only error branches", () => {
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);
 			expect((err as ValidationError).fieldErrors).toEqual({ first_name: ["invalid"] });
-		}
-	});
-
-	it("changePassword with wrong current password throws ConflictError", async () => {
-		const client = httpAdapter().build();
-		await expect(client.changePassword("__wrong__", "new123")).rejects.toBeInstanceOf(ConflictError);
-	});
-
-	it("changePassword with empty new password throws ValidationError with fieldErrors", async () => {
-		const client = httpAdapter().build();
-		try {
-			await client.changePassword("old", "");
-			throw new Error("expected throw");
-		} catch (err) {
-			expect(err).toBeInstanceOf(ValidationError);
-			expect((err as ValidationError).fieldErrors).toEqual({ newPassword: ["required"] });
 		}
 	});
 

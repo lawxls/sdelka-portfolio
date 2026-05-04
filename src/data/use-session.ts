@@ -151,6 +151,21 @@ export function useResetPassword() {
 	});
 }
 
+/**
+ * Mutation hook for the in-app "change password" CTA in settings. Authed-only
+ * — fires `client.requestPasswordChange()` (no body; backend pulls the email
+ * from the session) so the user receives an email-link they can land on
+ * `/reset-password` with. The user stays signed in throughout; clearing the
+ * session only happens after they actually consume the link.
+ */
+export function useRequestPasswordChange() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (): Promise<void> => client.requestPasswordChange(),
+	});
+}
+
 export type SessionStatus = "pending" | "authed" | "anon";
 
 /**

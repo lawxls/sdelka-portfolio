@@ -21,6 +21,7 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		resendConfirmation: vi.fn().mockResolvedValue(undefined),
 		forgotPassword: vi.fn(),
 		resetPassword: vi.fn(),
+		requestPasswordChange: vi.fn(),
 		...overrides,
 	};
 }

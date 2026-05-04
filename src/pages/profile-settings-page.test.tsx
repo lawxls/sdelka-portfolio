@@ -5,10 +5,10 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
-import * as authApi from "@/data/auth-api";
 import type { ProfileClient } from "@/data/clients/profile-client";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import type { SessionClient } from "@/data/clients/session-client";
+import { fakeSessionClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { makeSettings, mockHostname } from "@/test-utils";
 import { ProfileSettingsPage } from "./profile-settings-page";
 
@@ -21,10 +21,11 @@ const MOCK_SETTINGS = makeSettings({ patronymic: "Иванович" });
 let queryClient: QueryClient;
 let profileClient: ProfileClient;
 
-function renderPage(profile?: ProfileClient) {
-	profileClient = profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+function renderPage(opts: { profile?: ProfileClient; session?: SessionClient } = {}) {
+	profileClient = opts.profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+	const session = opts.session ?? fakeSessionClient({ requestPasswordChange: vi.fn().mockResolvedValue(undefined) });
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient }}>
+		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient, session }}>
 			<MemoryRouter initialEntries={["/settings/profile"]}>
 				<Routes>
 					<Route path="*" element={<ProfileSettingsPage />} />
@@ -103,38 +104,54 @@ describe("ProfileSettingsPage", () => {
 		expect(screen.getByText(/неверный формат/i)).toBeInTheDocument();
 	});
 
-	test("Изменить пароль section renders with description and button", async () => {
+	test("Изменить пароль section renders with description and CTA", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Изменить пароль" })).toBeInTheDocument();
 		});
-		expect(screen.getByText("Получить письмо со ссылкой для обновления пароля")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Изменить пароль" })).toBeInTheDocument();
+		expect(screen.getByText("Мы отправим ссылку для смены пароля на вашу почту")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
 	});
 
-	test("Изменить пароль calls forgotPassword with user email", async () => {
-		const forgotSpy = vi.spyOn(authApi, "forgotPassword");
-
-		renderPage();
+	test("CTA fires requestPasswordChange and surfaces success toast", async () => {
+		const requestPasswordChange = vi.fn().mockResolvedValue(undefined);
+		renderPage({ session: fakeSessionClient({ requestPasswordChange }) });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Изменить пароль" })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Изменить пароль" }));
+		await user.click(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" }));
 
 		await waitFor(() => {
-			expect(forgotSpy).toHaveBeenCalledWith("ivan@example.com");
+			expect(requestPasswordChange).toHaveBeenCalledOnce();
 		});
+		expect(requestPasswordChange).toHaveBeenCalledWith();
 		expect(toast.success).toHaveBeenCalledWith("Письмо отправлено");
+	});
+
+	test("CTA failure surfaces error toast and leaves the user signed in", async () => {
+		const requestPasswordChange = vi.fn().mockRejectedValue(new Error("boom"));
+		renderPage({ session: fakeSessionClient({ requestPasswordChange }) });
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
+		});
+
+		await user.click(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" }));
+
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Не удалось отправить письмо");
+		});
 	});
 
 	test("shows error state with retry button when settings request fails", async () => {
 		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
 		const original = profile.settings;
 		profile.settings = vi.fn().mockRejectedValueOnce(new Error("boom")).mockImplementation(original);
-		renderPage(profile);
+		renderPage({ profile });
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
 		});
@@ -144,7 +161,7 @@ describe("ProfileSettingsPage", () => {
 	test("submit button is disabled during in-flight request", async () => {
 		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
 		profile.update = vi.fn(() => new Promise<never>(() => {}));
-		renderPage(profile);
+		renderPage({ profile });
 		const user = userEvent.setup();
 
 		await waitFor(() => {
@@ -161,9 +178,11 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("email notifications checkbox reflects mailing_allowed from API", async () => {
-		renderPage(
-			createInMemoryProfileClient({ settings: makeSettings({ patronymic: "Иванович", mailing_allowed: false }) }),
-		);
+		renderPage({
+			profile: createInMemoryProfileClient({
+				settings: makeSettings({ patronymic: "Иванович", mailing_allowed: false }),
+			}),
+		});
 		await waitFor(() => {
 			expect(screen.getByRole("checkbox", { name: /уведомления/i })).toBeInTheDocument();
 		});

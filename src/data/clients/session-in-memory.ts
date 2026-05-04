@@ -167,5 +167,14 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			match.password = input.new_password;
 			match.passwordResetToken = undefined;
 		},
+
+		async requestPasswordChange(): Promise<void> {
+			// Authed call — production backend looks up the active user from the
+			// session and emails them a reset link. The in-memory adapter has no
+			// session concept, so it just resolves; tests asserting the round-trip
+			// (request → email link → reset) drive the reset half via
+			// `forgotPassword` directly with a known uid+token.
+			await delay();
+		},
 	};
 }

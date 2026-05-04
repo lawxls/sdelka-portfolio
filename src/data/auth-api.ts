@@ -65,7 +65,3 @@ export async function resetPassword(token: string, password: string): Promise<Re
 export async function logout(): Promise<void> {
 	return logoutMock();
 }
-
-export function extractFormErrors(_err: unknown): { error: string | null; fieldErrors: Record<string, string> } {
-	return { error: "Произошла ошибка. Попробуйте ещё раз.", fieldErrors: {} };
-}

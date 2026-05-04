@@ -16,8 +16,6 @@ import type {
  * (mock store) or HTTP (Django `/api/v1/auth/*` endpoints). Hooks pull this
  * through context, so swapping adapters is a one-line change in the
  * composition root.
- *
- * Subsequent slices add `requestPasswordChange`.
  */
 export interface SessionClient {
 	login(input: LoginInput): Promise<LoginResult>;
@@ -54,4 +52,9 @@ export interface SessionClient {
 	 * the new password, and persist it. The user is NOT auto-logged-in — they
 	 * land on a "пароль изменён" success screen and re-enter via /login. */
 	resetPassword(input: ResetPasswordInput): Promise<void>;
+	/** Authed-only: send the current user a password-reset email. The settings
+	 * "change password" CTA calls this — there is no body, the backend pulls
+	 * the email from the session. The user completes the change via the link,
+	 * which lands on `/reset-password` (same surface as forgot-password). */
+	requestPasswordChange(): Promise<void>;
 }

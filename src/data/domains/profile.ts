@@ -2,7 +2,8 @@ import type { EmployeeRole } from "../types";
 
 /**
  * Profile domain types — current-user identity + preferences. Backs `useMe`,
- * `useSettings`, `useUpdateSettings`, and `useChangePassword`. Profile is a
+ * `useSettings`, and `useUpdateSettings`. Password changes live on
+ * `SessionClient.requestPasswordChange` (email-link flow). Profile is a
  * single-row domain — every operation works on the active session's user
  * record, there is no list shape.
  */
@@ -21,10 +22,6 @@ export interface UserSettings {
 export type SettingsPatch = Partial<
 	Pick<UserSettings, "first_name" | "last_name" | "patronymic" | "phone" | "mailing_allowed">
 >;
-
-export interface ChangePasswordResponse {
-	detail: string;
-}
 
 export interface CurrentEmployee {
 	id: number;

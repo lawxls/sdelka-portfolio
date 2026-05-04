@@ -194,7 +194,6 @@ export function fakeProfileClient(overrides: Partial<ProfileClient> = {}): Profi
 		me: notImplemented("me"),
 		settings: notImplemented("settings"),
 		update: notImplemented("update"),
-		changePassword: notImplemented("changePassword"),
 		...overrides,
 	};
 }
@@ -261,6 +260,7 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 		resendConfirmation: notImplemented("resendConfirmation"),
 		forgotPassword: notImplemented("forgotPassword"),
 		resetPassword: notImplemented("resetPassword"),
+		requestPasswordChange: notImplemented("requestPasswordChange"),
 		...overrides,
 	};
 }

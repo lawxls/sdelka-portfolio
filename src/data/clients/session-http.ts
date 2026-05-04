@@ -49,5 +49,9 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 
 		resetPassword: (input: ResetPasswordInput) =>
 			http.post<void>(`/auth/reset-password/`, { body: input, skipRefresh: true }),
+
+		// Authed call: rides the standard 401-refresh path (no skipRefresh) — if
+		// the access token has just expired, the interceptor refreshes silently.
+		requestPasswordChange: () => http.post<void>(`/auth/request-password-change/`, { body: {} }),
 	};
 }

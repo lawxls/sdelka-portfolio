@@ -1,4 +1,4 @@
-import type { ChangePasswordResponse, CurrentEmployee, SettingsPatch, UserSettings } from "../domains/profile";
+import type { CurrentEmployee, SettingsPatch, UserSettings } from "../domains/profile";
 import { delay } from "../mock-utils";
 import type { ProfileClient } from "./profile-client";
 
@@ -48,11 +48,6 @@ export function createInMemoryProfileClient(options?: InMemoryProfileOptions): P
 			await delay();
 			settings = { ...settings, ...patch };
 			return { ...settings };
-		},
-
-		async changePassword(_currentPassword: string, _newPassword: string): Promise<ChangePasswordResponse> {
-			await delay();
-			return { detail: "Пароль успешно изменён" };
 		},
 	};
 }

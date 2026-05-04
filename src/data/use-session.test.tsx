@@ -14,6 +14,7 @@ import {
 	useLogin,
 	useLogout,
 	useRegister,
+	useRequestPasswordChange,
 	useResendConfirmation,
 	useResetPassword,
 	useSessionBootstrap,
@@ -349,6 +350,47 @@ describe("useResetPassword", () => {
 		});
 
 		expect(getAccessToken()).toBeNull();
+	});
+});
+
+describe("useRequestPasswordChange", () => {
+	test("calls client.requestPasswordChange with no args and resolves", async () => {
+		const requestPasswordChange = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ requestPasswordChange });
+
+		const { result } = renderHook(() => useRequestPasswordChange(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
+		});
+
+		expect(requestPasswordChange).toHaveBeenCalledOnce();
+		expect(requestPasswordChange).toHaveBeenCalledWith();
+	});
+
+	test("does not clear the access token (user stays signed in until they consume the email link)", async () => {
+		setTokens("existing-access");
+		const requestPasswordChange = vi.fn().mockResolvedValue(undefined);
+		const client = fakeSessionClient({ requestPasswordChange });
+
+		const { result } = renderHook(() => useRequestPasswordChange(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await result.current.mutateAsync();
+		});
+
+		expect(getAccessToken()).toBe("existing-access");
+	});
+
+	test("propagates errors so the caller can surface a toast", async () => {
+		const requestPasswordChange = vi.fn().mockRejectedValue(new Error("network blip"));
+		const client = fakeSessionClient({ requestPasswordChange });
+
+		const { result } = renderHook(() => useRequestPasswordChange(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(result.current.mutateAsync()).rejects.toThrow();
+		});
 	});
 });
 
