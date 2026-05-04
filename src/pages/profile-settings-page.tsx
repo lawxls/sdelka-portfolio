@@ -5,9 +5,9 @@ import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { extractFormErrors } from "@/data/auth-errors";
-import type { UserSettings } from "@/data/domains/profile";
+import type { CurrentEmployee } from "@/data/domains/profile";
+import { useMe, useUpdateSettings } from "@/data/use-me";
 import { useRequestPasswordChange } from "@/data/use-session";
-import { useSettings, useUpdateSettings } from "@/data/use-settings";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { formatDate, formatFullName, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
 const DEFAULT_TARIFF_NAME = "Базовый";
 
-function ProfileForm({ data }: { data: UserSettings }) {
+function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
 	const requestPasswordChange = useRequestPasswordChange();
 
@@ -195,7 +195,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 }
 
 export function ProfileSettingsPage() {
-	const { data, isError, refetch } = useSettings();
+	const { data, isError, refetch } = useMe();
 
 	if (isError) {
 		return (

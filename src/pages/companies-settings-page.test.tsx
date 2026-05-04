@@ -10,7 +10,7 @@ import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
-import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { CompaniesSettingsPage } from "./companies-settings-page";
 
 function makeStored(id: string, overrides: Partial<Company> = {}): Company {
@@ -94,7 +94,7 @@ function renderPage(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}
 		>
@@ -122,7 +122,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}
 		>

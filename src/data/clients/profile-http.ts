@@ -1,13 +1,11 @@
-import type { CurrentEmployee, UserSettings } from "../domains/profile";
+import type { CurrentEmployee } from "../domains/profile";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { ProfileClient } from "./profile-client";
 
 export function createHttpProfileClient(http: HttpClient = defaultHttpClient): ProfileClient {
 	return {
-		me: () => http.get<CurrentEmployee>(`/me`),
+		me: () => http.get<CurrentEmployee>(`/users/me/`),
 
-		settings: () => http.get<UserSettings>(`/profile/settings`),
-
-		update: (patch) => http.patch<UserSettings>(`/profile/settings`, { body: patch }),
+		update: (patch) => http.patch<CurrentEmployee>(`/users/me/`, { body: patch }),
 	};
 }

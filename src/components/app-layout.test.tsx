@@ -11,7 +11,7 @@ import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memor
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings, TooltipWrapper } from "@/test-utils";
+import { createTestQueryClient, makeMe, TooltipWrapper } from "@/test-utils";
 import { AppLayout } from "./app-layout";
 
 function renderLayout(initialEntry = "/positions") {
@@ -26,7 +26,7 @@ function renderLayout(initialEntry = "/positions") {
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 			}}
 		>

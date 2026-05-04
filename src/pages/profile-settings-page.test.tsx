@@ -9,20 +9,20 @@ import type { ProfileClient } from "@/data/clients/profile-client";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import type { SessionClient } from "@/data/clients/session-client";
 import { fakeSessionClient, TestClientsProvider } from "@/data/test-clients-provider";
-import { makeSettings, mockHostname } from "@/test-utils";
+import { makeMe, mockHostname } from "@/test-utils";
 import { ProfileSettingsPage } from "./profile-settings-page";
 
 vi.mock("sonner", () => ({
 	toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
-const MOCK_SETTINGS = makeSettings({ patronymic: "Иванович" });
+const MOCK_ME = makeMe({ patronymic: "Иванович" });
 
 let queryClient: QueryClient;
 let profileClient: ProfileClient;
 
 function renderPage(opts: { profile?: ProfileClient; session?: SessionClient } = {}) {
-	profileClient = opts.profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+	profileClient = opts.profile ?? createInMemoryProfileClient({ me: MOCK_ME });
 	const session = opts.session ?? fakeSessionClient({ requestPasswordChange: vi.fn().mockResolvedValue(undefined) });
 	return render(
 		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient, session }}>
@@ -82,9 +82,9 @@ describe("ProfileSettingsPage", () => {
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(async () => {
-			const current = await profileClient.settings();
+			const current = await profileClient.me();
 			expect(current.first_name).toBe("Пётр");
-			expect(current.last_name).toBe(MOCK_SETTINGS.last_name);
+			expect(current.last_name).toBe(MOCK_ME.last_name);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});
@@ -147,10 +147,10 @@ describe("ProfileSettingsPage", () => {
 		});
 	});
 
-	test("shows error state with retry button when settings request fails", async () => {
-		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
-		const original = profile.settings;
-		profile.settings = vi.fn().mockRejectedValueOnce(new Error("boom")).mockImplementation(original);
+	test("shows error state with retry button when me request fails", async () => {
+		const profile = createInMemoryProfileClient({ me: MOCK_ME });
+		const original = profile.me;
+		profile.me = vi.fn().mockRejectedValueOnce(new Error("boom")).mockImplementation(original);
 		renderPage({ profile });
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe("ProfileSettingsPage", () => {
 	});
 
 	test("submit button is disabled during in-flight request", async () => {
-		const profile = createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+		const profile = createInMemoryProfileClient({ me: MOCK_ME });
 		profile.update = vi.fn(() => new Promise<never>(() => {}));
 		renderPage({ profile });
 		const user = userEvent.setup();
@@ -180,7 +180,7 @@ describe("ProfileSettingsPage", () => {
 	test("email notifications checkbox reflects mailing_allowed from API", async () => {
 		renderPage({
 			profile: createInMemoryProfileClient({
-				settings: makeSettings({ patronymic: "Иванович", mailing_allowed: false }),
+				me: makeMe({ patronymic: "Иванович", mailing_allowed: false }),
 			}),
 		});
 		await waitFor(() => {
@@ -214,7 +214,7 @@ describe("ProfileSettingsPage", () => {
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(async () => {
-			const current = await profileClient.settings();
+			const current = await profileClient.me();
 			expect(current.mailing_allowed).toBe(false);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");

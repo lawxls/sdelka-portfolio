@@ -10,7 +10,7 @@ import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
 
 const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
@@ -76,7 +76,7 @@ function renderPage(initialPath = "/settings/employees") {
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
 				session: createInMemorySessionClient(),
 			}}
@@ -104,7 +104,7 @@ function renderPageWithSpy(initialPath = "/settings/employees") {
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
 				session: createInMemorySessionClient(),
 			}}

@@ -192,7 +192,6 @@ export function fakeProfileClient(overrides: Partial<ProfileClient> = {}): Profi
 	};
 	return {
 		me: notImplemented("me"),
-		settings: notImplemented("settings"),
 		update: notImplemented("update"),
 		...overrides,
 	};
