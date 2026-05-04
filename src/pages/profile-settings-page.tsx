@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
-import { extractFormErrors, forgotPassword } from "@/data/auth-api";
-import type { UserSettings } from "@/data/domains/profile";
-import { useSettings, useUpdateSettings } from "@/data/use-settings";
+import { extractFormErrors } from "@/data/auth-errors";
+import type { CurrentEmployee } from "@/data/domains/profile";
+import { useMe, useUpdateSettings } from "@/data/use-me";
+import { useRequestPasswordChange } from "@/data/use-session";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import { formatDate, formatFullName, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,8 +15,9 @@ import { cn } from "@/lib/utils";
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
 const DEFAULT_TARIFF_NAME = "Базовый";
 
-function ProfileForm({ data }: { data: UserSettings }) {
+function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
+	const requestPasswordChange = useRequestPasswordChange();
 
 	const [firstName, setFirstName] = useState(data.first_name);
 	const [lastName, setLastName] = useState(data.last_name);
@@ -24,7 +26,6 @@ function ProfileForm({ data }: { data: UserSettings }) {
 	const [mailingAllowed, setMailingAllowed] = useState(data.mailing_allowed);
 	const [phoneError, setPhoneError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [forgotPending, setForgotPending] = useState(false);
 
 	const isDirty =
 		firstName !== data.first_name ||
@@ -63,16 +64,11 @@ function ProfileForm({ data }: { data: UserSettings }) {
 		});
 	}
 
-	async function handleForgotPassword() {
-		setForgotPending(true);
-		try {
-			await forgotPassword(data.email);
-			toast.success("Письмо отправлено");
-		} catch {
-			toast.error("Не удалось отправить письмо");
-		} finally {
-			setForgotPending(false);
-		}
+	function handleRequestPasswordChange() {
+		requestPasswordChange.mutate(undefined, {
+			onSuccess: () => toast.success("Письмо отправлено"),
+			onError: () => toast.error("Не удалось отправить письмо"),
+		});
 	}
 
 	const initials = getInitials(data.first_name, data.last_name);
@@ -180,17 +176,17 @@ function ProfileForm({ data }: { data: UserSettings }) {
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="min-w-0">
 						<h2 className="text-base font-semibold">Изменить пароль</h2>
-						<p className="mt-0.5 text-sm text-muted-foreground">Получить письмо со ссылкой для обновления пароля</p>
+						<p className="mt-0.5 text-sm text-muted-foreground">Мы отправим ссылку для смены пароля на вашу почту</p>
 					</div>
 					<Button
 						type="button"
 						variant="outline"
-						onClick={handleForgotPassword}
-						disabled={forgotPending}
+						onClick={handleRequestPasswordChange}
+						disabled={requestPasswordChange.isPending}
 						className="sm:shrink-0"
 					>
-						{forgotPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-						Изменить пароль
+						{requestPasswordChange.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+						Отправить ссылку для смены пароля на почту
 					</Button>
 				</div>
 			</section>
@@ -199,7 +195,7 @@ function ProfileForm({ data }: { data: UserSettings }) {
 }
 
 export function ProfileSettingsPage() {
-	const { data, isError, refetch } = useSettings();
+	const { data, isError, refetch } = useMe();
 
 	if (isError) {
 		return (

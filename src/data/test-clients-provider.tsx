@@ -5,10 +5,10 @@ import type { CompaniesClient } from "./clients/companies-client";
 import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
-import type { InvitationsClient } from "./clients/invitations-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
+import type { SessionClient } from "./clients/session-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { TendersClient } from "./clients/tenders-client";
@@ -191,9 +191,7 @@ export function fakeProfileClient(overrides: Partial<ProfileClient> = {}): Profi
 	};
 	return {
 		me: notImplemented("me"),
-		settings: notImplemented("settings"),
 		update: notImplemented("update"),
-		changePassword: notImplemented("changePassword"),
 		...overrides,
 	};
 }
@@ -218,19 +216,6 @@ export function fakeWorkspaceEmployeesClient(
 	};
 }
 
-/** Build a fake `InvitationsClient` for hook tests — methods default to
- * throwing "not implemented" so a test that forgets to stub a call fails
- * loudly. */
-export function fakeInvitationsClient(overrides: Partial<InvitationsClient> = {}): InvitationsClient {
-	const notImplemented = (method: string) => () => {
-		throw new Error(`fakeInvitationsClient.${method} not stubbed`);
-	};
-	return {
-		verify: notImplemented("verify"),
-		...overrides,
-	};
-}
-
 /** Build a fake `CompanyInfoClient` for hook tests — methods default to
  * throwing "not implemented" so a test that forgets to stub a call fails
  * loudly. */
@@ -240,6 +225,27 @@ export function fakeCompanyInfoClient(overrides: Partial<CompanyInfoClient> = {}
 	};
 	return {
 		get: notImplemented("get"),
+		...overrides,
+	};
+}
+
+/** Build a fake `SessionClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeSessionClient(overrides: Partial<SessionClient> = {}): SessionClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeSessionClient.${method} not stubbed`);
+	};
+	return {
+		login: notImplemented("login"),
+		refresh: notImplemented("refresh"),
+		logout: notImplemented("logout"),
+		register: notImplemented("register"),
+		confirmEmail: notImplemented("confirmEmail"),
+		checkEmail: notImplemented("checkEmail"),
+		resendConfirmation: notImplemented("resendConfirmation"),
+		forgotPassword: notImplemented("forgotPassword"),
+		resetPassword: notImplemented("resetPassword"),
+		requestPasswordChange: notImplemented("requestPasswordChange"),
 		...overrides,
 	};
 }

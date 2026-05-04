@@ -91,17 +91,17 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/all$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/all$`),
 			respond: () => ({ status: 200, body: { suppliers: Array.from(store.values()) } }),
 		},
 		{
 			method: "GET",
-			path: /^\/api\/suppliers$/,
+			path: /^\/suppliers$/,
 			respond: () => ({ status: 200, body: listAll() }),
 		},
 		{
 			method: "GET",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/([^/]+)$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/([^/]+)$`),
 			respond: ({ url }) => {
 				const id = decodeURIComponent(new URL(url, "http://test").pathname.split("/").pop() ?? "");
 				const found = store.get(id);
@@ -111,7 +111,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "GET",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers(\\?|$)`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers(\\?|$)`),
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const search = u.searchParams.get("search")?.toLowerCase();
@@ -122,7 +122,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/archive$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/archive$`),
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { supplierIds: string[] };
 				for (const id of data.supplierIds) {
@@ -134,7 +134,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/unarchive$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/unarchive$`),
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { supplierIds: string[] };
 				for (const id of data.supplierIds) {
@@ -146,7 +146,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/delete$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/delete$`),
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { supplierIds: string[] };
 				for (const id of data.supplierIds) store.delete(id);
@@ -155,7 +155,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/send-request$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/send-request$`),
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { supplierIds: string[] };
 				const transitioned: string[] = [];
@@ -171,7 +171,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: new RegExp(`^/api/items/${ITEM_ID}/suppliers/([^/]+)/messages$`),
+			path: new RegExp(`^/items/${ITEM_ID}/suppliers/([^/]+)/messages$`),
 			respond: ({ url, init }) => {
 				const match = new URL(url, "http://test").pathname.match(/\/suppliers\/([^/]+)\/messages$/);
 				const id = decodeURIComponent(match?.[1] ?? "");

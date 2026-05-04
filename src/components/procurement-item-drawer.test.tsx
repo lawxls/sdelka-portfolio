@@ -90,7 +90,7 @@ beforeEach(() => {
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 	_setSupplierMockDelay(0, 0);
 	_setMockDelay(0, 0);
 	vi.clearAllMocks();

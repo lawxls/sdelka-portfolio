@@ -7,9 +7,10 @@ import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
-import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { CompaniesSettingsPage } from "./companies-settings-page";
 
 function makeStored(id: string, overrides: Partial<Company> = {}): Company {
@@ -93,7 +94,8 @@ function renderPage(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
+				session: createInMemorySessionClient(),
 			}}
 		>
 			<TooltipProvider>
@@ -120,7 +122,8 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
+				session: createInMemorySessionClient(),
 			}}
 		>
 			<TooltipProvider>
@@ -145,7 +148,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 	companies = MOCK_COMPANIES;
 });
 

@@ -142,12 +142,12 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/workspace\/employees$/,
+			path: /^\/workspace\/employees$/,
 			respond: () => ({ status: 200, body: Array.from(store.values()).map(stripPermissions) }),
 		},
 		{
 			method: "GET",
-			path: /^\/api\/workspace\/employees\/(\d+)$/,
+			path: /^\/workspace\/employees\/(\d+)$/,
 			respond: ({ url }) => {
 				const id = Number(/\/(\d+)$/.exec(url)?.[1]);
 				const found = store.get(id);
@@ -157,7 +157,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/workspace\/employees\/invite$/,
+			path: /^\/workspace\/employees\/invite$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { invites: InviteEmployeeData[] };
 				for (const invite of data.invites) {
@@ -194,7 +194,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/workspace\/employees\/(\d+)$/,
+			path: /^\/workspace\/employees\/(\d+)$/,
 			respond: ({ url, init }) => {
 				const id = Number(/\/(\d+)$/.exec(url)?.[1]);
 				const existing = store.get(id);
@@ -210,7 +210,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/workspace\/employees\/delete$/,
+			path: /^\/workspace\/employees\/delete$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: number[] };
 				for (const id of data.ids) {
@@ -224,7 +224,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/workspace\/employees\/(\d+)\/permissions$/,
+			path: /^\/workspace\/employees\/(\d+)\/permissions$/,
 			respond: ({ url, init }) => {
 				const id = Number(/\/(\d+)\/permissions$/.exec(url)?.[1]);
 				const existing = store.get(id);

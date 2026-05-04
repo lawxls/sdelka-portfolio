@@ -49,17 +49,17 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/folders$/,
+			path: /^\/folders$/,
 			respond: () => ({ status: 200, body: Array.from(store.values()) }),
 		},
 		{
 			method: "GET",
-			path: /^\/api\/folders\/stats(\?|$)/,
+			path: /^\/folders\/stats(\?|$)/,
 			respond: () => ({ status: 200, body: { stats: [], archiveCount: 0 } }),
 		},
 		{
 			method: "POST",
-			path: /^\/api\/folders$/,
+			path: /^\/folders$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { name: string; color: string };
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
@@ -72,7 +72,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/folders\/([^/]+)$/,
+			path: /^\/folders\/([^/]+)$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -87,7 +87,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/api\/folders\/([^/]+)$/,
+			path: /^\/folders\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");

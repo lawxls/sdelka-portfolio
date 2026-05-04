@@ -43,7 +43,7 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/workspace\/company-info$/,
+			path: /^\/workspace\/company-info$/,
 			respond: () => ({ status: 200, body: info }),
 		},
 	];

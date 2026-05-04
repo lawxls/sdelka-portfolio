@@ -1,12 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { createTestQueryClient } from "@/test-utils";
+import { createTestQueryClient, makeMe } from "@/test-utils";
 import type { ProfileClient } from "./clients/profile-client";
 import { NetworkError } from "./errors";
 import { fakeProfileClient, TestClientsProvider } from "./test-clients-provider";
-import { useMe } from "./use-me";
+import { useMe, useUpdateSettings } from "./use-me";
 
 let queryClient: QueryClient;
 
@@ -28,13 +28,14 @@ afterEach(() => {
 
 describe("useMe", () => {
 	test("returns the current employee from client.me()", async () => {
-		const me = vi.fn().mockResolvedValue({ id: 1, role: "admin" });
+		const seed = makeMe({ id: 42, role: "user", first_name: "Анна" });
+		const me = vi.fn().mockResolvedValue(seed);
 		const client = fakeProfileClient({ me });
 
 		const { result } = renderHook(() => useMe(), { wrapper: wrapperFactory(client) });
 
 		await waitFor(() => {
-			expect(result.current.data).toEqual({ id: 1, role: "admin" });
+			expect(result.current.data).toEqual(seed);
 		});
 		expect(me).toHaveBeenCalledOnce();
 	});
@@ -48,6 +49,40 @@ describe("useMe", () => {
 
 		await waitFor(() => {
 			expect(result.current.error).toBeInstanceOf(NetworkError);
+		});
+	});
+});
+
+describe("useUpdateSettings", () => {
+	test("calls client.update and writes the result into the me query cache", async () => {
+		const seed = makeMe();
+		const updated = { ...seed, first_name: "Пётр" };
+		const update = vi.fn().mockResolvedValue(updated);
+		const client = fakeProfileClient({ update });
+
+		queryClient.setQueryData(["me"], seed);
+
+		const { result } = renderHook(() => useUpdateSettings(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			const out = await result.current.mutateAsync({ first_name: "Пётр" });
+			expect(out.first_name).toBe("Пётр");
+		});
+
+		expect(update).toHaveBeenCalledOnce();
+		expect(update.mock.calls[0][0]).toEqual({ first_name: "Пётр" });
+		expect(queryClient.getQueryData(["me"])).toEqual(updated);
+	});
+
+	test("surfaces NetworkError as the mutation error", async () => {
+		const client = fakeProfileClient({
+			update: () => Promise.reject(new NetworkError(new Error("offline"))),
+		});
+
+		const { result } = renderHook(() => useUpdateSettings(), { wrapper: wrapperFactory(client) });
+
+		await act(async () => {
+			await expect(result.current.mutateAsync({ first_name: "Пётр" })).rejects.toBeInstanceOf(NetworkError);
 		});
 	});
 });

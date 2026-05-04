@@ -1,27 +1,44 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AuthError, ConflictError, HttpError, NetworkError, NotFoundError, ValidationError } from "./errors";
-import { createHttpClient } from "./http-client";
+import {
+	AuthError,
+	ConflictError,
+	HttpError,
+	NetworkError,
+	NotFoundError,
+	TooManyRequestsError,
+	ValidationError,
+} from "./errors";
+import { createHttpClient, installAuthHandlers } from "./http-client";
 
 type FakeFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-function jsonResponse(status: number, body: unknown): Response {
+function jsonResponse(status: number, body: unknown, headers?: Record<string, string>): Response {
 	const hasBody = body !== undefined && status !== 204;
-	return new Response(hasBody ? JSON.stringify(body) : null, {
-		status,
-		headers: hasBody ? { "content-type": "application/json" } : undefined,
-	});
+	const finalHeaders = { ...(hasBody ? { "content-type": "application/json" } : {}), ...(headers ?? {}) };
+	return new Response(hasBody ? JSON.stringify(body) : null, { status, headers: finalHeaders });
 }
 
-function setup(fetchImpl: FakeFetch, opts: { token?: string | null } = {}) {
+interface SetupOpts {
+	token?: string | null;
+	csrf?: string | null;
+	refresh?: () => Promise<void>;
+	onAuthCleared?: () => void;
+}
+
+function setup(fetchImpl: FakeFetch, opts: SetupOpts = {}) {
 	return createHttpClient({
 		baseUrl: "https://api.test",
 		fetch: fetchImpl,
 		getToken: () => opts.token ?? null,
+		getCsrfToken: () => opts.csrf ?? null,
+		refresh: opts.refresh,
+		onAuthCleared: opts.onAuthCleared,
 	});
 }
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	installAuthHandlers(null);
 });
 
 describe("httpClient — request construction", () => {
@@ -186,6 +203,198 @@ describe("httpClient — network failures", () => {
 	});
 });
 
+describe("httpClient — credentials and CSRF", () => {
+	it("includes credentials on every request so cookies traverse cross-origin", async () => {
+		const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, {}));
+		const http = setup(fetchSpy);
+
+		await http.get("/foo");
+		await http.post("/foo", { body: { x: 1 } });
+
+		for (const call of fetchSpy.mock.calls) {
+			expect((call[1] as RequestInit).credentials).toBe("include");
+		}
+	});
+
+	it("echoes csrftoken cookie as X-CSRFToken on state-changing verbs", async () => {
+		const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, {}));
+		const http = setup(fetchSpy, { csrf: "csrf-abc" });
+
+		await http.post("/foo", { body: {} });
+		await http.patch("/foo", { body: {} });
+		await http.delete("/foo");
+
+		for (const call of fetchSpy.mock.calls) {
+			expect((call[1] as RequestInit).headers).toBeInstanceOf(Headers);
+			expect(((call[1] as RequestInit).headers as Headers).get("X-CSRFToken")).toBe("csrf-abc");
+		}
+	});
+
+	it("does not attach X-CSRFToken to GET requests", async () => {
+		const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, {}));
+		const http = setup(fetchSpy, { csrf: "csrf-abc" });
+
+		await http.get("/foo");
+
+		expect(((fetchSpy.mock.calls[0][1] as RequestInit).headers as Headers).has("X-CSRFToken")).toBe(false);
+	});
+
+	it("omits X-CSRFToken when no csrftoken cookie is set", async () => {
+		const fetchSpy = vi.fn().mockImplementation(async () => jsonResponse(200, {}));
+		const http = setup(fetchSpy);
+
+		await http.post("/foo", { body: {} });
+
+		expect(((fetchSpy.mock.calls[0][1] as RequestInit).headers as Headers).has("X-CSRFToken")).toBe(false);
+	});
+});
+
+describe("httpClient — 429 throttling", () => {
+	it("maps 429 with Retry-After to TooManyRequestsError carrying parsed seconds", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(429, { detail: "throttled" }, { "retry-after": "30" }));
+		const http = setup(fetchSpy);
+
+		try {
+			await http.post("/login", { body: {} });
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(TooManyRequestsError);
+			expect((err as TooManyRequestsError).retryAfter).toBe(30);
+		}
+	});
+
+	it("retryAfter is null when Retry-After is absent", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(429, {}));
+		const http = setup(fetchSpy);
+
+		try {
+			await http.post("/login", { body: {} });
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(TooManyRequestsError);
+			expect((err as TooManyRequestsError).retryAfter).toBeNull();
+		}
+	});
+
+	it("retryAfter is null when Retry-After is unparseable (HTTP-date)", async () => {
+		const fetchSpy = vi
+			.fn()
+			.mockResolvedValue(jsonResponse(429, {}, { "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT" }));
+		const http = setup(fetchSpy);
+
+		try {
+			await http.post("/login", { body: {} });
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(TooManyRequestsError);
+			expect((err as TooManyRequestsError).retryAfter).toBeNull();
+		}
+	});
+});
+
+describe("httpClient — single-flight 401 refresh", () => {
+	it("triggers refresh exactly once when N concurrent requests get 401, then retries each", async () => {
+		let refreshCount = 0;
+		let unauthed = true;
+		const fetchSpy = vi.fn().mockImplementation(async () => {
+			if (unauthed) return jsonResponse(401, { detail: "stale" });
+			return jsonResponse(200, { ok: true });
+		});
+
+		const refresh = vi.fn().mockImplementation(async () => {
+			refreshCount += 1;
+			unauthed = false;
+		});
+
+		const http = setup(fetchSpy, { refresh });
+
+		const results = await Promise.all([http.get("/a"), http.get("/b"), http.get("/c")]);
+
+		expect(refreshCount).toBe(1);
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(results).toEqual([{ ok: true }, { ok: true }, { ok: true }]);
+		// 3 initial 401s + 3 retries = 6 fetch calls
+		expect(fetchSpy).toHaveBeenCalledTimes(6);
+	});
+
+	it("propagates original AuthError and calls onAuthCleared once when refresh fails", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(401, { detail: "stale" }));
+		const refresh = vi.fn().mockRejectedValue(new AuthError(401));
+		const onAuthCleared = vi.fn();
+
+		const http = setup(fetchSpy, { refresh, onAuthCleared });
+
+		await expect(http.get("/a")).rejects.toBeInstanceOf(AuthError);
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(onAuthCleared).toHaveBeenCalledTimes(1);
+	});
+
+	it("skipRefresh on a request short-circuits the interceptor", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(401, {}));
+		const refresh = vi.fn();
+
+		const http = setup(fetchSpy, { refresh });
+
+		await expect(http.post("/auth/refresh/", { body: {}, skipRefresh: true })).rejects.toBeInstanceOf(AuthError);
+		expect(refresh).not.toHaveBeenCalled();
+	});
+
+	it("does not retry if no refresh handler is configured", async () => {
+		const fetchSpy = vi.fn().mockResolvedValue(jsonResponse(401, {}));
+		const http = setup(fetchSpy);
+
+		await expect(http.get("/a")).rejects.toBeInstanceOf(AuthError);
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("falls back to default refresh handlers installed via installAuthHandlers", async () => {
+		const refresh = vi.fn().mockResolvedValue(undefined);
+		const onAuthCleared = vi.fn();
+		installAuthHandlers({ refresh, onAuthCleared });
+
+		let unauthed = true;
+		const fetchSpy = vi.fn().mockImplementation(async () => {
+			if (unauthed) {
+				unauthed = false;
+				return jsonResponse(401, {});
+			}
+			return jsonResponse(200, { ok: true });
+		});
+
+		const http = createHttpClient({
+			baseUrl: "https://api.test",
+			fetch: fetchSpy,
+			getToken: () => null,
+			getCsrfToken: () => null,
+		});
+
+		const result = await http.get("/a");
+
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(result).toEqual({ ok: true });
+	});
+
+	it("if a second wave of requests comes after refresh resolves, fires a fresh refresh", async () => {
+		let unauthed = true;
+		const fetchSpy = vi.fn().mockImplementation(async () => {
+			if (unauthed) return jsonResponse(401, {});
+			return jsonResponse(200, { ok: true });
+		});
+		const refresh = vi.fn().mockImplementation(async () => {
+			unauthed = false;
+		});
+
+		const http = setup(fetchSpy, { refresh });
+
+		await http.get("/a");
+		// Now simulate the access becoming stale again.
+		unauthed = true;
+		await http.get("/a");
+
+		expect(refresh).toHaveBeenCalledTimes(2);
+	});
+});
+
 describe("httpClient — getBinary", () => {
 	it("returns blob and filename from Content-Disposition header", async () => {
 		const fetchSpy = vi.fn().mockResolvedValue(
@@ -199,7 +408,7 @@ describe("httpClient — getBinary", () => {
 		);
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export?company=c1");
+		const result = await http.getBinary("/items/export?company=c1");
 
 		expect(result.filename).toBe("report.xlsx");
 		expect(await result.blob.text()).toBe("bytes");
@@ -217,7 +426,7 @@ describe("httpClient — getBinary", () => {
 		);
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export");
+		const result = await http.getBinary("/items/export");
 
 		expect(result.filename).toBe("items тест.xlsx");
 	});
@@ -226,7 +435,7 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
 		const http = setup(fetchSpy);
 
-		const result = await http.getBinary("/api/items/export?a=1", { fallbackFilename: "items.xlsx" });
+		const result = await http.getBinary("/items/export?a=1", { fallbackFilename: "items.xlsx" });
 
 		expect(result.filename).toBe("items.xlsx");
 	});
@@ -235,7 +444,7 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response("x", { status: 200 }));
 		const http = setup(fetchSpy, { token: "abc" });
 
-		await http.getBinary("/api/items/export");
+		await http.getBinary("/items/export");
 
 		const init = fetchSpy.mock.calls[0][1] as RequestInit;
 		expect((init.headers as Headers).get("Authorization")).toBe("Bearer abc");
@@ -245,13 +454,34 @@ describe("httpClient — getBinary", () => {
 		const fetchSpy = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
 		const http = setup(fetchSpy);
 
-		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NotFoundError);
+		await expect(http.getBinary("/items/export")).rejects.toBeInstanceOf(NotFoundError);
 	});
 
 	it("fetch rejection → NetworkError", async () => {
 		const fetchSpy = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = setup(fetchSpy);
 
-		await expect(http.getBinary("/api/items/export")).rejects.toBeInstanceOf(NetworkError);
+		await expect(http.getBinary("/items/export")).rejects.toBeInstanceOf(NetworkError);
+	});
+
+	it("401 triggers refresh-and-retry just like JSON requests", async () => {
+		let unauthed = true;
+		const fetchSpy = vi.fn().mockImplementation(async () => {
+			if (unauthed) return new Response(null, { status: 401 });
+			return new Response("bytes", {
+				status: 200,
+				headers: { "content-disposition": 'attachment; filename="r.xlsx"' },
+			});
+		});
+		const refresh = vi.fn().mockImplementation(async () => {
+			unauthed = false;
+		});
+
+		const http = setup(fetchSpy, { refresh });
+		const result = await http.getBinary("/items/export");
+
+		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(result.filename).toBe("r.xlsx");
+		expect(await result.blob.text()).toBe("bytes");
 	});
 });

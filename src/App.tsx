@@ -12,6 +12,7 @@ import { LoginPage } from "@/pages/login-page";
 import { ProcurementPage } from "@/pages/procurement-page";
 import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
+import { ResendConfirmationPage } from "@/pages/resend-confirmation-page";
 import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { SettingsIndexPage } from "@/pages/settings-index-page";
 import { TariffsSettingsPage } from "@/pages/tariffs-settings-page";
@@ -47,6 +48,7 @@ function App() {
 				<Route path="/login" element={<LoginPage />} />
 				<Route path="/register" element={<RegisterPage />} />
 				<Route path="/confirm-email" element={<ConfirmEmailPage />} />
+				<Route path="/resend-confirmation" element={<ResendConfirmationPage />} />
 				<Route path="/forgot-password" element={<ForgotPasswordPage />} />
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
 			</Route>

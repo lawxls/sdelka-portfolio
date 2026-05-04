@@ -3,10 +3,10 @@ import type { CompaniesClient } from "./clients/companies-client";
 import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
-import type { InvitationsClient } from "./clients/invitations-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProfileClient } from "./clients/profile-client";
+import type { SessionClient } from "./clients/session-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { TendersClient } from "./clients/tenders-client";
@@ -28,8 +28,8 @@ export interface DataClients {
 	emails?: EmailsClient;
 	profile?: ProfileClient;
 	workspaceEmployees?: WorkspaceEmployeesClient;
-	invitations?: InvitationsClient;
 	companyInfo?: CompanyInfoClient;
+	session?: SessionClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -110,14 +110,14 @@ export function useWorkspaceEmployeesClient(): WorkspaceEmployeesClient {
 	return workspaceEmployees;
 }
 
-export function useInvitationsClient(): InvitationsClient {
-	const { invitations } = useClients();
-	if (!invitations) throw new Error("invitations client not provided");
-	return invitations;
-}
-
 export function useCompanyInfoClient(): CompanyInfoClient {
 	const { companyInfo } = useClients();
 	if (!companyInfo) throw new Error("company-info client not provided");
 	return companyInfo;
+}
+
+export function useSessionClient(): SessionClient {
+	const { session } = useClients();
+	if (!session) throw new Error("session client not provided");
+	return session;
 }

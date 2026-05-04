@@ -71,7 +71,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/tenders(\?|$)/,
+			path: /^\/tenders(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
@@ -82,7 +82,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/tenders\/([^/]+)$/,
+			path: /^\/tenders\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -93,7 +93,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/tenders$/,
+			path: /^\/tenders$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as Partial<ProcurementInquiry>;
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
@@ -106,7 +106,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/api\/tenders\/([^/]+)$/,
+			path: /^\/tenders\/([^/]+)$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -121,7 +121,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/api\/tenders\/([^/]+)$/,
+			path: /^\/tenders\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");

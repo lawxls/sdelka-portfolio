@@ -99,6 +99,7 @@ async function waitForToolbar() {
 
 beforeEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	setTokens("test-access");
 	companies = SINGLE_COMPANY;
 	queryClient = new QueryClient({

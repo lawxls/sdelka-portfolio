@@ -1,6 +1,6 @@
 import { User } from "lucide-react";
 import { Link } from "react-router";
-import { useSettings } from "@/data/use-settings";
+import { useMe } from "@/data/use-me";
 import { cn } from "@/lib/utils";
 
 interface UserAvatarMenuProps {
@@ -13,9 +13,9 @@ function formatTriggerName(firstName: string, lastName: string): string {
 }
 
 export function UserAvatarMenu({ className }: UserAvatarMenuProps) {
-	const { data: settings } = useSettings();
+	const { data: me } = useMe();
 
-	const displayName = settings ? formatTriggerName(settings.first_name, settings.last_name) : null;
+	const displayName = me ? formatTriggerName(me.first_name, me.last_name) : null;
 
 	return (
 		<Link

@@ -50,7 +50,7 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/notifications$/,
+			path: /^\/notifications$/,
 			respond: () => ({
 				status: 200,
 				body: {
@@ -61,7 +61,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/notifications\/([^/]+)\/read$/,
+			path: /^\/notifications\/([^/]+)\/read$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").slice(-2)[0] ?? "");
@@ -74,7 +74,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/notifications\/read-all$/,
+			path: /^\/notifications\/read-all$/,
 			respond: () => {
 				for (const n of list) readIds.add(n.id);
 				return { status: 204 };
