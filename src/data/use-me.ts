@@ -15,19 +15,14 @@ export function useMe() {
 	});
 }
 
-/**
- * Patches the current user's profile and invalidates the `me` query so
- * surfaces (avatar menu, settings page, role-aware UI) re-fetch with the
- * new values.
- */
 export function useUpdateSettings() {
 	const client = useProfileClient();
 	const queryClient = useQueryClient();
 
 	return useMutation({
 		mutationFn: client.update,
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["me"] });
+		onSuccess: (updated) => {
+			queryClient.setQueryData(["me"], updated);
 		},
 	});
 }

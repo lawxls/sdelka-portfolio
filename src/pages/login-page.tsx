@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
+import { FormErrorBanner } from "@/components/form-error-banner";
 import { Button } from "@/components/ui/button";
-import { extractFormErrors } from "@/data/auth-errors";
-import { AuthError, TooManyRequestsError } from "@/data/errors";
+import { extractFormErrors, isEmailNotVerified } from "@/data/auth-errors";
+import { TooManyRequestsError } from "@/data/errors";
 import { useLogin } from "@/data/use-session";
 import { useCountdown } from "@/hooks/use-countdown";
 
@@ -32,13 +33,7 @@ export function LoginPage() {
 			await login.mutateAsync({ email, password });
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
-			if (
-				err instanceof AuthError &&
-				err.status === 403 &&
-				typeof err.body === "object" &&
-				err.body !== null &&
-				(err.body as { code?: unknown }).code === "email_not_verified"
-			) {
+			if (isEmailNotVerified(err)) {
 				navigate(`/resend-confirmation?email=${encodeURIComponent(email)}`);
 				return;
 			}
@@ -60,11 +55,7 @@ export function LoginPage() {
 			<p className="mt-1 text-sm text-muted-foreground">Войдите в свой аккаунт</p>
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
-				{error && (
-					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-						{error}
-					</div>
-				)}
+				{error && <FormErrorBanner>{error}</FormErrorBanner>}
 
 				<FloatingInput
 					label="Email"

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
+import { FormErrorBanner } from "@/components/form-error-banner";
 import { PhoneInput } from "@/components/phone-input";
 import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
@@ -98,11 +99,7 @@ export function RegisterPage() {
 
 			{stage === "email" && (
 				<form onSubmit={handleEmailSubmit} className="mt-8 space-y-4">
-					{error && (
-						<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-							{error}
-						</div>
-					)}
+					{error && <FormErrorBanner>{error}</FormErrorBanner>}
 
 					<FloatingInput
 						label="Email"
@@ -123,11 +120,7 @@ export function RegisterPage() {
 
 			{stage === "details" && (
 				<form onSubmit={handleDetailsSubmit} className="mt-8 space-y-4">
-					{error && (
-						<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-							{error}
-						</div>
-					)}
+					{error && <FormErrorBanner>{error}</FormErrorBanner>}
 
 					<FloatingInput
 						label="Имя"

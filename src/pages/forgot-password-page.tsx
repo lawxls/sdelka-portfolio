@@ -6,24 +6,17 @@ import { useForgotPassword } from "@/data/use-session";
 
 export function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
-	const [submitted, setSubmitted] = useState(false);
 
 	const forgotPassword = useForgotPassword();
 
-	async function handleSubmit(e: React.FormEvent) {
+	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		try {
-			await forgotPassword.mutateAsync({ email });
-		} catch {
-			// Anti-enumeration: render the same success copy regardless of whether
-			// the backend matched the email. Defense-in-depth — the HTTP backend
-			// returns 200 either way, but a network blip / in-memory adapter quirk
-			// shouldn't tell the user the email is unknown.
-		}
-		setSubmitted(true);
+		// Anti-enumeration: surface the success view on settle (success OR error),
+		// so the UI never reveals whether the email matched a known account.
+		forgotPassword.mutate({ email });
 	}
 
-	if (submitted) {
+	if (forgotPassword.isSuccess || forgotPassword.isError) {
 		return (
 			<>
 				<h1 className="text-2xl font-semibold">Проверьте почту</h1>

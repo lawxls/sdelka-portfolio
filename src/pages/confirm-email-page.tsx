@@ -23,7 +23,6 @@ export function ConfirmEmailPage() {
 			{ uid, token },
 			{
 				onSuccess: () => {
-					// useConfirmEmail already stored the access token; the user is signed in.
 					navigate("/inquiries", { replace: true });
 				},
 				onError: (err) => {

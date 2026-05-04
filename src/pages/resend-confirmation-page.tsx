@@ -7,25 +7,17 @@ import { useResendConfirmation } from "@/data/use-session";
 export function ResendConfirmationPage() {
 	const [searchParams] = useSearchParams();
 	const [email, setEmail] = useState(searchParams.get("email") ?? "");
-	const [submitted, setSubmitted] = useState(false);
 	const resend = useResendConfirmation();
 
-	async function handleSubmit(e: React.FormEvent) {
+	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
-		if (resend.isPending || submitted) return;
-		// Anti-enumeration: surface the same success state regardless of whether
-		// the backend accepted or rejected (network blip, throttle, missing user).
-		// The user is told to check the inbox; if there's no account, no email
-		// arrives — we never tell them which case occurred.
-		try {
-			await resend.mutateAsync(email);
-		} catch {
-			// swallow — the success view doesn't reveal outcome.
-		}
-		setSubmitted(true);
+		if (resend.isPending) return;
+		// Anti-enumeration: surface the success view on settle (success OR error),
+		// so the UI never reveals whether the email matched an account.
+		resend.mutate(email);
 	}
 
-	if (submitted) {
+	if (resend.isSuccess || resend.isError) {
 		return (
 			<>
 				<h1 className="text-2xl font-semibold">Проверьте почту</h1>

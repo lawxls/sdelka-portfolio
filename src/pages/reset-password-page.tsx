@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
+import { FormErrorBanner } from "@/components/form-error-banner";
 import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
@@ -38,16 +39,12 @@ export function ResetPasswordPage() {
 		setError(null);
 		setFieldErrors({});
 
-		const validationErrors = validatePasswordWithConfirm(password, confirmPassword);
+		const validationErrors = validatePasswordWithConfirm(password, confirmPassword, {
+			password: "new_password",
+			confirm: "new_password_confirm",
+		});
 		if (validationErrors) {
-			// validatePasswordWithConfirm emits keys `password` / `password_confirm`;
-			// remap to the API field names so backend ValidationError responses
-			// (which key by `new_password` / `new_password_confirm`) blend without
-			// a remap layer in the JSX.
-			const remapped: Record<string, string> = {};
-			if (validationErrors.password) remapped.new_password = validationErrors.password;
-			if (validationErrors.password_confirm) remapped.new_password_confirm = validationErrors.password_confirm;
-			setFieldErrors(remapped);
+			setFieldErrors(validationErrors);
 			return;
 		}
 
@@ -87,14 +84,14 @@ export function ResetPasswordPage() {
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
 				{error && (
-					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+					<FormErrorBanner>
 						{error}
 						<p className="mt-2">
 							<Link to="/forgot-password" className="font-medium text-foreground hover:underline">
 								Запросить новую ссылку
 							</Link>
 						</p>
-					</div>
+					</FormErrorBanner>
 				)}
 
 				<FloatingInput

@@ -1,19 +1,9 @@
+import { pluralizeRu } from "../lib/format";
 import { AuthError, TooManyRequestsError, ValidationError } from "./errors";
 
-/**
- * Translator for auth-flow API errors. Pivots on Django error codes (per-field
- * `code` values DRF returns alongside the message) so the UI can surface a
- * stable Russian copy regardless of how the upstream English string evolves.
- *
- * Returns `{ error, fieldErrors }`:
- *  - `error`: a top-of-form banner string (`null` when only field errors apply)
- *  - `fieldErrors`: per-field message keyed by field name; the first message
- *     wins so callers can show a single line under the input
- *
- * Coverage in this slice is intentionally narrow — `invalid_credentials` and
- * the throttling case are the two paths LoginPage exercises. Subsequent slices
- * extend the dictionary as register / reset-password flows migrate.
- */
+// Translator for auth-flow API errors. Pivots on Django/DRF error `code`
+// values (per-field and top-level) so UI copy stays stable as upstream
+// English messages evolve.
 export interface FormErrors {
 	error: string | null;
 	fieldErrors: Record<string, string>;
@@ -43,7 +33,8 @@ const FIELD_CODES: Record<string, string> = {
 export function extractFormErrors(err: unknown): FormErrors {
 	if (err instanceof TooManyRequestsError) {
 		const seconds = err.retryAfter;
-		const suffix = seconds && seconds > 0 ? ` Повторите попытку через ${seconds} с.` : "";
+		const suffix =
+			seconds && seconds > 0 ? ` Повторите попытку через ${pluralizeRu(seconds, "секунду", "секунды", "секунд")}.` : "";
 		return { error: `Слишком много попыток.${suffix}`, fieldErrors: {} };
 	}
 
@@ -108,6 +99,19 @@ function readFieldCodes(body: unknown): DrfFieldCodes {
 		}
 	}
 	return out;
+}
+
+/** True when the backend rejected login because the user's email is unverified.
+ * The login page redirects these to /resend-confirmation instead of showing
+ * a banner. */
+export function isEmailNotVerified(err: unknown): boolean {
+	return err instanceof AuthError && err.status === 403 && readBodyCode(err.body) === "email_not_verified";
+}
+
+function readBodyCode(body: unknown): string | null {
+	if (!body || typeof body !== "object") return null;
+	const code = (body as { code?: unknown }).code;
+	return typeof code === "string" ? code : null;
 }
 
 function pickCodeFromFieldValue(value: unknown): string | null {

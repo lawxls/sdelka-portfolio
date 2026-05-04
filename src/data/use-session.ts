@@ -15,13 +15,6 @@ import type {
 	ResetPasswordInput,
 } from "./domains/session";
 
-/**
- * Mutation hook for the login form. On success stores the access token in
- * `sessionStorage` (the refresh cookie is set server-side and is not
- * accessible to JS) and resolves with the user record so callers can route
- * post-login. Errors propagate untouched — the caller translates them via
- * `extractFormErrors` to surface field-level UI.
- */
 export function useLogin() {
 	const client = useSessionClient();
 
@@ -35,11 +28,10 @@ export function useLogin() {
 }
 
 /**
- * Sign the user out. Local cleanup runs unconditionally — even if the backend
- * call fails (network down, refresh cookie already expired) we still drop the
- * access token, wipe the cached query data, and dispatch `AUTH_CLEARED_EVENT`.
- * The next interaction in any open tab transitions to /login because
- * `useSessionBootstrap` listens to the same event.
+ * Local cleanup runs unconditionally — even if the backend call fails
+ * (network down, cookie already expired) the user must still drop out of the
+ * authed UI. `clearTokens` dispatches `AUTH_CLEARED_EVENT`, which
+ * `useSessionBootstrap` consumes to redirect to /login.
  */
 export function useLogout() {
 	const client = useSessionClient();
@@ -50,10 +42,7 @@ export function useLogout() {
 			try {
 				await client.logout();
 			} catch {
-				// Backend rejected the call (cookie missing, throttled, server down).
-				// We still want the user logged out locally — the refresh cookie may
-				// linger until expiry, but this tab can't use it without an access
-				// token, and the next refresh attempt will hit a 401 and redirect.
+				// Tolerate backend failure; local cleanup below still runs.
 			}
 			clearTokens();
 			queryClient.clear();
@@ -61,12 +50,8 @@ export function useLogout() {
 	});
 }
 
-/**
- * Mutation hook for the register form. Resolves with the new user record but
- * does NOT store tokens — the user must confirm their email before they can
- * sign in (auto-login happens in `useConfirmEmail`). Errors propagate untouched
- * so the caller can pivot through `extractFormErrors` for field-level UI.
- */
+// Register does NOT auto-login; auto-login happens in `useConfirmEmail` after
+// the user follows the email-confirmation link.
 export function useRegister() {
 	const client = useSessionClient();
 
@@ -75,12 +60,6 @@ export function useRegister() {
 	});
 }
 
-/**
- * Mutation hook for the email-confirmation page. On success stores the access
- * token in `sessionStorage` (the refresh cookie is set server-side) so the
- * caller can navigate the user straight into the protected app — they land
- * signed in without ever seeing the login form.
- */
 export function useConfirmEmail() {
 	const client = useSessionClient();
 
@@ -93,12 +72,6 @@ export function useConfirmEmail() {
 	});
 }
 
-/**
- * Pre-check whether an email is already registered, so the register form's
- * stage 1 can surface a "this email is taken" hint before the user fills out
- * the rest of the details. Modeled as a mutation because the form fires it
- * imperatively on submit, not on every keystroke.
- */
 export function useCheckEmail() {
 	const client = useSessionClient();
 
@@ -107,12 +80,8 @@ export function useCheckEmail() {
 	});
 }
 
-/**
- * Mutation hook for the resend-confirmation page and the /login → 403
- * `email_not_verified` recovery flow. Anti-enumeration: the backend always
- * returns 200, so callers should always render the same generic "если аккаунт
- * существует, мы отправили письмо" success copy regardless of outcome.
- */
+// Anti-enumeration: backend always returns 200; pages must show the same
+// success copy on either branch. Same applies to `useForgotPassword` below.
 export function useResendConfirmation() {
 	const client = useSessionClient();
 
@@ -121,13 +90,6 @@ export function useResendConfirmation() {
 	});
 }
 
-/**
- * Mutation hook for the forgot-password page. Anti-enumeration: the backend
- * always returns 200 regardless of whether the email matches a known account,
- * so the page renders the same generic success copy on success and on
- * (unexpected) failure. The hook surfaces errors normally — the page swallows
- * them in `onError` to keep the user-facing surface opaque.
- */
 export function useForgotPassword() {
 	const client = useSessionClient();
 
@@ -136,13 +98,6 @@ export function useForgotPassword() {
 	});
 }
 
-/**
- * Mutation hook for the reset-password page. Submits uid + token + new password
- * + confirmation; on success the user is NOT auto-logged-in (they re-enter via
- * /login with the new password). Errors propagate untouched so the caller can
- * pivot through `extractFormErrors` for a `invalid_or_expired_link` banner or
- * password-validator field errors.
- */
 export function useResetPassword() {
 	const client = useSessionClient();
 
@@ -151,13 +106,6 @@ export function useResetPassword() {
 	});
 }
 
-/**
- * Mutation hook for the in-app "change password" CTA in settings. Authed-only
- * — fires `client.requestPasswordChange()` (no body; backend pulls the email
- * from the session) so the user receives an email-link they can land on
- * `/reset-password` with. The user stays signed in throughout; clearing the
- * session only happens after they actually consume the link.
- */
 export function useRequestPasswordChange() {
 	const client = useSessionClient();
 

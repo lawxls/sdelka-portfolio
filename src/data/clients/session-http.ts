@@ -13,17 +13,9 @@ import type {
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { SessionClient } from "./session-client";
 
-/**
- * HTTP adapter for the session domain. All endpoints pass `skipRefresh: true`
- * so the http-client's 401-refresh interceptor never recurses through them:
- * - login / register / confirm-email / check-email: the user has no session
- *   yet, so a 401-refresh dance is meaningless.
- * - refresh: a 401 here means the refresh cookie is gone or expired; calling
- *   refresh from the refresh path would loop forever.
- * - logout: a 401 here means the refresh cookie is already gone; the local
- *   cleanup in `useLogout` runs anyway, so a refresh-then-retry would just
- *   delay the inevitable.
- */
+// `skipRefresh: true` on every unauthed endpoint prevents the http-client's
+// 401-refresh interceptor from recursing through `/auth/refresh/` itself or
+// firing for endpoints where no session exists yet.
 export function createHttpSessionClient(http: HttpClient = defaultHttpClient): SessionClient {
 	return {
 		login: (input: LoginInput) => http.post<LoginResult>(`/auth/login/`, { body: input, skipRefresh: true }),

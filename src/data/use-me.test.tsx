@@ -54,9 +54,10 @@ describe("useMe", () => {
 });
 
 describe("useUpdateSettings", () => {
-	test("calls client.update and invalidates the me query on success", async () => {
+	test("calls client.update and writes the result into the me query cache", async () => {
 		const seed = makeMe();
-		const update = vi.fn().mockResolvedValue({ ...seed, first_name: "Пётр" });
+		const updated = { ...seed, first_name: "Пётр" };
+		const update = vi.fn().mockResolvedValue(updated);
 		const client = fakeProfileClient({ update });
 
 		queryClient.setQueryData(["me"], seed);
@@ -64,14 +65,13 @@ describe("useUpdateSettings", () => {
 		const { result } = renderHook(() => useUpdateSettings(), { wrapper: wrapperFactory(client) });
 
 		await act(async () => {
-			const updated = await result.current.mutateAsync({ first_name: "Пётр" });
-			expect(updated.first_name).toBe("Пётр");
+			const out = await result.current.mutateAsync({ first_name: "Пётр" });
+			expect(out.first_name).toBe("Пётр");
 		});
 
 		expect(update).toHaveBeenCalledOnce();
 		expect(update.mock.calls[0][0]).toEqual({ first_name: "Пётр" });
-		const state = queryClient.getQueryState(["me"]);
-		expect(state?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryData(["me"])).toEqual(updated);
 	});
 
 	test("surfaces NetworkError as the mutation error", async () => {
