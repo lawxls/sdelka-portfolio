@@ -1,27 +1,25 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-	clearInvitationCode,
-	clearTokens,
-	getAccessToken,
-	getInvitationCode,
-	isAuthenticated,
-	setInvitationCode,
-	setTokens,
-} from "./auth";
+import { clearTokens, getAccessToken, isAuthenticated, readCsrfToken, setTokens } from "./auth";
 
 afterEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
+	document.cookie.split(";").forEach((c) => {
+		const eq = c.indexOf("=");
+		const name = (eq >= 0 ? c.slice(0, eq) : c).trim();
+		if (name) document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+	});
 	vi.restoreAllMocks();
 });
 
 describe("auth tokens", () => {
-	test("setTokens stores access token in localStorage", () => {
+	test("setTokens stores access token in sessionStorage", () => {
 		setTokens("access-123");
-		expect(localStorage.getItem("auth-access-token")).toBe("access-123");
+		expect(sessionStorage.getItem("auth-access-token")).toBe("access-123");
 	});
 
 	test("getAccessToken returns stored access token", () => {
-		localStorage.setItem("auth-access-token", "my-access");
+		sessionStorage.setItem("auth-access-token", "my-access");
 		expect(getAccessToken()).toBe("my-access");
 	});
 
@@ -29,10 +27,10 @@ describe("auth tokens", () => {
 		expect(getAccessToken()).toBeNull();
 	});
 
-	test("clearTokens removes access token from localStorage", () => {
+	test("clearTokens removes access token from sessionStorage", () => {
 		setTokens("access");
 		clearTokens();
-		expect(localStorage.getItem("auth-access-token")).toBeNull();
+		expect(sessionStorage.getItem("auth-access-token")).toBeNull();
 	});
 
 	test("clearTokens dispatches auth:cleared event", () => {
@@ -53,24 +51,25 @@ describe("auth tokens", () => {
 	});
 });
 
-describe("invitation code", () => {
-	test("setInvitationCode stores code in localStorage", () => {
-		setInvitationCode("ABC12");
-		expect(localStorage.getItem("auth-invitation-code")).toBe("ABC12");
+describe("readCsrfToken", () => {
+	test("returns null when no csrftoken cookie is set", () => {
+		expect(readCsrfToken()).toBeNull();
 	});
 
-	test("getInvitationCode returns stored code", () => {
-		localStorage.setItem("auth-invitation-code", "XYZ99");
-		expect(getInvitationCode()).toBe("XYZ99");
+	test("returns the csrftoken cookie value when present", () => {
+		document.cookie = "csrftoken=abc123";
+		expect(readCsrfToken()).toBe("abc123");
 	});
 
-	test("getInvitationCode returns null when no code stored", () => {
-		expect(getInvitationCode()).toBeNull();
+	test("ignores other cookies", () => {
+		document.cookie = "sessionid=foo";
+		document.cookie = "csrftoken=xyz";
+		document.cookie = "other=bar";
+		expect(readCsrfToken()).toBe("xyz");
 	});
 
-	test("clearInvitationCode removes code from localStorage", () => {
-		setInvitationCode("ABC12");
-		clearInvitationCode();
-		expect(localStorage.getItem("auth-invitation-code")).toBeNull();
+	test("decodes URL-encoded cookie values", () => {
+		document.cookie = "csrftoken=" + encodeURIComponent("a/b+c");
+		expect(readCsrfToken()).toBe("a/b+c");
 	});
 });

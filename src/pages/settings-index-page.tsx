@@ -2,7 +2,7 @@ import { Building2, ChevronRight, CreditCard, LifeBuoy, LogOut, Mail, Settings, 
 import { useState } from "react";
 import { Link, Navigate } from "react-router";
 import { SupportDialog } from "@/components/support-dialog";
-import { clearTokens } from "@/data/auth";
+import { useLogout } from "@/data/use-session";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 
 type IconComponent = React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -19,6 +19,7 @@ interface Section {
 export function SettingsIndexPage() {
 	const isMobile = useIsMobile();
 	const [supportOpen, setSupportOpen] = useState(false);
+	const logout = useLogout();
 
 	if (!isMobile) {
 		return <Navigate to="/settings/profile" replace />;
@@ -40,7 +41,7 @@ export function SettingsIndexPage() {
 			items: [
 				{ kind: "link", path: "/settings/tariffs", label: "Тарифы", icon: CreditCard },
 				{ kind: "button", onClick: () => setSupportOpen(true), label: "Помощь", icon: LifeBuoy },
-				{ kind: "button", onClick: clearTokens, label: "Выйти", icon: LogOut, destructive: true },
+				{ kind: "button", onClick: () => logout.mutate(), label: "Выйти", icon: LogOut, destructive: true },
 			],
 		},
 	];

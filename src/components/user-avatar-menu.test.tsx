@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ProfileClient } from "@/data/clients/profile-client";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { fakeProfileClient, TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings } from "@/test-utils";
+import { createTestQueryClient, makeMe } from "@/test-utils";
 import { UserAvatarMenu } from "./user-avatar-menu";
 
-const MOCK_SETTINGS = makeSettings({ first_name: "Станислав", last_name: "Чмелев" });
+const MOCK_ME = makeMe({ first_name: "Станислав", last_name: "Чмелев" });
 
 beforeEach(() => {
 	localStorage.clear();
@@ -21,7 +21,7 @@ afterEach(() => {
 
 function renderMenu(opts: { initialEntries?: string[]; profile?: ProfileClient } = {}) {
 	const queryClient = createTestQueryClient();
-	const profile = opts.profile ?? createInMemoryProfileClient({ settings: MOCK_SETTINGS });
+	const profile = opts.profile ?? createInMemoryProfileClient({ me: MOCK_ME });
 	return render(
 		<TestClientsProvider queryClient={queryClient} clients={{ profile }}>
 			<MemoryRouter initialEntries={opts.initialEntries ?? ["/"]}>
@@ -59,7 +59,7 @@ describe("UserAvatarMenu trigger", () => {
 	test("name renders as '<First> <Last>' when last name is present", async () => {
 		renderMenu({
 			profile: createInMemoryProfileClient({
-				settings: makeSettings({ first_name: "Станислав", last_name: "Чмелев" }),
+				me: makeMe({ first_name: "Станислав", last_name: "Чмелев" }),
 			}),
 		});
 
@@ -71,7 +71,7 @@ describe("UserAvatarMenu trigger", () => {
 	test("name renders as '<First>' when last name is missing", async () => {
 		renderMenu({
 			profile: createInMemoryProfileClient({
-				settings: makeSettings({ first_name: "Станислав", last_name: "" }),
+				me: makeMe({ first_name: "Станислав", last_name: "" }),
 			}),
 		});
 
@@ -81,9 +81,9 @@ describe("UserAvatarMenu trigger", () => {
 		expect(screen.queryByText(/Станислав\s+\./)).not.toBeInTheDocument();
 	});
 
-	test("shows profile icon (no name) before settings load", () => {
+	test("shows profile icon (no name) before me loads", () => {
 		const profile = fakeProfileClient({
-			settings: () => new Promise(() => {}),
+			me: () => new Promise(() => {}),
 		});
 		renderMenu({ profile });
 

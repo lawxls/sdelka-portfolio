@@ -50,3 +50,18 @@ export class ValidationError extends HttpError {
 		this.fieldErrors = fieldErrors;
 	}
 }
+
+/**
+ * 429 — backend throttled the request. `retryAfter` is parsed from the
+ * `Retry-After` header (seconds). Null when absent or unparseable; UI surfaces
+ * a generic "try again later" in that case.
+ */
+export class TooManyRequestsError extends HttpError {
+	readonly retryAfter: number | null;
+
+	constructor(retryAfter: number | null, body?: unknown) {
+		super(429, "Too Many Requests", body);
+		this.name = "TooManyRequestsError";
+		this.retryAfter = retryAfter;
+	}
+}

@@ -22,12 +22,11 @@ const enc = encodeURIComponent;
 
 export function createHttpTendersClient(http: HttpClient = defaultHttpClient): TendersClient {
 	return {
-		list: (params: ListTendersParams) => http.get<CursorPage<TenderSummary>>(`/api/tenders${buildQuery(params)}`),
-		get: (id) => http.get<ProcurementInquiry>(`/api/tenders/${enc(id)}`),
-		create: (input: CreateTenderInput) => http.post<ProcurementInquiry>(`/api/tenders`, { body: input }),
-		update: (id, patch) => http.patch<ProcurementInquiry>(`/api/tenders/${enc(id)}`, { body: patch }),
-		archive: (id, isArchived) =>
-			http.post<ProcurementInquiry>(`/api/tenders/${enc(id)}/archive`, { body: { isArchived } }),
-		delete: (id) => http.delete<void>(`/api/tenders/${enc(id)}`),
+		list: (params: ListTendersParams) => http.get<CursorPage<TenderSummary>>(`/tenders${buildQuery(params)}`),
+		get: (id) => http.get<ProcurementInquiry>(`/tenders/${enc(id)}`),
+		create: (input: CreateTenderInput) => http.post<ProcurementInquiry>(`/tenders`, { body: input }),
+		update: (id, patch) => http.patch<ProcurementInquiry>(`/tenders/${enc(id)}`, { body: patch }),
+		archive: (id, isArchived) => http.post<ProcurementInquiry>(`/tenders/${enc(id)}/archive`, { body: { isArchived } }),
+		delete: (id) => http.delete<void>(`/tenders/${enc(id)}`),
 	};
 }

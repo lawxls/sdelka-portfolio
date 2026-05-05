@@ -4,6 +4,6 @@ import type { CompanyInfoClient } from "./company-info-client";
 
 export function createHttpCompanyInfoClient(http: HttpClient = defaultHttpClient): CompanyInfoClient {
 	return {
-		get: () => http.get<CompanyInfo>(`/api/workspace/company-info`),
+		get: () => http.get<CompanyInfo>(`/workspace/company-info`),
 	};
 }

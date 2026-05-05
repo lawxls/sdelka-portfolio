@@ -57,12 +57,12 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/workspace\/emails$/,
+			path: /^\/workspace\/emails$/,
 			respond: () => ({ status: 200, body: Array.from(store.values()) }),
 		},
 		{
 			method: "POST",
-			path: /^\/api\/workspace\/emails$/,
+			path: /^\/workspace\/emails$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as AddEmailPayload;
 				if (!data.email) return { status: 400, body: { fieldErrors: { email: ["required"] } } };
@@ -85,7 +85,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/workspace\/emails\/delete$/,
+			path: /^\/workspace\/emails\/delete$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
 				for (const id of data.ids) store.delete(id);
@@ -94,7 +94,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/workspace\/emails\/disable$/,
+			path: /^\/workspace\/emails\/disable$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
 				for (const id of data.ids) {

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
+import { FormErrorBanner } from "@/components/form-error-banner";
 import { Button } from "@/components/ui/button";
-import { setTokens } from "@/data/auth";
-import { extractFormErrors, login } from "@/data/auth-api";
+import { extractFormErrors, isEmailNotVerified } from "@/data/auth-errors";
+import { TooManyRequestsError } from "@/data/errors";
+import { useLogin } from "@/data/use-session";
+import { useCountdown } from "@/hooks/use-countdown";
 
 export function LoginPage() {
 	const navigate = useNavigate();
@@ -11,36 +14,40 @@ export function LoginPage() {
 	const from =
 		(location.state as { from?: { pathname: string; search?: string; hash?: string } })?.from ?? "/inquiries";
 
+	const login = useLogin();
+
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-	const [submitting, setSubmitting] = useState(false);
+	const [throttleUntil, setThrottleUntil] = useState<number | null>(null);
+	const throttleSecondsLeft = useCountdown(throttleUntil);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		if (throttleSecondsLeft > 0 || login.isPending) return;
 		setError(null);
 		setFieldErrors({});
-		setSubmitting(true);
 
 		try {
-			const result = await login(email, password);
-			setTokens(result.access);
+			await login.mutateAsync({ email, password });
 			navigate(from, { replace: true });
 		} catch (err: unknown) {
+			if (isEmailNotVerified(err)) {
+				navigate(`/resend-confirmation?email=${encodeURIComponent(email)}`);
+				return;
+			}
 			const result = extractFormErrors(err);
-			const msg = result.error?.toLowerCase();
-			const translated = msg?.includes("invalid email or password")
-				? "Неверный пароль или почта"
-				: msg?.includes("you don't have access to this workspace")
-					? "У вас нет доступа к этому рабочему пространству"
-					: result.error;
-			setError(translated);
+			setError(result.error);
 			setFieldErrors(result.fieldErrors);
-		} finally {
-			setSubmitting(false);
+			if (err instanceof TooManyRequestsError && err.retryAfter && err.retryAfter > 0) {
+				setThrottleUntil(Date.now() + err.retryAfter * 1000);
+			}
 		}
 	}
+
+	const submitDisabled = login.isPending || throttleSecondsLeft > 0;
+	const submitLabel = throttleSecondsLeft > 0 ? `Подождите ${throttleSecondsLeft} с` : "Войти";
 
 	return (
 		<>
@@ -48,11 +55,7 @@ export function LoginPage() {
 			<p className="mt-1 text-sm text-muted-foreground">Войдите в свой аккаунт</p>
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
-				{error && (
-					<div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-						{error}
-					</div>
-				)}
+				{error && <FormErrorBanner>{error}</FormErrorBanner>}
 
 				<FloatingInput
 					label="Email"
@@ -82,8 +85,8 @@ export function LoginPage() {
 					</Link>
 				</div>
 
-				<Button type="submit" size="xl" className="w-full" disabled={submitting}>
-					Войти
+				<Button type="submit" size="xl" className="w-full" disabled={submitDisabled}>
+					{submitLabel}
 				</Button>
 			</form>
 		</>

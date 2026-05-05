@@ -6,10 +6,10 @@ const enc = encodeURIComponent;
 
 export function createHttpNotificationsClient(http: HttpClient = defaultHttpClient): NotificationsClient {
 	return {
-		list: () => http.get<NotificationsResponse>(`/api/notifications`),
+		list: () => http.get<NotificationsResponse>(`/notifications`),
 
-		markAsRead: (id: string) => http.post<void>(`/api/notifications/${enc(id)}/read`),
+		markAsRead: (id: string) => http.post<void>(`/notifications/${enc(id)}/read`),
 
-		markAllAsRead: () => http.post<void>(`/api/notifications/read-all`),
+		markAllAsRead: () => http.post<void>(`/notifications/read-all`),
 	};
 }

@@ -1,23 +1,26 @@
-import { useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import { AUTH_CLEARED_EVENT, isAuthenticated } from "@/data/auth";
-import { useMountEffect } from "@/hooks/use-mount-effect";
+import { useSessionBootstrap } from "@/data/use-session";
+
+// Splash keeps the user from seeing a /login flash while the cold-load
+// /auth/refresh/ is in flight.
+function BootstrapSplash() {
+	return (
+		<div
+			className="flex min-h-screen items-center justify-center bg-background"
+			role="status"
+			data-testid="session-bootstrap-splash"
+		>
+			<LoaderCircle className="size-8 animate-spin text-muted-foreground" aria-label="Загрузка" />
+		</div>
+	);
+}
 
 export function ProtectedRoute() {
 	const location = useLocation();
-	const [authed, setAuthed] = useState(() => isAuthenticated());
+	const status = useSessionBootstrap();
 
-	useMountEffect(() => {
-		function handleCleared() {
-			setAuthed(false);
-		}
-		window.addEventListener(AUTH_CLEARED_EVENT, handleCleared);
-		return () => window.removeEventListener(AUTH_CLEARED_EVENT, handleCleared);
-	});
-
-	if (!authed) {
-		return <Navigate to="/login" state={{ from: location }} replace />;
-	}
-
+	if (status === "pending") return <BootstrapSplash />;
+	if (status === "anon") return <Navigate to="/login" state={{ from: location }} replace />;
 	return <Outlet />;
 }

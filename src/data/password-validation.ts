@@ -4,9 +4,23 @@ export function validatePassword(value: string): string | null {
 	return null;
 }
 
-export function validatePasswordWithConfirm(password: string, confirmPassword: string): Record<string, string> | null {
+interface FieldNames {
+	password?: string;
+	confirm?: string;
+}
+
+/** Field-error keys default to (`password`, `password_confirm`) — matching the
+ * register API payload — but can be overridden so the reset-password flow can
+ * key by (`new_password`, `new_password_confirm`) without a remap layer. */
+export function validatePasswordWithConfirm(
+	password: string,
+	confirmPassword: string,
+	fields: FieldNames = {},
+): Record<string, string> | null {
+	const passwordKey = fields.password ?? "password";
+	const confirmKey = fields.confirm ?? "password_confirm";
 	const error = validatePassword(password);
-	if (error) return { password: error };
-	if (password !== confirmPassword) return { confirmPassword: "Пароли не совпадают" };
+	if (error) return { [passwordKey]: error };
+	if (password !== confirmPassword) return { [confirmKey]: "Пароли не совпадают" };
 	return null;
 }

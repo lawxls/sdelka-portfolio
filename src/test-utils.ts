@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { UserSettings } from "@/data/domains/profile";
+import type { CurrentEmployee } from "@/data/domains/profile";
 import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
 import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
@@ -94,8 +94,9 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 	};
 }
 
-export function makeSettings(overrides: Partial<UserSettings> = {}): UserSettings {
+export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmployee {
 	return {
+		id: 1,
 		first_name: "Иван",
 		last_name: "Иванов",
 		email: "ivan@example.com",
@@ -103,6 +104,7 @@ export function makeSettings(overrides: Partial<UserSettings> = {}): UserSetting
 		avatar_icon: "blue",
 		date_joined: "2024-01-15T10:00:00Z",
 		mailing_allowed: true,
+		role: "admin",
 		...overrides,
 	};
 }

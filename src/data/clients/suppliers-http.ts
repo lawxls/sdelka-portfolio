@@ -21,34 +21,34 @@ const enc = encodeURIComponent;
 
 export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient): SuppliersClient {
 	return {
-		list: (itemId, params) => http.get<SuppliersPage>(`/api/items/${enc(itemId)}/suppliers${buildQuery(params ?? {})}`),
+		list: (itemId, params) => http.get<SuppliersPage>(`/items/${enc(itemId)}/suppliers${buildQuery(params ?? {})}`),
 
-		listForItem: (itemId) => http.get<SuppliersList>(`/api/items/${enc(itemId)}/suppliers/all`),
+		listForItem: (itemId) => http.get<SuppliersList>(`/items/${enc(itemId)}/suppliers/all`),
 
-		listAll: () => http.get<Supplier[]>(`/api/suppliers`),
+		listAll: () => http.get<Supplier[]>(`/suppliers`),
 
-		get: (itemId, supplierId) => http.get<Supplier | null>(`/api/items/${enc(itemId)}/suppliers/${enc(supplierId)}`),
+		get: (itemId, supplierId) => http.get<Supplier | null>(`/items/${enc(itemId)}/suppliers/${enc(supplierId)}`),
 
-		getById: (supplierId) => http.get<Supplier | null>(`/api/suppliers/${enc(supplierId)}`),
+		getById: (supplierId) => http.get<Supplier | null>(`/suppliers/${enc(supplierId)}`),
 
 		quotesByInn: (inn, contextItemId) =>
-			http.get<SupplierQuote[]>(`/api/suppliers/quotes${buildQuery({ inn, contextItemId })}`),
+			http.get<SupplierQuote[]>(`/suppliers/quotes${buildQuery({ inn, contextItemId })}`),
 
 		archive: (itemId, supplierIds) =>
-			http.post<void>(`/api/items/${enc(itemId)}/suppliers/archive`, { body: { supplierIds } }),
+			http.post<void>(`/items/${enc(itemId)}/suppliers/archive`, { body: { supplierIds } }),
 
 		unarchive: (itemId, supplierIds) =>
-			http.post<void>(`/api/items/${enc(itemId)}/suppliers/unarchive`, { body: { supplierIds } }),
+			http.post<void>(`/items/${enc(itemId)}/suppliers/unarchive`, { body: { supplierIds } }),
 
 		delete: (itemId, supplierIds) =>
-			http.post<void>(`/api/items/${enc(itemId)}/suppliers/delete`, { body: { supplierIds } }),
+			http.post<void>(`/items/${enc(itemId)}/suppliers/delete`, { body: { supplierIds } }),
 
 		sendRequest: (itemId, supplierIds) =>
-			http.post<string[]>(`/api/items/${enc(itemId)}/suppliers/send-request`, { body: { supplierIds } }),
+			http.post<string[]>(`/items/${enc(itemId)}/suppliers/send-request`, { body: { supplierIds } }),
 
 		sendMessage: (itemId, supplierId, body, files) => {
 			const attachments = files && files.length > 0 ? filesToAttachments(files) : undefined;
-			return http.post<SupplierChatMessage>(`/api/items/${enc(itemId)}/suppliers/${enc(supplierId)}/messages`, {
+			return http.post<SupplierChatMessage>(`/items/${enc(itemId)}/suppliers/${enc(supplierId)}/messages`, {
 				body: { body, attachments },
 			});
 		},

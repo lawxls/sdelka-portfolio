@@ -6,7 +6,7 @@ import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import type { Task } from "@/data/task-types";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings, makeTask, TooltipWrapper } from "@/test-utils";
+import { createTestQueryClient, makeMe, makeTask, TooltipWrapper } from "@/test-utils";
 import { AppRail } from "./app-rail";
 
 function renderRail(initialPath = "/positions", tasksSeed: Task[] = []) {
@@ -15,7 +15,7 @@ function renderRail(initialPath = "/positions", tasksSeed: Task[] = []) {
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				tasks: createInMemoryTasksClient({ seed: tasksSeed }),
 			}}
 		>
@@ -164,7 +164,7 @@ describe("AppRail navigation", () => {
 			<TestClientsProvider
 				queryClient={queryClient}
 				clients={{
-					profile: createInMemoryProfileClient({ settings: makeSettings() }),
+					profile: createInMemoryProfileClient({ me: makeMe() }),
 					tasks: createInMemoryTasksClient({ seed: [] }),
 				}}
 			>

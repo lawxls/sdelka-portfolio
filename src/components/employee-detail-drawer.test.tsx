@@ -9,7 +9,7 @@ import type { WorkspaceEmployeesClient } from "@/data/clients/workspace-employee
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { createTestQueryClient, makeSettings, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 
 const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
@@ -75,7 +75,7 @@ function renderWithUrl(initialPath: string) {
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				profile: createInMemoryProfileClient({ settings: makeSettings() }),
+				profile: createInMemoryProfileClient({ me: makeMe() }),
 				workspaceEmployees,
 			}}
 		>
@@ -93,7 +93,7 @@ function renderWithUrl(initialPath: string) {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 	workspaceEmployees = createInMemoryWorkspaceEmployeesClient({
 		seed: [MOCK_EMPLOYEE, MOCK_EMPLOYEE_PENDING],
 	});

@@ -8,11 +8,11 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
-import { createInMemoryInvitationsClient } from "@/data/clients/invitations-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
@@ -128,7 +128,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient(),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
-				invitations: createInMemoryInvitationsClient(),
+				session: createInMemorySessionClient({ refreshAvailable: true }),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>
@@ -152,6 +152,7 @@ async function renderAppReady(initialEntries?: string[], opts?: { items?: ItemsC
 
 beforeEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	setTokens("test-access");
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -261,26 +262,29 @@ describe("Routing", () => {
 		expect(screen.queryByRole("menuitem", { name: /Сменить тему/ })).not.toBeInTheDocument();
 	});
 
-	test("/register renders registration page with valid invitation", async () => {
-		localStorage.clear(); // no auth token — public route
+	test("/register renders registration page (no invitation gate)", async () => {
+		localStorage.clear();
+		sessionStorage.clear(); // no auth token — public route
 
-		renderApp(["/register?code=ABC12"]);
+		renderApp(["/register"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
 		});
 	});
 
-	test("/confirm-email renders confirmation page", async () => {
-		localStorage.clear(); // no auth token — public route
+	test("/confirm-email renders pending state while confirming", async () => {
+		localStorage.clear();
+		sessionStorage.clear(); // no auth token — public route
 
-		renderApp(["/confirm-email?token=test-token"]);
+		renderApp(["/confirm-email?uid=test-uid&token=test-token"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Email подтверждён" })).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Подтверждение email" })).toBeInTheDocument();
 		});
 	});
 
 	test("/forgot-password renders forgot password page", async () => {
-		localStorage.clear(); // no auth token — public route
+		localStorage.clear();
+		sessionStorage.clear(); // no auth token — public route
 		renderApp(["/forgot-password"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Восстановление пароля" })).toBeInTheDocument();
@@ -288,8 +292,9 @@ describe("Routing", () => {
 	});
 
 	test("/reset-password renders reset password page", async () => {
-		localStorage.clear(); // no auth token — public route
-		renderApp(["/reset-password?token=test-token"]);
+		localStorage.clear();
+		sessionStorage.clear(); // no auth token — public route
+		renderApp(["/reset-password?uid=42&token=test-token"]);
 		await waitFor(() => {
 			expect(screen.getByRole("heading", { name: "Новый пароль" })).toBeInTheDocument();
 		});

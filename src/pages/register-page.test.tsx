@@ -4,16 +4,34 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
-import { createInMemoryInvitationsClient } from "@/data/clients/invitations-in-memory";
+import type { SessionClient } from "@/data/clients/session-client";
+import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { mockHostname } from "@/test-utils";
 import { RegisterPage } from "./register-page";
 
 let queryClient: QueryClient;
 
-function renderRegister(initialEntries = ["/register?code=ABC12"]) {
+function renderRegister({
+	initialEntries = ["/register"],
+	session,
+}: {
+	initialEntries?: string[];
+	session?: SessionClient;
+} = {}) {
+	const sessionClient =
+		session ??
+		createInMemorySessionClient({
+			users: [
+				{
+					email: "taken@example.com",
+					password: "anything-1",
+					user: { id: 1, email: "taken@example.com" },
+				},
+			],
+		});
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ invitations: createInMemoryInvitationsClient() }}>
+		<TestClientsProvider queryClient={queryClient} clients={{ session: sessionClient }}>
 			<MemoryRouter initialEntries={initialEntries}>
 				<Routes>
 					<Route element={<AuthLayout />}>
@@ -35,51 +53,22 @@ beforeEach(() => {
 
 afterEach(() => {
 	localStorage.clear();
+	sessionStorage.clear();
 	vi.restoreAllMocks();
 });
 
 describe("RegisterPage", () => {
-	// --- Invitation code validation ---
-
-	test("redirects to /login when no invitation code in URL or localStorage", async () => {
-		renderRegister(["/register"]);
-		await waitFor(() => {
-			expect(screen.getByText("Login Page")).toBeInTheDocument();
-		});
-	});
-
-	test("stores invitation code from URL param in localStorage", async () => {
-		renderRegister();
-		await waitFor(() => {
-			expect(localStorage.getItem("auth-invitation-code")).toBe("ABC12");
-		});
-	});
-
-	test("uses invitation code from localStorage when not in URL", async () => {
-		localStorage.setItem("auth-invitation-code", "SAVED1");
-
-		renderRegister(["/register"]);
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
-		});
-	});
-
 	// --- Stage 1: Email ---
 
-	test("stage 1: renders email input after valid invitation", async () => {
+	test("renders email input on mount (no invitation-code gate)", async () => {
 		renderRegister();
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
-		});
+		expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
 		expect(screen.getByLabelText("Email")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Продолжить" })).toBeInTheDocument();
 	});
 
-	test("stage 1: advances to stage 2 when email is submitted", async () => {
+	test("stage 1: advances to stage 2 when email is unique", async () => {
 		renderRegister();
-		await waitFor(() => {
-			expect(screen.getByLabelText("Email")).toBeInTheDocument();
-		});
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
@@ -87,47 +76,50 @@ describe("RegisterPage", () => {
 		await waitFor(() => {
 			expect(screen.getByLabelText("Имя")).toBeInTheDocument();
 		});
+	});
+
+	test("stage 1: surfaces an inline 'email taken' error and stays on the email step", async () => {
+		renderRegister();
+		const user = userEvent.setup();
+		await user.type(screen.getByLabelText("Email"), "taken@example.com");
+		await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Этот email уже зарегистрирован")).toBeInTheDocument();
+		});
+		expect(screen.queryByLabelText("Имя")).not.toBeInTheDocument();
 	});
 
 	// --- Stage 2: Details ---
 
-	test("stage 2: renders name, phone, password, confirm password fields", async () => {
+	test("stage 2: renders all required fields plus optional patronymic", async () => {
 		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
 		await waitFor(() => {
 			expect(screen.getByLabelText("Имя")).toBeInTheDocument();
-			expect(screen.getByLabelText("Телефон")).toBeInTheDocument();
-			expect(screen.getByLabelText("Пароль")).toBeInTheDocument();
-			expect(screen.getByLabelText("Подтвердите пароль")).toBeInTheDocument();
 		});
-	});
-
-	test("stage 2: phone input shows +7 prefix", async () => {
-		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
-		const user = userEvent.setup();
-		await user.type(screen.getByLabelText("Email"), "new@user.com");
-		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
-		await waitFor(() => {
-			expect(screen.getByText("+7")).toBeInTheDocument();
-		});
+		expect(screen.getByLabelText("Фамилия")).toBeInTheDocument();
+		expect(screen.getByLabelText("Отчество")).toBeInTheDocument();
+		expect(screen.getByLabelText("Телефон")).toBeInTheDocument();
+		expect(screen.getByLabelText("Название компании")).toBeInTheDocument();
+		expect(screen.getByLabelText("Пароль")).toBeInTheDocument();
+		expect(screen.getByLabelText("Подтвердите пароль")).toBeInTheDocument();
 	});
 
 	test("stage 2: shows password validation error for short password", async () => {
 		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
 		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
 		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
 		await user.type(screen.getByLabelText("Пароль"), "short");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "short");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -139,14 +131,15 @@ describe("RegisterPage", () => {
 
 	test("stage 2: shows error when passwords do not match", async () => {
 		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
 		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
 		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "differentPass");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -156,62 +149,141 @@ describe("RegisterPage", () => {
 		});
 	});
 
-	test("stage 2: successful registration advances to stage 3", async () => {
-		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
+	test("stage 2: successful registration sends company_name + password_confirm + phone in payload and advances to stage 3", async () => {
+		const register = vi.fn().mockResolvedValue({ user: { id: 99, email: "new@user.com" } });
+		const checkEmail = vi.fn().mockResolvedValue({ exists: false });
+		const session: SessionClient = {
+			login: vi.fn(),
+			refresh: vi.fn(),
+			logout: vi.fn(),
+			register,
+			confirmEmail: vi.fn(),
+			checkEmail,
+			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
+			requestPasswordChange: vi.fn(),
+		};
+
+		renderRegister({ session });
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
 		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
 		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
+		await user.type(screen.getByLabelText("Отчество"), "Петрович");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Проверьте почту")).toBeInTheDocument();
-			expect(screen.getByText("new@user.com")).toBeInTheDocument();
+		});
+		expect(screen.getByText("new@user.com")).toBeInTheDocument();
+
+		expect(register).toHaveBeenCalledWith({
+			email: "new@user.com",
+			password: "securePass1",
+			password_confirm: "securePass1",
+			first_name: "Иван",
+			last_name: "Иванов",
+			patronymic: "Петрович",
+			phone: "+79991234567",
+			company_name: "ООО Пример",
 		});
 	});
 
-	test("stage 2: clears invitation code from localStorage after successful registration", async () => {
-		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
+	test("stage 2: omits patronymic from payload when left blank", async () => {
+		const register = vi.fn().mockResolvedValue({ user: { id: 99, email: "new@user.com" } });
+		const checkEmail = vi.fn().mockResolvedValue({ exists: false });
+		const session: SessionClient = {
+			login: vi.fn(),
+			refresh: vi.fn(),
+			logout: vi.fn(),
+			register,
+			confirmEmail: vi.fn(),
+			checkEmail,
+			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
+			requestPasswordChange: vi.fn(),
+		};
 
-		// Invitation code was stored
-		expect(localStorage.getItem("auth-invitation-code")).toBe("ABC12");
-
+		renderRegister({ session });
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
 		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
 		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("Пароль"), "securePass1");
+		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
+		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
+
+		await waitFor(() => expect(screen.getByText("Проверьте почту")).toBeInTheDocument());
+		expect(register).toHaveBeenCalledWith(expect.objectContaining({ patronymic: undefined }));
+	});
+
+	test("stage 2: surfaces backend ValidationError field codes via the translator", async () => {
+		const { ValidationError } = await import("@/data/errors");
+		const register = vi
+			.fn()
+			.mockRejectedValue(
+				new ValidationError({}, { password: [{ code: "password_too_common", message: "Too common" }] }),
+			);
+		const checkEmail = vi.fn().mockResolvedValue({ exists: false });
+		const session: SessionClient = {
+			login: vi.fn(),
+			refresh: vi.fn(),
+			logout: vi.fn(),
+			register,
+			confirmEmail: vi.fn(),
+			checkEmail,
+			resendConfirmation: vi.fn(),
+			forgotPassword: vi.fn(),
+			resetPassword: vi.fn(),
+			requestPasswordChange: vi.fn(),
+		};
+
+		renderRegister({ session });
+		const user = userEvent.setup();
+		await user.type(screen.getByLabelText("Email"), "new@user.com");
+		await user.click(screen.getByRole("button", { name: "Продолжить" }));
+		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
+		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
+		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Проверьте почту")).toBeInTheDocument();
+			expect(screen.getByText("Пароль слишком распространён")).toBeInTheDocument();
 		});
-		expect(localStorage.getItem("auth-invitation-code")).toBeNull();
 	});
 
 	// --- Stage 3: Confirmation ---
 
-	test("stage 3: shows login link", async () => {
+	test("stage 3: shows confirmation screen with email and login link", async () => {
 		renderRegister();
-		await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
 		const user = userEvent.setup();
 		await user.type(screen.getByLabelText("Email"), "new@user.com");
 		await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
 		await waitFor(() => expect(screen.getByLabelText("Имя")).toBeInTheDocument());
+
 		await user.type(screen.getByLabelText("Имя"), "Иван");
+		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
+		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -225,18 +297,6 @@ describe("RegisterPage", () => {
 
 	test("renders 'Уже есть аккаунт? Войти' link", async () => {
 		renderRegister();
-		await waitFor(() => {
-			expect(screen.getByRole("link", { name: "Войти" })).toBeInTheDocument();
-		});
-	});
-
-	// --- Russian text ---
-
-	test("all text is in Russian", async () => {
-		renderRegister();
-		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Регистрация" })).toBeInTheDocument();
-			expect(screen.getByRole("button", { name: "Продолжить" })).toBeInTheDocument();
-		});
+		expect(screen.getByRole("link", { name: "Войти" })).toBeInTheDocument();
 	});
 });

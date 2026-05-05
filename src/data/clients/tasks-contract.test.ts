@@ -85,12 +85,12 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/api\/tasks\/all$/,
+			path: /^\/tasks\/all$/,
 			respond: () => ({ status: 200, body: Array.from(store.values()) }),
 		},
 		{
 			method: "GET",
-			path: /^\/api\/tasks\/board(\?|$)/,
+			path: /^\/tasks\/board(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const filtered = applyFilters(u.searchParams);
@@ -116,7 +116,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/tasks(\?|$)/,
+			path: /^\/tasks(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const filtered = applyFilters(u.searchParams);
@@ -138,7 +138,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/api\/tasks\/([^/]+)$/,
+			path: /^\/tasks\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -149,10 +149,10 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/api\/tasks\/([^/]+)\/status$/,
+			path: /^\/tasks\/([^/]+)\/status$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/api\/tasks\/([^/]+)\/status$/);
+				const match = path.match(/^\/tasks\/([^/]+)\/status$/);
 				const id = decodeURIComponent(match?.[1] ?? "");
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
@@ -179,10 +179,10 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/api\/tasks\/([^/]+)\/attachments\/([^/]+)$/,
+			path: /^\/tasks\/([^/]+)\/attachments\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/api\/tasks\/([^/]+)\/attachments\/([^/]+)$/);
+				const match = path.match(/^\/tasks\/([^/]+)\/attachments\/([^/]+)$/);
 				const id = decodeURIComponent(match?.[1] ?? "");
 				const attId = decodeURIComponent(match?.[2] ?? "");
 				const existing = store.get(id);

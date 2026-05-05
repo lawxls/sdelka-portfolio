@@ -26,26 +26,26 @@ const enc = encodeURIComponent;
 
 export function createHttpItemsClient(http: HttpClient = defaultHttpClient): ItemsClient {
 	return {
-		list: (params: ListItemsParams) => http.get<CursorPage<ProcurementItem>>(`/api/items${buildListQuery(params)}`),
+		list: (params: ListItemsParams) => http.get<CursorPage<ProcurementItem>>(`/items${buildListQuery(params)}`),
 
-		listAll: () => http.get<ProcurementItem[]>(`/api/items/all`),
+		listAll: () => http.get<ProcurementItem[]>(`/items/all`),
 
-		listByTender: (tenderId: string) => http.get<ProcurementItem[]>(`/api/items/by-tender/${enc(tenderId)}`),
+		listByTender: (tenderId: string) => http.get<ProcurementItem[]>(`/items/by-tender/${enc(tenderId)}`),
 
-		totals: (params: TotalsParams) => http.get<Totals>(`/api/items/totals${buildListQuery(params)}`),
+		totals: (params: TotalsParams) => http.get<Totals>(`/items/totals${buildListQuery(params)}`),
 
-		get: (id) => http.get<ProcurementItem>(`/api/items/${enc(id)}`),
+		get: (id) => http.get<ProcurementItem>(`/items/${enc(id)}`),
 
-		create: (inputs: NewItemInput[]) => http.post<CreateItemsResult>(`/api/items`, { body: { items: inputs } }),
+		create: (inputs: NewItemInput[]) => http.post<CreateItemsResult>(`/items`, { body: { items: inputs } }),
 
-		update: (id, data: UpdateItemData) => http.patch<ProcurementItem>(`/api/items/${enc(id)}`, { body: data }),
+		update: (id, data: UpdateItemData) => http.patch<ProcurementItem>(`/items/${enc(id)}`, { body: data }),
 
-		delete: (id) => http.delete<void>(`/api/items/${enc(id)}`),
+		delete: (id) => http.delete<void>(`/items/${enc(id)}`),
 
 		archive: (id, isArchived) =>
-			http.post<ProcurementItem>(`/api/items/${enc(id)}/${isArchived ? "archive" : "unarchive"}`),
+			http.post<ProcurementItem>(`/items/${enc(id)}/${isArchived ? "archive" : "unarchive"}`),
 
 		export: (params: ExportItemsParams) =>
-			http.getBinary(`/api/items/export${buildListQuery(params)}`, { fallbackFilename: "items.xlsx" }),
+			http.getBinary(`/items/export${buildListQuery(params)}`, { fallbackFilename: "items.xlsx" }),
 	};
 }

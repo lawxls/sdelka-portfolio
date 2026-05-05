@@ -52,7 +52,7 @@ function renderDrawer(open = true) {
 beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
-	localStorage.setItem("auth-access-token", "test-token");
+	sessionStorage.setItem("auth-access-token", "test-token");
 	workspaceEmployees = createInMemoryWorkspaceEmployeesClient({ seed: [] });
 });
 

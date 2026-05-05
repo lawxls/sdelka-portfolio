@@ -1,27 +1,28 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { FloatingInput } from "@/components/floating-input";
 import { Button } from "@/components/ui/button";
-import { useForgotPassword } from "@/data/use-session";
+import { useResendConfirmation } from "@/data/use-session";
 
-export function ForgotPasswordPage() {
-	const [email, setEmail] = useState("");
-
-	const forgotPassword = useForgotPassword();
+export function ResendConfirmationPage() {
+	const [searchParams] = useSearchParams();
+	const [email, setEmail] = useState(searchParams.get("email") ?? "");
+	const resend = useResendConfirmation();
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		if (resend.isPending) return;
 		// Anti-enumeration: surface the success view on settle (success OR error),
-		// so the UI never reveals whether the email matched a known account.
-		forgotPassword.mutate({ email });
+		// so the UI never reveals whether the email matched an account.
+		resend.mutate(email);
 	}
 
-	if (forgotPassword.isSuccess || forgotPassword.isError) {
+	if (resend.isSuccess || resend.isError) {
 		return (
 			<>
 				<h1 className="text-2xl font-semibold">Проверьте почту</h1>
 				<p className="mt-2 text-sm text-muted-foreground">
-					Если аккаунт существует, мы отправили ссылку для восстановления пароля
+					Если аккаунт существует, мы отправили письмо для подтверждения почты.
 				</p>
 				<p className="mt-6 text-sm">
 					<Link to="/login" className="text-foreground hover:underline">
@@ -34,8 +35,8 @@ export function ForgotPasswordPage() {
 
 	return (
 		<>
-			<h1 className="text-2xl font-semibold">Восстановление пароля</h1>
-			<p className="mt-1 text-sm text-muted-foreground">Введите email для восстановления доступа</p>
+			<h1 className="text-2xl font-semibold">Подтверждение почты</h1>
+			<p className="mt-1 text-sm text-muted-foreground">Отправим ссылку для подтверждения на указанный email.</p>
 
 			<form onSubmit={handleSubmit} className="mt-8 space-y-4">
 				<FloatingInput
@@ -48,8 +49,8 @@ export function ForgotPasswordPage() {
 					required
 				/>
 
-				<Button type="submit" size="xl" className="w-full" disabled={forgotPassword.isPending}>
-					Отправить
+				<Button type="submit" size="xl" className="w-full" disabled={resend.isPending}>
+					Отправить ссылку
 				</Button>
 			</form>
 
