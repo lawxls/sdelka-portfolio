@@ -90,7 +90,7 @@ function matchesFolder(item: ProcurementItem, folder: string | undefined, archiv
 
 function matchesDeviation(item: ProcurementItem, deviation: string | undefined): boolean {
 	if (!deviation || deviation === "all") return true;
-	if (item.bestPrice == null) return false;
+	if (item.bestPrice == null || item.currentPrice == null) return false;
 	if (deviation === "overpaying") return item.currentPrice > item.bestPrice;
 	if (deviation === "saving") return item.currentPrice < item.bestPrice;
 	return true;
@@ -173,7 +173,7 @@ export async function fetchTotalsMock(
 	let weightedCurrent = 0;
 	let weightedBest = 0;
 	for (const item of filtered) {
-		if (item.bestPrice == null) continue;
+		if (item.bestPrice == null || item.currentPrice == null) continue;
 		const diff = (item.currentPrice - item.bestPrice) * item.annualQuantity;
 		if (diff > 0) totalOverpayment += diff;
 		else totalSavings += -diff;

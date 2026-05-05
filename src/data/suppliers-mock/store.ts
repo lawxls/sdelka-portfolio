@@ -97,8 +97,8 @@ function makeYourSupplier(itemId: string): Supplier | null {
 	if (!cs?.inn) return null;
 	// Multi-item tenders share one tender-level pricePerUnit; prefer the item's
 	// own buyer reference price so «Ваш поставщик» reflects per-position spread.
-	// Items with currentPrice=0 opt out so X/N coverage stays accurate.
-	const perItemPrice = item && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;
+	// Items with currentPrice null/0 opt out so X/N coverage stays accurate.
+	const perItemPrice = item && item.currentPrice != null && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;
 	if (perItemPrice == null || perItemPrice <= 0) return null;
 	const identityHash = hash(cs.inn);
 	const profile = makeIdentityProfile(identityHash);
