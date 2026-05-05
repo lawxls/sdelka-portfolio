@@ -39,6 +39,10 @@ export interface ListTendersParams {
 	deadlineFrom?: string;
 	/** Inclusive ISO date (YYYY-MM-DD). Filters by tender deadline ≤ this date. */
 	deadlineTo?: string;
+	/** Inclusive ISO date (YYYY-MM-DD). Filters by tender creation date ≥ this date. */
+	createdAtFrom?: string;
+	/** Inclusive ISO date (YYYY-MM-DD). Filters by tender creation date ≤ this date. */
+	createdAtTo?: string;
 	sort?: TenderSortField;
 	dir?: TenderSortDirection;
 	cursor?: string;
@@ -106,6 +110,14 @@ function matchesDeadlineRange(tender: ProcurementInquiry, from?: string, to?: st
 	return true;
 }
 
+function matchesCreatedAtRange(tender: ProcurementInquiry, from?: string, to?: string): boolean {
+	if (!from && !to) return true;
+	const createdAt = tender.createdAt?.slice(0, 10) ?? "";
+	if (from && createdAt < from) return false;
+	if (to && createdAt > to) return false;
+	return true;
+}
+
 function applyFilters(
 	tenders: ProcurementInquiry[],
 	params: ListTendersParams,
@@ -119,6 +131,7 @@ function applyFilters(
 		if (q && !t.name.toLowerCase().includes(q)) return false;
 		if (!matchesDeadline(t, params.deadline, now)) return false;
 		if (!matchesDeadlineRange(t, params.deadlineFrom, params.deadlineTo)) return false;
+		if (!matchesCreatedAtRange(t, params.createdAtFrom, params.createdAtTo)) return false;
 		if (params.status) {
 			const status = getTenderStatus(itemsForTender(t.id, allItems));
 			if (status !== params.status) return false;

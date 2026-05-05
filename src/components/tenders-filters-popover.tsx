@@ -10,74 +10,83 @@ import { cn } from "@/lib/utils";
 import type { DeadlineFilter } from "./tenders-toolbar";
 
 function DateRangePicker({
+	idPrefix,
 	from,
 	to,
 	onChange,
-	onPresetOverdue,
-	isOverdue,
+	ariaLabelPrefix,
+	overduePreset,
 	onClear,
 }: {
+	idPrefix: string;
 	from: string | undefined;
 	to: string | undefined;
 	onChange: (from: string | undefined, to: string | undefined) => void;
-	onPresetOverdue: () => void;
-	isOverdue: boolean;
+	ariaLabelPrefix: string;
+	overduePreset?: { active: boolean; onSelect: () => void };
 	onClear: () => void;
 }) {
 	const hasRange = Boolean(from) || Boolean(to);
+	const showFooter = hasRange || (overduePreset?.active ?? false);
 	return (
 		<div className="flex flex-col gap-1.5">
 			<div className="grid grid-cols-2 gap-1.5">
 				<div className="flex flex-col gap-0.5">
-					<label htmlFor="deadline-from" className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+					<label htmlFor={`${idPrefix}-from`} className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
 						С
 					</label>
 					<DateField
-						id="deadline-from"
+						id={`${idPrefix}-from`}
 						value={from ?? ""}
 						onChange={(v) => onChange(v || undefined, to)}
-						ariaLabel="Дедлайн с"
+						ariaLabel={`${ariaLabelPrefix} с`}
 						placeholder="—"
 						max={to}
 					/>
 				</div>
 				<div className="flex flex-col gap-0.5">
-					<label htmlFor="deadline-to" className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+					<label htmlFor={`${idPrefix}-to`} className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
 						По
 					</label>
 					<DateField
-						id="deadline-to"
+						id={`${idPrefix}-to`}
 						value={to ?? ""}
 						onChange={(v) => onChange(from, v || undefined)}
-						ariaLabel="Дедлайн по"
+						ariaLabel={`${ariaLabelPrefix} по`}
 						placeholder="—"
 						min={from}
 					/>
 				</div>
 			</div>
-			<div className="flex items-center justify-between gap-2">
-				<button
-					type="button"
-					onClick={onPresetOverdue}
-					data-testid="deadline-filter-overdue"
-					className={cn(
-						"rounded-md border border-transparent px-2 py-1 text-xs transition-colors hover:bg-muted",
-						isOverdue && "border-border bg-muted font-medium text-highlight-foreground",
+			{(overduePreset || showFooter) && (
+				<div className="flex items-center justify-between gap-2">
+					{overduePreset ? (
+						<button
+							type="button"
+							onClick={overduePreset.onSelect}
+							data-testid={`${idPrefix}-filter-overdue`}
+							className={cn(
+								"rounded-md border border-transparent px-2 py-1 text-xs transition-colors hover:bg-muted",
+								overduePreset.active && "border-border bg-muted font-medium text-highlight-foreground",
+							)}
+						>
+							Просрочены
+						</button>
+					) : (
+						<span aria-hidden="true" />
 					)}
-				>
-					Просрочены
-				</button>
-				{(hasRange || isOverdue) && (
-					<button
-						type="button"
-						onClick={onClear}
-						data-testid="deadline-filter-all"
-						className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-					>
-						Сбросить
-					</button>
-				)}
-			</div>
+					{showFooter && (
+						<button
+							type="button"
+							onClick={onClear}
+							data-testid={`${idPrefix}-filter-all`}
+							className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+						>
+							Сбросить
+						</button>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -102,6 +111,9 @@ interface TendersFiltersPopoverProps {
 	deadlineFrom?: string;
 	deadlineTo?: string;
 	onDeadlineRangeChange?: (from: string | undefined, to: string | undefined) => void;
+	createdAtFrom?: string;
+	createdAtTo?: string;
+	onCreatedAtRangeChange?: (from: string | undefined, to: string | undefined) => void;
 	companies?: CompanySummary[];
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
@@ -117,6 +129,9 @@ export function TendersFiltersPopover({
 	deadlineFrom,
 	deadlineTo,
 	onDeadlineRangeChange,
+	createdAtFrom,
+	createdAtTo,
+	onCreatedAtRangeChange,
 	companies,
 	selectedCompany,
 	onCompanySelect,
@@ -128,6 +143,8 @@ export function TendersFiltersPopover({
 		deadline !== "all" ||
 		Boolean(deadlineFrom) ||
 		Boolean(deadlineTo) ||
+		Boolean(createdAtFrom) ||
+		Boolean(createdAtTo) ||
 		(showCompanies && selectedCompany !== undefined);
 	return (
 		<Popover>
@@ -194,18 +211,38 @@ export function TendersFiltersPopover({
 							<div data-testid="tenders-filters-section-deadline" className="flex flex-col gap-1.5 px-2 py-1.5">
 								<div className="text-xs font-medium text-muted-foreground">Дедлайн</div>
 								<DateRangePicker
+									idPrefix="deadline"
 									from={deadlineFrom}
 									to={deadlineTo}
 									onChange={onDeadlineRangeChange}
-									onPresetOverdue={() => {
-										onDeadlineChange("overdue");
-										onDeadlineRangeChange(undefined, undefined);
+									ariaLabelPrefix="Дедлайн"
+									overduePreset={{
+										active: deadline === "overdue",
+										onSelect: () => {
+											onDeadlineChange("overdue");
+											onDeadlineRangeChange(undefined, undefined);
+										},
 									}}
-									isOverdue={deadline === "overdue"}
 									onClear={() => {
 										onDeadlineChange("all");
 										onDeadlineRangeChange(undefined, undefined);
 									}}
+								/>
+							</div>
+						</>
+					)}
+					{onCreatedAtRangeChange && (
+						<>
+							<div className="my-1 h-px bg-border" />
+							<div data-testid="tenders-filters-section-created-at" className="flex flex-col gap-1.5 px-2 py-1.5">
+								<div className="text-xs font-medium text-muted-foreground">Дата создания</div>
+								<DateRangePicker
+									idPrefix="created-at"
+									from={createdAtFrom}
+									to={createdAtTo}
+									onChange={onCreatedAtRangeChange}
+									ariaLabelPrefix="Дата создания"
+									onClear={() => onCreatedAtRangeChange(undefined, undefined)}
 								/>
 							</div>
 						</>

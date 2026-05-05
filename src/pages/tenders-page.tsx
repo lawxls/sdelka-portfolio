@@ -289,6 +289,8 @@ export function TendersPage() {
 	const deadline = parseDeadline(searchParams);
 	const deadlineFrom = searchParams.get("deadlineFrom") ?? undefined;
 	const deadlineTo = searchParams.get("deadlineTo") ?? undefined;
+	const createdAtFrom = searchParams.get("createdAtFrom") ?? undefined;
+	const createdAtTo = searchParams.get("createdAtTo") ?? undefined;
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
 	const company = searchParams.get("company") ?? undefined;
@@ -303,6 +305,8 @@ export function TendersPage() {
 		deadline,
 		deadlineFrom,
 		deadlineTo,
+		createdAtFrom,
+		createdAtTo,
 		folder,
 		company,
 		sort: sort?.field,
@@ -352,6 +356,17 @@ export function TendersPage() {
 			else next.delete("deadlineFrom");
 			if (to) next.set("deadlineTo", to);
 			else next.delete("deadlineTo");
+			return next;
+		});
+	}
+
+	function handleCreatedAtRangeChange(from: string | undefined, to: string | undefined) {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			if (from) next.set("createdAtFrom", from);
+			else next.delete("createdAtFrom");
+			if (to) next.set("createdAtTo", to);
+			else next.delete("createdAtTo");
 			return next;
 		});
 	}
@@ -431,6 +446,9 @@ export function TendersPage() {
 			deadlineFrom={deadlineFrom}
 			deadlineTo={deadlineTo}
 			onDeadlineRangeChange={handleDeadlineRangeChange}
+			createdAtFrom={createdAtFrom}
+			createdAtTo={createdAtTo}
+			onCreatedAtRangeChange={handleCreatedAtRangeChange}
 			folders={folders}
 			folderCounts={counts}
 			foldersLoading={foldersLoading || statsLoading}

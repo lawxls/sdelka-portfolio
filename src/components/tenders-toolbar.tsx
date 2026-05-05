@@ -22,6 +22,9 @@ interface TendersToolbarProps {
 	deadlineFrom?: string;
 	deadlineTo?: string;
 	onDeadlineRangeChange?: (from: string | undefined, to: string | undefined) => void;
+	createdAtFrom?: string;
+	createdAtTo?: string;
+	onCreatedAtRangeChange?: (from: string | undefined, to: string | undefined) => void;
 	folders: Folder[];
 	folderCounts: Record<string, number>;
 	foldersLoading?: boolean;
@@ -48,6 +51,9 @@ export function TendersToolbar({
 	deadlineFrom,
 	deadlineTo,
 	onDeadlineRangeChange,
+	createdAtFrom,
+	createdAtTo,
+	onCreatedAtRangeChange,
 	folders,
 	folderCounts,
 	foldersLoading,
@@ -108,6 +114,9 @@ export function TendersToolbar({
 			deadlineFrom={deadlineFrom}
 			deadlineTo={deadlineTo}
 			onDeadlineRangeChange={onDeadlineRangeChange}
+			createdAtFrom={createdAtFrom}
+			createdAtTo={createdAtTo}
+			onCreatedAtRangeChange={onCreatedAtRangeChange}
 			companies={companies}
 			selectedCompany={selectedCompany}
 			onCompanySelect={onCompanySelect}
@@ -121,6 +130,8 @@ export function TendersToolbar({
 		deadline !== "all" ||
 		Boolean(deadlineFrom) ||
 		Boolean(deadlineTo) ||
+		Boolean(createdAtFrom) ||
+		Boolean(createdAtTo) ||
 		(activeFolder !== undefined && activeFolder !== "archive") ||
 		(showCompanies && selectedCompany !== undefined);
 
