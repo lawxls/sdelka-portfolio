@@ -711,20 +711,6 @@ function Step1Body({
 						Добавить позицию
 					</Button>
 				</div>
-
-				<Field
-					label="Комментарий"
-					hint="Опишите дополнительные требования к позициям — ИИ учтёт их при поиске поставщиков и в переговорах"
-					htmlFor="position-comment"
-				>
-					<Textarea
-						id="position-comment"
-						placeholder="Срочная поставка до 15-го числа"
-						value={step1.additionalInfo}
-						onChange={(e) => update1("additionalInfo", e.target.value)}
-						rows={3}
-					/>
-				</Field>
 			</div>
 
 			<SectionGroupHeader title="Логистика" />
@@ -748,23 +734,39 @@ function Step1Body({
 			</div>
 
 			<SectionGroupHeader title="Дополнительно" />
-			<div className="flex flex-wrap gap-2 border-t border-border py-3">
-				<CheckboxBadge
-					id="cash-payment-allowed"
-					checked={step1.cashPaymentAllowed}
-					onChange={(v) => update1("cashPaymentAllowed", v)}
-					ariaLabel="Допускается оплата наличными"
+			<div className="flex flex-col gap-4 border-t border-border py-4">
+				<div className="flex flex-wrap gap-2">
+					<CheckboxBadge
+						id="cash-payment-allowed"
+						checked={step1.cashPaymentAllowed}
+						onChange={(v) => update1("cashPaymentAllowed", v)}
+						ariaLabel="Допускается оплата наличными"
+					>
+						Допускается оплата наличными
+					</CheckboxBadge>
+					<CheckboxBadge
+						id="analogues-not-allowed"
+						checked={step1.analoguesNotAllowed}
+						onChange={(v) => update1("analoguesNotAllowed", v)}
+						ariaLabel="Аналоги не допускаются"
+					>
+						Аналоги не допускаются
+					</CheckboxBadge>
+				</div>
+
+				<Field
+					label="Комментарий"
+					hint="Опишите дополнительные требования к позициям — ИИ учтёт их при поиске поставщиков и в переговорах"
+					htmlFor="position-comment"
 				>
-					Допускается оплата наличными
-				</CheckboxBadge>
-				<CheckboxBadge
-					id="analogues-not-allowed"
-					checked={step1.analoguesNotAllowed}
-					onChange={(v) => update1("analoguesNotAllowed", v)}
-					ariaLabel="Аналоги не допускаются"
-				>
-					Аналоги не допускаются
-				</CheckboxBadge>
+					<Textarea
+						id="position-comment"
+						placeholder="Срочная поставка до 15-го числа"
+						value={step1.additionalInfo}
+						onChange={(e) => update1("additionalInfo", e.target.value)}
+						rows={3}
+					/>
+				</Field>
 			</div>
 		</div>
 	);
@@ -778,10 +780,10 @@ function SingleSupplierBanner() {
 		>
 			<Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
 			<div className="flex flex-col gap-1.5">
-				<p className="text-balance font-semibold">Важно: один запрос&nbsp;— один поставщик</p>
+				<p className="text-balance font-semibold">Важно: один запрос&nbsp;— одна отрасль</p>
 				<p className="text-pretty">
-					Все позиции в рамках одного запроса должны поставляться одним поставщиком. Для товаров из разных категорий
-					создавайте отдельные запросы.
+					Все позиции в рамках одного запроса должны поставляться поставщиками из одной отрасли. Для товаров из разных
+					категорий создавайте отдельные запросы.
 				</p>
 			</div>
 		</div>
