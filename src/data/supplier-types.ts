@@ -39,7 +39,12 @@ export const SUPPLIER_STATUS_CONFIG: Record<SupplierStatus, { label: string; cla
 };
 
 /** Statuses that allow sending messages to the supplier */
-export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set(["кп_запрошено", "переговоры", "получено_кп"]);
+export const COMPOSABLE_STATUSES: ReadonlySet<SupplierStatus> = new Set([
+	"кп_запрошено",
+	"переговоры",
+	"получено_кп",
+	"отказ",
+]);
 
 export type SupplierCompanyType = "производитель" | "дистрибьютор";
 

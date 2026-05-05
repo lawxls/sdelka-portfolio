@@ -333,9 +333,9 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
-		test("hides composer for отказ status", () => {
+		test("shows composer for отказ status", () => {
 			renderDrawer({ supplier: makeSupplier("s1", { status: "отказ" }) });
-			expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
 		test("shows disabled composer for new status (composer rendered but blocked)", () => {
