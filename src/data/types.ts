@@ -17,6 +17,10 @@ export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	completed: "Переговоры завершены",
 };
 
+/** Tender statuses while suppliers are still being sourced — RFQ email/auto-send
+ * are still tunable here; once negotiations begin, the email is locked. */
+export const RFQ_EDITABLE_STATUSES: ReadonlySet<TenderStatus> = new Set(["searching", "searching_completed"]);
+
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 
@@ -53,11 +57,6 @@ export function formatQuotePaymentType(
 }
 
 export type PaymentMethod = "bank_transfer" | "cash";
-
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-	bank_transfer: "Р/С",
-	cash: "Наличные",
-};
 
 export type DeliveryCostType = "free" | "paid" | "pickup";
 
@@ -101,7 +100,7 @@ export interface ProcurementItem {
 	name: string;
 	status: ProcurementStatus;
 	annualQuantity: number;
-	currentPrice: number;
+	currentPrice: number | null;
 	bestPrice: number | null;
 	averagePrice: number | null;
 	/** Parent tender slug. Items belong to exactly one tender. Company, folder,
@@ -121,6 +120,13 @@ export interface ProcurementItem {
 /** Запрос — primary procurement container that bundles a 1:N collection of
  * `ProcurementItem`s sharing one budget, deadline, company, and category.
  * Slug `id` (e.g. `T-001`) doubles as URL param. */
+export interface TenderEmailDraft {
+	subject: string;
+	body: string;
+}
+
+export type TenderSendMode = "auto" | "manual";
+
 export interface ProcurementInquiry {
 	id: string;
 	name: string;
@@ -144,6 +150,10 @@ export interface ProcurementInquiry {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	attachedFiles?: AttachedFile[];
+	/** RFQ email draft sent to suppliers when an RFQ is dispatched. */
+	email?: TenderEmailDraft;
+	/** Whether RFQ emails are dispatched automatically once suppliers are found. */
+	sendMode?: TenderSendMode;
 }
 
 export interface Folder {
@@ -205,20 +215,21 @@ export interface NewItemInput {
 	tenderId?: string;
 }
 
-/** Annual cost in ₽ = annualQuantity × currentPrice. */
-export function getAnnualCost(item: ProcurementItem): number {
+/** Annual cost in ₽ = annualQuantity × currentPrice. Null when no current price recorded. */
+export function getAnnualCost(item: ProcurementItem): number | null {
+	if (item.currentPrice == null) return null;
 	return item.annualQuantity * item.currentPrice;
 }
 
 /** Deviation % = (currentPrice - bestPrice) / bestPrice * 100. Null if no market data. */
 export function getDeviation(item: ProcurementItem): number | null {
-	if (item.bestPrice == null) return null;
+	if (item.bestPrice == null || item.currentPrice == null) return null;
 	return ((item.currentPrice - item.bestPrice) / item.bestPrice) * 100;
 }
 
 /** Annual overpayment in ₽ = (currentPrice - bestPrice) * annualQuantity. Null if no market data. */
 export function getOverpayment(item: ProcurementItem): number | null {
-	if (item.bestPrice == null) return null;
+	if (item.bestPrice == null || item.currentPrice == null) return null;
 	return (item.currentPrice - item.bestPrice) * item.annualQuantity;
 }
 

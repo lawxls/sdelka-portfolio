@@ -48,13 +48,7 @@ describe("DetailsTabPanel", () => {
 		});
 
 		const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-		expect(headings).toEqual([
-			"Основное",
-			"Логистика и финансы",
-			"Дополнительно",
-			"Ваш поставщик",
-			"Ответы на уточнения",
-		]);
+		expect(headings).toEqual(["Основное", "Логистика", "Дополнительно", "Ваш поставщик", "Ответы на уточнения"]);
 	});
 
 	test("reads tender-level fields from the parent tender (current supplier name in Ваш поставщик)", async () => {

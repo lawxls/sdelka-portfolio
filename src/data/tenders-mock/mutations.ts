@@ -1,14 +1,15 @@
 import { delay } from "../mock-utils";
 import { generateTenderSlug } from "../tenders/generate-tender-slug";
-import type { AttachedFile, CurrentSupplier, PaymentMethod, ProcurementInquiry, UnloadingType } from "../types";
+import type {
+	AttachedFile,
+	CurrentSupplier,
+	PaymentMethod,
+	ProcurementInquiry,
+	TenderEmailDraft,
+	TenderSendMode,
+	UnloadingType,
+} from "../types";
 import { findTenderIndex, listSlugs, pushTender, readTenders, removeTender, writeTenderAt } from "./store";
-
-export type TenderSendMode = "auto" | "manual";
-
-export interface TenderEmailDraft {
-	subject: string;
-	body: string;
-}
 
 export interface CreateTenderInput {
 	name: string;
@@ -49,6 +50,8 @@ export async function createTenderMock(input: CreateTenderInput): Promise<Procur
 		...(input.analoguesAllowed !== undefined && { analoguesAllowed: input.analoguesAllowed }),
 		...(input.additionalInfo && { additionalInfo: input.additionalInfo }),
 		...(input.attachedFiles && { attachedFiles: input.attachedFiles }),
+		...(input.email && { email: input.email }),
+		...(input.sendMode && { sendMode: input.sendMode }),
 	};
 	pushTender(tender);
 	return { ...tender };

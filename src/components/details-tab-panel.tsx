@@ -7,13 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import type { GeneratedAnswer, ProcurementItem, Unit } from "@/data/types";
-import {
-	DELIVERY_COST_TYPE_LABELS,
-	formatPaymentType,
-	PAYMENT_METHOD_LABELS,
-	UNITS,
-	UNLOADING_LABELS,
-} from "@/data/types";
+import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
@@ -298,15 +292,11 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Логистика и финансы (read-only, owned by parent tender) --- */}
-			<Section title="Логистика и финансы" editing={false}>
+			{/* --- Логистика (read-only, owned by parent tender) --- */}
+			<Section title="Логистика" editing={false}>
 				<CardGrid>
 					<FieldCard label="Разгрузка">
 						<ValueText value={tender?.unloading ? UNLOADING_LABELS[tender.unloading] : ""} />
-					</FieldCard>
-
-					<FieldCard label="Способ оплаты">
-						<ValueText value={tender?.paymentMethod ? PAYMENT_METHOD_LABELS[tender.paymentMethod] : ""} />
 					</FieldCard>
 
 					<FieldCard label="Адрес доставки" span="full">
@@ -319,16 +309,14 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			{tender && (
 				<Section title="Дополнительно" editing={false}>
 					<CardGrid>
-						<FieldCard label="Требования" span="half">
+						<FieldCard label="Условия" span="half">
 							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 								<li>
-									<span className="text-muted-foreground">Отсрочка:</span> {yesNo(tender.deferralRequired)}
+									<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
+									{yesNo(tender.paymentMethod === "cash")}
 								</li>
 								<li>
-									<span className="text-muted-foreground">Образец:</span> {yesNo(tender.sampleRequired)}
-								</li>
-								<li>
-									<span className="text-muted-foreground">Аналоги:</span> {yesNo(tender.analoguesAllowed)}
+									<span className="text-muted-foreground">Аналоги допускаются:</span> {yesNo(tender.analoguesAllowed)}
 								</li>
 							</ul>
 						</FieldCard>

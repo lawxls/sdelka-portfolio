@@ -1,18 +1,26 @@
-import { Archive, Ban, Check, Mail } from "lucide-react";
+import { Archive, Ban, Check, Mail, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
+import { InlineRenameInput } from "@/components/inline-rename-input";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
+import {
+	SUPPLIER_DRAWER_TABS,
+	SupplierDetailDrawer,
+	type SupplierDrawerTab,
+} from "@/components/supplier-detail-drawer";
 import { SuppliersTable } from "@/components/suppliers-table";
 import { TaskCard } from "@/components/task-card";
 import { TaskDrawer } from "@/components/task-drawer";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
+import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	SUPPLIER_STATUSES,
@@ -25,8 +33,8 @@ import {
 } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
 import { getTenderStatus } from "@/data/tenders/get-tender-status";
-import type { Folder, PaymentType, ProcurementInquiry, ProcurementItem } from "@/data/types";
-import { formatPaymentType, PAYMENT_METHOD_LABELS, UNLOADING_LABELS } from "@/data/types";
+import type { Folder, PaymentType, ProcurementInquiry, ProcurementItem, TenderStatus } from "@/data/types";
+import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
 import { useTenderItems } from "@/data/use-items";
@@ -34,10 +42,11 @@ import {
 	useAllSuppliers,
 	useArchiveSuppliers,
 	useSendSupplierRequest,
+	useSupplierById,
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
-import { useTender } from "@/data/use-tenders";
+import { useTender, useUpdateTender } from "@/data/use-tenders";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
@@ -45,6 +54,7 @@ import {
 	formatDayMonthShort,
 	formatDayMonthShortTime,
 	formatRussianPlural,
+	formatShortDate,
 	isOverdue,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -60,6 +70,12 @@ const TABS: { key: TenderDetailTab; label: string; mobileLabel?: string }[] = [
 
 const DEFAULT_TAB: TenderDetailTab = "suppliers";
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
+const VALID_SUPPLIER_TABS = new Set<string>(SUPPLIER_DRAWER_TABS);
+
+function parseSupplierTab(param: string | null): SupplierDrawerTab {
+	if (param && VALID_SUPPLIER_TABS.has(param)) return param as SupplierDrawerTab;
+	return "info";
+}
 
 const CONSOLIDATED_PAGE_SIZE = 30;
 
@@ -96,14 +112,6 @@ function parseTenderTab(param: string | null): TenderDetailTab {
 	return DEFAULT_TAB;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
-
-function formatDate(iso: string): string {
-	const d = new Date(iso);
-	if (Number.isNaN(d.getTime())) return iso;
-	return dateFormatter.format(d);
-}
-
 function formatInquiryNumber(id: string): string {
 	const match = id.match(/\d+/);
 	return match ? String(Number(match[0])) : id;
@@ -116,13 +124,51 @@ export function TenderDetailPage() {
 	const isMobile = useIsMobile();
 	const activeTab = parseTenderTab(searchParams.get("tab"));
 	const taskId = searchParams.get("task");
+	const supplierId = searchParams.get("supplier");
+	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
 
 	const { data: tender, isLoading, isError } = useTender(slug);
 	const { data: folders = [] } = useFolders();
 	const { data: items = [] } = useTenderItems(slug || undefined);
+	const { data: supplier } = useSupplierById(supplierId);
 
 	function handleClose() {
 		navigate({ pathname: "/inquiries", search: searchParams.toString() });
+	}
+
+	function handleSupplierOpen(id: string, origin: SupplierDrawerTab = "info") {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("supplier", id);
+				next.set("supplier_tab", origin);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleSupplierClose() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete("supplier");
+				next.delete("supplier_tab");
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleSupplierTabChange(tab: SupplierDrawerTab) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("supplier_tab", tab);
+				return next;
+			},
+			{ replace: true },
+		);
 	}
 
 	function handleTaskOpen(id: string) {
@@ -208,11 +254,19 @@ export function TenderDetailPage() {
 							activeTab={activeTab}
 							onTabChange={handleTabChange}
 							onTaskOpen={handleTaskOpen}
+							onSupplierOpen={handleSupplierOpen}
 						/>
 					)}
 				</SheetContent>
 			</Sheet>
 			<TaskDrawer taskId={taskId} onClose={handleTaskClose} isMobile={isMobile} />
+			<SupplierDetailDrawer
+				supplier={supplier ?? null}
+				open={supplierId != null}
+				onClose={handleSupplierClose}
+				activeTab={supplierTab}
+				onTabChange={handleSupplierTabChange}
+			/>
 		</>
 	);
 }
@@ -224,12 +278,31 @@ interface TenderDrawerBodyProps {
 	activeTab: TenderDetailTab;
 	onTabChange: (tab: TenderDetailTab) => void;
 	onTaskOpen: (id: string) => void;
+	onSupplierOpen: (id: string, origin?: SupplierDrawerTab) => void;
 }
 
-function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTaskOpen }: TenderDrawerBodyProps) {
+function TenderDrawerBody({
+	tender,
+	items,
+	folders,
+	activeTab,
+	onTabChange,
+	onTaskOpen,
+	onSupplierOpen,
+}: TenderDrawerBodyProps) {
 	const folder = folders.find((f) => f.id === tender.folderId);
 	const status = getTenderStatus(items);
 	const statusCfg = STATUS_CONFIG[status];
+	const updateTenderMutation = useUpdateTender();
+	const [isEditingName, setIsEditingName] = useState(false);
+
+	function handleSaveName(name: string) {
+		const trimmed = name.trim();
+		if (trimmed && trimmed !== tender.name) {
+			updateTenderMutation.mutate({ id: tender.id, patch: { name: trimmed } });
+		}
+		setIsEditingName(false);
+	}
 
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [] } = useAllSuppliers();
@@ -272,7 +345,32 @@ function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTa
 					<span aria-hidden="true" className="font-heading text-base font-medium text-foreground">
 						•
 					</span>
-					<SheetTitle className="leading-snug">{tender.name}</SheetTitle>
+					{isEditingName ? (
+						<SheetTitle className="flex-1 min-w-0 leading-snug text-balance">
+							<InlineRenameInput
+								defaultValue={tender.name}
+								onSave={handleSaveName}
+								onCancel={() => setIsEditingName(false)}
+							/>
+						</SheetTitle>
+					) : (
+						<div className="group flex min-w-0 flex-1 items-center gap-1.5">
+							<SheetTitle className="leading-snug text-balance">{tender.name}</SheetTitle>
+							<button
+								type="button"
+								onClick={() => setIsEditingName(true)}
+								aria-label="Переименовать запрос"
+								className={cn(
+									"relative inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100",
+									"transition-[opacity,background-color,color,scale] duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
+									"after:absolute after:inset-[-8px] after:content-['']",
+								)}
+								data-testid="tender-rename-button"
+							>
+								<Pencil aria-hidden="true" className="size-3.5" />
+							</button>
+						</div>
+					)}
 				</div>
 				<SheetDescription className="sr-only">Детали запроса</SheetDescription>
 				<div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -357,10 +455,14 @@ function TenderDrawerBody({ tender, items, folders, activeTab, onTabChange, onTa
 					activeTab === "details" ? "p-4" : "pt-3",
 				)}
 			>
-				{activeTab === "suppliers" && <TenderSuppliersTab items={items} />}
-				{activeTab === "offers" && <TenderOffersTab tenderId={tender.id} items={items} />}
+				{activeTab === "suppliers" && (
+					<TenderSuppliersTab items={items} onSupplierClick={(id) => onSupplierOpen(id, "info")} />
+				)}
+				{activeTab === "offers" && (
+					<TenderOffersTab tenderId={tender.id} items={items} onSupplierClick={(id) => onSupplierOpen(id, "offers")} />
+				)}
 				{activeTab === "tasks" && <TenderTasksTab tenderId={tender.id} onTaskClick={onTaskOpen} />}
-				{activeTab === "details" && <TenderDetailsTab tender={tender} items={items} folder={folder} />}
+				{activeTab === "details" && <TenderDetailsTab tender={tender} items={items} folder={folder} status={status} />}
 			</div>
 		</div>
 	);
@@ -459,12 +561,24 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 	return (av - bv) * sign;
 }
 
-function TenderSuppliersTab({ items }: { items: readonly ProcurementItem[] }) {
+function TenderSuppliersTab({
+	items,
+	onSupplierClick,
+}: {
+	items: readonly ProcurementItem[];
+	onSupplierClick: (id: string) => void;
+}) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
-	return <TenderConsolidatedSuppliersPanel items={items} />;
+	return <TenderConsolidatedSuppliersPanel items={items} onSupplierClick={onSupplierClick} />;
 }
 
-function TenderConsolidatedSuppliersPanel({ items }: { items: readonly ProcurementItem[] }) {
+function TenderConsolidatedSuppliersPanel({
+	items,
+	onSupplierClick,
+}: {
+	items: readonly ProcurementItem[];
+	onSupplierClick: (id: string) => void;
+}) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
 	const archiveMutation = useArchiveSuppliers();
@@ -627,6 +741,7 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 				suppliers={visibleSuppliers}
 				totalCount={sortedSuppliers.length}
 				isLoading={isLoading}
+				onRowClick={onSupplierClick}
 				hasNextPage={hasNextPage}
 				loadMore={loadMore}
 				isFetchingNextPage={false}
@@ -658,12 +773,28 @@ function TenderConsolidatedSuppliersPanel({ items }: { items: readonly Procureme
 	);
 }
 
-function TenderOffersTab({ tenderId, items }: { tenderId: string; items: readonly ProcurementItem[] }) {
+function TenderOffersTab({
+	tenderId,
+	items,
+	onSupplierClick,
+}: {
+	tenderId: string;
+	items: readonly ProcurementItem[];
+	onSupplierClick: (id: string) => void;
+}) {
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
-	return <TenderConsolidatedOffersPanel tenderId={tenderId} items={items} />;
+	return <TenderConsolidatedOffersPanel tenderId={tenderId} items={items} onSupplierClick={onSupplierClick} />;
 }
 
-function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; items: readonly ProcurementItem[] }) {
+function TenderConsolidatedOffersPanel({
+	tenderId,
+	items,
+	onSupplierClick,
+}: {
+	tenderId: string;
+	items: readonly ProcurementItem[];
+	onSupplierClick: (id: string) => void;
+}) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: tender } = useTender(tenderId);
 	const currentSupplier = tender?.currentSupplier;
@@ -814,6 +945,7 @@ function TenderConsolidatedOffersPanel({ tenderId, items }: { tenderId: string; 
 				currentSupplier={currentSupplier}
 				currentSupplierRowId={currentSupplierRowId}
 				isLoading={isLoading}
+				onRowClick={onSupplierClick}
 				hasNextPage={hasNextPage}
 				loadMore={loadMore}
 				isFetchingNextPage={false}
@@ -1057,10 +1189,12 @@ function TenderDetailsTab({
 	tender,
 	items,
 	folder,
+	status,
 }: {
 	tender: ProcurementInquiry;
 	items: readonly ProcurementItem[];
 	folder?: Folder;
+	status: TenderStatus;
 }) {
 	const { data: company } = useCompanyDetail(tender.companyId ?? null);
 	const addressesText = useMemo(() => {
@@ -1073,6 +1207,7 @@ function TenderDetailsTab({
 	}, [tender.addressIds, company?.addresses]);
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 	const currentSupplier = tender.currentSupplier;
+	const rfqEditable = RFQ_EDITABLE_STATUSES.has(status);
 
 	return (
 		<div data-testid="tender-tab-details" className="flex flex-col gap-6">
@@ -1087,14 +1222,11 @@ function TenderDetailsTab({
 					<FieldCard label="Название" span="full">
 						<ValueText value={tender.name} />
 					</FieldCard>
-					<FieldCard label="Бюджет">
-						<ValueText value={formatCurrency(tender.budget)} />
-					</FieldCard>
 					<FieldCard label="Дедлайн">
-						<ValueText value={formatDate(tender.deadline)} />
+						<ValueText value={formatShortDate(tender.deadline)} />
 					</FieldCard>
 					<FieldCard label="Дата создания">
-						<ValueText value={formatDate(tender.createdAt)} />
+						<ValueText value={formatShortDate(tender.createdAt)} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -1111,13 +1243,10 @@ function TenderDetailsTab({
 				)}
 			</Section>
 
-			<Section title="Логистика и финансы">
+			<Section title="Логистика">
 				<CardGrid>
 					<FieldCard label="Разгрузка">
 						<ValueText value={tender.unloading ? UNLOADING_LABELS[tender.unloading] : ""} />
-					</FieldCard>
-					<FieldCard label="Способ оплаты">
-						<ValueText value={tender.paymentMethod ? PAYMENT_METHOD_LABELS[tender.paymentMethod] : ""} />
 					</FieldCard>
 					<FieldCard label="Адрес доставки" span="full">
 						<ValueText value={addressesText} />
@@ -1125,18 +1254,18 @@ function TenderDetailsTab({
 				</CardGrid>
 			</Section>
 
+			<TenderRfqSection tender={tender} editable={rfqEditable} />
+
 			<Section title="Дополнительно">
 				<CardGrid>
-					<FieldCard label="Требования" span="half">
+					<FieldCard label="Условия" span="half">
 						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 							<li>
-								<span className="text-muted-foreground">Отсрочка:</span> {yesNo(tender.deferralRequired)}
+								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
+								{yesNo(tender.paymentMethod === "cash")}
 							</li>
 							<li>
-								<span className="text-muted-foreground">Образец:</span> {yesNo(tender.sampleRequired)}
-							</li>
-							<li>
-								<span className="text-muted-foreground">Аналоги:</span> {yesNo(tender.analoguesAllowed)}
+								<span className="text-muted-foreground">Аналоги допускаются:</span> {yesNo(tender.analoguesAllowed)}
 							</li>
 						</ul>
 					</FieldCard>
@@ -1174,6 +1303,92 @@ function TenderDetailsTab({
 				</CardGrid>
 			</Section>
 		</div>
+	);
+}
+
+function TenderRfqSection({ tender, editable }: { tender: ProcurementInquiry; editable: boolean }) {
+	const updateMutation = useUpdateTender();
+	const [editing, setEditing] = useState(false);
+	const [bodyDraft, setBodyDraft] = useState("");
+	const [autoSendDraft, setAutoSendDraft] = useState(false);
+
+	const currentBody = tender.email?.body ?? "";
+	const currentAutoSend = tender.sendMode === "auto";
+
+	function handleEdit() {
+		setBodyDraft(currentBody);
+		setAutoSendDraft(currentAutoSend);
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleSave() {
+		const trimmedBody = bodyDraft.trim();
+		const patch: Partial<ProcurementInquiry> = {
+			email: trimmedBody ? { subject: tender.email?.subject ?? "", body: trimmedBody } : undefined,
+			sendMode: autoSendDraft ? "auto" : "manual",
+		};
+		updateMutation.mutate(
+			{ id: tender.id, patch },
+			{
+				onSuccess: () => setEditing(false),
+			},
+		);
+	}
+
+	const dirty = bodyDraft !== currentBody || autoSendDraft !== currentAutoSend;
+
+	return (
+		<Section
+			title="RFQ"
+			editLabel={editable ? "Редактировать RFQ" : undefined}
+			editing={editing}
+			onEdit={editable ? handleEdit : undefined}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			saveDisabled={!dirty || updateMutation.isPending}
+			isPending={updateMutation.isPending}
+		>
+			<CardGrid>
+				<FieldCard label="Текст письма" span="full">
+					{editing ? (
+						<Textarea
+							aria-label="Текст письма"
+							value={bodyDraft}
+							onChange={(e) => setBodyDraft(e.target.value)}
+							rows={8}
+							spellCheck={false}
+						/>
+					) : currentBody ? (
+						<p className="whitespace-pre-wrap text-pretty text-sm">{currentBody}</p>
+					) : (
+						<ValueText value="" />
+					)}
+				</FieldCard>
+				<FieldCard label="Автоотправка запросов" span="full">
+					{editing ? (
+						<div>
+							<CheckboxBadge
+								id="tender-rfq-autosend"
+								checked={autoSendDraft}
+								onChange={setAutoSendDraft}
+								ariaLabel="Автоотправка запросов"
+							>
+								Автоотправка запросов
+							</CheckboxBadge>
+							<p className="mt-1.5 text-xs text-muted-foreground">
+								Когда включено — запросы рассылаются всем поставщикам сразу после их нахождения.
+							</p>
+						</div>
+					) : (
+						<ValueText value={currentAutoSend ? "Включена" : "Выключена"} />
+					)}
+				</FieldCard>
+			</CardGrid>
+		</Section>
 	);
 }
 
