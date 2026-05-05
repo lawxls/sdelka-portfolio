@@ -59,7 +59,7 @@ const ANALYSIS_COLUMNS: SortableColumn[] = [
 	{ label: "ЛУЧШЕЕ\u00A0ТСО", field: "bestPrice", tooltip: TCO_TOOLTIP },
 	{ label: "СРЕДНЕЕ\u00A0ТСО", field: "averagePrice", tooltip: TCO_TOOLTIP },
 	{ label: "ОТКЛОНЕНИЕ\u00A0₽", field: "overpayment" },
-	{ label: "ОТКЛОНЕНИЕ\u00A0%", field: "deviation" },
+	{ label: "ОТКЛ.\u00A0%", field: "deviation" },
 ];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
@@ -270,10 +270,10 @@ export function ProcurementTable({
 	const analysisHead =
 		"sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] text-highlight-foreground";
 	return (
-		<div className="flex min-h-0 flex-1 flex-col">
+		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<div
 				ref={scrollContainerRef}
-				className="flex flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg"
+				className="flex min-w-0 flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg"
 				data-testid="table-scroll-container"
 			>
 				<Table>

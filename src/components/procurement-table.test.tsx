@@ -159,7 +159,7 @@ describe("ProcurementTable", () => {
 		expect(screen.getByRole("button", { name: /Сортировать по ТЕКУЩЕЕ\u00A0ТСО/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ЛУЧШЕЕ\u00A0ТСО/ })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛОНЕНИЕ\u00A0₽/ })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛОНЕНИЕ\u00A0%/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Сортировать по ОТКЛ.\u00A0%/ })).toBeInTheDocument();
 	});
 
 	test("clicking sort button calls onSort with correct field", async () => {
