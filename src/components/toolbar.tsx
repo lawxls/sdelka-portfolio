@@ -45,8 +45,8 @@ const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
 	{ label: "Текущее ТСО", field: "currentPrice" },
 	{ label: "Лучшее ТСО", field: "bestPrice" },
 	{ label: "Среднее ТСО", field: "averagePrice" },
-	{ label: "Переплата", field: "overpayment" },
-	{ label: "Отклонение", field: "deviation" },
+	{ label: "Отклонение в ₽", field: "overpayment" },
+	{ label: "Отклонение в %", field: "deviation" },
 ];
 
 const FILTER_BTN =

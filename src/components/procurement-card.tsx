@@ -302,13 +302,13 @@ export function ProcurementCard({
 					</div>
 				))}
 				<div>
-					<dt className="text-xs text-muted-foreground">Переплата&nbsp;₽</dt>
+					<dt className="text-xs text-muted-foreground">Отклонение&nbsp;₽</dt>
 					<dd data-field="overpayment" className={`tabular-nums ${signClassName(overpayment)}`}>
 						{formatCurrency(overpayment)}
 					</dd>
 				</div>
 				<div>
-					<dt className="text-xs text-muted-foreground">Переплата&nbsp;%</dt>
+					<dt className="text-xs text-muted-foreground">Отклонение&nbsp;%</dt>
 					<dd data-field="deviation" className={`tabular-nums ${dev.className}`}>
 						{dev.text}
 					</dd>

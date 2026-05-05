@@ -160,8 +160,8 @@ describe("SortPopover (inside mobile overflow)", () => {
 		expect(screen.getByText("Текущее ТСО")).toBeInTheDocument();
 		expect(screen.getByText("Лучшее ТСО")).toBeInTheDocument();
 		expect(screen.getByText("Среднее ТСО")).toBeInTheDocument();
-		expect(screen.getByText("Переплата")).toBeInTheDocument();
-		expect(screen.getByText("Отклонение")).toBeInTheDocument();
+		expect(screen.getByText("Отклонение в ₽")).toBeInTheDocument();
+		expect(screen.getByText("Отклонение в %")).toBeInTheDocument();
 	});
 
 	test("clicking sort field calls onSort with correct field", () => {
@@ -179,7 +179,7 @@ describe("SortPopover (inside mobile overflow)", () => {
 		renderToolbar({ sort: { field: "overpayment", direction: "asc" } });
 		openOverflow();
 		fireEvent.click(screen.getByRole("button", { name: "Сортировка" }));
-		const activeBtn = screen.getByText("Переплата").closest("button");
+		const activeBtn = screen.getByText("Отклонение в ₽").closest("button");
 		expect(activeBtn?.className).toContain("font-medium");
 	});
 

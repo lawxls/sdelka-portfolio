@@ -51,15 +51,15 @@ interface SortableColumn {
 const TCO_TOOLTIP = "ТСО (Total Cost of Ownership)\u00A0— совокупная стоимость владения: цена и стоимость доставки";
 
 const INPUT_COLUMNS: SortableColumn[] = [
-	{ label: "ОБЪЕМ\u00A0₽", field: "annualCost" },
+	{ label: "ОБЪЕМ\u00A0В\u00A0ГОД\u00A0₽", field: "annualCost" },
 	{ label: "ТЕКУЩЕЕ\u00A0ТСО", field: "currentPrice", tooltip: TCO_TOOLTIP },
 ];
 
 const ANALYSIS_COLUMNS: SortableColumn[] = [
 	{ label: "ЛУЧШЕЕ\u00A0ТСО", field: "bestPrice", tooltip: TCO_TOOLTIP },
 	{ label: "СРЕДНЕЕ\u00A0ТСО", field: "averagePrice", tooltip: TCO_TOOLTIP },
-	{ label: "ПЕРЕПЛАТА\u00A0₽", field: "overpayment" },
-	{ label: "ПЕРЕПЛАТА\u00A0%", field: "deviation" },
+	{ label: "ОТКЛОНЕНИЕ\u00A0₽", field: "overpayment" },
+	{ label: "ОТКЛОНЕНИЕ\u00A0%", field: "deviation" },
 ];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
@@ -273,7 +273,7 @@ export function ProcurementTable({
 		<div className="flex min-h-0 flex-1 flex-col">
 			<div
 				ref={scrollContainerRef}
-				className="flex flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:last-child]:pr-lg"
+				className="flex flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg"
 				data-testid="table-scroll-container"
 			>
 				<Table>
