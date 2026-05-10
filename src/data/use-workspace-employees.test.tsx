@@ -26,7 +26,7 @@ function wrapperFactory(client: WorkspaceEmployeesClient) {
 	);
 }
 
-function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): WorkspaceEmployee {
+function makeEmployee(id: string, overrides: Partial<WorkspaceEmployee> = {}): WorkspaceEmployee {
 	return {
 		id,
 		firstName: "Иван",
@@ -42,7 +42,7 @@ function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): W
 	};
 }
 
-function makeDetail(id: number, overrides: Partial<WorkspaceEmployeeDetail> = {}): WorkspaceEmployeeDetail {
+function makeDetail(id: string, overrides: Partial<WorkspaceEmployeeDetail> = {}): WorkspaceEmployeeDetail {
 	return {
 		...makeEmployee(id),
 		permissions: {
@@ -69,7 +69,7 @@ afterEach(() => {
 
 describe("useWorkspaceEmployees", () => {
 	it("returns the employee list from the client", async () => {
-		const list = vi.fn().mockResolvedValue([makeEmployee(1), makeEmployee(2, { firstName: "Мария" })]);
+		const list = vi.fn().mockResolvedValue([makeEmployee("1"), makeEmployee("2", { firstName: "Мария" })]);
 		const client = fakeWorkspaceEmployeesClient({ list });
 
 		const { result } = renderHook(() => useWorkspaceEmployees(), { wrapper: wrapperFactory(client) });
@@ -115,17 +115,17 @@ describe("useWorkspaceEmployees", () => {
 
 describe("useWorkspaceEmployeeDetail", () => {
 	it("fetches detail with permissions for known id", async () => {
-		const get = vi.fn().mockResolvedValue(makeDetail(7, { firstName: "Пётр" }));
+		const get = vi.fn().mockResolvedValue(makeDetail("7", { firstName: "Пётр" }));
 		const client = fakeWorkspaceEmployeesClient({ get });
 
-		const { result } = renderHook(() => useWorkspaceEmployeeDetail(7), { wrapper: wrapperFactory(client) });
+		const { result } = renderHook(() => useWorkspaceEmployeeDetail("7"), { wrapper: wrapperFactory(client) });
 
 		await waitFor(() => {
 			expect(result.current.employee).toBeDefined();
 		});
-		expect(get).toHaveBeenCalledWith(7);
+		expect(get).toHaveBeenCalledWith("7");
 		expect(result.current.employee?.firstName).toBe("Пётр");
-		expect(result.current.employee?.permissions.employeeId).toBe(7);
+		expect(result.current.employee?.permissions.employeeId).toBe("7");
 	});
 
 	it("does not fetch when id is null", async () => {
@@ -143,7 +143,7 @@ describe("useWorkspaceEmployeeDetail", () => {
 			get: () => Promise.reject(new NotFoundError({ detail: "missing" })),
 		});
 
-		const { result } = renderHook(() => useWorkspaceEmployeeDetail(99), { wrapper: wrapperFactory(client) });
+		const { result } = renderHook(() => useWorkspaceEmployeeDetail("99"), { wrapper: wrapperFactory(client) });
 
 		await waitFor(() => {
 			expect(result.current.error).toBeInstanceOf(NotFoundError);
@@ -155,8 +155,8 @@ describe("useInviteEmployees", () => {
 	it("invites and triggers refetch via invalidation", async () => {
 		const list = vi
 			.fn()
-			.mockResolvedValueOnce([makeEmployee(1)])
-			.mockResolvedValueOnce([makeEmployee(1), makeEmployee(2, { email: "new@example.com" })]);
+			.mockResolvedValueOnce([makeEmployee("1")])
+			.mockResolvedValueOnce([makeEmployee("1"), makeEmployee("2", { email: "new@example.com" })]);
 		const invite = vi.fn().mockResolvedValue(undefined);
 		const client = fakeWorkspaceEmployeesClient({ list, invite });
 
@@ -220,8 +220,8 @@ describe("useDeleteWorkspaceEmployees", () => {
 	it("deletes the given ids and triggers refetch via invalidation", async () => {
 		const list = vi
 			.fn()
-			.mockResolvedValueOnce([makeEmployee(1), makeEmployee(2)])
-			.mockResolvedValueOnce([makeEmployee(2)]);
+			.mockResolvedValueOnce([makeEmployee("1"), makeEmployee("2")])
+			.mockResolvedValueOnce([makeEmployee("2")]);
 		const deleteFn = vi.fn().mockResolvedValue(undefined);
 		const client = fakeWorkspaceEmployeesClient({ list, delete: deleteFn });
 
@@ -231,10 +231,10 @@ describe("useDeleteWorkspaceEmployees", () => {
 		await waitFor(() => expect(read.current.employees).toHaveLength(2));
 
 		await act(async () => {
-			await del.current.mutateAsync([1]);
+			await del.current.mutateAsync(["1"]);
 		});
 
-		expect(deleteFn).toHaveBeenCalledWith([1]);
+		expect(deleteFn).toHaveBeenCalledWith(["1"]);
 		await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
 		await waitFor(() => expect(read.current.employees).toHaveLength(1));
 	});
@@ -242,20 +242,20 @@ describe("useDeleteWorkspaceEmployees", () => {
 
 describe("useUpdateWorkspaceEmployee", () => {
 	it("updates an employee and invalidates both list and detail caches", async () => {
-		const update = vi.fn().mockResolvedValue(makeDetail(3, { position: "Старший менеджер" }));
+		const update = vi.fn().mockResolvedValue(makeDetail("3", { position: "Старший менеджер" }));
 		const client = fakeWorkspaceEmployeesClient({ update });
 
-		queryClient.setQueryData(["workspace-employee", 3], makeDetail(3));
-		queryClient.setQueryData(["workspace-employees"], [makeEmployee(3)]);
+		queryClient.setQueryData(["workspace-employee", "3"], makeDetail("3"));
+		queryClient.setQueryData(["workspace-employees"], [makeEmployee("3")]);
 
 		const { result } = renderHook(() => useUpdateWorkspaceEmployee(), { wrapper: wrapperFactory(client) });
 
 		await act(async () => {
-			await result.current.mutateAsync({ id: 3, data: { position: "Старший менеджер" } });
+			await result.current.mutateAsync({ id: "3", data: { position: "Старший менеджер" } });
 		});
 
-		expect(update).toHaveBeenCalledWith(3, { position: "Старший менеджер" });
-		expect(queryClient.getQueryState(["workspace-employee", 3])?.isInvalidated).toBe(true);
+		expect(update).toHaveBeenCalledWith("3", { position: "Старший менеджер" });
+		expect(queryClient.getQueryState(["workspace-employee", "3"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["workspace-employees"])?.isInvalidated).toBe(true);
 	});
 });
@@ -264,7 +264,7 @@ describe("useUpdateWorkspaceEmployeePermissions", () => {
 	it("patches permissions and invalidates the detail cache only", async () => {
 		const updatePermissions = vi.fn().mockResolvedValue({
 			id: "perm-3",
-			employeeId: 3,
+			employeeId: "3",
 			tenders: "edit" as const,
 			positions: "edit" as const,
 			tasks: "view" as const,
@@ -274,19 +274,19 @@ describe("useUpdateWorkspaceEmployeePermissions", () => {
 		});
 		const client = fakeWorkspaceEmployeesClient({ updatePermissions });
 
-		queryClient.setQueryData(["workspace-employee", 3], makeDetail(3));
-		queryClient.setQueryData(["workspace-employees"], [makeEmployee(3)]);
+		queryClient.setQueryData(["workspace-employee", "3"], makeDetail("3"));
+		queryClient.setQueryData(["workspace-employees"], [makeEmployee("3")]);
 
 		const { result } = renderHook(() => useUpdateWorkspaceEmployeePermissions(), {
 			wrapper: wrapperFactory(client),
 		});
 
 		await act(async () => {
-			await result.current.mutateAsync({ id: 3, data: { tenders: "edit" } });
+			await result.current.mutateAsync({ id: "3", data: { tenders: "edit" } });
 		});
 
-		expect(updatePermissions).toHaveBeenCalledWith(3, { tenders: "edit" });
-		expect(queryClient.getQueryState(["workspace-employee", 3])?.isInvalidated).toBe(true);
+		expect(updatePermissions).toHaveBeenCalledWith("3", { tenders: "edit" });
+		expect(queryClient.getQueryState(["workspace-employee", "3"])?.isInvalidated).toBe(true);
 		// list cache stays fresh — permissions don't surface in the table.
 		expect(queryClient.getQueryState(["workspace-employees"])?.isInvalidated).toBe(false);
 	});

@@ -25,7 +25,7 @@ import { createInMemoryWorkspaceEmployeesClient } from "./workspace-employees-in
 
 const SEED: WorkspaceEmployeeDetail[] = [
 	{
-		id: 1,
+		id: "1",
 		firstName: "Иван",
 		lastName: "Иванов",
 		patronymic: "Иванович",
@@ -46,7 +46,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		],
 		permissions: {
 			id: "perm-1",
-			employeeId: 1,
+			employeeId: "1",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -56,7 +56,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 2,
+		id: "2",
 		firstName: "Мария",
 		lastName: "Петрова",
 		patronymic: "Сергеевна",
@@ -68,7 +68,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		companies: [],
 		permissions: {
 			id: "perm-2",
-			employeeId: 2,
+			employeeId: "2",
 			tenders: "view",
 			positions: "view",
 			tasks: "view",
@@ -78,7 +78,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 3,
+		id: "3",
 		firstName: "Дмитрий",
 		lastName: "Попов",
 		patronymic: "",
@@ -90,7 +90,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		companies: [],
 		permissions: {
 			id: "perm-3",
-			employeeId: 3,
+			employeeId: "3",
 			tenders: "none",
 			positions: "none",
 			tasks: "none",
@@ -130,7 +130,7 @@ interface HttpRoute {
 }
 
 function httpAdapter(): Adapter {
-	const store = new Map<number, WorkspaceEmployeeDetail>();
+	const store = new Map<string, WorkspaceEmployeeDetail>();
 	let counter = 1000;
 	for (const e of SEED) store.set(e.id, structuredClone(e));
 
@@ -149,7 +149,7 @@ function httpAdapter(): Adapter {
 			method: "GET",
 			path: /^\/workspace\/employees\/(\d+)$/,
 			respond: ({ url }) => {
-				const id = Number(/\/(\d+)$/.exec(url)?.[1]);
+				const id = /\/(\d+)$/.exec(url)?.[1] ?? "";
 				const found = store.get(id);
 				if (!found) return { status: 404, body: { detail: `employee ${id} not found` } };
 				return { status: 200, body: found };
@@ -166,8 +166,8 @@ function httpAdapter(): Adapter {
 						return { status: 409, body: { detail: "email already invited" } };
 					}
 					counter += 1;
-					store.set(counter, {
-						id: counter,
+					store.set(String(counter), {
+						id: String(counter),
 						firstName: invite.firstName,
 						lastName: invite.lastName,
 						patronymic: invite.patronymic,
@@ -179,7 +179,7 @@ function httpAdapter(): Adapter {
 						companies: [],
 						permissions: {
 							id: `perm-${counter}`,
-							employeeId: counter,
+							employeeId: String(counter),
 							tenders: "none",
 							positions: "none",
 							tasks: "none",
@@ -196,7 +196,7 @@ function httpAdapter(): Adapter {
 			method: "PATCH",
 			path: /^\/workspace\/employees\/(\d+)$/,
 			respond: ({ url, init }) => {
-				const id = Number(/\/(\d+)$/.exec(url)?.[1]);
+				const id = /\/(\d+)$/.exec(url)?.[1] ?? "";
 				const existing = store.get(id);
 				if (!existing) return { status: 404, body: { detail: `employee ${id} not found` } };
 				const data = JSON.parse(init?.body as string) as UpdateWorkspaceEmployeeData;
@@ -212,7 +212,7 @@ function httpAdapter(): Adapter {
 			method: "POST",
 			path: /^\/workspace\/employees\/delete$/,
 			respond: ({ init }) => {
-				const data = JSON.parse(init?.body as string) as { ids: number[] };
+				const data = JSON.parse(init?.body as string) as { ids: string[] };
 				for (const id of data.ids) {
 					const existing = store.get(id);
 					// HTTP mirrors the in-memory rule: admins can't be deleted.
@@ -226,7 +226,7 @@ function httpAdapter(): Adapter {
 			method: "PATCH",
 			path: /^\/workspace\/employees\/(\d+)\/permissions$/,
 			respond: ({ url, init }) => {
-				const id = Number(/\/(\d+)\/permissions$/.exec(url)?.[1]);
+				const id = /\/(\d+)\/permissions$/.exec(url)?.[1] ?? "";
 				const existing = store.get(id);
 				if (!existing) return { status: 404, body: { detail: `employee ${id} not found` } };
 				const data = JSON.parse(init?.body as string) as UpdatePermissionsData;
@@ -277,14 +277,14 @@ describe.each(
 
 	it("list returns the seeded employees without permissions", async () => {
 		const list = await client.list();
-		expect(list.map((e) => e.id).sort()).toEqual([1, 2, 3]);
+		expect(list.map((e) => e.id).sort()).toEqual(["1", "2", "3"]);
 		expect(list[0]).not.toHaveProperty("permissions");
-		expect(list.find((e) => e.id === 1)?.email).toBe("ivan@example.com");
+		expect(list.find((e) => e.id === "1")?.email).toBe("ivan@example.com");
 	});
 
 	it("list surfaces companies array on each employee", async () => {
 		const list = await client.list();
-		const ivan = list.find((e) => e.id === 1);
+		const ivan = list.find((e) => e.id === "1");
 		expect(ivan?.companies[0].name).toBe("Компания А");
 	});
 
@@ -294,14 +294,14 @@ describe.each(
 	});
 
 	it("get returns detail with permissions for known id", async () => {
-		const detail = await client.get(2);
-		expect(detail.id).toBe(2);
+		const detail = await client.get("2");
+		expect(detail.id).toBe("2");
 		expect(detail.permissions.tenders).toBe("view");
 		expect(detail.permissions.positions).toBe("view");
 	});
 
 	it("get throws NotFoundError for unknown id", async () => {
-		await expect(client.get(99999)).rejects.toBeInstanceOf(NotFoundError);
+		await expect(client.get("99999")).rejects.toBeInstanceOf(NotFoundError);
 	});
 
 	it("invite + list roundtrip — appends invitee with registeredAt=null", async () => {
@@ -325,40 +325,40 @@ describe.each(
 	});
 
 	it("update merges patch and persists", async () => {
-		await client.update(2, { position: "Старший менеджер" });
-		const detail = await client.get(2);
+		await client.update("2", { position: "Старший менеджер" });
+		const detail = await client.get("2");
 		expect(detail.position).toBe("Старший менеджер");
 		// untouched
 		expect(detail.firstName).toBe("Мария");
 	});
 
 	it("update throws NotFoundError for unknown id", async () => {
-		await expect(client.update(99999, { position: "Test" })).rejects.toBeInstanceOf(NotFoundError);
+		await expect(client.update("99999", { position: "Test" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 
 	it("delete removes user-role employees", async () => {
-		await client.delete([2]);
+		await client.delete(["2"]);
 		const list = await client.list();
-		expect(list.find((e) => e.id === 2)).toBeUndefined();
+		expect(list.find((e) => e.id === "2")).toBeUndefined();
 	});
 
 	it("delete leaves admin employees in place", async () => {
-		await client.delete([1]);
+		await client.delete(["1"]);
 		const list = await client.list();
-		expect(list.find((e) => e.id === 1)).toBeDefined();
+		expect(list.find((e) => e.id === "1")).toBeDefined();
 	});
 
 	it("updatePermissions patches only provided levels", async () => {
-		const result = await client.updatePermissions(2, { tenders: "edit" });
+		const result = await client.updatePermissions("2", { tenders: "edit" });
 		expect(result.tenders).toBe("edit");
 		expect(result.positions).toBe("view");
 		expect(result.tasks).toBe("view");
-		const detail = await client.get(2);
+		const detail = await client.get("2");
 		expect(detail.permissions.tenders).toBe("edit");
 	});
 
 	it("updatePermissions throws NotFoundError for unknown id", async () => {
-		await expect(client.updatePermissions(99999, { tenders: "edit" })).rejects.toBeInstanceOf(NotFoundError);
+		await expect(client.updatePermissions("99999", { tenders: "edit" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 });
 
@@ -434,7 +434,7 @@ describe("HTTP-only error branches", () => {
 	it("update with sentinel firstName throws ValidationError", async () => {
 		const client = httpAdapter().build();
 		try {
-			await client.update(1, { firstName: "__validation__" });
+			await client.update("1", { firstName: "__validation__" });
 			throw new Error("expected throw");
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);

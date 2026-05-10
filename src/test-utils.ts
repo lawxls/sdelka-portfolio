@@ -70,7 +70,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 		],
 		employees: [
 			{
-				id: 1,
+				id: "1",
 				firstName: "Иван",
 				lastName: "Иванов",
 				patronymic: "Иванович",
@@ -80,7 +80,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 				email: "ivan@example.com",
 				permissions: {
 					id: `perm-${id}`,
-					employeeId: 1,
+					employeeId: "1",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",
@@ -114,10 +114,10 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 		id,
 		itemId: "item-1",
 		companyName: `Поставщик ${id}`,
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		inn: "0000000000",
-		companyType: "производитель",
+		companyType: "manufacturer",
 		region: "Москва",
 		foundedYear: 2005,
 		revenue: 100_000_000,

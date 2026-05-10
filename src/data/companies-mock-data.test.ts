@@ -39,7 +39,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		],
 		employees: [
 			{
-				id: 1,
+				id: "1",
 				firstName: "Иван",
 				lastName: "Иванов",
 				patronymic: "Иванович",
@@ -49,7 +49,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 				email: "ivan@example.com",
 				permissions: {
 					id: "perm-1",
-					employeeId: 1,
+					employeeId: "1",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",
@@ -103,7 +103,7 @@ describe("fetchCompaniesMock", () => {
 	it("sorts by employeeCount", async () => {
 		const empl = (id: number) =>
 			Array.from({ length: id }, (_, i) => ({
-				id: i + 1,
+				id: String(i + 1),
 				firstName: "x",
 				lastName: "y",
 				patronymic: "",
@@ -113,7 +113,7 @@ describe("fetchCompaniesMock", () => {
 				email: "",
 				permissions: {
 					id: `p${i}`,
-					employeeId: i + 1,
+					employeeId: String(i + 1),
 					tenders: "none" as const,
 					positions: "none" as const,
 					tasks: "none" as const,
@@ -280,7 +280,7 @@ describe("createEmployeeMock", () => {
 			phone: "+79991234567",
 			email: "anna@example.com",
 		});
-		expect(created.id).toBeGreaterThan(0);
+		expect(created.id).toMatch(/^\d+$/);
 		expect(created.firstName).toBe("Анна");
 		expect(created.permissions.employeeId).toBe(created.id);
 		expect(created.permissions.tenders).toBe("none");
@@ -302,7 +302,7 @@ describe("updateEmployeeMock", () => {
 
 	it("throws when employee not found", async () => {
 		_setCompanies([makeStored("c1")]);
-		await expect(updateEmployeeMock("c1", 999, { position: "x" })).rejects.toThrow();
+		await expect(updateEmployeeMock("c1", "999", { position: "x" })).rejects.toThrow();
 	});
 });
 

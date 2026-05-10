@@ -84,7 +84,7 @@ const TEST_COMPANIES: Company[] = [
 		addresses: [{ id: "addr-1", name: "Офис", address: "г. Москва, ул. Тестовая, д. 1", phone: "", isMain: true }],
 		employees: [
 			{
-				id: 1,
+				id: "1",
 				firstName: "Иван",
 				lastName: "Иванов",
 				patronymic: "",
@@ -94,7 +94,7 @@ const TEST_COMPANIES: Company[] = [
 				email: "",
 				permissions: {
 					id: "p1",
-					employeeId: 1,
+					employeeId: "1",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",

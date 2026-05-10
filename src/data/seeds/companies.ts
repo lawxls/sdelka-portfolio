@@ -33,7 +33,7 @@ export const SEED_COMPANIES: Company[] = [
 		],
 		employees: [
 			{
-				id: 1,
+				id: "1",
 				firstName: "Иван",
 				lastName: "Журавлёв",
 				patronymic: "Сергеевич",
@@ -44,7 +44,7 @@ export const SEED_COMPANIES: Company[] = [
 				registeredAt: "2024-01-15T10:00:00Z",
 				permissions: {
 					id: "perm-c1-1",
-					employeeId: 1,
+					employeeId: "1",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",
@@ -54,7 +54,7 @@ export const SEED_COMPANIES: Company[] = [
 				},
 			},
 			{
-				id: 2,
+				id: "2",
 				firstName: "Ольга",
 				lastName: "Соколова",
 				patronymic: "Андреевна",
@@ -65,7 +65,7 @@ export const SEED_COMPANIES: Company[] = [
 				registeredAt: "2024-02-01T10:00:00Z",
 				permissions: {
 					id: "perm-c1-2",
-					employeeId: 2,
+					employeeId: "2",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",
@@ -75,7 +75,7 @@ export const SEED_COMPANIES: Company[] = [
 				},
 			},
 			{
-				id: 3,
+				id: "3",
 				firstName: "Дмитрий",
 				lastName: "Орлов",
 				patronymic: "Михайлович",
@@ -86,7 +86,7 @@ export const SEED_COMPANIES: Company[] = [
 				registeredAt: "2024-03-12T10:00:00Z",
 				permissions: {
 					id: "perm-c1-3",
-					employeeId: 3,
+					employeeId: "3",
 					tenders: "edit",
 					positions: "edit",
 					tasks: "edit",
@@ -96,7 +96,7 @@ export const SEED_COMPANIES: Company[] = [
 				},
 			},
 			{
-				id: 4,
+				id: "4",
 				firstName: "Екатерина",
 				lastName: "Белова",
 				patronymic: "Игоревна",
@@ -107,7 +107,7 @@ export const SEED_COMPANIES: Company[] = [
 				registeredAt: "2024-05-20T10:00:00Z",
 				permissions: {
 					id: "perm-c1-4",
-					employeeId: 4,
+					employeeId: "4",
 					tenders: "view",
 					positions: "view",
 					tasks: "view",

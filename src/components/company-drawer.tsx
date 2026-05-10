@@ -607,8 +607,8 @@ function EmployeesTab({
 	companyId: string;
 	initialAddEmployee?: boolean;
 }) {
-	const [expandedId, setExpandedId] = useState<number | null>(null);
-	const [editingId, setEditingId] = useState<number | null>(null);
+	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [editingId, setEditingId] = useState<string | null>(null);
 	const [inviteOpen, setInviteOpen] = useState(initialAddEmployee ?? false);
 
 	const updateMutation = useUpdateEmployee(companyId);
@@ -616,7 +616,7 @@ function EmployeesTab({
 	const permsMutation = useUpdateEmployeePermissions(companyId);
 	const { data: me } = useMe();
 
-	function handleSave(employeeId: number, original: Employee, form: EmployeeFormState) {
+	function handleSave(employeeId: string, original: Employee, form: EmployeeFormState) {
 		const changed: UpdateEmployeeData = {};
 		if (form.firstName !== original.firstName) changed.firstName = form.firstName;
 		if (form.lastName !== original.lastName) changed.lastName = form.lastName;
@@ -634,20 +634,20 @@ function EmployeesTab({
 		updateMutation.mutate({ employeeId, data: changed }, { onSuccess: () => setEditingId(null) });
 	}
 
-	function handleDelete(employeeId: number) {
+	function handleDelete(employeeId: string) {
 		deleteMutation.mutate(employeeId, { onError: () => toast.error("Не удалось удалить сотрудника") });
 	}
 
-	function handlePermissionChange(employeeId: number, module: PermissionModuleKey, level: PermissionLevel) {
+	function handlePermissionChange(employeeId: string, module: PermissionModuleKey, level: PermissionLevel) {
 		permsMutation.mutate({ employeeId, data: { [module]: level } });
 	}
 
-	function handleEdit(employeeId: number) {
+	function handleEdit(employeeId: string) {
 		setExpandedId(employeeId);
 		setEditingId(employeeId);
 	}
 
-	function handleToggle(employeeId: number) {
+	function handleToggle(employeeId: string) {
 		setExpandedId(expandedId === employeeId ? null : employeeId);
 		if (editingId === employeeId) setEditingId(null);
 	}
@@ -663,7 +663,7 @@ function EmployeesTab({
 					isExpanded={expandedId === emp.id}
 					isEditing={editingId === emp.id}
 					canDelete={company.employees.length > 1}
-					canEdit={!isUserRole || emp.id === me?.id}
+					canEdit={!isUserRole || (me != null && emp.id === String(me.id))}
 					onToggle={() => handleToggle(emp.id)}
 					onEdit={() => handleEdit(emp.id)}
 					onCancelEdit={() => setEditingId(null)}

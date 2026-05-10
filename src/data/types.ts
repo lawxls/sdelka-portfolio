@@ -270,7 +270,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 
 export interface EmployeePermissions {
 	id: string;
-	employeeId: number;
+	employeeId: string;
 	tenders: PermissionLevel;
 	positions: PermissionLevel;
 	tasks: PermissionLevel;
@@ -280,7 +280,7 @@ export interface EmployeePermissions {
 }
 
 export interface Employee {
-	id: number;
+	id: string;
 	firstName: string;
 	lastName: string;
 	patronymic: string;

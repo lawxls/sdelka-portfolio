@@ -1,3 +1,5 @@
+import { hash } from "./hash";
+
 const AVATAR_COLORS: Record<string, string> = {
 	red: "bg-folder-red",
 	orange: "bg-folder-orange",
@@ -15,7 +17,8 @@ export function getAvatarColor(icon: string): string {
 	return AVATAR_COLORS[icon] ?? "bg-folder-blue";
 }
 
-export function getAvatarColorForId(id: number): string {
-	const key = AVATAR_COLOR_KEYS[Math.abs(id) % AVATAR_COLOR_KEYS.length];
+export function getAvatarColorForId(id: string | number): string {
+	const n = typeof id === "number" ? Math.abs(id) : hash(id);
+	const key = AVATAR_COLOR_KEYS[n % AVATAR_COLOR_KEYS.length];
 	return getAvatarColor(key);
 }

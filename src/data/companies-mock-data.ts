@@ -250,9 +250,9 @@ export interface UpdatePermissionsData {
 }
 
 let employeeIdCounter = 1000;
-function nextEmployeeId(): number {
+function nextEmployeeId(): string {
 	employeeIdCounter += 1;
-	return employeeIdCounter;
+	return String(employeeIdCounter);
 }
 
 export async function createEmployeeMock(
@@ -288,7 +288,7 @@ export async function createEmployeeMock(
 
 export async function updateEmployeeMock(
 	companyId: string,
-	employeeId: number,
+	employeeId: string,
 	data: UpdateEmployeeData,
 ): Promise<Employee & { permissions: EmployeePermissions }> {
 	await delay();
@@ -300,7 +300,7 @@ export async function updateEmployeeMock(
 	return { ...e, permissions: { ...e.permissions } };
 }
 
-export async function deleteEmployeeMock(companyId: string, employeeId: number): Promise<void> {
+export async function deleteEmployeeMock(companyId: string, employeeId: string): Promise<void> {
 	await delay();
 	const company = requireCompany(companyId);
 	company.employees = company.employees.filter((e) => e.id !== employeeId);
@@ -308,7 +308,7 @@ export async function deleteEmployeeMock(companyId: string, employeeId: number):
 
 export async function updateEmployeePermissionsMock(
 	companyId: string,
-	employeeId: number,
+	employeeId: string,
 	data: UpdatePermissionsData,
 ): Promise<EmployeePermissions> {
 	await delay();

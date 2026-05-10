@@ -43,7 +43,7 @@ export function EmployeesSettingsPage() {
 	const { employees } = useWorkspaceEmployees();
 	const deleteMutation = useDeleteWorkspaceEmployees();
 
-	const [selected, setSelected] = useState<Set<number>>(new Set());
+	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const [searchExpanded, setSearchExpanded] = useState(false);
 	const [archiveActive, setArchiveActive] = useState(false);
@@ -72,7 +72,7 @@ export function EmployeesSettingsPage() {
 		[roleFilter],
 	);
 
-	function toggleRow(id: number) {
+	function toggleRow(id: string) {
 		setSelected((prev) => {
 			const next = new Set(prev);
 			if (next.has(id)) next.delete(id);
@@ -105,7 +105,7 @@ export function EmployeesSettingsPage() {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
-				next.set("employee", String(employee.id));
+				next.set("employee", employee.id);
 				return next;
 			},
 			{ replace: true },

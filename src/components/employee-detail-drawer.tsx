@@ -29,8 +29,7 @@ const TABS: { key: DrawerTab; label: string }[] = [
 
 export function EmployeeDetailDrawer() {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const employeeIdStr = searchParams.get("employee");
-	const employeeId = employeeIdStr ? Number(employeeIdStr) : null;
+	const employeeId = searchParams.get("employee");
 	const open = employeeId != null;
 
 	function handleClose() {
@@ -58,7 +57,7 @@ export function EmployeeDetailDrawer() {
 	);
 }
 
-function EmployeeDetailContent({ employeeId }: { employeeId: number }) {
+function EmployeeDetailContent({ employeeId }: { employeeId: string }) {
 	const [activeTab, setActiveTab] = useState<DrawerTab>("info");
 	const { employee, isLoading, error } = useWorkspaceEmployeeDetail(employeeId);
 	const updatePermsMutation = useUpdateWorkspaceEmployeePermissions();

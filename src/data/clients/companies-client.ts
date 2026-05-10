@@ -33,11 +33,11 @@ export interface CompaniesClient {
 	deleteAddress(companyId: string, addressId: string): Promise<void>;
 
 	createEmployee(companyId: string, data: CreateEmployeeData): Promise<EmployeeWithPermissions>;
-	updateEmployee(companyId: string, employeeId: number, data: UpdateEmployeeData): Promise<EmployeeWithPermissions>;
-	deleteEmployee(companyId: string, employeeId: number): Promise<void>;
+	updateEmployee(companyId: string, employeeId: string, data: UpdateEmployeeData): Promise<EmployeeWithPermissions>;
+	deleteEmployee(companyId: string, employeeId: string): Promise<void>;
 	updateEmployeePermissions(
 		companyId: string,
-		employeeId: number,
+		employeeId: string,
 		data: UpdatePermissionsData,
 	): Promise<EmployeePermissions>;
 }

@@ -210,10 +210,10 @@ describe("useUpdateEmployee", () => {
 		const client = fakeCompaniesClient({ updateEmployee });
 
 		const { result } = renderHook(() => useUpdateEmployee("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate({ employeeId: 1, data: { position: "CEO" } });
+		result.current.mutate({ employeeId: "1", data: { position: "CEO" } });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(updateEmployee).toHaveBeenCalledWith("c1", 1, { position: "CEO" });
+		expect(updateEmployee).toHaveBeenCalledWith("c1", "1", { position: "CEO" });
 	});
 });
 
@@ -223,10 +223,10 @@ describe("useDeleteEmployee", () => {
 		const client = fakeCompaniesClient({ deleteEmployee });
 
 		const { result } = renderHook(() => useDeleteEmployee("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate(1);
+		result.current.mutate("1");
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(deleteEmployee).toHaveBeenCalledWith("c1", 1);
+		expect(deleteEmployee).toHaveBeenCalledWith("c1", "1");
 	});
 });
 
@@ -234,7 +234,7 @@ describe("useUpdateEmployeePermissions", () => {
 	it("calls client.updateEmployeePermissions with data", async () => {
 		const updateEmployeePermissions = vi.fn().mockResolvedValue({
 			id: "p1",
-			employeeId: 1,
+			employeeId: "1",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -245,9 +245,9 @@ describe("useUpdateEmployeePermissions", () => {
 		const client = fakeCompaniesClient({ updateEmployeePermissions });
 
 		const { result } = renderHook(() => useUpdateEmployeePermissions("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate({ employeeId: 1, data: { employees: "view" } });
+		result.current.mutate({ employeeId: "1", data: { employees: "view" } });
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(updateEmployeePermissions).toHaveBeenCalledWith("c1", 1, { employees: "view" });
+		expect(updateEmployeePermissions).toHaveBeenCalledWith("c1", "1", { employees: "view" });
 	});
 });

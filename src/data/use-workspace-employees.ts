@@ -21,11 +21,11 @@ export function useWorkspaceEmployees(options?: { enabled?: boolean }) {
 	};
 }
 
-export function useWorkspaceEmployeeDetail(id: number | null) {
+export function useWorkspaceEmployeeDetail(id: string | null) {
 	const client = useWorkspaceEmployeesClient();
 	const query = useQuery({
 		queryKey: ["workspace-employee", id],
-		queryFn: () => client.get(id as number),
+		queryFn: () => client.get(id as string),
 		enabled: id != null,
 	});
 
@@ -53,7 +53,7 @@ export function useDeleteWorkspaceEmployees() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: (ids: number[]) => client.delete(ids),
+		mutationFn: (ids: string[]) => client.delete(ids),
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
 		},
@@ -65,7 +65,7 @@ export function useUpdateWorkspaceEmployee() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: number; data: UpdateWorkspaceEmployeeData }) => client.update(id, data),
+		mutationFn: ({ id, data }: { id: string; data: UpdateWorkspaceEmployeeData }) => client.update(id, data),
 		onSettled: (_data, _error, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employee", variables.id] });
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
@@ -78,7 +78,7 @@ export function useUpdateWorkspaceEmployeePermissions() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: ({ id, data }: { id: number; data: UpdatePermissionsData }) => client.updatePermissions(id, data),
+		mutationFn: ({ id, data }: { id: string; data: UpdatePermissionsData }) => client.updatePermissions(id, data),
 		onSettled: (_data, _error, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employee", variables.id] });
 		},

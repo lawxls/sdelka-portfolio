@@ -24,7 +24,7 @@ const MAIN_COMPANY_SUMMARY: CompanySummary = {
  */
 export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
-		id: 1,
+		id: "1",
 		firstName: "Иван",
 		lastName: "Журавлёв",
 		patronymic: "Сергеевич",
@@ -36,7 +36,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-1",
-			employeeId: 1,
+			employeeId: "1",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -46,7 +46,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 2,
+		id: "2",
 		firstName: "Ольга",
 		lastName: "Соколова",
 		patronymic: "Андреевна",
@@ -58,7 +58,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-2",
-			employeeId: 2,
+			employeeId: "2",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -68,7 +68,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 3,
+		id: "3",
 		firstName: "Дмитрий",
 		lastName: "Орлов",
 		patronymic: "Михайлович",
@@ -80,7 +80,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-3",
-			employeeId: 3,
+			employeeId: "3",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -90,7 +90,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 4,
+		id: "4",
 		firstName: "Екатерина",
 		lastName: "Белова",
 		patronymic: "Игоревна",
@@ -102,7 +102,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-4",
-			employeeId: 4,
+			employeeId: "4",
 			tenders: "view",
 			positions: "view",
 			tasks: "view",
@@ -112,7 +112,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 5,
+		id: "5",
 		firstName: "Николай",
 		lastName: "Фёдоров",
 		patronymic: "Олегович",
@@ -124,7 +124,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-5",
-			employeeId: 5,
+			employeeId: "5",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -134,7 +134,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 6,
+		id: "6",
 		firstName: "Анна",
 		lastName: "Смирнова",
 		patronymic: "Николаевна",
@@ -146,7 +146,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [MAIN_COMPANY_SUMMARY],
 		permissions: {
 			id: "perm-w-6",
-			employeeId: 6,
+			employeeId: "6",
 			tenders: "view",
 			positions: "view",
 			tasks: "view",
@@ -156,7 +156,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 7,
+		id: "7",
 		firstName: "Дмитрий",
 		lastName: "Попов",
 		patronymic: "",
@@ -168,7 +168,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [],
 		permissions: {
 			id: "perm-w-7",
-			employeeId: 7,
+			employeeId: "7",
 			tenders: "none",
 			positions: "none",
 			tasks: "none",

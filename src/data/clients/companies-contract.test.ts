@@ -174,10 +174,10 @@ function httpAdapter(seed: Company[]): HttpHarness {
 				employeeIdCounter += 1;
 				const employee = {
 					...data,
-					id: employeeIdCounter,
+					id: String(employeeIdCounter),
 					permissions: {
 						id: `perm-${employeeIdCounter}`,
-						employeeId: employeeIdCounter,
+						employeeId: String(employeeIdCounter),
 						tenders: "none" as const,
 						positions: "none" as const,
 						tasks: "none" as const,
@@ -322,7 +322,7 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 			phone: "+7",
 			email: "a@b",
 		});
-		expect(employee.id).toBeGreaterThan(0);
+		expect(employee.id).toMatch(/^\d+$/);
 		expect(employee.permissions.tenders).toBe("none");
 		expect(employee.permissions.positions).toBe("none");
 	});

@@ -17,9 +17,9 @@ import type {
  */
 export interface WorkspaceEmployeesClient {
 	list(): Promise<WorkspaceEmployee[]>;
-	get(id: number): Promise<WorkspaceEmployeeDetail>;
+	get(id: string): Promise<WorkspaceEmployeeDetail>;
 	invite(invites: InviteEmployeeData[]): Promise<void>;
-	update(id: number, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail>;
-	delete(ids: number[]): Promise<void>;
-	updatePermissions(id: number, data: UpdatePermissionsData): Promise<EmployeePermissions>;
+	update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail>;
+	delete(ids: string[]): Promise<void>;
+	updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions>;
 }

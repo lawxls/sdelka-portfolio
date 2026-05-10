@@ -170,7 +170,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 			await delay();
 			const company = require(companyId);
 			employeeIdCounter += 1;
-			const id = employeeIdCounter;
+			const id = String(employeeIdCounter);
 			const employee: EmployeeWithPermissions = {
 				id,
 				firstName: data.firstName,
@@ -197,7 +197,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 
 		async updateEmployee(
 			companyId: string,
-			employeeId: number,
+			employeeId: string,
 			data: UpdateEmployeeData,
 		): Promise<EmployeeWithPermissions> {
 			await delay();
@@ -209,7 +209,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 			return { ...e, permissions: { ...e.permissions } };
 		},
 
-		async deleteEmployee(companyId: string, employeeId: number): Promise<void> {
+		async deleteEmployee(companyId: string, employeeId: string): Promise<void> {
 			await delay();
 			const company = require(companyId);
 			company.employees = company.employees.filter((e) => e.id !== employeeId);
@@ -217,7 +217,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 
 		async updateEmployeePermissions(
 			companyId: string,
-			employeeId: number,
+			employeeId: string,
 			data: UpdatePermissionsData,
 		): Promise<EmployeePermissions> {
 			await delay();

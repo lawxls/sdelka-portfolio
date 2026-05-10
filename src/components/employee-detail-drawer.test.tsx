@@ -13,7 +13,7 @@ import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 
 const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
-	id: 1,
+	id: "1",
 	firstName: "Иван",
 	lastName: "Иванов",
 	patronymic: "Иванович",
@@ -34,7 +34,7 @@ const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
 	],
 	permissions: {
 		id: "perm-1",
-		employeeId: 1,
+		employeeId: "1",
 		tenders: "view",
 		positions: "view",
 		tasks: "edit",
@@ -45,7 +45,7 @@ const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
 };
 
 const MOCK_EMPLOYEE_PENDING: WorkspaceEmployeeDetail = {
-	id: 2,
+	id: "2",
 	firstName: "Мария",
 	lastName: "Петрова",
 	patronymic: "Сергеевна",
@@ -57,7 +57,7 @@ const MOCK_EMPLOYEE_PENDING: WorkspaceEmployeeDetail = {
 	companies: [],
 	permissions: {
 		id: "perm-2",
-		employeeId: 2,
+		employeeId: "2",
 		tenders: "none",
 		positions: "none",
 		tasks: "none",
@@ -161,7 +161,7 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 		await user.click(screen.getByTestId("perm-tenders-edit"));
 
 		await waitFor(async () => {
-			const detail = await workspaceEmployees.get(1);
+			const detail = await workspaceEmployees.get("1");
 			expect(detail.permissions.tenders).toBe("edit");
 		});
 	});

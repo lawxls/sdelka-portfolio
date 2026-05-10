@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe("useLogin", () => {
 	test("calls client.login and stores access token on success", async () => {
-		const login = vi.fn().mockResolvedValue({ access: "fresh-access", user: { id: 1, email: "a@b.com" } });
+		const login = vi.fn().mockResolvedValue({ access: "fresh-access", user: { id: "1", email: "a@b.com" } });
 		const client = fakeSessionClient({ login });
 
 		const { result } = renderHook(() => useLogin(), { wrapper: wrapperFactory(client) });
@@ -95,7 +95,7 @@ describe("useLogout", () => {
 
 	test("clears the react-query cache so the next signed-in user starts fresh", async () => {
 		setTokens("existing-access");
-		queryClient.setQueryData(["me"], { id: 1, email: "a@b.com" });
+		queryClient.setQueryData(["me"], { id: "1", email: "a@b.com" });
 		queryClient.setQueryData(["companies"], [{ id: "company-1" }]);
 
 		const logout = vi.fn().mockResolvedValue(undefined);
@@ -143,7 +143,7 @@ describe("useLogout", () => {
 
 describe("useRegister", () => {
 	test("calls client.register and resolves with the new user record without storing tokens", async () => {
-		const register = vi.fn().mockResolvedValue({ user: { id: 99, email: "newuser@example.com" } });
+		const register = vi.fn().mockResolvedValue({ user: { id: "99", email: "newuser@example.com" } });
 		const client = fakeSessionClient({ register });
 
 		const { result } = renderHook(() => useRegister(), { wrapper: wrapperFactory(client) });
@@ -200,7 +200,7 @@ describe("useRegister", () => {
 
 describe("useConfirmEmail", () => {
 	test("calls client.confirmEmail and stores access token on success (auto-login)", async () => {
-		const confirmEmail = vi.fn().mockResolvedValue({ access: "confirmed-access", user: { id: 5, email: "x@y.z" } });
+		const confirmEmail = vi.fn().mockResolvedValue({ access: "confirmed-access", user: { id: "5", email: "x@y.z" } });
 		const client = fakeSessionClient({ confirmEmail });
 
 		const { result } = renderHook(() => useConfirmEmail(), { wrapper: wrapperFactory(client) });

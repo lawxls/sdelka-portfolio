@@ -52,12 +52,12 @@ export function createInMemoryWorkspaceEmployeesClient(
 	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
 	let idCounter = 1000;
 	const getCompanySummaries: GetCompanySummariesByIds = options?.getCompanySummaries ?? (async () => []);
-	function nextEmployeeId(): number {
+	function nextEmployeeId(): string {
 		idCounter += 1;
-		return idCounter;
+		return String(idCounter);
 	}
 
-	function requireIndex(id: number): number {
+	function requireIndex(id: string): number {
 		const idx = store.findIndex((e) => e.id === id);
 		if (idx === -1) throw new NotFoundError({ detail: `Workspace employee ${id} not found` });
 		return idx;
@@ -72,7 +72,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 			}));
 		},
 
-		async get(id: number): Promise<WorkspaceEmployeeDetail> {
+		async get(id: string): Promise<WorkspaceEmployeeDetail> {
 			await delay();
 			return cloneEmployee(store[requireIndex(id)]);
 		},
@@ -107,14 +107,14 @@ export function createInMemoryWorkspaceEmployeesClient(
 			}
 		},
 
-		async update(id: number, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail> {
+		async update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail> {
 			await delay();
 			const idx = requireIndex(id);
 			store[idx] = { ...store[idx], ...data };
 			return cloneEmployee(store[idx]);
 		},
 
-		async delete(ids: number[]): Promise<void> {
+		async delete(ids: string[]): Promise<void> {
 			await delay();
 			const toRemove = new Set(ids);
 			store = store.filter((e) => {
@@ -123,7 +123,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 			});
 		},
 
-		async updatePermissions(id: number, data: UpdatePermissionsData): Promise<EmployeePermissions> {
+		async updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions> {
 			await delay();
 			const idx = requireIndex(id);
 			const updated = { ...store[idx].permissions, ...data };

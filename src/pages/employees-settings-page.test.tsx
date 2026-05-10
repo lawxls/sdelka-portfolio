@@ -15,7 +15,7 @@ import { EmployeesSettingsPage } from "./employees-settings-page";
 
 const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
-		id: 1,
+		id: "1",
 		firstName: "Иван",
 		lastName: "Иванов",
 		patronymic: "Иванович",
@@ -36,7 +36,7 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		],
 		permissions: {
 			id: "perm-1",
-			employeeId: 1,
+			employeeId: "1",
 			tenders: "edit",
 			positions: "edit",
 			tasks: "edit",
@@ -46,7 +46,7 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		},
 	},
 	{
-		id: 2,
+		id: "2",
 		firstName: "Мария",
 		lastName: "Петрова",
 		patronymic: "Сергеевна",
@@ -58,7 +58,7 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		companies: [],
 		permissions: {
 			id: "perm-2",
-			employeeId: 2,
+			employeeId: "2",
 			tenders: "none",
 			positions: "none",
 			tasks: "none",

@@ -37,7 +37,7 @@ const MOCK_COMPANIES: Company[] = [
 			{ id: "addr-2", name: "Склад", address: "г. Подольск", phone: "", isMain: false },
 		],
 		employees: Array.from({ length: 12 }, (_, i) => ({
-			id: i + 1,
+			id: String(i + 1),
 			firstName: "x",
 			lastName: "y",
 			patronymic: "",
@@ -47,7 +47,7 @@ const MOCK_COMPANIES: Company[] = [
 			email: "",
 			permissions: {
 				id: `p${i}`,
-				employeeId: i + 1,
+				employeeId: String(i + 1),
 				tenders: "none" as const,
 				positions: "none" as const,
 				tasks: "none" as const,
@@ -62,7 +62,7 @@ const MOCK_COMPANIES: Company[] = [
 		name: "СтройМастер",
 		addresses: [{ id: "addr-3", name: "Центральный", address: "г. Казань", phone: "", isMain: true }],
 		employees: Array.from({ length: 5 }, (_, i) => ({
-			id: 100 + i,
+			id: String(100 + i),
 			firstName: "x",
 			lastName: "y",
 			patronymic: "",
@@ -72,7 +72,7 @@ const MOCK_COMPANIES: Company[] = [
 			email: "",
 			permissions: {
 				id: `p2-${i}`,
-				employeeId: 100 + i,
+				employeeId: String(100 + i),
 				tenders: "none" as const,
 				positions: "none" as const,
 				tasks: "none" as const,
