@@ -84,7 +84,7 @@ describe("ResetPasswordPage", () => {
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "short");
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-		expect(screen.getByText("Пароль должен содержать минимум 8 символов")).toBeInTheDocument();
+		expect(screen.getByText("Пароль должен содержать минимум 10 символов")).toBeInTheDocument();
 	});
 
 	test("inline error: passwords do not match (client-side validation)", async () => {

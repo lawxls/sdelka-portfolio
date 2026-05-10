@@ -125,7 +125,7 @@ describe("RegisterPage", () => {
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Пароль должен содержать минимум 8 символов")).toBeInTheDocument();
+			expect(screen.getByText("Пароль должен содержать минимум 10 символов")).toBeInTheDocument();
 		});
 	});
 
