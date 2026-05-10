@@ -54,7 +54,7 @@ function makeSeed(id: string, overrides: Partial<SupplierSeed> = {}): SupplierSe
 const SEEDS: SupplierSeed[] = [
 	makeSeed("supplier-x-1", { companyName: "Альфа" }),
 	makeSeed("supplier-x-2", { companyName: "Бета" }),
-	makeSeed("supplier-x-3", { companyName: "Гамма", status: "получено_кп", pricePerUnit: 100, tco: 110 }),
+	makeSeed("supplier-x-3", { companyName: "Гамма", status: "quote_received", pricePerUnit: 100, tco: 110 }),
 ];
 
 interface Adapter {
@@ -162,7 +162,7 @@ function httpAdapter(): Adapter {
 				for (const id of data.supplierIds) {
 					const s = store.get(id);
 					if (s && s.status === "new") {
-						store.set(id, { ...s, status: "кп_запрошено" });
+						store.set(id, { ...s, status: "quote_requested" });
 						transitioned.push(id);
 					}
 				}
@@ -276,9 +276,9 @@ describe.each(adapters.map((make) => [make().name, make]))("SuppliersClient cont
 		expect(suppliers.find((s) => s.id === "supplier-x-1")).toBeUndefined();
 	});
 
-	it("sendRequest transitions new → кп_запрошено and returns ids touched", async () => {
+	it("sendRequest transitions new → quote_requested and returns ids touched", async () => {
 		const ids = await client.sendRequest(ITEM_ID, ["supplier-x-1", "supplier-x-3"]);
-		// supplier-x-3 is already получено_кп, so only supplier-x-1 transitions.
+		// supplier-x-3 is already quote_received, so only supplier-x-1 transitions.
 		expect(ids).toEqual(["supplier-x-1"]);
 	});
 

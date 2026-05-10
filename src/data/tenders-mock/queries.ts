@@ -79,7 +79,7 @@ function summarize(tender: ProcurementInquiry, allItems: readonly ProcurementIte
 		deadline: tender.deadline,
 		status: getTenderStatus(items),
 		positionsCount: items.length,
-		kpCount: countDistinctSuppliers(items, (s) => s.status === "получено_кп"),
+		kpCount: countDistinctSuppliers(items, (s) => s.status === "quote_received"),
 		suppliersCount: countDistinctSuppliers(items, (s) => !s.archived),
 	};
 }

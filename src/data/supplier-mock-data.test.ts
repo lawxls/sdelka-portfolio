@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 const ALL = { limit: Number.POSITIVE_INFINITY };
-const ITEM_1_KP_COUNT = ORMATEK_SUPPLIERS.filter((s) => s.status === "получено_кп").length;
+const ITEM_1_KP_COUNT = ORMATEK_SUPPLIERS.filter((s) => s.status === "quote_received").length;
 
 // Total non-archived supplier count for item-1 — derived from the mock layer at runtime
 // so tests stay agnostic to the exact candidate-pool target (spread 200–300 per item).
@@ -64,16 +64,16 @@ describe("supplier mock store", () => {
 		}
 	});
 
-	it("has получено_кп suppliers for item-1", async () => {
+	it("has quote_received suppliers for item-1", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		const kpCount = suppliers.filter((s) => s.status === "получено_кп").length;
+		const kpCount = suppliers.filter((s) => s.status === "quote_received").length;
 		// +1 for the auto-seeded «Ваш поставщик» row mirroring item-1.currentSupplier (ПолимерПром).
 		expect(kpCount).toBe(ITEM_1_KP_COUNT + 1);
 	});
 
-	it("получено_кп suppliers have non-null price and tco", async () => {
+	it("quote_received suppliers have non-null price and tco", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
+		const kpSuppliers = suppliers.filter((s) => s.status === "quote_received");
 		for (const s of kpSuppliers) {
 			expect(s.pricePerUnit).toBeTypeOf("number");
 			expect(s.tco).toBeTypeOf("number");
@@ -82,7 +82,7 @@ describe("supplier mock store", () => {
 
 	it("non-КП suppliers have null price and tco", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		const nonKp = suppliers.filter((s) => s.status !== "получено_кп");
+		const nonKp = suppliers.filter((s) => s.status !== "quote_received");
 		expect(nonKp.length).toBeGreaterThan(0);
 		for (const s of nonKp) {
 			expect(s.pricePerUnit).toBeNull();
@@ -92,7 +92,7 @@ describe("supplier mock store", () => {
 
 	it("tco equals pricePerUnit + round(deliveryCost / 100) for КП suppliers", async () => {
 		const { suppliers } = await getSuppliers("item-1", ALL);
-		const kpSuppliers = suppliers.filter((s) => s.status === "получено_кп");
+		const kpSuppliers = suppliers.filter((s) => s.status === "quote_received");
 		for (const s of kpSuppliers) {
 			expect(s.tco).toBe(Math.round((s.pricePerUnit ?? 0) + (s.deliveryCost ?? 0) / 100));
 		}
@@ -212,18 +212,18 @@ describe("getSuppliers sort", () => {
 
 describe("getSuppliers status filter", () => {
 	it("filters by a single status", async () => {
-		const { suppliers } = await getSuppliers("item-1", { statuses: ["получено_кп"] });
+		const { suppliers } = await getSuppliers("item-1", { statuses: ["quote_received"] });
 		expect(suppliers.length).toBeGreaterThan(0);
 		for (const s of suppliers) {
-			expect(s.status).toBe("получено_кп");
+			expect(s.status).toBe("quote_received");
 		}
 	});
 
 	it("filters by multiple statuses", async () => {
-		const { suppliers } = await getSuppliers("item-1", { statuses: ["получено_кп", "отказ"] });
+		const { suppliers } = await getSuppliers("item-1", { statuses: ["quote_received", "refused"] });
 		expect(suppliers.length).toBeGreaterThan(0);
 		for (const s of suppliers) {
-			expect(["получено_кп", "отказ"]).toContain(s.status);
+			expect(["quote_received", "refused"]).toContain(s.status);
 		}
 	});
 
@@ -272,17 +272,17 @@ describe("getSupplier (single)", () => {
 describe("getSuppliers combined search + sort + filter", () => {
 	it("applies search, status filter, and sort together", async () => {
 		const { suppliers: all } = await getSuppliers("item-1");
-		const kpSuppliers = all.filter((s) => s.status === "получено_кп");
+		const kpSuppliers = all.filter((s) => s.status === "quote_received");
 		// Use a substring from one of the КП suppliers
 		const searchTerm = kpSuppliers[0].companyName.slice(0, 3);
 		const { suppliers } = await getSuppliers("item-1", {
 			search: searchTerm,
-			statuses: ["получено_кп"],
+			statuses: ["quote_received"],
 			sort: "batchCost",
 			dir: "asc",
 		});
 		for (const s of suppliers) {
-			expect(s.status).toBe("получено_кп");
+			expect(s.status).toBe("quote_received");
 			expect(s.companyName.toLowerCase()).toContain(searchTerm.toLowerCase());
 		}
 	});

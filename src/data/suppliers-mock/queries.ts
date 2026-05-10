@@ -40,16 +40,16 @@ function applySupplierFilters(suppliers: Supplier[], params?: SupplierFilterPara
 	return result;
 }
 
-/** Default sort: "получено_кп" first, then TCO asc, then price/unit asc */
+/** Default sort: "quote_received" first, then TCO asc, then price/unit asc */
 // Rank by status so received КП surfaces first in the Предложения tab, and
-// candidates (new) surface first in the Поставщики pipeline tab (получено_кп is filtered out there).
+// candidates (new) surface first in the Поставщики pipeline tab (quote_received is filtered out there).
 const STATUS_RANK: Record<SupplierStatus, number> = {
-	получено_кп: 0,
+	quote_received: 0,
 	new: 1,
-	кп_запрошено: 2,
-	переговоры: 3,
-	отказ: 4,
-	ошибка: 5,
+	quote_requested: 2,
+	negotiating: 3,
+	refused: 4,
+	error: 5,
 };
 
 function defaultSortSuppliers(suppliers: Supplier[]): Supplier[] {
@@ -161,7 +161,7 @@ export async function getSuppliers(
 	return { suppliers: page, nextCursor, total: filtered.length };
 }
 
-/** Returns the supplier's `получено_кп` quotes across all items, keyed by item.
+/** Returns the supplier's `quote_received` quotes across all items, keyed by item.
  * Used by the supplier drawer's «Предложения» tab. Suppliers are matched by INN
  * — the stable identity we enrich onto every seeded/generated supplier row.
  * Archived rows are excluded so the tab reflects active offers only.
@@ -174,7 +174,7 @@ export async function getSupplierQuotesByInn(inn: string, contextItemId: string)
 	const quotes: SupplierQuote[] = [];
 	for (const itemId of ALL_ITEM_IDS) {
 		const suppliers = getSuppliersForItem(itemId);
-		const match = suppliers.find((s) => s.inn === inn && s.status === "получено_кп" && !s.archived);
+		const match = suppliers.find((s) => s.inn === inn && s.status === "quote_received" && !s.archived);
 		if (!match) continue;
 		const item = _getItem(itemId);
 		const tender = item?.tenderId ? _getTender(item.tenderId) : null;

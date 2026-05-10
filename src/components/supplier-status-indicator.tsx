@@ -4,11 +4,11 @@ import { SUPPLIER_STATUS_CONFIG } from "@/data/supplier-types";
 
 export const STATUS_ICONS: Record<SupplierStatus, React.ComponentType<{ className?: string }>> = {
 	new: Circle,
-	кп_запрошено: Mail,
-	переговоры: MessagesSquare,
-	получено_кп: Check,
-	отказ: Ban,
-	ошибка: CircleAlert,
+	quote_requested: Mail,
+	negotiating: MessagesSquare,
+	quote_received: Check,
+	refused: Ban,
+	error: CircleAlert,
 };
 
 export function SupplierStatusIndicator({ status, className }: { status: SupplierStatus; className?: string }) {

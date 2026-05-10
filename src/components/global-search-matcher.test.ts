@@ -7,7 +7,7 @@ import type { CompanySummary, ProcurementItem } from "@/data/types";
 import { makeCompany, makeItem, makeSupplier, makeTask } from "@/test-utils";
 import { matchGlobal } from "./global-search-matcher";
 
-function makeEmployee(id: number, overrides: Partial<WorkspaceEmployee> = {}): WorkspaceEmployee {
+function makeEmployee(id: string, overrides: Partial<WorkspaceEmployee> = {}): WorkspaceEmployee {
 	return {
 		id,
 		firstName: "Иван",
@@ -90,28 +90,33 @@ describe("matchGlobal", () => {
 	it("attaches supplier status to each supplier result", () => {
 		const suppliers = [
 			makeSupplier("s1", { companyName: "test A", status: "new", inn: "1111111111" }),
-			makeSupplier("s2", { companyName: "test B", status: "переговоры", inn: "2222222222" }),
-			makeSupplier("s3", { companyName: "test C", status: "получено_кп", inn: "3333333333" }),
+			makeSupplier("s2", { companyName: "test B", status: "negotiating", inn: "2222222222" }),
+			makeSupplier("s3", { companyName: "test C", status: "quote_received", inn: "3333333333" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "test", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
 		expect(sup?.results.find((r) => r.id === "s1")).toMatchObject({ status: "new" });
-		expect(sup?.results.find((r) => r.id === "s2")).toMatchObject({ status: "переговоры" });
-		expect(sup?.results.find((r) => r.id === "s3")).toMatchObject({ status: "получено_кп" });
+		expect(sup?.results.find((r) => r.id === "s2")).toMatchObject({ status: "negotiating" });
+		expect(sup?.results.find((r) => r.id === "s3")).toMatchObject({ status: "quote_received" });
 	});
 
 	it("collapses the same supplier across items into one result by INN", () => {
 		const suppliers = [
-			makeSupplier("s1", { companyName: "ТД Дубликат", itemId: "item-2", status: "кп_запрошено", inn: "7755443322" }),
-			makeSupplier("s2", { companyName: "ТД Дубликат", itemId: "item-3", status: "получено_кп", inn: "7755443322" }),
-			makeSupplier("s3", { companyName: "ТД Дубликат", itemId: "item-4", status: "отказ", inn: "7755443322" }),
+			makeSupplier("s1", {
+				companyName: "ТД Дубликат",
+				itemId: "item-2",
+				status: "quote_requested",
+				inn: "7755443322",
+			}),
+			makeSupplier("s2", { companyName: "ТД Дубликат", itemId: "item-3", status: "quote_received", inn: "7755443322" }),
+			makeSupplier("s3", { companyName: "ТД Дубликат", itemId: "item-4", status: "refused", inn: "7755443322" }),
 			makeSupplier("s4", { companyName: "Другой поставщик", itemId: "item-2", status: "new", inn: "9999999999" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "дубликат", suppliers });
 		const sup = groups.find((g) => g.group === "suppliers");
 		expect(sup?.results).toHaveLength(1);
-		// Prefers the получено_кп instance (s2), whose drawer shows all offers.
-		expect(sup?.results[0]).toMatchObject({ id: "s2", status: "получено_кп" });
+		// Prefers the quote_received instance (s2), whose drawer shows all offers.
+		expect(sup?.results[0]).toMatchObject({ id: "s2", status: "quote_received" });
 		// Opens the supplier drawer directly — no item= param, so the item drawer
 		// stays closed behind the supplier drawer.
 		expect(sup?.results[0].href).toBe("/positions?supplier=s2&supplier_tab=offers");
@@ -119,8 +124,8 @@ describe("matchGlobal", () => {
 
 	it("supplier href opens the detail drawer without the item drawer for non-new statuses", () => {
 		const suppliers = [
-			makeSupplier("s1", { companyName: "Alphacorp", itemId: "item-2", status: "получено_кп", inn: "1111111111" }),
-			makeSupplier("s2", { companyName: "Alphabeta", itemId: "item-3", status: "переговоры", inn: "2222222222" }),
+			makeSupplier("s1", { companyName: "Alphacorp", itemId: "item-2", status: "quote_received", inn: "1111111111" }),
+			makeSupplier("s2", { companyName: "Alphabeta", itemId: "item-3", status: "negotiating", inn: "2222222222" }),
 			makeSupplier("s3", { companyName: "Alphagamma", itemId: "item-4", status: "new", inn: "3333333333" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "alpha", suppliers });
@@ -143,10 +148,10 @@ describe("matchGlobal", () => {
 
 	it("matches employees by full name and email", () => {
 		const employees = [
-			makeEmployee(1, { firstName: "Иван", lastName: "Петров", patronymic: "", email: "petrov@corp.ru" }),
-			makeEmployee(2, { firstName: "Пётр", lastName: "Иванов", patronymic: "", email: "ivanov@corp.ru" }),
-			makeEmployee(3, { firstName: "Мария", lastName: "Сидорова", patronymic: "", email: "ivan.s@corp.ru" }),
-			makeEmployee(4, { firstName: "Алексей", lastName: "Смирнов", patronymic: "", email: "a@s.ru" }),
+			makeEmployee("1", { firstName: "Иван", lastName: "Петров", patronymic: "", email: "petrov@corp.ru" }),
+			makeEmployee("2", { firstName: "Пётр", lastName: "Иванов", patronymic: "", email: "ivanov@corp.ru" }),
+			makeEmployee("3", { firstName: "Мария", lastName: "Сидорова", patronymic: "", email: "ivan.s@corp.ru" }),
+			makeEmployee("4", { firstName: "Алексей", lastName: "Смирнов", patronymic: "", email: "a@s.ru" }),
 		];
 		const groups = matchGlobal({ ...EMPTY, query: "иван", employees });
 		const g = groups.find((gr) => gr.group === "employees");
@@ -187,7 +192,7 @@ describe("matchGlobal", () => {
 			...EMPTY,
 			query: "ivan",
 			isPrivileged: false,
-			employees: [makeEmployee(1, { firstName: "Ivan" })],
+			employees: [makeEmployee("1", { firstName: "Ivan" })],
 			companies: [makeCompany("company-ivan", { name: "IvanCo" })],
 			inboxes: [makeInbox("e1", "ivan@corp.ru")],
 		});
@@ -203,7 +208,7 @@ describe("matchGlobal", () => {
 			items: [makeItem("1", { name: "test item" })],
 			suppliers: [makeSupplier("s1", { companyName: "test sup" })],
 			tasks: [makeTask("t1", { name: "test task" })],
-			employees: [makeEmployee(1, { firstName: "test" })],
+			employees: [makeEmployee("1", { firstName: "test" })],
 			companies: [makeCompany("c1", { name: "test co" })],
 			inboxes: [makeInbox("e1", "test@x.ru")],
 		});

@@ -31,7 +31,7 @@ function renderDrawer(props: Partial<React.ComponentProps<typeof SupplierDetailD
 			address: "г. Москва, ул. Промышленная, д. 15",
 			website: "https://alfa-trade.ru",
 			email: "info@alfa-trade.ru",
-			status: "получено_кп",
+			status: "quote_received",
 			pricePerUnit: 1200,
 			deliveryCost: 1500,
 			tco: 2700,
@@ -194,12 +194,12 @@ describe("SupplierDetailDrawer", () => {
 	});
 
 	describe("Предложения tab", () => {
-		test("renders empty state when supplier has no получено_кп quotes anywhere", async () => {
+		test("renders empty state when supplier has no quote_received quotes anywhere", async () => {
 			renderDrawer({
 				supplier: makeSupplier("s1", {
 					// An INN with no matching seeds → zero cross-item quotes
 					inn: "9999999999",
-					status: "кп_запрошено",
+					status: "quote_requested",
 				}),
 				activeTab: "offers",
 			});
@@ -213,8 +213,8 @@ describe("SupplierDetailDrawer", () => {
 			// Use a real enriched supplier so its INN lines up with the seed join in
 			// quotesByInn — hand-rolling an INN would miss the hash scheme.
 			const { suppliers } = await createInMemorySuppliersClient().listForItem("item-1");
-			const kp = suppliers.find((s) => s.status === "получено_кп" && !s.archived);
-			if (!kp) throw new Error("Expected at least one получено_кп supplier on item-1");
+			const kp = suppliers.find((s) => s.status === "quote_received" && !s.archived);
+			if (!kp) throw new Error("Expected at least one quote_received supplier on item-1");
 			renderDrawer({ supplier: kp, activeTab: "offers", onNavigateToItem });
 			const title = await screen.findByTestId("offer-card-title-item-1");
 			await user.click(title);
@@ -284,7 +284,7 @@ describe("SupplierDetailDrawer", () => {
 			renderDrawer({
 				activeTab: "chat",
 				supplier: makeSupplier("s1", {
-					status: "кп_запрошено",
+					status: "quote_requested",
 					chatHistory: [{ sender: "Агент", timestamp: "2026-02-20T10:00:00.000Z", body: "Тест", isOurs: true }],
 				}),
 			});
@@ -318,23 +318,23 @@ describe("SupplierDetailDrawer", () => {
 	});
 
 	describe("ChatComposer visibility", () => {
-		test("shows composer for кп_запрошено status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }) });
+		test("shows composer for quote_requested status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "quote_requested" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
 		test("shows composer for переговоры status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "переговоры" }) });
+			renderDrawer({ supplier: makeSupplier("s1", { status: "negotiating" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
-		test("shows composer for получено_кп status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "получено_кп" }) });
+		test("shows composer for quote_received status", () => {
+			renderDrawer({ supplier: makeSupplier("s1", { status: "quote_received" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
 		test("shows composer for отказ status", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "отказ" }) });
+			renderDrawer({ supplier: makeSupplier("s1", { status: "refused" }) });
 			expect(screen.getByRole("textbox")).toBeInTheDocument();
 		});
 
@@ -355,7 +355,7 @@ describe("SupplierDetailDrawer", () => {
 		});
 
 		test("hides prompt for non-candidate statuses", () => {
-			renderDrawer({ supplier: makeSupplier("s1", { status: "кп_запрошено" }) });
+			renderDrawer({ supplier: makeSupplier("s1", { status: "quote_requested" }) });
 			expect(screen.queryByTestId("candidate-chat-prompt")).not.toBeInTheDocument();
 		});
 
@@ -469,7 +469,7 @@ describe("SupplierDetailDrawer", () => {
 		test("renders «Ошибка доставки» badge on agent message for delivery_failed event", () => {
 			renderDrawer({
 				supplier: makeSupplier("s1", {
-					status: "ошибка",
+					status: "error",
 					chatHistory: [
 						{
 							sender: "Агент",

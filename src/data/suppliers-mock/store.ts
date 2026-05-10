@@ -85,7 +85,7 @@ export function listKnownItemIds(): string[] {
 	return [...itemIds];
 }
 
-/** Build a получено_кп Supplier row that mirrors the parent tender's `currentSupplier`
+/** Build a quote_received Supplier row that mirrors the parent tender's `currentSupplier`
  * (the «Ваш поставщик»). INN/companyName come from currentSupplier verbatim; profile
  * fields (region/revenue/etc.) are deterministically derived from the INN so the row
  * looks like a real legal entity. Returns null when the item has no parent tender,
@@ -109,7 +109,7 @@ function makeYourSupplier(itemId: string): Supplier | null {
 		id: yourSupplierId(itemId),
 		itemId,
 		companyName: cs.companyName,
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		...profile,
 		// Override the hash-derived INN with the one the user actually entered.

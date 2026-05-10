@@ -599,7 +599,7 @@ function ChatPanel({
 	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
 	const sendRequestMutation = useSendSupplierRequest();
 	const isCandidate = supplier.status === "new";
-	const isError = supplier.status === "ошибка";
+	const isError = supplier.status === "error";
 	// Candidates and «ошибка» rows keep a disabled composer so the thread still
 	// shows where messages will land once the request is (re)sent.
 	const showComposer = COMPOSABLE_STATUSES.has(supplier.status) || isCandidate || isError;

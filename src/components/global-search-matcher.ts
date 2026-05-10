@@ -82,7 +82,7 @@ function supplierHref(s: Supplier): string {
 	}
 	// Suppliers are workspace-level entities that may quote on many items.
 	// Open the detail drawer directly — no need to drag the item drawer along.
-	const tab = s.status === "получено_кп" ? "offers" : "info";
+	const tab = s.status === "quote_received" ? "offers" : "info";
 	return `/positions?supplier=${encodeURIComponent(s.id)}&supplier_tab=${tab}`;
 }
 
@@ -91,11 +91,11 @@ function supplierHref(s: Supplier): string {
 // context (offers > negotiation > quote requested > errors > refusals > bare
 // candidates that lack a drawer).
 const SUPPLIER_DEDUP_PRIORITY: Record<SupplierStatus, number> = {
-	получено_кп: 0,
-	переговоры: 1,
-	кп_запрошено: 2,
-	ошибка: 3,
-	отказ: 4,
+	quote_received: 0,
+	negotiating: 1,
+	quote_requested: 2,
+	error: 3,
+	refused: 4,
 	new: 5,
 };
 
@@ -168,10 +168,10 @@ export function matchGlobal(input: MatchInput): GroupResult[] {
 			},
 			(e) => ({
 				group: "employees",
-				id: String(e.id),
+				id: e.id,
 				name: `${e.lastName} ${e.firstName}`.trim(),
 				meta: e.email,
-				href: `/settings/employees?employee=${encodeURIComponent(String(e.id))}`,
+				href: `/settings/employees?employee=${encodeURIComponent(e.id)}`,
 			}),
 		);
 		if (employees.length > 0) groups.push({ group: "employees", results: employees });

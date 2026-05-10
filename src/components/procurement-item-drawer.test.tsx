@@ -25,7 +25,7 @@ import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { ProcurementItem } from "@/data/types";
 import { mockHostname } from "@/test-utils";
 
-// Cherry-pick a compact, deterministic seed: 3 получено_кп (rename one to ТД СОМ) + 7 others = 10 seeds.
+// Cherry-pick a compact, deterministic seed: 3 quote_received (rename one to ТД СОМ) + 7 others = 10 seeds.
 // Auto-generated pipeline candidates (15, 1 pre-archived) are appended on load per item.
 const TEST_SUPPLIERS: SupplierSeed[] = [
 	{ ...ORMATEK_SUPPLIERS[9], companyName: "ТД СОМ" },
@@ -40,7 +40,7 @@ const TEST_SUPPLIERS: SupplierSeed[] = [
 	ORMATEK_SUPPLIERS[6],
 ];
 
-const SEED_KP_COUNT = TEST_SUPPLIERS.filter((s) => s.status === "получено_кп").length;
+const SEED_KP_COUNT = TEST_SUPPLIERS.filter((s) => s.status === "quote_received").length;
 
 import { ProcurementItemDrawer } from "./procurement-item-drawer";
 
@@ -227,7 +227,7 @@ describe("ProcurementItemDrawer — Предложения (offers) tab", () => 
 		});
 	});
 
-	test("only shows получено_кп suppliers (plus pinned current-supplier row)", async () => {
+	test("only shows quote_received suppliers (plus pinned current-supplier row)", async () => {
 		renderDrawer(["/positions?item=item-1&tab=offers"]);
 		await waitFor(() => {
 			// Header + 1 pinned current-supplier + SEED_KP_COUNT КП rows.

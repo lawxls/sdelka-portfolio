@@ -16,12 +16,12 @@ export const ITEM: ProcurementItem = {
 };
 
 export const SUPPLIERS: SupplierSeed[] = [
-	// 1. получено_кп — best price
+	// 1. quote_received — best price
 	{
 		id: "supplier-item-6-1",
 		itemId: "item-6",
 		companyName: "ООО «Койра-Трейд»",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "sales@koira-trade.ru",
 		website: "https://koira-trade.ru",
@@ -62,12 +62,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 2. получено_кп
+	// 2. quote_received
 	{
 		id: "supplier-item-6-2",
 		itemId: "item-6",
 		companyName: "Lanka Coco Import",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "import@lankacoco.ru",
 		website: "https://lankacoco.ru",
@@ -102,12 +102,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 3. получено_кп
+	// 3. quote_received
 	{
 		id: "supplier-item-6-3",
 		itemId: "item-6",
 		companyName: "ТД «Кокос-Поставка»",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "info@kokos-postavka.ru",
 		website: "https://kokos-postavka.ru",
@@ -136,12 +136,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 4. получено_кп
+	// 4. quote_received
 	{
 		id: "supplier-item-6-4",
 		itemId: "item-6",
 		companyName: "ООО «Эко-Наполнители»",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "zakaz@eco-napolniteli.ru",
 		website: "https://eco-napolniteli.ru",
@@ -175,7 +175,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-5",
 		itemId: "item-6",
 		companyName: "АгроКокос",
-		status: "переговоры",
+		status: "negotiating",
 		archived: false,
 		email: "sales@agrokokos.ru",
 		website: "https://agrokokos.ru",
@@ -221,7 +221,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-6",
 		itemId: "item-6",
 		companyName: "ИП Беляков — натур. сырьё",
-		status: "переговоры",
+		status: "negotiating",
 		archived: false,
 		email: "belyakov.ip@mail.ru",
 		website: "",
@@ -256,12 +256,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 7. кп_запрошено
+	// 7. quote_requested
 	{
 		id: "supplier-item-6-7",
 		itemId: "item-6",
 		companyName: "Coir-Eco",
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		email: "info@coir-eco.ru",
 		website: "https://coir-eco.ru",
@@ -283,12 +283,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 8. кп_запрошено
+	// 8. quote_requested
 	{
 		id: "supplier-item-6-8",
 		itemId: "item-6",
 		companyName: "ООО «Балтика-Койра»",
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		email: "order@baltica-koira.ru",
 		website: "https://baltica-koira.ru",
@@ -310,12 +310,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 9. кп_запрошено
+	// 9. quote_requested
 	{
 		id: "supplier-item-6-9",
 		itemId: "item-6",
 		companyName: "КокосПремиум",
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		email: "sales@kokospremium.ru",
 		website: "https://kokospremium.ru",
@@ -342,7 +342,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-10",
 		itemId: "item-6",
 		companyName: "Natural Fiber Rus",
-		status: "отказ",
+		status: "refused",
 		archived: false,
 		email: "contact@natfiber.ru",
 		website: "https://natfiber.ru",
@@ -370,12 +370,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 			},
 		],
 	},
-	// 11. кп_запрошено
+	// 11. quote_requested
 	{
 		id: "supplier-item-6-11",
 		itemId: "item-6",
 		companyName: "ООО «Тропик-Импорт»",
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		email: "info@tropik-import.ru",
 		website: "https://tropik-import.ru",
@@ -390,12 +390,12 @@ export const SUPPLIERS: SupplierSeed[] = [
 		documents: [],
 		chatHistory: [],
 	},
-	// 12. кп_запрошено
+	// 12. quote_requested
 	{
 		id: "supplier-item-6-12",
 		itemId: "item-6",
 		companyName: "ИндСнаб-Койра",
-		status: "кп_запрошено",
+		status: "quote_requested",
 		archived: false,
 		email: "mail@indsnab-koira.ru",
 		website: "https://indsnab-koira.ru",
@@ -414,7 +414,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-13",
 		itemId: "item-6",
 		companyName: "Изолон",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "fillings@izolon.ru",
 		website: "https://izolon.ru",
@@ -447,7 +447,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-14",
 		itemId: "item-6",
 		companyName: "Синтез-Поролон",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "koira@sintez-poroloun.ru",
 		website: "https://sintez-poroloun.ru",
@@ -480,7 +480,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-15",
 		itemId: "item-6",
 		companyName: "Шуйский трикотаж",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "koira@shuya-trikotazh.ru",
 		website: "https://shuya-trikotazh.ru",
@@ -513,7 +513,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-16",
 		itemId: "item-6",
 		companyName: "Ивановский текстиль",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "koira@ivtex.ru",
 		website: "https://ivtex.ru",
@@ -546,7 +546,7 @@ export const SUPPLIERS: SupplierSeed[] = [
 		id: "supplier-item-6-17",
 		itemId: "item-6",
 		companyName: "ГК «Матрас-Пром»",
-		status: "получено_кп",
+		status: "quote_received",
 		archived: false,
 		email: "koira@matras-prom.ru",
 		website: "https://matras-prom.ru",

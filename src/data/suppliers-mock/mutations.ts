@@ -31,7 +31,7 @@ export async function unarchiveSuppliers(itemId: string, supplierIds: string[]):
 	);
 }
 
-/** Transitions eligible (status="new") suppliers to "кп_запрошено".
+/** Transitions eligible (status="new") suppliers to "quote_requested".
  * Returns ids actually transitioned (already-requested ones are skipped).
  * When the item was in a completed-search state, the first request burst flips it to negotiating. */
 export async function sendSupplierRequest(itemId: string, supplierIds: string[]): Promise<string[]> {
@@ -42,7 +42,7 @@ export async function sendSupplierRequest(itemId: string, supplierIds: string[])
 	const next = suppliers.map((s) => {
 		if (!ids.has(s.id) || s.status !== "new") return s;
 		transitioned.push(s.id);
-		return { ...s, status: "кп_запрошено" as const };
+		return { ...s, status: "quote_requested" as const };
 	});
 	writeSuppliersForItem(itemId, next);
 

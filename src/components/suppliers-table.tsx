@@ -84,8 +84,8 @@ const FILTER_BTN =
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
 
 const SUPPLIER_COMPANY_TYPE_ICONS: Record<SupplierCompanyType, LucideIcon> = {
-	производитель: Factory,
-	дистрибьютор: Truck,
+	manufacturer: Factory,
+	distributor: Truck,
 };
 
 function CompanyTypeBadge({ type }: { type: SupplierCompanyType }) {

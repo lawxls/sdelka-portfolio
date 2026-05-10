@@ -18,7 +18,7 @@ const ITEM_1: ProcurementItem = {
 	status: "completed",
 	annualQuantity: 180_000,
 	currentPrice: 1776,
-	// Computed from ORMATEK_SUPPLIERS получено_кп TCOs (50 offers): min 1485, mean 2256.
+	// Computed from ORMATEK_SUPPLIERS quote_received TCOs (50 offers): min 1485, mean 2256.
 	bestPrice: 1485,
 	averagePrice: 2256,
 	unit: "м",

@@ -17,7 +17,7 @@ import type {
  * live in `src/data/operations/procurement-operations.ts`.
  */
 export interface SuppliersClient {
-	/** Paginated list for one item. Default sort puts получено_кп first then ranks by TCO. */
+	/** Paginated list for one item. Default sort puts quote_received first then ranks by TCO. */
 	list(itemId: string, params?: SupplierFilterParams): Promise<SuppliersPage>;
 	/** All suppliers for one item (no filter / pagination). */
 	listForItem(itemId: string): Promise<SuppliersList>;
@@ -32,7 +32,7 @@ export interface SuppliersClient {
 	unarchive(itemId: string, supplierIds: string[]): Promise<void>;
 	delete(itemId: string, supplierIds: string[]): Promise<void>;
 
-	/** Transition matching status="new" rows to "кп_запрошено". Returns the ids actually flipped. */
+	/** Transition matching status="new" rows to "quote_requested". Returns the ids actually flipped. */
 	sendRequest(itemId: string, supplierIds: string[]): Promise<string[]>;
 	sendMessage(itemId: string, supplierId: string, body: string, files?: File[]): Promise<SupplierChatMessage>;
 }

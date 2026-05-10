@@ -20,7 +20,7 @@ beforeEach(() => {
 const defaultSuppliers = [
 	makeSupplier("s1", {
 		companyName: "ООО «Альфа»",
-		status: "получено_кп",
+		status: "quote_received",
 		pricePerUnit: 1000,
 		tco: 2700,
 		email: "alfa@test.ru",
@@ -33,7 +33,7 @@ const defaultSuppliers = [
 	}),
 	makeSupplier("s2", {
 		companyName: "ООО «Бета»",
-		status: "получено_кп",
+		status: "quote_received",
 		email: "beta@test.ru",
 		website: "https://beta.ru",
 		deliveryCost: null,
@@ -45,7 +45,7 @@ const defaultSuppliers = [
 	}),
 	makeSupplier("s3", {
 		companyName: "ООО «Гамма»",
-		status: "получено_кп",
+		status: "quote_received",
 		email: "gamma@test.ru",
 		website: "https://gamma.ru",
 		deliveryCost: 0,

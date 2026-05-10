@@ -83,11 +83,11 @@ const CONSOLIDATED_PAGE_SIZE = 30;
  * row with the most-advanced status wins so a received-КП entry isn't shadowed
  * by a still-«Кандидат» row for the same company. */
 const SUPPLIER_PIPELINE_RANK: Record<SupplierStatus, number> = {
-	получено_кп: 5,
-	переговоры: 4,
-	кп_запрошено: 3,
-	ошибка: 2,
-	отказ: 2,
+	quote_received: 5,
+	negotiating: 4,
+	quote_requested: 3,
+	error: 2,
+	refused: 2,
 	new: 1,
 };
 
@@ -318,8 +318,8 @@ function TenderDrawerBody({
 			const identity = supplierIdentity(s);
 			total.add(identity);
 			if (s.status !== "new") contacted.add(identity);
-			if (s.status === "получено_кп") quotesReceived.add(identity);
-			else if (s.status === "отказ") refusals.add(identity);
+			if (s.status === "quote_received") quotesReceived.add(identity);
+			else if (s.status === "refused") refusals.add(identity);
 		}
 		return {
 			total: total.size,
@@ -814,7 +814,7 @@ function TenderConsolidatedOffersPanel({
 		for (const s of allSuppliers) {
 			if (s.archived) continue;
 			if (!itemIds.has(s.itemId)) continue;
-			if (s.status !== "получено_кп") continue;
+			if (s.status !== "quote_received") continue;
 			if (s.tco == null) continue;
 			const identity = supplierIdentity(s);
 			let perItem = map.get(identity);
@@ -834,7 +834,7 @@ function TenderConsolidatedOffersPanel({
 		for (const s of allSuppliers) {
 			if (s.archived !== showArchived) continue;
 			if (!itemIds.has(s.itemId)) continue;
-			if (s.status !== "получено_кп") continue;
+			if (s.status !== "quote_received") continue;
 			if (activeItemIdsSet.size > 0 && !activeItemIdsSet.has(s.itemId)) continue;
 			const identity = supplierIdentity(s);
 			const existing = byIdentity.get(identity);

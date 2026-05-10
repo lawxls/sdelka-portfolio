@@ -317,7 +317,7 @@ function SuppliersTabPanel({
 	const [showArchived, setShowArchived] = useState(false);
 	const [confirmingRequestAll, setConfirmingRequestAll] = useState(false);
 
-	// Pipeline = all statuses except получено_кп. If the user has picked a subset via filter,
+	// Pipeline = all statuses except quote_received. If the user has picked a subset via filter,
 	// honor that; otherwise request the full pipeline set.
 	const effectiveStatuses = useMemo(
 		() => (activeStatuses.length > 0 ? activeStatuses : [...SUPPLIER_STATUSES]),
@@ -557,7 +557,7 @@ function OffersTabPanel({
 	const filterParams = useMemo(
 		() => ({
 			search: search || undefined,
-			statuses: ["получено_кп"] as SupplierStatus[],
+			statuses: ["quote_received"] as SupplierStatus[],
 			showArchived,
 			sort: sort?.field,
 			dir: sort?.direction,
@@ -733,8 +733,8 @@ function ProcurementItemDrawerContent({
 			if (s.archived) continue;
 			total++;
 			if (s.status !== "new") contacted++;
-			if (s.status === "получено_кп") quotesReceived++;
-			else if (s.status === "отказ") refusals++;
+			if (s.status === "quote_received") quotesReceived++;
+			else if (s.status === "refused") refusals++;
 		}
 		return { total, contacted, quotesReceived, refusals };
 	}, [allSuppliersData?.suppliers]);

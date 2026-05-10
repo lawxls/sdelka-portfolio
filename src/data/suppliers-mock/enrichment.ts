@@ -1,3 +1,4 @@
+import { hash } from "@/lib/hash";
 import { _getItem } from "../items-mock-data";
 import type {
 	MessageEvent,
@@ -8,6 +9,8 @@ import type {
 	SupplierStatus,
 } from "../supplier-types";
 import { AGENT_EMAIL } from "../supplier-types";
+
+export { hash };
 
 // --- Deterministic profile enrichment (inn / region / companyType / foundedYear / revenue) ---
 
@@ -66,12 +69,6 @@ const REVENUE_TIERS = [10_000_000, 45_000_000, 120_000_000, 350_000_000, 900_000
 // Headcount tiers roughly aligned with REVENUE_TIERS — small shops at ~15, mid-market at ~300, large at 2500+.
 const EMPLOYEE_COUNT_TIERS = [12, 28, 65, 140, 320, 780, 2100];
 
-export function hash(s: string): number {
-	let h = 0;
-	for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0;
-	return Math.abs(h);
-}
-
 function makeInn(seed: number): string {
 	const base = ((seed + 1) * 2_654_435_761) % 10_000_000_000;
 	return base.toString().padStart(10, "0");
@@ -93,9 +90,9 @@ function makeAddress(region: string, h: number): string {
 export function inferCompanyType(companyName: string): SupplierCompanyType {
 	const lower = companyName.toLowerCase();
 	if (lower.includes("тд") || lower.includes("торг") || lower.includes("трейд") || lower.includes("снаб")) {
-		return "дистрибьютор";
+		return "distributor";
 	}
-	return hash(companyName) % 3 === 0 ? "дистрибьютор" : "производитель";
+	return hash(companyName) % 3 === 0 ? "distributor" : "manufacturer";
 }
 
 // Anchor the generated "quote received" dates to a stable reference so tests
@@ -134,7 +131,7 @@ export function enrichSeed(seed: SupplierSeed): Supplier {
 		...profile,
 		companyType: inferCompanyType(seed.companyName),
 		address: seed.address.length > 0 ? seed.address : profile.address,
-		quoteReceivedAt: seed.status === "получено_кп" ? makeQuoteReceivedAt(perRowHash) : undefined,
+		quoteReceivedAt: seed.status === "quote_received" ? makeQuoteReceivedAt(perRowHash) : undefined,
 		chatHistory: enrichChatHistory(seed, perRowHash),
 	};
 }
@@ -166,14 +163,14 @@ function makeDefaultQuoteRequest(itemId: string, h: number): SupplierChatMessage
 // the outcome. «Ошибка» tags the outgoing agent message (our send failed); the
 // others tag the supplier's last reply.
 const TERMINAL_EVENT: Partial<Record<SupplierStatus, MessageEvent>> = {
-	получено_кп: "quote_received",
-	отказ: "refusal",
-	ошибка: "delivery_failed",
+	quote_received: "quote_received",
+	refused: "refusal",
+	error: "delivery_failed",
 };
 
 function enrichChatHistory(seed: SupplierSeed, perRowHash: number): SupplierChatMessage[] {
 	const needsAutoRequest =
-		seed.chatHistory.length === 0 && (seed.status === "кп_запрошено" || seed.status === "ошибка");
+		seed.chatHistory.length === 0 && (seed.status === "quote_requested" || seed.status === "error");
 	const history = needsAutoRequest ? [makeDefaultQuoteRequest(seed.itemId, perRowHash)] : seed.chatHistory;
 	if (history.length === 0) return history;
 
@@ -202,79 +199,79 @@ function enrichChatHistory(seed: SupplierSeed, perRowHash: number): SupplierChat
 // (corporate forms skew manufacturer, trading forms skew distributor), so the
 // final role distribution is mixed regardless of the stem's original type.
 const CANDIDATE_STEMS: { stem: string; type: SupplierCompanyType; slug: string }[] = [
-	{ stem: "СтальПром", type: "производитель", slug: "stalprom" },
-	{ stem: "МеталлИнвест", type: "производитель", slug: "metallinvest" },
-	{ stem: "Восток-Металл", type: "производитель", slug: "vostok-metall" },
-	{ stem: "УралСтальКомплект", type: "производитель", slug: "uralstal-komplekt" },
-	{ stem: "Северсталь-Трейд", type: "дистрибьютор", slug: "severstal-trade" },
-	{ stem: "ПромСнаб-Поволжье", type: "дистрибьютор", slug: "promsnab-povolzhe" },
-	{ stem: "ТоргСнабМеталл", type: "дистрибьютор", slug: "torgsnab-metall" },
-	{ stem: "ГлавМетКом", type: "дистрибьютор", slug: "glavmetkom" },
-	{ stem: "Металл-Экспресс", type: "производитель", slug: "metall-express" },
-	{ stem: "ПрофильТорг", type: "производитель", slug: "profiltorg" },
-	{ stem: "СибМетКомплект", type: "производитель", slug: "sibmetcomplekt" },
-	{ stem: "АрматураЦентр", type: "производитель", slug: "armaturacentr" },
-	{ stem: "МеталлСтандарт", type: "производитель", slug: "metallstandart" },
-	{ stem: "СтройМетКомплект", type: "дистрибьютор", slug: "stroymetcomplekt" },
-	{ stem: "ПромСталь", type: "производитель", slug: "promstal" },
-	{ stem: "Химпром-Центр", type: "производитель", slug: "himprom-centr" },
-	{ stem: "ПолимерИнвест", type: "производитель", slug: "polimerinvest" },
-	{ stem: "ХимТехСнаб", type: "дистрибьютор", slug: "himtechsnab" },
-	{ stem: "Пластик-Сервис", type: "производитель", slug: "plastik-servis" },
-	{ stem: "ЭлектроПром", type: "производитель", slug: "elektroprom" },
-	{ stem: "Промкабель-Трейд", type: "дистрибьютор", slug: "promkabel-trade" },
-	{ stem: "СибЭнергоКомплект", type: "дистрибьютор", slug: "sibenergokomplekt" },
-	{ stem: "Энергомаш-Урал", type: "производитель", slug: "energomash-ural" },
-	{ stem: "МашСтройСнаб", type: "дистрибьютор", slug: "mashstroysnab" },
-	{ stem: "ТехноПром-Юг", type: "производитель", slug: "tehnoprom-yug" },
-	{ stem: "СеверТехСнаб", type: "дистрибьютор", slug: "severtehsnab" },
-	{ stem: "Центр-Комплект", type: "дистрибьютор", slug: "centr-komplekt" },
-	{ stem: "ИндустрияСервис", type: "дистрибьютор", slug: "industriya-servis" },
-	{ stem: "АвтоКомплект-Поволжье", type: "дистрибьютор", slug: "avtokomplekt-povolzhe" },
-	{ stem: "ТрансПром", type: "дистрибьютор", slug: "transprom" },
-	{ stem: "Логист-Снаб", type: "дистрибьютор", slug: "logist-snab" },
-	{ stem: "Ростех-Маркет", type: "дистрибьютор", slug: "rostech-market" },
-	{ stem: "УралИндустрия", type: "производитель", slug: "ural-industriya" },
-	{ stem: "Новотех", type: "производитель", slug: "novotech" },
-	{ stem: "СтройПромМаркет", type: "дистрибьютор", slug: "stroyprommarket" },
-	{ stem: "ДревПром-Центр", type: "производитель", slug: "drevprom-centr" },
-	{ stem: "ФанераПром", type: "производитель", slug: "faneraprom" },
-	{ stem: "МебельПром-Снаб", type: "дистрибьютор", slug: "mebelprom-snab" },
-	{ stem: "ЛесСнаб-Сибирь", type: "дистрибьютор", slug: "lessnab-sibir" },
-	{ stem: "ТД «Дерев-Мастер»", type: "дистрибьютор", slug: "derev-master" },
-	{ stem: "КартонПром-Урал", type: "производитель", slug: "kartonprom-ural" },
-	{ stem: "БумагаСнаб", type: "дистрибьютор", slug: "bumagasnab" },
-	{ stem: "ЦеллюлозаЦентр", type: "производитель", slug: "cellulosa-centr" },
-	{ stem: "УпакТрейд", type: "дистрибьютор", slug: "upaktrade" },
-	{ stem: "ПромПак-Поволжье", type: "производитель", slug: "prompak-povolzhe" },
-	{ stem: "КоробТорг", type: "дистрибьютор", slug: "korobtorg" },
-	{ stem: "СтеклоПром", type: "производитель", slug: "steklo-prom" },
-	{ stem: "ПромСтройИнвест", type: "дистрибьютор", slug: "promstroyinvest" },
-	{ stem: "Железобетон-Юг", type: "производитель", slug: "zhbetonyug" },
-	{ stem: "ЦементПром", type: "производитель", slug: "cementprom" },
-	{ stem: "СтройКомплект-СПб", type: "дистрибьютор", slug: "stroykomplekt-spb" },
-	{ stem: "ГрадСтрой", type: "дистрибьютор", slug: "gradstroy" },
-	{ stem: "ЭкоСтройСнаб", type: "дистрибьютор", slug: "ecostroysnab" },
-	{ stem: "ПромТехноСнаб", type: "дистрибьютор", slug: "promtehnosnab" },
-	{ stem: "ВолгаТрейд", type: "дистрибьютор", slug: "volga-trade" },
-	{ stem: "КамаСнаб", type: "дистрибьютор", slug: "kama-snab" },
-	{ stem: "Дон-Комплект", type: "дистрибьютор", slug: "don-komplekt" },
-	{ stem: "Ока-Металл", type: "производитель", slug: "oka-metall" },
-	{ stem: "Алтай-Маш", type: "производитель", slug: "altay-mash" },
-	{ stem: "Приморье-Снаб", type: "дистрибьютор", slug: "primore-snab" },
-	{ stem: "Байкал-Пром", type: "производитель", slug: "baikal-prom" },
-	{ stem: "Кузбасс-Трейд", type: "дистрибьютор", slug: "kuzbass-trade" },
-	{ stem: "Казань-Комплект", type: "дистрибьютор", slug: "kazan-komplekt" },
-	{ stem: "Москва-Снаб", type: "дистрибьютор", slug: "moskva-snab" },
-	{ stem: "Тула-Металл", type: "производитель", slug: "tula-metall" },
-	{ stem: "Воронеж-Пром", type: "производитель", slug: "voronezh-prom" },
-	{ stem: "Ростов-ТехСнаб", type: "дистрибьютор", slug: "rostov-tehsnab" },
-	{ stem: "Нева-Пром", type: "производитель", slug: "neva-prom" },
-	{ stem: "Балтика-Трейд", type: "дистрибьютор", slug: "baltika-trade" },
-	{ stem: "АвтоДеталь", type: "производитель", slug: "avto-detal" },
-	{ stem: "Резинотех", type: "производитель", slug: "rezinoteh" },
-	{ stem: "Компонент-Сервис", type: "дистрибьютор", slug: "komponent-servis" },
-	{ stem: "Гидропром", type: "производитель", slug: "gidroprom" },
+	{ stem: "СтальПром", type: "manufacturer", slug: "stalprom" },
+	{ stem: "МеталлИнвест", type: "manufacturer", slug: "metallinvest" },
+	{ stem: "Восток-Металл", type: "manufacturer", slug: "vostok-metall" },
+	{ stem: "УралСтальКомплект", type: "manufacturer", slug: "uralstal-komplekt" },
+	{ stem: "Северсталь-Трейд", type: "distributor", slug: "severstal-trade" },
+	{ stem: "ПромСнаб-Поволжье", type: "distributor", slug: "promsnab-povolzhe" },
+	{ stem: "ТоргСнабМеталл", type: "distributor", slug: "torgsnab-metall" },
+	{ stem: "ГлавМетКом", type: "distributor", slug: "glavmetkom" },
+	{ stem: "Металл-Экспресс", type: "manufacturer", slug: "metall-express" },
+	{ stem: "ПрофильТорг", type: "manufacturer", slug: "profiltorg" },
+	{ stem: "СибМетКомплект", type: "manufacturer", slug: "sibmetcomplekt" },
+	{ stem: "АрматураЦентр", type: "manufacturer", slug: "armaturacentr" },
+	{ stem: "МеталлСтандарт", type: "manufacturer", slug: "metallstandart" },
+	{ stem: "СтройМетКомплект", type: "distributor", slug: "stroymetcomplekt" },
+	{ stem: "ПромСталь", type: "manufacturer", slug: "promstal" },
+	{ stem: "Химпром-Центр", type: "manufacturer", slug: "himprom-centr" },
+	{ stem: "ПолимерИнвест", type: "manufacturer", slug: "polimerinvest" },
+	{ stem: "ХимТехСнаб", type: "distributor", slug: "himtechsnab" },
+	{ stem: "Пластик-Сервис", type: "manufacturer", slug: "plastik-servis" },
+	{ stem: "ЭлектроПром", type: "manufacturer", slug: "elektroprom" },
+	{ stem: "Промкабель-Трейд", type: "distributor", slug: "promkabel-trade" },
+	{ stem: "СибЭнергоКомплект", type: "distributor", slug: "sibenergokomplekt" },
+	{ stem: "Энергомаш-Урал", type: "manufacturer", slug: "energomash-ural" },
+	{ stem: "МашСтройСнаб", type: "distributor", slug: "mashstroysnab" },
+	{ stem: "ТехноПром-Юг", type: "manufacturer", slug: "tehnoprom-yug" },
+	{ stem: "СеверТехСнаб", type: "distributor", slug: "severtehsnab" },
+	{ stem: "Центр-Комплект", type: "distributor", slug: "centr-komplekt" },
+	{ stem: "ИндустрияСервис", type: "distributor", slug: "industriya-servis" },
+	{ stem: "АвтоКомплект-Поволжье", type: "distributor", slug: "avtokomplekt-povolzhe" },
+	{ stem: "ТрансПром", type: "distributor", slug: "transprom" },
+	{ stem: "Логист-Снаб", type: "distributor", slug: "logist-snab" },
+	{ stem: "Ростех-Маркет", type: "distributor", slug: "rostech-market" },
+	{ stem: "УралИндустрия", type: "manufacturer", slug: "ural-industriya" },
+	{ stem: "Новотех", type: "manufacturer", slug: "novotech" },
+	{ stem: "СтройПромМаркет", type: "distributor", slug: "stroyprommarket" },
+	{ stem: "ДревПром-Центр", type: "manufacturer", slug: "drevprom-centr" },
+	{ stem: "ФанераПром", type: "manufacturer", slug: "faneraprom" },
+	{ stem: "МебельПром-Снаб", type: "distributor", slug: "mebelprom-snab" },
+	{ stem: "ЛесСнаб-Сибирь", type: "distributor", slug: "lessnab-sibir" },
+	{ stem: "ТД «Дерев-Мастер»", type: "distributor", slug: "derev-master" },
+	{ stem: "КартонПром-Урал", type: "manufacturer", slug: "kartonprom-ural" },
+	{ stem: "БумагаСнаб", type: "distributor", slug: "bumagasnab" },
+	{ stem: "ЦеллюлозаЦентр", type: "manufacturer", slug: "cellulosa-centr" },
+	{ stem: "УпакТрейд", type: "distributor", slug: "upaktrade" },
+	{ stem: "ПромПак-Поволжье", type: "manufacturer", slug: "prompak-povolzhe" },
+	{ stem: "КоробТорг", type: "distributor", slug: "korobtorg" },
+	{ stem: "СтеклоПром", type: "manufacturer", slug: "steklo-prom" },
+	{ stem: "ПромСтройИнвест", type: "distributor", slug: "promstroyinvest" },
+	{ stem: "Железобетон-Юг", type: "manufacturer", slug: "zhbetonyug" },
+	{ stem: "ЦементПром", type: "manufacturer", slug: "cementprom" },
+	{ stem: "СтройКомплект-СПб", type: "distributor", slug: "stroykomplekt-spb" },
+	{ stem: "ГрадСтрой", type: "distributor", slug: "gradstroy" },
+	{ stem: "ЭкоСтройСнаб", type: "distributor", slug: "ecostroysnab" },
+	{ stem: "ПромТехноСнаб", type: "distributor", slug: "promtehnosnab" },
+	{ stem: "ВолгаТрейд", type: "distributor", slug: "volga-trade" },
+	{ stem: "КамаСнаб", type: "distributor", slug: "kama-snab" },
+	{ stem: "Дон-Комплект", type: "distributor", slug: "don-komplekt" },
+	{ stem: "Ока-Металл", type: "manufacturer", slug: "oka-metall" },
+	{ stem: "Алтай-Маш", type: "manufacturer", slug: "altay-mash" },
+	{ stem: "Приморье-Снаб", type: "distributor", slug: "primore-snab" },
+	{ stem: "Байкал-Пром", type: "manufacturer", slug: "baikal-prom" },
+	{ stem: "Кузбасс-Трейд", type: "distributor", slug: "kuzbass-trade" },
+	{ stem: "Казань-Комплект", type: "distributor", slug: "kazan-komplekt" },
+	{ stem: "Москва-Снаб", type: "distributor", slug: "moskva-snab" },
+	{ stem: "Тула-Металл", type: "manufacturer", slug: "tula-metall" },
+	{ stem: "Воронеж-Пром", type: "manufacturer", slug: "voronezh-prom" },
+	{ stem: "Ростов-ТехСнаб", type: "distributor", slug: "rostov-tehsnab" },
+	{ stem: "Нева-Пром", type: "manufacturer", slug: "neva-prom" },
+	{ stem: "Балтика-Трейд", type: "distributor", slug: "baltika-trade" },
+	{ stem: "АвтоДеталь", type: "manufacturer", slug: "avto-detal" },
+	{ stem: "Резинотех", type: "manufacturer", slug: "rezinoteh" },
+	{ stem: "Компонент-Сервис", type: "distributor", slug: "komponent-servis" },
+	{ stem: "Гидропром", type: "manufacturer", slug: "gidroprom" },
 ];
 
 // `typeBias` overrides each stem's hint so the resulting pool balances roles
@@ -283,8 +280,8 @@ const LEGAL_WRAPPERS: { prefix: string; suffix: string; typeBias?: SupplierCompa
 	{ prefix: "ООО «", suffix: "»", tag: "ooo" },
 	{ prefix: "ЗАО «", suffix: "»", tag: "zao" },
 	{ prefix: "АО «", suffix: "»", tag: "ao" },
-	{ prefix: "ПКФ «", suffix: "»", typeBias: "производитель", tag: "pkf" },
-	{ prefix: "ТД «", suffix: "»", typeBias: "дистрибьютор", tag: "td" },
+	{ prefix: "ПКФ «", suffix: "»", typeBias: "manufacturer", tag: "pkf" },
+	{ prefix: "ТД «", suffix: "»", typeBias: "distributor", tag: "td" },
 ];
 
 const CANDIDATE_POOL: { name: string; type: SupplierCompanyType; domain: string }[] = (() => {
@@ -327,10 +324,10 @@ export function generateCandidates(itemId: string, count: number): Supplier[] {
 		const identityHash = hash(pool.name);
 		const perRowHash = hash(`${itemId}:candidate-${i + 1}`);
 		const profile = makeIdentityProfile(identityHash);
-		// One pre-archived (i=7) and one "ошибка"-status (i=11) for demo coverage.
-		const status: SupplierStatus = i === 11 && !skipErrorCandidate ? "ошибка" : "new";
+		// One pre-archived (i=7) and one "error"-status (i=11) for demo coverage.
+		const status: SupplierStatus = i === 11 && !skipErrorCandidate ? "error" : "new";
 		const chatHistory: SupplierChatMessage[] =
-			status === "ошибка" ? [{ ...makeDefaultQuoteRequest(itemId, perRowHash), events: ["delivery_failed"] }] : [];
+			status === "error" ? [{ ...makeDefaultQuoteRequest(itemId, perRowHash), events: ["delivery_failed"] }] : [];
 		return {
 			id: `candidate-supplier-${itemId}-${i + 1}`,
 			itemId,
