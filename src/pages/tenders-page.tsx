@@ -61,15 +61,22 @@ interface ColumnDef {
 const COLUMNS: readonly ColumnDef[] = [
 	{ label: "№", align: "center" },
 	{ label: "НАЗВАНИЕ", align: "left" },
-	{ label: "ВСЕГО ПОСТАВЩИКОВ", align: "right", field: "suppliersCount" },
-	{ label: "ПОЛУЧЕНО КП", align: "right", field: "kpCount" },
-	{ label: "ДАТА СОЗДАНИЯ", align: "right", field: "createdAt" },
-	{ label: "ДЕДЛАЙН", align: "right", field: "deadline" },
+	{ label: "ВСЕГО ПОСТАВЩИКОВ", align: "center", field: "suppliersCount" },
+	{ label: "ПОЛУЧЕНО КП", align: "center", field: "kpCount" },
+	{ label: "ВОПРОСЫ", align: "center", field: "tasksCount" },
+	{ label: "ДАТА СОЗДАНИЯ", align: "center", field: "createdAt" },
+	{ label: "ДЕДЛАЙН", align: "center", field: "deadline" },
 ] as const;
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"] as const;
 
-const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set(["suppliersCount", "kpCount", "createdAt", "deadline"]);
+const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set([
+	"suppliersCount",
+	"kpCount",
+	"tasksCount",
+	"createdAt",
+	"deadline",
+]);
 
 interface TenderSortState {
 	field: TenderSortField;
@@ -142,6 +149,7 @@ function SortableHeaderButton({
 			className={cn(
 				"inline-flex items-center gap-1 transition-colors hover:text-foreground",
 				col.align === "right" && "ml-auto",
+				col.align === "center" && "mx-auto",
 			)}
 			onClick={() => onSort(col.field)}
 			aria-label={`Сортировать по ${col.label}`}
@@ -213,10 +221,13 @@ function TenderRow({
 					</div>
 				</div>
 			</TableCell>
-			<TableCell className="text-right tabular-nums">{tender.suppliersCount}</TableCell>
-			<TableCell className="text-right tabular-nums">{tender.kpCount}</TableCell>
-			<TableCell className="text-right tabular-nums">{formatDayMonthShort(tender.createdAt)}</TableCell>
-			<TableCell className="text-right tabular-nums">{formatDayMonthShort(tender.deadline)}</TableCell>
+			<TableCell className="text-center tabular-nums">{tender.suppliersCount}</TableCell>
+			<TableCell className="text-center tabular-nums">{tender.kpCount}</TableCell>
+			<TableCell className="text-center tabular-nums">
+				{tender.tasksCount > 0 ? tender.tasksCount : <span className="text-muted-foreground">—</span>}
+			</TableCell>
+			<TableCell className="text-center tabular-nums">{formatDayMonthShort(tender.createdAt)}</TableCell>
+			<TableCell className="text-center tabular-nums">{formatDayMonthShort(tender.deadline)}</TableCell>
 		</TableRow>
 	);
 	return (

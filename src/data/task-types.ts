@@ -5,6 +5,8 @@ export type TaskStatus = "assigned" | "in_progress" | "completed" | "archived";
 
 export const TASK_STATUSES: TaskStatus[] = ["assigned", "in_progress", "completed", "archived"];
 
+export const ACTIVE_TASK_STATUSES: readonly TaskStatus[] = ["assigned", "in_progress"];
+
 export const STATUS_ICONS: Record<TaskStatus, LucideIcon> = {
 	assigned: CircleDot,
 	in_progress: Loader,

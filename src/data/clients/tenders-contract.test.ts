@@ -65,6 +65,8 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 			status: "searching" as const,
 			positionsCount: 0,
 			kpCount: 0,
+			suppliersCount: 0,
+			tasksCount: 0,
 		};
 	}
 

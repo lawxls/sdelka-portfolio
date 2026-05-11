@@ -2,6 +2,8 @@ import { _getAllItems } from "../items-mock-data";
 import { delay, paginate } from "../mock-utils";
 import { type Supplier, supplierIdentity } from "../supplier-types";
 import { ALL_ITEM_IDS, getSuppliersForItem } from "../suppliers-mock/store";
+import { ACTIVE_TASK_STATUSES, type Task } from "../task-types";
+import { readTasks } from "../tasks-mock/store";
 import { getTenderStatus } from "../tenders/get-tender-status";
 import type { ProcurementInquiry, ProcurementItem, TenderStatus } from "../types";
 import { readTenders } from "./store";
@@ -18,12 +20,13 @@ export interface TenderSummary {
 	positionsCount: number;
 	kpCount: number;
 	suppliersCount: number;
+	tasksCount: number;
 }
 
 /** "Все" (default — exclude archived) | "просрочены" | "ближайшие 7 дней". */
 export type DeadlineFilter = "all" | "overdue" | "soon";
 
-export type TenderSortField = "budget" | "suppliersCount" | "kpCount" | "createdAt" | "deadline";
+export type TenderSortField = "budget" | "suppliersCount" | "kpCount" | "tasksCount" | "createdAt" | "deadline";
 export type TenderSortDirection = "asc" | "desc";
 
 export interface ListTendersParams {
@@ -67,7 +70,20 @@ function countDistinctSuppliers(items: readonly ProcurementItem[], predicate: (s
 	return seen.size;
 }
 
-function summarize(tender: ProcurementInquiry, allItems: readonly ProcurementItem[]): TenderSummary {
+function countActiveTasks(tenderId: string, allTasks: readonly Task[]): number {
+	let n = 0;
+	for (const t of allTasks) {
+		if (t.tender.id !== tenderId) continue;
+		if (ACTIVE_TASK_STATUSES.includes(t.status)) n += 1;
+	}
+	return n;
+}
+
+function summarize(
+	tender: ProcurementInquiry,
+	allItems: readonly ProcurementItem[],
+	allTasks: readonly Task[],
+): TenderSummary {
 	const items = itemsForTender(tender.id, allItems);
 	return {
 		id: tender.id,
@@ -81,6 +97,7 @@ function summarize(tender: ProcurementInquiry, allItems: readonly ProcurementIte
 		positionsCount: items.length,
 		kpCount: countDistinctSuppliers(items, (s) => s.status === "quote_received"),
 		suppliersCount: countDistinctSuppliers(items, (s) => !s.archived),
+		tasksCount: countActiveTasks(tender.id, allTasks),
 	};
 }
 
@@ -152,6 +169,8 @@ function compareSummaries(a: TenderSummary, b: TenderSummary, field: TenderSortF
 			return a.suppliersCount - b.suppliersCount;
 		case "kpCount":
 			return a.kpCount - b.kpCount;
+		case "tasksCount":
+			return a.tasksCount - b.tasksCount;
 		case "createdAt":
 			return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
 		case "deadline":
@@ -174,9 +193,10 @@ export async function fetchTendersListMock(params: ListTendersParams): Promise<{
 }> {
 	await delay();
 	const allItems = _getAllItems();
+	const allTasks = readTasks();
 	const filtered = sortByCreatedAtDesc(applyFilters(readTenders(), params, allItems, new Date()));
 	const page = paginate({ items: filtered, cursor: params.cursor, limit: params.limit, getId: (t) => t.id });
-	let summaries = page.items.map((t) => summarize(t, allItems));
+	let summaries = page.items.map((t) => summarize(t, allItems, allTasks));
 	if (params.sort && params.dir) {
 		summaries = sortSummaries(summaries, params.sort, params.dir);
 	}

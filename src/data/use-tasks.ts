@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useItemsClient, useTasksClient } from "./clients-context";
 import type { TaskBoardResponse } from "./domains/tasks";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
-import { TASK_STATUSES } from "./task-types";
+import { ACTIVE_TASK_STATUSES, TASK_STATUSES } from "./task-types";
 
 type TasksCache = {
 	pages: Array<{ tasks: Task[]; nextCursor: string | null }>;
@@ -156,7 +156,7 @@ export function useTasksCount(params?: TasksListParams) {
 	return query.data?.count ?? 0;
 }
 
-const ACTIVE_TASKS_PARAMS: TasksListParams = { statuses: ["assigned", "in_progress"] };
+const ACTIVE_TASKS_PARAMS: TasksListParams = { statuses: [...ACTIVE_TASK_STATUSES] };
 
 export function useActiveTasksCount() {
 	return useTasksCount(ACTIVE_TASKS_PARAMS);

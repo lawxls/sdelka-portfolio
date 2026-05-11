@@ -16,7 +16,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { STATUS_ICONS, type Task, type TaskFilterParams, type TaskStatus } from "@/data/task-types";
+import {
+	ACTIVE_TASK_STATUSES,
+	STATUS_ICONS,
+	type Task,
+	type TaskFilterParams,
+	type TaskStatus,
+} from "@/data/task-types";
 import { useTasksCount, useTasksList, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useTenders } from "@/data/use-tenders";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -36,7 +42,7 @@ import { cn } from "@/lib/utils";
 type StatusFilter = "active" | "completed" | "archived";
 
 const STATUS_FILTER_TO_STATUSES: Record<StatusFilter, TaskStatus[]> = {
-	active: ["assigned", "in_progress"],
+	active: [...ACTIVE_TASK_STATUSES],
 	completed: ["completed"],
 	archived: ["archived"],
 };
@@ -54,15 +60,15 @@ type SortState = { field: SortField; direction: "asc" | "desc" } | null;
 interface SortableColumn {
 	label: string;
 	field: SortField;
-	align?: "left" | "right";
+	align?: "left" | "right" | "center";
 }
 
 const COLUMNS: SortableColumn[] = [
 	{ label: "ВОПРОС", field: "name" },
-	{ label: "НАЗНАЧЕН", field: "assignee" },
-	{ label: "КОЛИЧЕСТВО", field: "questionCount", align: "right" },
-	{ label: "ДЕДЛАЙН", field: "deadlineAt", align: "right" },
-	{ label: "ДАТА И ВРЕМЯ СОЗДАНИЯ", field: "createdAt", align: "right" },
+	{ label: "НАЗНАЧЕН", field: "assignee", align: "center" },
+	{ label: "КОЛИЧЕСТВО", field: "questionCount", align: "center" },
+	{ label: "ДЕДЛАЙН", field: "deadlineAt", align: "center" },
+	{ label: "ДАТА И ВРЕМЯ СОЗДАНИЯ", field: "createdAt", align: "center" },
 ];
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
@@ -70,7 +76,8 @@ const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
 const STICKY_HEAD = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
 
 function SortIcon({ field, sort }: { field: SortField; sort: SortState }) {
-	if (sort?.field !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" aria-hidden="true" />;
+	if (sort?.field !== field)
+		return <ArrowUpDown className="size-3.5 text-muted-foreground/50 transition-opacity" aria-hidden="true" />;
 	return sort.direction === "asc" ? (
 		<ArrowUp className="size-3.5" aria-hidden="true" />
 	) : (
@@ -141,7 +148,7 @@ function AssigneeCell({ task }: { task: Task }) {
 		return <span className="text-muted-foreground">—</span>;
 	}
 	return (
-		<div className="flex items-center gap-2">
+		<div className="inline-flex max-w-full items-center gap-2">
 			<span
 				role="img"
 				aria-label={name}
@@ -349,18 +356,18 @@ function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive,
 					<div className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{task.tender.name}</div>
 				</div>
 			</TableCell>
-			<TableCell>
+			<TableCell className="text-center">
 				<AssigneeCell task={task} />
 			</TableCell>
-			<TableCell className="text-right tabular-nums">
+			<TableCell className="text-center tabular-nums">
 				{task.questionCount > 0 ? task.questionCount : <span className="text-muted-foreground">—</span>}
 			</TableCell>
-			<TableCell className="text-right">
+			<TableCell className="text-center">
 				<time dateTime={task.deadlineAt} className={cn("tabular-nums", overdue && "font-medium text-destructive")}>
 					{formatDayMonthShort(task.deadlineAt)}
 				</time>
 			</TableCell>
-			<TableCell className="text-right tabular-nums text-muted-foreground">
+			<TableCell className="text-center tabular-nums text-muted-foreground">
 				{formatDayMonthShortTime(task.createdAt)}
 			</TableCell>
 		</TableRow>
@@ -662,7 +669,14 @@ export function TasksPage() {
 										/>
 									</TableHead>
 									{COLUMNS.map((col) => (
-										<TableHead key={col.field} className={cn(col.align === "right" && "text-right", STICKY_HEAD)}>
+										<TableHead
+											key={col.field}
+											className={cn(
+												col.align === "right" && "text-right",
+												col.align === "center" && "text-center",
+												STICKY_HEAD,
+											)}
+										>
 											<SortableHeaderButton col={col} sort={sort} onSort={handleSort} />
 										</TableHead>
 									))}
@@ -679,17 +693,17 @@ export function TasksPage() {
 												<Skeleton className="h-4 w-64" />
 												<Skeleton className="mt-1 h-3 w-40" />
 											</TableCell>
-											<TableCell>
-												<Skeleton className="h-4 w-32" />
+											<TableCell className="text-center">
+												<Skeleton className="mx-auto h-4 w-32" />
 											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="ml-auto h-4 w-6" />
+											<TableCell className="text-center">
+												<Skeleton className="mx-auto h-4 w-6" />
 											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="ml-auto h-4 w-12" />
+											<TableCell className="text-center">
+												<Skeleton className="mx-auto h-4 w-12" />
 											</TableCell>
-											<TableCell className="text-right">
-												<Skeleton className="ml-auto h-4 w-12" />
+											<TableCell className="text-center">
+												<Skeleton className="mx-auto h-4 w-12" />
 											</TableCell>
 										</TableRow>
 									))}
