@@ -20,6 +20,7 @@ export interface PositionDraft {
 	annualQuantity: string;
 	pricePerUnit: string;
 	currentSupplierInn: string;
+	files: File[];
 }
 
 interface Step1State {
@@ -32,7 +33,7 @@ interface Step1State {
 	cashPaymentAllowed: boolean;
 	analoguesNotAllowed: boolean;
 	additionalInfo: string;
-	files: File[];
+	copySuppliersFromTenderId: string | null;
 }
 
 interface Step2Answer {
@@ -71,6 +72,7 @@ function defaultPosition(): PositionDraft {
 		annualQuantity: "",
 		pricePerUnit: "",
 		currentSupplierInn: "",
+		files: [],
 	};
 }
 
@@ -85,7 +87,7 @@ function defaultStep1(initialDeadline: string): Step1State {
 		cashPaymentAllowed: false,
 		analoguesNotAllowed: false,
 		additionalInfo: "",
-		files: [],
+		copySuppliersFromTenderId: null,
 	};
 }
 
@@ -172,8 +174,9 @@ function buildTenderInput(step1: Step1State, step3: Step3State): CreateTenderInp
 	tender.analoguesAllowed = !step1.analoguesNotAllowed;
 	const info = step1.additionalInfo.trim();
 	if (info) tender.additionalInfo = info;
-	if (step1.files.length > 0) {
-		tender.attachedFiles = step1.files.map((f) => ({ name: f.name, size: f.size }));
+	const aggregatedFiles = step1.positions.flatMap((p) => p.files);
+	if (aggregatedFiles.length > 0) {
+		tender.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
 	}
 
 	const supplierInn = step1.positions.map((p) => p.currentSupplierInn.trim()).find((inn) => inn !== "");
@@ -248,6 +251,14 @@ export function useCreateTenderForm() {
 			if (prev.positions.length <= 1) return prev;
 			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
 		});
+	}
+
+	/** Bulk-set positions — used when importing items from /positions.
+	 * Always leaves at least one position so cards never render empty. */
+	function setPositions(positions: PositionDraft[]) {
+		const next = positions.length > 0 ? positions : [defaultPosition()];
+		setStep1((prev) => ({ ...prev, positions: next }));
+		setStep1Errors((prev) => ({ ...prev, positions: next.map(() => ({})) }));
 	}
 
 	function update2(questionId: string, patch: Step2Answer) {
@@ -349,7 +360,8 @@ export function useCreateTenderForm() {
 			p.quantityPerDelivery !== "" ||
 			p.annualQuantity !== "" ||
 			p.pricePerUnit !== "" ||
-			p.currentSupplierInn !== ""
+			p.currentSupplierInn !== "" ||
+			p.files.length > 0
 		);
 	}
 
@@ -364,7 +376,7 @@ export function useCreateTenderForm() {
 		step1.cashPaymentAllowed ||
 		step1.analoguesNotAllowed ||
 		step1.additionalInfo !== "" ||
-		step1.files.length > 0 ||
+		step1.copySuppliersFromTenderId !== null ||
 		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText) ||
 		step3.autoSend ||
 		step3.generated;
@@ -390,6 +402,7 @@ export function useCreateTenderForm() {
 		updatePosition,
 		addPosition,
 		removePosition,
+		setPositions,
 		update2,
 		update3,
 		seedEmail,

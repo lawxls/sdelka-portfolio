@@ -22,6 +22,9 @@ export const STATUS_LABELS: Record<DisplayStatus, string> = {
  * are still tunable here; once negotiations begin, the email is locked. */
 export const RFQ_EDITABLE_STATUSES: ReadonlySet<TenderStatus> = new Set(["searching", "searching_completed"]);
 
+/** Item statuses that can be imported into a fresh inquiry via «Выбрать позиции». */
+export const PICKABLE_ITEM_STATUSES: ReadonlySet<ProcurementStatus> = new Set(["ready_for_analytics", "completed"]);
+
 export const UNITS = ["шт", "кг", "м", "л", "т", "м²", "м³", "уп", "комп", "рул"] as const;
 export type Unit = (typeof UNITS)[number];
 

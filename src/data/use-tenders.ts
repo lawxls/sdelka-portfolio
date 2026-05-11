@@ -3,13 +3,14 @@ import { toast } from "sonner";
 import { useTendersClient } from "./clients-context";
 import type { ListTendersParams, ProcurementInquiry } from "./domains/tenders";
 
-export function useTenders(params: ListTendersParams = {}) {
+export function useTenders(params: ListTendersParams = {}, options: { enabled?: boolean } = {}) {
 	const client = useTendersClient();
 	const query = useInfiniteQuery({
 		queryKey: ["tenders", params] as const,
 		queryFn: ({ pageParam }) => client.list({ ...params, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+		enabled: options.enabled ?? true,
 	});
 
 	const items = query.data?.pages.flatMap((page) => page.items) ?? [];

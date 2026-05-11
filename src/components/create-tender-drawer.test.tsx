@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
+import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Address, Company, Folder } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
@@ -67,8 +69,18 @@ function renderDrawer(
 	const queryClient = createTestQueryClient();
 	const companiesClient = createInMemoryCompaniesClient(companies);
 	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
+	const tendersClient = createInMemoryTendersClient({ seed: [] });
+	const itemsClient = createInMemoryItemsClient({ seed: [] });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
-		<TestClientsProvider queryClient={queryClient} clients={{ companies: companiesClient, folders: foldersClient }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{
+				companies: companiesClient,
+				folders: foldersClient,
+				tenders: tendersClient,
+				items: itemsClient,
+			}}
+		>
 			{children}
 		</TestClientsProvider>
 	);

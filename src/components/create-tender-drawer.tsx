@@ -1,6 +1,19 @@
-import { Check, ChevronDown, CircleHelp, Info, LoaderCircle, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+	Check,
+	ChevronDown,
+	CircleHelp,
+	Info,
+	LoaderCircle,
+	Package,
+	Paperclip,
+	Plus,
+	RefreshCw,
+	Search,
+	Trash2,
+	X,
+} from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -12,8 +25,17 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { DateField } from "@/components/ui/date-field";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,15 +44,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { TenderSummary } from "@/data/domains/tenders";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import { UNITS, UNLOADING_LABELS } from "@/data/types";
+import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateAddress } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useAllItems } from "@/data/use-items";
+import { useTenders } from "@/data/use-tenders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { digitsOnly, formatFileSize } from "@/lib/format";
+import { digitsOnly, formatFileSize, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
 	type CreateTenderPayload,
 	type PositionDraft,
@@ -580,28 +606,33 @@ function Step1Body({
 	companyTriggerRef,
 	onAddPosition,
 }: Step1BodyProps) {
-	const { step1, step1Errors, update1, updatePosition, removePosition, canAddPosition } = form;
+	const { step1, step1Errors, update1, updatePosition, removePosition, setPositions, canAddPosition } = form;
 	const companyDisabled = !!lockedCompany;
 	const showRemove = step1.positions.length > 1;
+	const [pickerOpen, setPickerOpen] = useState(false);
 
-	function handleFilesAdd(newFiles: FileList | null) {
-		if (!newFiles) return;
-		const currentTotal = step1.files.reduce((sum, f) => sum + f.size, 0);
+	function addFilesTo(positionIndex: number, newFiles: FileList | null) {
+		if (!newFiles || newFiles.length === 0) return;
+		const position = step1.positions[positionIndex];
+		// Budget against ALL positions' files — `attachedFiles` is a single tender-level
+		// list once submitted, so the limit applies to the aggregate.
+		let runningTotal = step1.positions.reduce((sum, p) => sum + p.files.reduce((s, f) => s + f.size, 0), 0);
 		const toAdd: File[] = [];
-		let runningTotal = currentTotal;
 		for (const file of newFiles) {
 			if (file.size > MAX_FILE_SIZE) continue;
 			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
 			toAdd.push(file);
 			runningTotal += file.size;
 		}
-		if (toAdd.length > 0) update1("files", [...step1.files, ...toAdd]);
+		if (toAdd.length > 0) updatePosition(positionIndex, "files", [...position.files, ...toAdd]);
 	}
 
-	function handleFileRemove(index: number) {
-		update1(
+	function removeFileFrom(positionIndex: number, fileIndex: number) {
+		const position = step1.positions[positionIndex];
+		updatePosition(
+			positionIndex,
 			"files",
-			step1.files.filter((_, i) => i !== index),
+			position.files.filter((_, i) => i !== fileIndex),
 		);
 	}
 
@@ -674,11 +705,39 @@ function Step1Body({
 						nextFolderColor={nextFolderColor}
 					/>
 				</Field>
+
+				<Field
+					label="Скопировать поставщиков"
+					hint="Используйте пул поставщиков уже существующего запроса вместо поиска заново"
+				>
+					<CopySuppliersSelect
+						value={step1.copySuppliersFromTenderId}
+						onChange={(id) => update1("copySuppliersFromTenderId", id)}
+					/>
+				</Field>
 			</div>
 
 			<SectionGroupHeader title="Позиции" />
 			<div className="flex flex-col gap-3 border-t border-border py-4">
 				<SingleSupplierBanner />
+				<Button
+					type="button"
+					variant="outline"
+					className="w-full"
+					onClick={() => setPickerOpen(true)}
+					aria-label="Выбрать позиции из списка"
+				>
+					<Package aria-hidden="true" className="size-4" />
+					Выбрать позиции
+				</Button>
+				<PickPositionsDialog
+					open={pickerOpen}
+					onOpenChange={setPickerOpen}
+					onApply={(items) => {
+						setPositions(items.map(itemToPositionDraft));
+						setPickerOpen(false);
+					}}
+				/>
 				{step1.positions.map((position, index) => (
 					<PositionCard
 						// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
@@ -688,14 +747,12 @@ function Step1Body({
 						error={step1Errors.positions[index]}
 						onChange={(key, value) => updatePosition(index, key, value)}
 						onRemove={showRemove ? () => removePosition(index) : undefined}
+						onFilesAdd={(files) => addFilesTo(index, files)}
+						onFileRemove={(fileIndex) => removeFileFrom(index, fileIndex)}
 						nameInputRef={(el) => {
 							nameInputRefs.current[index] = el;
 						}}
-					>
-						{index === 0 && (
-							<FilesField files={step1.files} onFilesAdd={handleFilesAdd} onFileRemove={handleFileRemove} />
-						)}
-					</PositionCard>
+					/>
 				))}
 				<div>
 					<Button
@@ -796,11 +853,21 @@ interface PositionCardProps {
 	error: { name?: string } | undefined;
 	onChange: <K extends keyof PositionDraft>(key: K, value: PositionDraft[K]) => void;
 	onRemove?: () => void;
+	onFilesAdd: (files: FileList | null) => void;
+	onFileRemove: (fileIndex: number) => void;
 	nameInputRef: (el: HTMLInputElement | null) => void;
-	children?: React.ReactNode;
 }
 
-function PositionCard({ index, position, error, onChange, onRemove, nameInputRef, children }: PositionCardProps) {
+function PositionCard({
+	index,
+	position,
+	error,
+	onChange,
+	onRemove,
+	onFilesAdd,
+	onFileRemove,
+	nameInputRef,
+}: PositionCardProps) {
 	const nameId = `position-${index}-name`;
 	const descId = `position-${index}-description`;
 	const qtyId = `position-${index}-qty`;
@@ -854,20 +921,18 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 				)}
 			</Field>
 
+			<DescriptionWithAttachments
+				id={descId}
+				value={position.description}
+				onChange={(v) => onChange("description", v)}
+				files={position.files}
+				onFilesAdd={onFilesAdd}
+				onFileRemove={onFileRemove}
+			/>
+
 			<div className="flex flex-wrap gap-3">
 				<Field label="Ед. изм." className="w-32 shrink-0">
-					<Select value={position.unit || undefined} onValueChange={(v) => onChange("unit", v as typeof position.unit)}>
-						<SelectTrigger aria-label="Единица измерения" className="w-full">
-							<SelectValue placeholder="Выберите" />
-						</SelectTrigger>
-						<SelectContent>
-							{UNITS.map((u) => (
-								<SelectItem key={u} value={u}>
-									{u}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<UnitCardSelect value={position.unit} onChange={(v) => onChange("unit", v)} />
 				</Field>
 				<Field label="Кол-во в поставке" htmlFor={qtyId} className="flex-1 min-w-32">
 					<Input
@@ -929,70 +994,109 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 					/>
 				</Field>
 			</div>
-
-			<Field label="Спецификация" hint="Описание позиции" htmlFor={descId}>
-				<Input
-					id={descId}
-					placeholder="По ГОСТ 34028-2016"
-					value={position.description}
-					onChange={(e) => onChange("description", e.target.value)}
-					spellCheck={false}
-					autoComplete="off"
-				/>
-			</Field>
-
-			{children}
 		</section>
 	);
 }
 
-interface FilesFieldProps {
+interface DescriptionWithAttachmentsProps {
+	id: string;
+	value: string;
+	onChange: (value: string) => void;
 	files: File[];
 	onFilesAdd: (files: FileList | null) => void;
 	onFileRemove: (index: number) => void;
 }
 
-function FilesField({ files, onFilesAdd, onFileRemove }: FilesFieldProps) {
+const isFileDrag = (dt: DataTransfer) => dt.types.includes("Files");
+
+function DescriptionWithAttachments({
+	id,
+	value,
+	onChange,
+	files,
+	onFilesAdd,
+	onFileRemove,
+}: DescriptionWithAttachmentsProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	// Track nested dragenter/dragleave pairs — text-node children inside the
+	// textarea fire extra events, so a simple boolean flickers.
+	const dragDepthRef = useRef(0);
+	const [isDragOver, setIsDragOver] = useState(false);
+
 	return (
 		<Field
-			label="Прикрепить файлы"
-			hint="Прикрепите макеты, спецификации и другие документы — это поможет поставщикам сделать точный расчёт"
+			label="Описание и спецификация"
+			hint="Опишите позицию — макеты, ГОСТ, чертежи помогут поставщикам"
+			htmlFor={id}
 		>
-			<button
-				type="button"
-				aria-label="Прикрепить файлы"
-				className="flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-input bg-background/40 p-4 text-center transition-colors hover:border-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
-				onClick={() => fileInputRef.current?.click()}
-				onDragOver={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-				}}
-				onDrop={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					onFilesAdd(e.dataTransfer.files);
-				}}
-			>
-				<p className="text-sm text-muted-foreground">Перетащите файлы сюда или нажмите для выбора</p>
-				<p className="text-xs text-muted-foreground">Макс. 10&nbsp;МБ на файл, 25&nbsp;МБ суммарно</p>
-			</button>
-			<input
-				ref={fileInputRef}
-				type="file"
-				multiple
-				className="hidden"
-				onChange={(e) => {
-					onFilesAdd(e.target.files);
-					e.target.value = "";
-				}}
-			/>
+			<div className="relative">
+				<Textarea
+					id={id}
+					placeholder="По ГОСТ 34028-2016. Прикрепите чертежи или перетащите файлы сюда"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					spellCheck={false}
+					autoComplete="off"
+					rows={3}
+					className={cn(
+						"pr-10 transition-[color,background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none",
+						isDragOver && "border-primary ring-3 ring-ring/40",
+					)}
+					onDragEnter={(e) => {
+						if (!isFileDrag(e.dataTransfer)) return;
+						e.preventDefault();
+						dragDepthRef.current += 1;
+						setIsDragOver(true);
+					}}
+					onDragOver={(e) => {
+						if (!isFileDrag(e.dataTransfer)) return;
+						e.preventDefault();
+						e.dataTransfer.dropEffect = "copy";
+					}}
+					onDragLeave={(e) => {
+						if (!isFileDrag(e.dataTransfer)) return;
+						dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+						if (dragDepthRef.current === 0) setIsDragOver(false);
+					}}
+					onDrop={(e) => {
+						if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+						e.preventDefault();
+						dragDepthRef.current = 0;
+						setIsDragOver(false);
+						onFilesAdd(e.dataTransfer.files);
+					}}
+				/>
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					onClick={() => fileInputRef.current?.click()}
+					aria-label="Прикрепить файлы"
+					className="absolute right-1.5 bottom-1.5 text-muted-foreground hover:text-foreground active:scale-[0.96] transition-[color,scale] duration-100 motion-reduce:transition-none motion-reduce:active:scale-100 before:absolute before:-inset-1.5 before:content-['']"
+				>
+					<Paperclip aria-hidden="true" className="size-4" />
+				</Button>
+				<input
+					ref={fileInputRef}
+					type="file"
+					multiple
+					className="hidden"
+					onChange={(e) => {
+						onFilesAdd(e.target.files);
+						e.target.value = "";
+					}}
+				/>
+			</div>
 			{files.length > 0 && (
 				<ul className="mt-1 flex flex-col gap-1">
 					{files.map((file, i) => (
-						<li key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm">
+						<li
+							key={`${file.name}-${file.size}`}
+							className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1 text-sm"
+						>
+							<Paperclip aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
 							<span className="min-w-0 flex-1 truncate">{file.name}</span>
-							<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+							<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatFileSize(file.size)}</span>
 							<Button
 								type="button"
 								variant="ghost"
@@ -1007,6 +1111,302 @@ function FilesField({ files, onFilesAdd, onFileRemove }: FilesFieldProps) {
 				</ul>
 			)}
 		</Field>
+	);
+}
+
+function UnitCardSelect({
+	value,
+	onChange,
+}: {
+	value: PositionDraft["unit"];
+	onChange: (v: PositionDraft["unit"]) => void;
+}) {
+	const [open, setOpen] = useState(false);
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					type="button"
+					variant="outline"
+					aria-label="Единица измерения"
+					className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}
+				>
+					<span className="truncate">{value || "Выберите"}</span>
+					<ChevronDown aria-hidden="true" className="size-4 opacity-60" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-56 rounded-xl p-1.5">
+				<div className="grid grid-cols-4 gap-1.5" role="listbox" aria-label="Единицы измерения">
+					{UNITS.map((u) => {
+						const selected = u === value;
+						return (
+							<button
+								key={u}
+								type="button"
+								role="option"
+								aria-selected={selected}
+								onClick={() => {
+									onChange(u);
+									setOpen(false);
+								}}
+								className={cn(
+									"flex h-10 items-center justify-center rounded-md border text-sm tabular-nums transition-[color,background-color,border-color,scale] duration-100 motion-reduce:transition-none active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+									selected
+										? "border-primary bg-primary text-primary-foreground"
+										: "border-border bg-background hover:border-primary/60 hover:bg-accent",
+								)}
+							>
+								{u}
+							</button>
+						);
+					})}
+				</div>
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+const NEW_SEARCH_LABEL = "Новый поиск";
+
+function CopySuppliersSelect({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+	const [open, setOpen] = useState(false);
+	const { items, isLoading } = useTenders({ sort: "createdAt", dir: "desc", limit: 50 }, { enabled: open });
+	const candidates = useMemo(() => items.filter((t) => t.suppliersCount > 0), [items]);
+	const selected = value ? items.find((t) => t.id === value) : undefined;
+	const labelId = useId();
+
+	function handlePick(id: string | null) {
+		onChange(id);
+		setOpen(false);
+	}
+
+	const triggerLabel = selected ? selected.name : NEW_SEARCH_LABEL;
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					type="button"
+					variant="outline"
+					aria-labelledby={labelId}
+					className="w-full justify-between font-normal"
+				>
+					<span id={labelId} className="min-w-0 flex-1 truncate text-left">
+						{triggerLabel}
+					</span>
+					<ChevronDown aria-hidden="true" className="ml-2 size-4 opacity-60" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent
+				align="start"
+				collisionPadding={16}
+				onWheel={(e) => e.stopPropagation()}
+				className="w-(--radix-popover-trigger-width) min-w-72 max-h-[60vh] overflow-y-auto overscroll-contain rounded-xl p-1.5"
+			>
+				<button
+					type="button"
+					onClick={() => handlePick(null)}
+					aria-pressed={value === null}
+					className={cn(
+						"flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-hidden",
+						value === null && "bg-accent text-accent-foreground",
+					)}
+				>
+					<span className="min-w-0 flex-1 font-medium">{NEW_SEARCH_LABEL}</span>
+					{value === null && <Check aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />}
+				</button>
+				{isLoading && <p className="px-2 py-2 text-sm text-muted-foreground">Загружаем запросы…</p>}
+				{!isLoading && candidates.length === 0 && (
+					<p className="px-2 py-2 text-sm text-muted-foreground">Нет запросов с поставщиками</p>
+				)}
+				{candidates.map((tender) => (
+					<CopySuppliersRow
+						key={tender.id}
+						tender={tender}
+						selected={tender.id === value}
+						onSelect={() => handlePick(tender.id)}
+					/>
+				))}
+			</PopoverContent>
+		</Popover>
+	);
+}
+
+function CopySuppliersRow({
+	tender,
+	selected,
+	onSelect,
+}: {
+	tender: TenderSummary;
+	selected: boolean;
+	onSelect: () => void;
+}) {
+	const status = STATUS_CONFIG[tender.status];
+	return (
+		<button
+			type="button"
+			onClick={onSelect}
+			aria-pressed={selected}
+			className={cn(
+				"flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:outline-hidden",
+				selected && "bg-accent text-accent-foreground",
+			)}
+		>
+			<div className="flex items-center gap-2">
+				<span className="flex min-w-0 flex-1 items-center gap-1.5">
+					<span className="min-w-0 truncate font-medium">{tender.name}</span>
+					<span
+						role="img"
+						aria-label={status.label}
+						className={cn("inline-flex shrink-0 items-center", status.className)}
+					>
+						<ProcurementStatusIcon status={tender.status} iconClassName="size-3.5" />
+					</span>
+				</span>
+				{selected && <Check aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />}
+			</div>
+			<p className="text-xs text-muted-foreground tabular-nums">
+				{pluralizeRu(tender.suppliersCount, "поставщик", "поставщика", "поставщиков")}
+			</p>
+		</button>
+	);
+}
+
+function itemToPositionDraft(item: ProcurementItem): PositionDraft {
+	return {
+		name: item.name,
+		description: item.description ?? "",
+		unit: item.unit ?? "",
+		quantityPerDelivery: item.quantityPerDelivery !== undefined ? String(item.quantityPerDelivery) : "",
+		annualQuantity: String(item.annualQuantity),
+		pricePerUnit: item.currentPrice !== null ? String(item.currentPrice) : "",
+		currentSupplierInn: "",
+		files: [],
+	};
+}
+
+interface PickPositionsDialogProps {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	onApply: (items: ProcurementItem[]) => void;
+}
+
+function PickPositionsDialog({ open, onOpenChange, onApply }: PickPositionsDialogProps) {
+	const { data: allItems, isLoading } = useAllItems({ enabled: open });
+	const [query, setQuery] = useState("");
+	const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+	useEffect(() => {
+		if (open) return;
+		setQuery("");
+		setSelectedIds(new Set());
+	}, [open]);
+
+	const candidates = useMemo(() => {
+		const pickable = (allItems ?? []).filter((item) => PICKABLE_ITEM_STATUSES.has(item.status));
+		const trimmed = query.trim().toLowerCase();
+		if (!trimmed) return pickable;
+		return pickable.filter((item) => item.name.toLowerCase().includes(trimmed));
+	}, [allItems, query]);
+
+	function toggle(id: string) {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}
+
+	function handleApply() {
+		const picked = (allItems ?? []).filter((item) => selectedIds.has(item.id));
+		onApply(picked);
+	}
+
+	const selectedCount = selectedIds.size;
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-[28rem]">
+				<DialogHeader className="gap-3 pr-8">
+					<DialogTitle>Выбрать позиции</DialogTitle>
+					<DialogDescription>Выберите позиции, которые хотите добавить в запрос</DialogDescription>
+				</DialogHeader>
+				<div className="relative">
+					<Search
+						aria-hidden="true"
+						className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+					/>
+					<Input
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						placeholder="Поиск по названию"
+						aria-label="Поиск позиций"
+						spellCheck={false}
+						autoComplete="off"
+						className="pl-8"
+					/>
+				</div>
+				<ul
+					className="-mx-1 flex max-h-[60vh] flex-col overflow-y-auto overscroll-contain"
+					aria-label="Доступные позиции"
+				>
+					{isLoading && <li className="px-2 py-6 text-center text-sm text-muted-foreground">Загружаем позиции…</li>}
+					{!isLoading && candidates.length === 0 && (
+						<li className="px-2 py-6 text-center text-sm text-muted-foreground">
+							{query.trim() ? "Ничего не найдено" : "Нет позиций, готовых к добавлению"}
+						</li>
+					)}
+					{candidates.map((item) => (
+						<PickPositionRow
+							key={item.id}
+							item={item}
+							checked={selectedIds.has(item.id)}
+							onToggle={() => toggle(item.id)}
+						/>
+					))}
+				</ul>
+				<DialogFooter>
+					<Button type="button" onClick={handleApply} disabled={selectedCount === 0}>
+						Добавить
+						{selectedCount > 0 && <span className="ml-1 tabular-nums">({selectedCount})</span>}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+function PickPositionRow({
+	item,
+	checked,
+	onToggle,
+}: {
+	item: ProcurementItem;
+	checked: boolean;
+	onToggle: () => void;
+}) {
+	const status = STATUS_CONFIG[item.status];
+	const checkboxId = `pick-position-${item.id}`;
+	return (
+		<li>
+			<label
+				htmlFor={checkboxId}
+				className="group/field flex min-h-10 cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-accent hover:text-accent-foreground"
+			>
+				<Checkbox id={checkboxId} checked={checked} onCheckedChange={() => onToggle()} />
+				<span className="flex min-w-0 flex-1 items-center gap-1.5">
+					<span className="min-w-0 truncate text-sm">{item.name}</span>
+					<span
+						role="img"
+						aria-label={status.label}
+						className={cn("inline-flex shrink-0 items-center", status.className)}
+					>
+						<ProcurementStatusIcon status={item.status} iconClassName="size-3.5" />
+					</span>
+				</span>
+			</label>
+		</li>
 	);
 }
 
