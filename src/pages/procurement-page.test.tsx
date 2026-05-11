@@ -121,7 +121,7 @@ describe("ProcurementPage — multi-company mode", () => {
 			expect(screen.getByText("Труба стальная")).toBeInTheDocument();
 		});
 		expect(screen.getByTestId("company-badge-i1")).toBeInTheDocument();
-		expect(screen.queryByTestId("folder-badge-i1")).not.toBeInTheDocument();
+		expect(screen.getByTestId("folder-badge-i1")).toBeInTheDocument();
 	});
 
 	test("company URL param scopes items and shows folder badges", async () => {

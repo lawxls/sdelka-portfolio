@@ -37,6 +37,11 @@ export function formatDeviation(value: number | null | undefined): { text: strin
 	return { text: `${triangle}${formatPercent(value)}`, className: signClassName(value) };
 }
 
+/** Strip every non-digit character — for numeric-only inputs (INN, etc.). */
+export function digitsOnly(value: string): string {
+	return value.replace(/\D/g, "");
+}
+
 /** Russian phone display: stored as raw digits with optional `+7` prefix → `+7 (XXX) XXX-XX-XX`.
  * Returns "" for empty input. Truncates at 10 subscriber digits. Recognises both `7` and `8` country prefixes. */
 export function formatPhone(raw: string): string {

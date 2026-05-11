@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
 import { useCheckEmail, useRegister } from "@/data/use-session";
+import { digitsOnly } from "@/lib/format";
 
 type Stage = "email" | "details" | "confirmation";
 
@@ -18,7 +19,7 @@ export function RegisterPage() {
 	const [lastName, setLastName] = useState("");
 	const [patronymic, setPatronymic] = useState("");
 	const [phone, setPhone] = useState("");
-	const [companyName, setCompanyName] = useState("");
+	const [inn, setInn] = useState("");
 	const [password, setPassword] = useState("");
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 
@@ -66,7 +67,7 @@ export function RegisterPage() {
 				last_name: lastName,
 				patronymic: patronymic || undefined,
 				phone,
-				company_name: companyName,
+				inn,
 			});
 			setStage("confirmation");
 		} catch (err: unknown) {
@@ -122,25 +123,26 @@ export function RegisterPage() {
 				<form onSubmit={handleDetailsSubmit} className="mt-8 space-y-4">
 					{error && <FormErrorBanner>{error}</FormErrorBanner>}
 
-					<FloatingInput
-						label="Имя"
-						name="firstName"
-						value={firstName}
-						onChange={(e) => setFirstName(e.target.value)}
-						error={fieldErrors.first_name}
-						autoComplete="given-name"
-						required
-					/>
+					<div className="grid grid-cols-2 gap-3">
+						<FloatingInput
+							label="Имя"
+							name="firstName"
+							value={firstName}
+							onChange={(e) => setFirstName(e.target.value)}
+							error={fieldErrors.first_name}
+							autoComplete="given-name"
+							required
+						/>
 
-					<FloatingInput
-						label="Фамилия"
-						name="lastName"
-						value={lastName}
-						onChange={(e) => setLastName(e.target.value)}
-						error={fieldErrors.last_name}
-						autoComplete="family-name"
-						required
-					/>
+						<FloatingInput
+							label="Фамилия"
+							name="lastName"
+							value={lastName}
+							onChange={(e) => setLastName(e.target.value)}
+							error={fieldErrors.last_name}
+							autoComplete="family-name"
+						/>
+					</div>
 
 					<FloatingInput
 						label="Отчество"
@@ -152,9 +154,14 @@ export function RegisterPage() {
 					/>
 
 					<div className="space-y-1.5">
-						<label htmlFor="phone" className="text-sm font-medium text-foreground">
-							Телефон
-						</label>
+						<div className="flex items-baseline gap-0.5">
+							<label htmlFor="phone" className="text-sm font-medium text-foreground">
+								Телефон
+							</label>
+							<span aria-hidden="true" className="text-sm font-medium text-destructive">
+								*
+							</span>
+						</div>
 						<PhoneInput
 							id="phone"
 							value={phone}
@@ -166,36 +173,40 @@ export function RegisterPage() {
 					</div>
 
 					<FloatingInput
-						label="Название компании"
-						name="companyName"
-						value={companyName}
-						onChange={(e) => setCompanyName(e.target.value)}
-						error={fieldErrors.company_name}
-						autoComplete="organization"
+						label="ИНН компании"
+						name="inn"
+						value={inn}
+						onChange={(e) => setInn(digitsOnly(e.target.value))}
+						error={fieldErrors.inn}
+						inputMode="numeric"
+						maxLength={12}
+						autoComplete="off"
 						required
 					/>
 
-					<FloatingInput
-						label="Пароль"
-						name="password"
-						type="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						error={fieldErrors.password}
-						autoComplete="new-password"
-						required
-					/>
+					<div className="grid grid-cols-2 gap-3">
+						<FloatingInput
+							label="Пароль"
+							name="password"
+							type="password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							error={fieldErrors.password}
+							autoComplete="new-password"
+							required
+						/>
 
-					<FloatingInput
-						label="Подтвердите пароль"
-						name="passwordConfirm"
-						type="password"
-						value={passwordConfirm}
-						onChange={(e) => setPasswordConfirm(e.target.value)}
-						error={fieldErrors.password_confirm}
-						autoComplete="new-password"
-						required
-					/>
+						<FloatingInput
+							label="Подтвердите пароль"
+							name="passwordConfirm"
+							type="password"
+							value={passwordConfirm}
+							onChange={(e) => setPasswordConfirm(e.target.value)}
+							error={fieldErrors.password_confirm}
+							autoComplete="new-password"
+							required
+						/>
+					</div>
 
 					<Button type="submit" size="xl" className="w-full" disabled={submitting}>
 						Зарегистрироваться

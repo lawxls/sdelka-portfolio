@@ -29,7 +29,7 @@ import { useCreateAddress } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatFileSize } from "@/lib/format";
+import { digitsOnly, formatFileSize } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
 	type CreateTenderPayload,
@@ -919,7 +919,7 @@ function PositionCard({ index, position, error, onChange, onRemove, nameInputRef
 					<Input
 						id={innId}
 						value={position.currentSupplierInn}
-						onChange={(e) => onChange("currentSupplierInn", e.target.value.replace(/\D/g, ""))}
+						onChange={(e) => onChange("currentSupplierInn", digitsOnly(e.target.value))}
 						inputMode="numeric"
 						autoComplete="off"
 						spellCheck={false}

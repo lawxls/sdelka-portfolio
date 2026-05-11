@@ -69,9 +69,9 @@ const defaultProps = {
 };
 
 describe("ProcurementTable", () => {
-	test("renders 8 column headers", () => {
+	test("renders 9 column headers", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByRole("columnheader")).toHaveLength(8);
+		expect(screen.getAllByRole("columnheader")).toHaveLength(9);
 	});
 
 	test("renders correct number of data rows", () => {
@@ -94,16 +94,16 @@ describe("ProcurementTable", () => {
 		expect(screen.getByText("Цемент М500")).toBeInTheDocument();
 	});
 
-	test("renders status badges with correct labels", () => {
+	test("renders status icons with aria-labels", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ищем поставщиков")).toHaveLength(3);
-		expect(screen.getByText("Ведём переговоры")).toBeInTheDocument();
+		expect(screen.getAllByLabelText("Ищем поставщиков")).toHaveLength(3);
+		expect(screen.getByLabelText("Ведём переговоры")).toBeInTheDocument();
 	});
 
-	test("renders status labels with correct color classes", () => {
+	test("status icons have correct color classes", () => {
 		renderWithTooltip(<ProcurementTable {...defaultProps} />);
-		expect(screen.getAllByText("Ищем поставщиков")[0].className).toContain("text-orange-600");
-		expect(screen.getByText("Ведём переговоры").className).toContain("text-blue-600");
+		expect(screen.getAllByLabelText("Ищем поставщиков")[0].className).toContain("text-orange-600");
+		expect(screen.getByLabelText("Ведём переговоры").className).toContain("text-blue-600");
 	});
 
 	test("renders dash for null prices, deviation, and overpayment", () => {

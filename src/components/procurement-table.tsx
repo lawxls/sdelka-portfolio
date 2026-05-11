@@ -22,6 +22,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -65,6 +66,26 @@ const ANALYSIS_COLUMNS: SortableColumn[] = [
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"] as const;
 const SKELETON_COL_KEYS = ["sc-1", "sc-2", "sc-3", "sc-4", "sc-5", "sc-6"] as const;
 
+const FIXED_COLUMN_COUNT = 3;
+const COLUMN_COUNT = FIXED_COLUMN_COUNT + INPUT_COLUMNS.length + ANALYSIS_COLUMNS.length;
+
+function ErrorState({ onRetry, className }: { onRetry?: () => void; className?: string }) {
+	return (
+		<div
+			className={cn("flex flex-col items-center justify-center gap-3 text-muted-foreground", className)}
+			data-testid="items-error"
+		>
+			<AlertTriangle className="size-8" aria-hidden="true" />
+			<p className="text-sm">Не удалось загрузить данные</p>
+			{onRetry && (
+				<Button type="button" onClick={onRetry}>
+					Повторить
+				</Button>
+			)}
+		</div>
+	);
+}
+
 function SortIcon({ field, sort }: { field: SortField; sort: SortState | null }) {
 	if (sort?.field !== field) return <ArrowUpDown className="size-3.5 text-muted-foreground/50" aria-hidden="true" />;
 	return sort.direction === "asc" ? (
@@ -86,7 +107,7 @@ function SortableHeaderButton({
 	const button = (
 		<button
 			type="button"
-			className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+			className="inline-flex items-center gap-1 hover:text-foreground transition-[color,transform] active:scale-[0.96]"
 			onClick={() => onSort(col.field)}
 			aria-label={`Сортировать по ${col.label}`}
 		>
@@ -203,24 +224,7 @@ export function ProcurementTable({
 							))}
 						</div>
 					)}
-					{error && !isLoading && (
-						<div
-							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
-							data-testid="items-error"
-						>
-							<AlertTriangle className="size-8" aria-hidden="true" />
-							<p className="text-sm">Не удалось загрузить данные</p>
-							{onRetry && (
-								<button
-									type="button"
-									className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-									onClick={onRetry}
-								>
-									Повторить
-								</button>
-							)}
-						</div>
-					)}
+					{error && !isLoading && <ErrorState onRetry={onRetry} className="h-48" />}
 					{!isLoading && !error && items.length === 0 && (
 						<div
 							className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground"
@@ -265,15 +269,14 @@ export function ProcurementTable({
 	}
 
 	const stickyHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)]";
-	const stickyNameHead = "sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] w-[1%]";
-	const stickyNameCell = "transition-colors w-[1%]";
-	const analysisHead =
-		"sticky top-0 z-20 bg-background shadow-[inset_0_-1px_0_var(--color-border)] text-highlight-foreground";
+	const stickyNameHead = `${stickyHead} w-full max-w-0`;
+	const stickyNameCell = "transition-colors w-full max-w-0";
+	const analysisHead = `${stickyHead} text-highlight-foreground`;
 	return (
 		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<div
 				ref={scrollContainerRef}
-				className="flex min-w-0 flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg"
+				className="flex min-w-0 flex-1 flex-col overflow-auto touch-manipulation [&_tr>*:first-child]:pl-lg [&_tr>*:last-child]:pr-lg [&_tr>*:not(:last-child)]:border-r"
 				data-testid="table-scroll-container"
 			>
 				<Table>
@@ -281,6 +284,7 @@ export function ProcurementTable({
 						<TableRow className="border-b-0">
 							<TableHead className={`w-12 text-center ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
+							<TableHead className={stickyHead}>КАТЕГОРИЯ</TableHead>
 							{INPUT_COLUMNS.map((col) => (
 								<TableHead key={col.field} className={`text-right ${stickyHead}`}>
 									<SortableHeaderButton col={col} sort={sort} onSort={onSort} />
@@ -302,7 +306,9 @@ export function ProcurementTable({
 									</TableCell>
 									<TableCell className={stickyNameCell}>
 										<Skeleton className="h-4 w-48" />
-										<Skeleton className="mt-1 h-3 w-24" />
+									</TableCell>
+									<TableCell>
+										<Skeleton className="h-4 w-20" />
 									</TableCell>
 									{SKELETON_COL_KEYS.map((ck) => (
 										<TableCell key={ck} className="text-right">
@@ -313,23 +319,8 @@ export function ProcurementTable({
 							))}
 						{error && !isLoading && (
 							<TableRow>
-								<TableCell colSpan={8} className="h-48">
-									<div
-										className="flex flex-col items-center justify-center gap-3 text-muted-foreground"
-										data-testid="items-error"
-									>
-										<AlertTriangle className="size-8" aria-hidden="true" />
-										<p className="text-sm">Не удалось загрузить данные</p>
-										{onRetry && (
-											<button
-												type="button"
-												className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-												onClick={onRetry}
-											>
-												Повторить
-											</button>
-										)}
-									</div>
+								<TableCell colSpan={COLUMN_COUNT} className="h-48">
+									<ErrorState onRetry={onRetry} />
 								</TableCell>
 							</TableRow>
 						)}
@@ -362,43 +353,45 @@ export function ProcurementTable({
 									</TableCell>
 								) : (
 									<TableCell className={`font-medium ${stickyNameCell}`}>
-										<div className="max-w-[350px]">
-											<div className="flex items-center gap-2 min-w-0">
-												<TruncatedName name={displayName} className="truncate" />
-												{showCompanyBadge && companyName && (
-													<div
-														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
-														data-testid={`company-badge-${item.id}`}
+										<div className="flex items-center gap-2 min-w-0">
+											<TruncatedName name={displayName} className="block min-w-0 truncate" />
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<span
+														role="img"
+														className={cn("inline-flex shrink-0 items-center", status.className)}
+														aria-label={status.label}
+														data-testid={`status-icon-${item.id}`}
 													>
-														<Building2 className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-														<span className="text-xs text-muted-foreground">{companyName}</span>
-													</div>
-												)}
-												{!showCompanyBadge && folder && !isArchiveView && (
-													<div
-														className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
-														data-testid={`folder-badge-${item.id}`}
-													>
-														<span
-															className="size-2 shrink-0 rounded-full"
-															style={{
-																backgroundColor: `var(--folder-${folder.color})`,
-															}}
-															aria-hidden="true"
-														/>
-														<span className="text-xs text-muted-foreground">{folder.name}</span>
-													</div>
-												)}
-											</div>
-											<div className="mt-0.5">
-												<span
-													className={`relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs ${status.className}`}
+														<ProcurementStatusIcon status={displayStatus} iconClassName="size-3.5" />
+													</span>
+												</TooltipTrigger>
+												<TooltipContent>{status.label}</TooltipContent>
+											</Tooltip>
+											{showCompanyBadge && companyName && (
+												<div
+													className="flex shrink-0 items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
+													data-testid={`company-badge-${item.id}`}
 												>
-													<ProcurementStatusIcon status={displayStatus} />
-													{status.label}
-												</span>
-											</div>
+													<Building2 className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+													<span className="text-xs text-muted-foreground">{companyName}</span>
+												</div>
+											)}
 										</div>
+									</TableCell>
+								);
+								const categoryCell = (
+									<TableCell>
+										{folder && !isArchiveView ? (
+											<span className="inline-flex items-center gap-1.5" data-testid={`folder-badge-${item.id}`}>
+												<span
+													className="size-2 shrink-0 rounded-full"
+													style={{ backgroundColor: `var(--folder-${folder.color})` }}
+													aria-hidden="true"
+												/>
+												<span className="text-xs font-medium text-foreground">{folder.name}</span>
+											</span>
+										) : null}
 									</TableCell>
 								);
 
@@ -412,6 +405,7 @@ export function ProcurementTable({
 									<>
 										<TableCell className="text-center tabular-nums text-muted-foreground">{index + 1}</TableCell>
 										{nameCell}
+										{categoryCell}
 										<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>
 										<TableCell className="text-right tabular-nums">{formatCurrency(item.currentPrice)}</TableCell>
 										<TableCell className="text-right tabular-nums">{formatCurrency(item.bestPrice)}</TableCell>

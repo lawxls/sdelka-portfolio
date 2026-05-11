@@ -1,3 +1,4 @@
+import { getRefreshToken } from "../auth";
 import type {
 	CheckEmailResult,
 	ConfirmEmailInput,
@@ -20,9 +21,10 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 	return {
 		login: (input: LoginInput) => http.post<LoginResult>(`/auth/login/`, { body: input, skipRefresh: true }),
 
-		refresh: () => http.post<RefreshResult>(`/auth/refresh/`, { body: {}, skipRefresh: true }),
+		refresh: () =>
+			http.post<RefreshResult>(`/auth/refresh/`, { body: { refresh: getRefreshToken() }, skipRefresh: true }),
 
-		logout: () => http.post<void>(`/auth/logout/`, { body: {}, skipRefresh: true }),
+		logout: () => http.post<void>(`/auth/logout/`, { body: { refresh: getRefreshToken() }, skipRefresh: true }),
 
 		register: (input: RegisterInput) =>
 			http.post<RegisterResult>(`/auth/register/`, { body: input, skipRefresh: true }),

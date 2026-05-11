@@ -11,6 +11,11 @@ describe("extractFormErrors — top-level codes", () => {
 		});
 	});
 
+	test('DRF detail "Invalid credentials." → Неверный пароль или почта', () => {
+		const err = new AuthError(401, { detail: "Invalid credentials." });
+		expect(extractFormErrors(err).error).toBe("Неверный пароль или почта");
+	});
+
 	test("email_not_verified surfaces a Russian message", () => {
 		const err = new AuthError(403, { code: "email_not_verified" });
 		expect(extractFormErrors(err).error).toBe("Подтвердите почту, чтобы войти");

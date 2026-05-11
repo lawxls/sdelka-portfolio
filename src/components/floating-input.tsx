@@ -12,6 +12,7 @@ interface FloatingInputProps {
 	autoComplete?: string;
 	prefix?: string;
 	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+	maxLength?: number;
 	required?: boolean;
 	readOnly?: boolean;
 }
@@ -26,6 +27,7 @@ export function FloatingInput({
 	autoComplete,
 	prefix,
 	inputMode,
+	maxLength,
 	required,
 	readOnly,
 }: FloatingInputProps) {
@@ -35,9 +37,16 @@ export function FloatingInput({
 
 	return (
 		<div className="space-y-1.5">
-			<label htmlFor={name} className="text-sm font-medium text-foreground">
-				{label}
-			</label>
+			<div className="flex items-baseline gap-0.5">
+				<label htmlFor={name} className="text-sm font-medium text-foreground">
+					{label}
+				</label>
+				{required && (
+					<span aria-hidden="true" className="text-sm font-medium text-destructive">
+						*
+					</span>
+				)}
+			</div>
 			<div className="relative">
 				{prefix && (
 					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
@@ -52,6 +61,7 @@ export function FloatingInput({
 					onChange={onChange}
 					autoComplete={autoComplete}
 					inputMode={inputMode}
+					maxLength={maxLength}
 					required={required}
 					readOnly={readOnly}
 					spellCheck={false}
@@ -72,14 +82,25 @@ export function FloatingInput({
 						type="button"
 						onClick={() => setShowPassword((s) => !s)}
 						aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
-						className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+						className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
 						tabIndex={-1}
 					>
-						{showPassword ? (
-							<EyeOff className="size-4" aria-hidden="true" />
-						) : (
-							<Eye className="size-4" aria-hidden="true" />
-						)}
+						<span className="relative size-4">
+							<Eye
+								aria-hidden="true"
+								className={cn(
+									"absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+									showPassword ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-0",
+								)}
+							/>
+							<EyeOff
+								aria-hidden="true"
+								className={cn(
+									"absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+									showPassword ? "scale-100 opacity-100 blur-0" : "scale-[0.25] opacity-0 blur-[4px]",
+								)}
+							/>
+						</span>
 					</button>
 				)}
 			</div>

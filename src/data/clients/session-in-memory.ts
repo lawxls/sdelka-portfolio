@@ -74,7 +74,7 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			if (!match) throw new AuthError(401, { code: "invalid_credentials" });
 			if (match.verified === false) throw new AuthError(403, { code: "email_not_verified" });
 			refreshAvailable = true;
-			return { access: nextId("access"), user: { ...match.user } };
+			return { access: nextId("access"), refresh: nextId("refresh"), user: { ...match.user } };
 		},
 
 		async refresh(): Promise<RefreshResult> {
@@ -120,7 +120,7 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			match.verified = true;
 			match.confirmationToken = undefined;
 			refreshAvailable = true;
-			return { access: nextId("access"), user: { ...match.user } };
+			return { access: nextId("access"), refresh: nextId("refresh"), user: { ...match.user } };
 		},
 
 		async checkEmail(email: string): Promise<CheckEmailResult> {

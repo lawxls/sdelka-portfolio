@@ -18,6 +18,13 @@ const TOP_LEVEL_CODES: Record<string, string> = {
 	invalid_or_expired_link: "Ссылка недействительна или истекла",
 };
 
+// Fallback for DRF/SimpleJWT responses that ship only `detail` (no `code`).
+// Brittle by design — keep entries narrow to upstream defaults the backend
+// hasn't yet wrapped with a stable code.
+const TOP_LEVEL_DETAIL_MESSAGES: Record<string, string> = {
+	"Invalid credentials.": "Неверный пароль или почта",
+};
+
 const FIELD_CODES: Record<string, string> = {
 	password_too_common: "Пароль слишком распространён",
 	password_too_short: "Пароль слишком короткий",
@@ -54,7 +61,10 @@ function pickTopLevelError(body: unknown): string | null {
 	const code = (body as { code?: unknown }).code;
 	if (typeof code === "string" && TOP_LEVEL_CODES[code]) return TOP_LEVEL_CODES[code];
 	const detail = (body as { detail?: unknown }).detail;
-	if (typeof detail === "string" && TOP_LEVEL_CODES[detail]) return TOP_LEVEL_CODES[detail];
+	if (typeof detail === "string") {
+		if (TOP_LEVEL_CODES[detail]) return TOP_LEVEL_CODES[detail];
+		if (TOP_LEVEL_DETAIL_MESSAGES[detail]) return TOP_LEVEL_DETAIL_MESSAGES[detail];
+	}
 	return null;
 }
 

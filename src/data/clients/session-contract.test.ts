@@ -45,7 +45,7 @@ function validRegisterInput(overrides: Partial<RegisterInput> = {}): RegisterInp
 		first_name: "Иван",
 		last_name: "Иванов",
 		phone: "+79991234567",
-		company_name: "ООО Пример",
+		inn: "7707083893",
 		...overrides,
 	};
 }
@@ -87,7 +87,10 @@ function httpAdapter(): Adapter {
 				const seed = SEED_USERS.find((u) => u.email === data.email && u.password === data.password);
 				if (!seed) return { status: 401, body: { code: "invalid_credentials" } };
 				if (seed.verified === false) return { status: 403, body: { code: "email_not_verified" } };
-				return { status: 200, body: { access: `access-${seed.user.id}`, user: seed.user } };
+				return {
+					status: 200,
+					body: { access: `access-${seed.user.id}`, refresh: `refresh-${seed.user.id}`, user: seed.user },
+				};
 			},
 		},
 		{
@@ -131,7 +134,11 @@ function httpAdapter(): Adapter {
 				if (data.uid === "good-uid" && data.token === "good-token") {
 					return {
 						status: 200,
-						body: { access: "access-confirmed", user: { id: 42, email: "confirmed@example.com" } },
+						body: {
+							access: "access-confirmed",
+							refresh: "refresh-confirmed",
+							user: { id: 42, email: "confirmed@example.com" },
+						},
 					};
 				}
 				return { status: 400, body: { code: "invalid_or_expired_link" } };

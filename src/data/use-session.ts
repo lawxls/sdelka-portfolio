@@ -21,7 +21,7 @@ export function useLogin() {
 	return useMutation({
 		mutationFn: async (input: LoginInput): Promise<LoginResult> => {
 			const result = await client.login(input);
-			setTokens(result.access);
+			setTokens(result.access, result.refresh);
 			return result;
 		},
 	});
@@ -66,7 +66,7 @@ export function useConfirmEmail() {
 	return useMutation({
 		mutationFn: async (input: ConfirmEmailInput): Promise<ConfirmEmailResult> => {
 			const result = await client.confirmEmail(input);
-			setTokens(result.access);
+			setTokens(result.access, result.refresh);
 			return result;
 		},
 	});
@@ -147,7 +147,7 @@ export function useSessionBootstrap(): SessionStatus {
 				.refresh()
 				.then((res) => {
 					if (cancelled) return;
-					setTokens(res.access);
+					setTokens(res.access, res.refresh);
 					setStatus("authed");
 				})
 				.catch(() => {

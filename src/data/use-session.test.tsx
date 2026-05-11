@@ -42,7 +42,9 @@ afterEach(() => {
 
 describe("useLogin", () => {
 	test("calls client.login and stores access token on success", async () => {
-		const login = vi.fn().mockResolvedValue({ access: "fresh-access", user: { id: "1", email: "a@b.com" } });
+		const login = vi
+			.fn()
+			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "a@b.com" } });
 		const client = fakeSessionClient({ login });
 
 		const { result } = renderHook(() => useLogin(), { wrapper: wrapperFactory(client) });
@@ -156,7 +158,7 @@ describe("useRegister", () => {
 				first_name: "Иван",
 				last_name: "Иванов",
 				phone: "+79991234567",
-				company_name: "ООО Пример",
+				inn: "7707083893",
 			});
 			expect(res.user.email).toBe("newuser@example.com");
 		});
@@ -165,7 +167,7 @@ describe("useRegister", () => {
 			expect.objectContaining({
 				email: "newuser@example.com",
 				password_confirm: "fresh-pass-1",
-				company_name: "ООО Пример",
+				inn: "7707083893",
 			}),
 		);
 		// Register does not auto-login — the user must confirm their email first.
@@ -189,7 +191,7 @@ describe("useRegister", () => {
 					first_name: "Иван",
 					last_name: "Иванов",
 					phone: "+79991234567",
-					company_name: "ООО Пример",
+					inn: "7707083893",
 				}),
 			).rejects.toBeInstanceOf(ValidationError);
 		});
@@ -200,7 +202,11 @@ describe("useRegister", () => {
 
 describe("useConfirmEmail", () => {
 	test("calls client.confirmEmail and stores access token on success (auto-login)", async () => {
-		const confirmEmail = vi.fn().mockResolvedValue({ access: "confirmed-access", user: { id: "5", email: "x@y.z" } });
+		const confirmEmail = vi.fn().mockResolvedValue({
+			access: "confirmed-access",
+			refresh: "confirmed-refresh",
+			user: { id: "5", email: "x@y.z" },
+		});
 		const client = fakeSessionClient({ confirmEmail });
 
 		const { result } = renderHook(() => useConfirmEmail(), { wrapper: wrapperFactory(client) });

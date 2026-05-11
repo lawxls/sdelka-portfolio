@@ -89,6 +89,13 @@ export function LoginPage() {
 					{submitLabel}
 				</Button>
 			</form>
+
+			<p className="mt-6 text-center text-sm text-muted-foreground">
+				Нет аккаунта?{" "}
+				<Link to="/register" className="text-foreground hover:underline">
+					Зарегистрироваться
+				</Link>
+			</p>
 		</>
 	);
 }

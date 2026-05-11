@@ -19,7 +19,7 @@ if (clients.session) {
 	installAuthHandlers({
 		refresh: async () => {
 			const result = await session.refresh();
-			setTokens(result.access);
+			setTokens(result.access, result.refresh);
 		},
 		onAuthCleared: () => clearTokens(),
 	});

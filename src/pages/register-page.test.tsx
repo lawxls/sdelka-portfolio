@@ -104,7 +104,7 @@ describe("RegisterPage", () => {
 		expect(screen.getByLabelText("Фамилия")).toBeInTheDocument();
 		expect(screen.getByLabelText("Отчество")).toBeInTheDocument();
 		expect(screen.getByLabelText("Телефон")).toBeInTheDocument();
-		expect(screen.getByLabelText("Название компании")).toBeInTheDocument();
+		expect(screen.getByLabelText("ИНН компании")).toBeInTheDocument();
 		expect(screen.getByLabelText("Пароль")).toBeInTheDocument();
 		expect(screen.getByLabelText("Подтвердите пароль")).toBeInTheDocument();
 	});
@@ -119,7 +119,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Иван");
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "short");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "short");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -139,7 +139,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Иван");
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "differentPass");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -149,7 +149,7 @@ describe("RegisterPage", () => {
 		});
 	});
 
-	test("stage 2: successful registration sends company_name + password_confirm + phone in payload and advances to stage 3", async () => {
+	test("stage 2: successful registration sends inn + password_confirm + phone in payload and advances to stage 3", async () => {
 		const register = vi.fn().mockResolvedValue({ user: { id: 99, email: "new@user.com" } });
 		const checkEmail = vi.fn().mockResolvedValue({ exists: false });
 		const session: SessionClient = {
@@ -175,7 +175,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Отчество"), "Петрович");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -193,7 +193,7 @@ describe("RegisterPage", () => {
 			last_name: "Иванов",
 			patronymic: "Петрович",
 			phone: "+79991234567",
-			company_name: "ООО Пример",
+			inn: "7707083893",
 		});
 	});
 
@@ -222,7 +222,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Иван");
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -261,7 +261,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Иван");
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));
@@ -283,7 +283,7 @@ describe("RegisterPage", () => {
 		await user.type(screen.getByLabelText("Имя"), "Иван");
 		await user.type(screen.getByLabelText("Фамилия"), "Иванов");
 		await user.type(screen.getByLabelText("Телефон"), "9991234567");
-		await user.type(screen.getByLabelText("Название компании"), "ООО Пример");
+		await user.type(screen.getByLabelText("ИНН компании"), "7707083893");
 		await user.type(screen.getByLabelText("Пароль"), "securePass1");
 		await user.type(screen.getByLabelText("Подтвердите пароль"), "securePass1");
 		await user.click(screen.getByRole("button", { name: "Зарегистрироваться" }));

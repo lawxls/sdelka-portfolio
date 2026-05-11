@@ -66,7 +66,9 @@ describe("ConfirmEmailPage", () => {
 	});
 
 	test("calls confirmEmail with both uid and token from query string", async () => {
-		const confirmEmail = vi.fn().mockResolvedValue({ access: "fresh-access", user: { id: "1", email: "x@y.z" } });
+		const confirmEmail = vi
+			.fn()
+			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "x@y.z" } });
 		const session = buildSession({ confirmEmail });
 		renderConfirmEmail(["/confirm-email?uid=test-uid&token=test-token"], session);
 
@@ -76,7 +78,9 @@ describe("ConfirmEmailPage", () => {
 	});
 
 	test("on success: stores access token, redirects to /inquiries (auto-login)", async () => {
-		const confirmEmail = vi.fn().mockResolvedValue({ access: "fresh-access", user: { id: "1", email: "x@y.z" } });
+		const confirmEmail = vi
+			.fn()
+			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "x@y.z" } });
 		const session = buildSession({ confirmEmail });
 		renderConfirmEmail(["/confirm-email?uid=good-uid&token=good-token"], session);
 
