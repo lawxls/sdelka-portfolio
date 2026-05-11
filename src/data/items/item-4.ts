@@ -4,7 +4,7 @@ import type { ProcurementItem } from "../types";
 export const ITEM: ProcurementItem = {
 	id: "item-4",
 	name: "ЛДСП 16 мм, дуб сонома",
-	status: "completed",
+	status: "ready_for_analytics",
 	annualQuantity: 42_000,
 	currentPrice: 1190,
 	bestPrice: 915,

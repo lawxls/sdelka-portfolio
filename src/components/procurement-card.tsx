@@ -1,4 +1,14 @@
-import { Archive, ArchiveRestore, Building2, Check, Ellipsis, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import {
+	Archive,
+	ArchiveRestore,
+	Building2,
+	Check,
+	Ellipsis,
+	LoaderCircle,
+	Pencil,
+	Sparkles,
+	Trash2,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import {
 	AlertDialog,
@@ -34,6 +44,10 @@ export const STATUS_CONFIG: Record<DisplayStatus, { label: string; className: st
 	},
 	negotiating: { label: STATUS_LABELS.negotiating, className: "text-blue-600 dark:text-blue-400" },
 	completed: { label: STATUS_LABELS.completed, className: "text-green-600 dark:text-green-400" },
+	ready_for_analytics: {
+		label: STATUS_LABELS.ready_for_analytics,
+		className: "text-teal-600 dark:text-teal-400",
+	},
 };
 
 export function ProcurementStatusIcon({
@@ -54,6 +68,9 @@ export function ProcurementStatusIcon({
 	}
 	if (status === "completed") {
 		return <Check className={iconClassName} aria-hidden="true" />;
+	}
+	if (status === "ready_for_analytics") {
+		return <Sparkles className={iconClassName} aria-hidden="true" />;
 	}
 	return null;
 }

@@ -9,6 +9,7 @@ import { ITEM as ITEM_9 } from "../items/item-9";
 import { ITEM as ITEM_10 } from "../items/item-10";
 import { ITEM as ITEM_11 } from "../items/item-11";
 import { ITEM as ITEM_12 } from "../items/item-12";
+import { ITEM as ITEM_13 } from "../items/item-13";
 import type { ProcurementItem } from "../types";
 import { SEED_ITEM_TENDER } from "./tenders";
 
@@ -44,6 +45,7 @@ const RAW_ITEMS: ProcurementItem[] = [
 	ITEM_10,
 	ITEM_11,
 	ITEM_12,
+	ITEM_13,
 ];
 
 export const SEED_ITEMS: ProcurementItem[] = RAW_ITEMS.map((item) => {

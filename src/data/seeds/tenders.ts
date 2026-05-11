@@ -14,6 +14,7 @@ export const SEED_ITEM_TENDER: Readonly<Record<string, string>> = {
 	"item-10": "T-004",
 	"item-11": "T-004",
 	"item-12": "T-004",
+	"item-13": "T-002",
 	"item-5": "T-005",
 	"item-7": "T-006",
 };

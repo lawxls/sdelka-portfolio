@@ -1,6 +1,6 @@
 import { formatRussianPlural } from "@/lib/format";
 
-export type ProcurementStatus = "searching" | "negotiating" | "completed";
+export type ProcurementStatus = "searching" | "negotiating" | "completed" | "ready_for_analytics";
 
 /** Derived visual status. "searching_completed" is not a stored status —
  * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
@@ -15,6 +15,7 @@ export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching_completed: "Поиск поставщиков завершён",
 	negotiating: "Ведём переговоры",
 	completed: "Переговоры завершены",
+	ready_for_analytics: "Готово к аналитике",
 };
 
 /** Tender statuses while suppliers are still being sourced — RFQ email/auto-send
