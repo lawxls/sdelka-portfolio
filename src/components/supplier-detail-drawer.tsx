@@ -818,7 +818,7 @@ export function SupplierDetailDrawer({
 				if (!nextOpen) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"}>
+			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : "xl"} closeButtonVariant="floating">
 				{supplier && (
 					<SupplierDrawerContent
 						key={supplier.id}

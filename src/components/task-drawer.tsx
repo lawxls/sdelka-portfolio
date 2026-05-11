@@ -1,13 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-	Archive,
-	CalendarClock,
-	CalendarPlus,
-	EllipsisVertical,
-	MessageCircleQuestion,
-	UserRound,
-	X,
-} from "lucide-react";
+import { Archive, CalendarClock, CalendarPlus, EllipsisVertical, MessageCircleQuestion, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +12,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { SupplierQuestion, TaskAssignee } from "@/data/task-types";
 import { useSupplierById } from "@/data/use-suppliers";
 import { useSubmitAnswer, useTask, useUpdateTaskStatus } from "@/data/use-tasks";
@@ -43,7 +35,11 @@ export function TaskDrawer({ taskId, onClose, answerFirstMode, onAnswerFirstComp
 				if (!open) onClose();
 			}}
 		>
-			<SheetContent side={isMobile ? "bottom" : "right"} size={isMobile ? "full" : undefined} showCloseButton={false}>
+			<SheetContent
+				side={isMobile ? "bottom" : "right"}
+				size={isMobile ? "full" : undefined}
+				closeButtonVariant="floating"
+			>
 				{taskId && (
 					<TaskDrawerContent
 						key={taskId}
@@ -212,31 +208,30 @@ function TaskDrawerContent({
 
 	return (
 		<>
-			<SheetHeader className="relative border-b pr-24 pb-4">
+			<SheetHeader className="relative border-b pb-4 max-md:pr-24 md:pr-12">
 				<SheetTitle className="pr-4">{currentTask.name}</SheetTitle>
 				<SheetDescription className="text-xs">{currentTask.tender.name}</SheetDescription>
-				<div className="absolute top-3 right-3 flex items-center gap-1">
-					{(!isAnswered || isArchived) && (
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon-sm" aria-label="Действия" disabled={updateStatus.isPending}>
-									<EllipsisVertical aria-hidden="true" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuItem onSelect={handleToggleArchive}>
-									<Archive className="size-3.5" />
-									{isArchived ? "Разархивировать" : "В архив"}
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					)}
-					<SheetClose asChild>
-						<Button variant="ghost" size="icon-sm" aria-label="Закрыть">
-							<X aria-hidden="true" />
-						</Button>
-					</SheetClose>
-				</div>
+				{(!isAnswered || isArchived) && (
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Действия"
+								disabled={updateStatus.isPending}
+								className="absolute top-3 max-md:right-14 md:right-3"
+							>
+								<EllipsisVertical aria-hidden="true" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem onSelect={handleToggleArchive}>
+								<Archive className="size-3.5" />
+								{isArchived ? "Разархивировать" : "В архив"}
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				)}
 			</SheetHeader>
 
 			<div className="flex-1 overflow-y-auto px-4 py-4">

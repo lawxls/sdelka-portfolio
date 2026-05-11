@@ -220,6 +220,7 @@ export function TenderDetailPage() {
 					side={isMobile ? "bottom" : "right"}
 					size={isMobile ? "full" : undefined}
 					className={isMobile ? undefined : "!w-4/5 !max-w-none"}
+					closeButtonVariant="floating"
 				>
 					{isLoading && (
 						<div className="flex h-full flex-col gap-4 p-6">

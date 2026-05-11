@@ -50,7 +50,10 @@ export function EmployeeDetailDrawer() {
 				if (!next) handleClose();
 			}}
 		>
-			<SheetContent className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none">
+			<SheetContent
+				className="flex flex-col max-md:!w-full max-md:!max-w-full max-md:!inset-0 max-md:!rounded-none"
+				closeButtonVariant="floating"
+			>
 				{employeeId != null && <EmployeeDetailContent key={employeeId} employeeId={employeeId} />}
 			</SheetContent>
 		</Sheet>

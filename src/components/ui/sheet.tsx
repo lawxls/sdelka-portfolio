@@ -33,17 +33,34 @@ function SheetOverlay({ className, ...props }: React.ComponentProps<typeof Sheet
 	);
 }
 
+/** On `md:` the floating close attaches as a half-pill that protrudes from the
+ * drawer's left edge (right border removed so it merges with the panel); on
+ * mobile, where there's no overlay space outside, it falls back to a full
+ * circle pinned top-right inside the panel. */
+const FLOATING_CLOSE_CLASSES = cn(
+	"absolute top-3 right-3 z-10 inline-flex size-9 items-center justify-center rounded-full border border-border/60 bg-popover text-foreground",
+	"shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.08)]",
+	"transition-[background-color,color,scale] duration-150 ease-out",
+	"hover:bg-muted active:scale-[0.96] motion-reduce:active:scale-100",
+	"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+	"after:absolute after:inset-[-2px] after:content-['']",
+	"md:top-4 md:right-full md:size-10 md:rounded-r-none md:rounded-l-full md:border-r-0",
+	"md:shadow-[-1px_0_2px_rgba(0,0,0,0.04),-6px_0_16px_-4px_rgba(0,0,0,0.08)]",
+);
+
 function SheetContent({
 	className,
 	children,
 	side = "right",
 	size,
 	showCloseButton = true,
+	closeButtonVariant = "inline",
 	...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
 	side?: "top" | "right" | "bottom" | "left";
 	size?: "full" | "xl";
 	showCloseButton?: boolean;
+	closeButtonVariant?: "inline" | "floating";
 }) {
 	return (
 		<SheetPortal>
@@ -60,7 +77,7 @@ function SheetContent({
 				{...props}
 			>
 				{children}
-				{showCloseButton && (
+				{showCloseButton && closeButtonVariant === "inline" && (
 					<SheetPrimitive.Close data-slot="sheet-close" asChild>
 						<Button
 							variant="ghost"
@@ -70,6 +87,14 @@ function SheetContent({
 							<XIcon />
 							<span className="sr-only">Close</span>
 						</Button>
+					</SheetPrimitive.Close>
+				)}
+				{showCloseButton && closeButtonVariant === "floating" && (
+					<SheetPrimitive.Close data-slot="sheet-close" asChild>
+						<button type="button" aria-label="Close" className={FLOATING_CLOSE_CLASSES}>
+							<XIcon className="size-4 md:size-[18px]" aria-hidden="true" />
+							<span className="sr-only">Close</span>
+						</button>
 					</SheetPrimitive.Close>
 				)}
 			</SheetPrimitive.Content>

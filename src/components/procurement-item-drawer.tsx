@@ -220,6 +220,7 @@ export function ProcurementItemDrawer({ item }: ProcurementItemDrawerProps) {
 					side={isMobile ? "bottom" : "right"}
 					size={isMobile ? "full" : undefined}
 					className={isMobile ? undefined : "!w-4/5 !max-w-none"}
+					closeButtonVariant="floating"
 				>
 					{itemId && (
 						<ProcurementItemDrawerContent
