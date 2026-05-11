@@ -460,7 +460,7 @@ interface EventBadgeSpec {
 
 const EVENT_BADGE: Record<MessageEvent, EventBadgeSpec> = {
 	task_created: {
-		label: "Создана задача",
+		label: "Создан вопрос",
 		className: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
 		Icon: ClipboardList,
 	},

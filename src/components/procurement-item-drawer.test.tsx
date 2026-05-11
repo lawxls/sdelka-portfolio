@@ -123,14 +123,14 @@ describe("ProcurementItemDrawer — open/close", () => {
 });
 
 describe("ProcurementItemDrawer — tabs", () => {
-	test("renders three tabs with Поставщики as default (no Задачи)", () => {
+	test("renders three tabs with Поставщики as default (no Вопросы)", () => {
 		renderDrawer();
 		const tabs = screen.getAllByRole("tab");
 		expect(tabs).toHaveLength(3);
 		expect(tabs[0]).toHaveTextContent("Поставщики");
 		expect(tabs[1]).toHaveTextContent("Предложения");
 		expect(tabs[2]).toHaveTextContent("Информация");
-		expect(screen.queryByRole("tab", { name: "Задачи" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("tab", { name: "Вопросы" })).not.toBeInTheDocument();
 		expect(tabs[0]).toHaveAttribute("aria-selected", "true");
 	});
 

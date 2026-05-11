@@ -253,7 +253,7 @@ describe("useUpdateTaskStatus", () => {
 		const board = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", {}]);
 		expect(board?.assigned?.results).toHaveLength(1);
 		expect(board?.in_progress?.results).toHaveLength(0);
-		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус задачи");
+		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус вопроса");
 	});
 });
 

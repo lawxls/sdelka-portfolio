@@ -97,7 +97,7 @@ function InfoTile({
 
 function AssigneeTile({ assignee }: { assignee: TaskAssignee | null }) {
 	return (
-		<InfoTile icon={UserRound} label="Назначена">
+		<InfoTile icon={UserRound} label="Назначен">
 			{formatAssigneeName(assignee)}
 		</InfoTile>
 	);
@@ -176,7 +176,7 @@ function TaskDrawerContent({
 		return (
 			<SheetHeader>
 				<SheetTitle>Загрузка…</SheetTitle>
-				<SheetDescription className="sr-only">Загрузка данных задачи</SheetDescription>
+				<SheetDescription className="sr-only">Загрузка данных вопроса</SheetDescription>
 			</SheetHeader>
 		);
 	}
@@ -203,7 +203,7 @@ function TaskDrawerContent({
 			{ id: currentTask.id, status: nextStatus },
 			{
 				onSuccess: () => {
-					toast.success(isArchived ? "Задача восстановлена из архива" : "Задача отправлена в архив");
+					toast.success(isArchived ? "Вопрос восстановлен из архива" : "Вопрос отправлен в архив");
 					onClose();
 				},
 			},
@@ -242,7 +242,7 @@ function TaskDrawerContent({
 			<div className="flex-1 overflow-y-auto px-4 py-4">
 				<div className="flex flex-col gap-5">
 					<div className="grid grid-cols-2 gap-1.5">
-						<InfoTile icon={CalendarPlus} label="Создана">
+						<InfoTile icon={CalendarPlus} label="Создан">
 							<time dateTime={currentTask.createdAt} className="tabular-nums">
 								{formatDateTime(currentTask.createdAt)}
 							</time>
@@ -253,7 +253,7 @@ function TaskDrawerContent({
 							</time>
 						</InfoTile>
 						<AssigneeTile assignee={currentTask.assignee} />
-						<InfoTile icon={MessageCircleQuestion} label="Вопросы">
+						<InfoTile icon={MessageCircleQuestion} label="Количество">
 							<span className="tabular-nums">{currentTask.questionCount}</span>
 						</InfoTile>
 					</div>

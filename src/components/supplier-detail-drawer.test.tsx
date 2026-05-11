@@ -432,7 +432,7 @@ describe("SupplierDetailDrawer", () => {
 			expect(screen.getByTestId("msg-event-quote_received")).toHaveTextContent("Получено КП");
 		});
 
-		test("renders «Создана задача» badge for task_created event", () => {
+		test("renders «Создан вопрос» badge for task_created event", () => {
 			renderDrawer({
 				supplier: makeSupplier("s1", {
 					chatHistory: [
@@ -446,7 +446,7 @@ describe("SupplierDetailDrawer", () => {
 					],
 				}),
 			});
-			expect(screen.getByTestId("msg-event-task_created")).toHaveTextContent("Создана задача");
+			expect(screen.getByTestId("msg-event-task_created")).toHaveTextContent("Создан вопрос");
 		});
 
 		test("renders «Отказ» badge for refusal event", () => {

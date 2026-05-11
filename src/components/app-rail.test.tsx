@@ -31,11 +31,11 @@ function renderRail(initialPath = "/positions", tasksSeed: Task[] = []) {
 }
 
 describe("AppRail items", () => {
-	test("renders Запросы, Позиции, Задачи, and Настройки with aria-labels", () => {
+	test("renders Запросы, Позиции, Вопросы, and Настройки with aria-labels", () => {
 		renderRail();
 		expect(screen.getByRole("link", { name: "Запросы" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Вопросы" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
@@ -50,7 +50,7 @@ describe("AppRail items", () => {
 	test("items link to /positions, /tasks, and /settings", () => {
 		renderRail();
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
-		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
+		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("href", "/tasks");
 		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
 	});
 
@@ -96,12 +96,12 @@ describe("AppRail active state", () => {
 	test("marks Позиции active at /positions", () => {
 		renderRail("/positions");
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
-		expect(screen.getByRole("link", { name: "Задачи" })).not.toHaveAttribute("aria-current");
+		expect(screen.getByRole("link", { name: "Вопросы" })).not.toHaveAttribute("aria-current");
 	});
 
-	test("marks Задачи active at /tasks", () => {
+	test("marks Вопросы active at /tasks", () => {
 		renderRail("/tasks");
-		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("aria-current", "page");
 	});
 
 	test("marks Настройки active at /settings", () => {
@@ -130,7 +130,7 @@ describe("AppRail visibility", () => {
 });
 
 describe("AppRail task count badge", () => {
-	test("shows count of active tasks (assigned + in_progress) next to Задачи", async () => {
+	test("shows count of active tasks (assigned + in_progress) next to Вопросы", async () => {
 		renderRail("/positions", [
 			makeTask("t-1", { status: "assigned" }),
 			makeTask("t-2", { status: "in_progress" }),
@@ -138,20 +138,20 @@ describe("AppRail task count badge", () => {
 			makeTask("t-4", { status: "completed" }),
 			makeTask("t-5", { status: "archived" }),
 		]);
-		const tasksLink = screen.getByRole("link", { name: "Задачи" });
+		const tasksLink = screen.getByRole("link", { name: "Вопросы" });
 		expect(await within(tasksLink).findByTestId("nav-tasks-count")).toHaveTextContent("3");
 	});
 
 	test("hides badge when there are no active tasks", async () => {
 		renderRail("/positions", [makeTask("t-1", { status: "completed" }), makeTask("t-2", { status: "archived" })]);
 		// Wait for query settle so a missing badge isn't a race
-		expect(await screen.findByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(await screen.findByRole("link", { name: "Вопросы" })).toBeInTheDocument();
 		expect(screen.queryByTestId("nav-tasks-count")).not.toBeInTheDocument();
 	});
 
 	test("badge is hidden from accessible name", async () => {
 		renderRail("/positions", [makeTask("t-1", { status: "assigned" })]);
-		const tasksLink = await screen.findByRole("link", { name: "Задачи" });
+		const tasksLink = await screen.findByRole("link", { name: "Вопросы" });
 		const badge = await within(tasksLink).findByTestId("nav-tasks-count");
 		expect(badge).toHaveAttribute("aria-hidden", "true");
 	});
@@ -179,7 +179,7 @@ describe("AppRail navigation", () => {
 				</TooltipWrapper>
 			</TestClientsProvider>,
 		);
-		await userEvent.setup().click(screen.getByRole("link", { name: "Задачи" }));
+		await userEvent.setup().click(screen.getByRole("link", { name: "Вопросы" }));
 		expect(screen.getByText("tasks-page")).toBeInTheDocument();
 	});
 });

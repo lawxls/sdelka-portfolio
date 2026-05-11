@@ -182,7 +182,7 @@ describe("Routing", () => {
 
 	test("/procurement redirects to /positions", async () => {
 		await renderAppReady(["/procurement"]);
-		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, вопросов…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 	});
 
@@ -195,7 +195,7 @@ describe("Routing", () => {
 
 	test("/positions renders positions content", async () => {
 		await renderAppReady();
-		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, задач…")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Поиск позиций, поставщиков, вопросов…")).toBeInTheDocument();
 		expect(screen.getByTestId("global-header")).toBeInTheDocument();
 		expect(screen.getByRole("main")).toBeInTheDocument();
 	});
@@ -203,7 +203,7 @@ describe("Routing", () => {
 	test("/tasks renders tasks page", async () => {
 		renderApp(["/tasks"]);
 		await waitFor(() => {
-			expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
+			expect(screen.getByRole("heading", { name: "Вопросы" })).toBeInTheDocument();
 		});
 	});
 

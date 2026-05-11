@@ -43,7 +43,7 @@ const unansweredTask = makeTask("task-1", {
 });
 
 const completedTask = makeTask("task-51", {
-	name: "Завершённая задача",
+	name: "Завершённый вопрос",
 	status: "completed",
 	completedResponse: "Согласовано. Условия поставки подтверждены, договор направлен на подпись.",
 });
@@ -121,7 +121,7 @@ describe("TaskDrawer", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Согласование цены на арматуру")).toBeInTheDocument();
 		});
-		expect(screen.queryByRole("combobox", { name: "Статус задачи" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("combobox", { name: "Статус вопроса" })).not.toBeInTheDocument();
 	});
 
 	it("submitting a message closes the drawer", async () => {
@@ -180,7 +180,7 @@ describe("TaskDrawer", () => {
 
 	it("unarchives an archived task via the overflow menu, restoring the prior status", async () => {
 		const archivedTask = makeTask("task-archived", {
-			name: "Архивная задача",
+			name: "Архивный вопрос",
 			status: "archived",
 			statusBeforeArchive: "in_progress",
 		});

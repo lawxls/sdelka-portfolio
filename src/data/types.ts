@@ -262,7 +262,7 @@ export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
 export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 	tenders: "Запросы",
 	positions: "Позиции",
-	tasks: "Задачи",
+	tasks: "Вопросы",
 	companies: "Компании",
 	employees: "Сотрудники",
 	emails: "Почты",

@@ -48,9 +48,9 @@ export type Notification =
 
 export const NOTIFICATION_TITLES: Record<NotificationType, string> = {
 	search_completed: "Поиск поставщиков завершён",
-	task_assigned: "Назначена новая задача",
+	task_assigned: "Назначен новый вопрос",
 	offer_received: "Получено новое предложение",
-	task_deadline_24h: "Дедлайн задачи подходит к концу",
+	task_deadline_24h: "Дедлайн вопроса подходит к концу",
 	negotiation_completed: "Переговоры завершены",
 };
 

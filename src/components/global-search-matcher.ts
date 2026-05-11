@@ -11,7 +11,7 @@ export type GlobalSearchGroup = "items" | "suppliers" | "tasks" | "employees" | 
 export const GROUP_LABELS: Record<GlobalSearchGroup, string> = {
 	items: "Позиции",
 	suppliers: "Поставщики",
-	tasks: "Задачи",
+	tasks: "Вопросы",
 	employees: "Сотрудники",
 	companies: "Компании",
 	inboxes: "Ящики",

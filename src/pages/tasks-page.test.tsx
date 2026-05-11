@@ -67,16 +67,16 @@ function renderPage(initialEntries?: string[]) {
 }
 
 describe("TasksPage", () => {
-	it("renders Задачи heading", async () => {
+	it("renders Вопросы heading", async () => {
 		renderPage();
-		expect(screen.getByRole("heading", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.getByRole("heading", { name: "Вопросы" })).toBeInTheDocument();
 	});
 
 	it("shows total count with Russian plural form and header", async () => {
 		renderPage();
 		await waitFor(() => {
 			// Default view = active tasks (assigned + in_progress) = 8 tasks
-			expect(screen.getByTestId("total-count")).toHaveTextContent(/^8\s+задач$/);
+			expect(screen.getByTestId("total-count")).toHaveTextContent(/^8\s+вопросов$/);
 		});
 	});
 
@@ -206,9 +206,9 @@ describe("TasksPage", () => {
 
 		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
 
-		const headers = ["Задача", "Назначена", "Вопросы", "Дедлайн", "дата.*создания"];
+		const headers = ["Вопрос", "Назначен", "Количество", "Дедлайн", "дата и время создания"];
 		for (const pattern of headers) {
-			expect(screen.getByRole("button", { name: new RegExp(pattern, "i") })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: new RegExp(`^Сортировать по ${pattern}$`, "i") })).toBeInTheDocument();
 		}
 	});
 

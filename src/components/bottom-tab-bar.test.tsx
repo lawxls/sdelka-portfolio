@@ -22,17 +22,17 @@ function renderBar(initialPath = "/positions", tasksSeed: Task[] = []) {
 }
 
 describe("BottomTabBar items", () => {
-	test("renders Позиции, Задачи, and Настройки with aria-labels", () => {
+	test("renders Позиции, Вопросы, and Настройки with aria-labels", () => {
 		renderBar();
 		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: "Вопросы" })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
 	});
 
 	test("items link to /positions, /tasks, and /settings", () => {
 		renderBar();
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
-		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("href", "/tasks");
+		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("href", "/tasks");
 		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
 	});
 
@@ -46,12 +46,12 @@ describe("BottomTabBar active state", () => {
 	test("marks Позиции active at /positions", () => {
 		renderBar("/positions");
 		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
-		expect(screen.getByRole("link", { name: "Задачи" })).not.toHaveAttribute("aria-current");
+		expect(screen.getByRole("link", { name: "Вопросы" })).not.toHaveAttribute("aria-current");
 	});
 
-	test("marks Задачи active at /tasks", () => {
+	test("marks Вопросы active at /tasks", () => {
 		renderBar("/tasks");
-		expect(screen.getByRole("link", { name: "Задачи" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("aria-current", "page");
 	});
 
 	test("marks Настройки active at /settings", () => {
@@ -93,20 +93,20 @@ describe("BottomTabBar navigation", () => {
 });
 
 describe("BottomTabBar task count badge", () => {
-	test("shows count of active tasks (assigned + in_progress) on Задачи", async () => {
+	test("shows count of active tasks (assigned + in_progress) on Вопросы", async () => {
 		renderBar("/positions", [
 			makeTask("t-1", { status: "assigned" }),
 			makeTask("t-2", { status: "in_progress" }),
 			makeTask("t-3", { status: "completed" }),
 			makeTask("t-4", { status: "archived" }),
 		]);
-		const tasksLink = screen.getByRole("link", { name: "Задачи" });
+		const tasksLink = screen.getByRole("link", { name: "Вопросы" });
 		expect(await within(tasksLink).findByTestId("nav-tasks-count")).toHaveTextContent("2");
 	});
 
 	test("hides badge when there are no active tasks", async () => {
 		renderBar("/positions", [makeTask("t-1", { status: "completed" })]);
-		expect(await screen.findByRole("link", { name: "Задачи" })).toBeInTheDocument();
+		expect(await screen.findByRole("link", { name: "Вопросы" })).toBeInTheDocument();
 		expect(screen.queryByTestId("nav-tasks-count")).not.toBeInTheDocument();
 	});
 });

@@ -205,7 +205,7 @@ export function GlobalSearch() {
 						<Input
 							ref={inputRef}
 							type="search"
-							placeholder="Поиск позиций, поставщиков, задач…"
+							placeholder="Поиск позиций, поставщиков, вопросов…"
 							value={rawQuery}
 							onChange={(e) => handleQueryChange(e.target.value)}
 							onFocus={() => setEverFocused(true)}

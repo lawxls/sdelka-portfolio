@@ -58,9 +58,9 @@ interface SortableColumn {
 }
 
 const COLUMNS: SortableColumn[] = [
-	{ label: "ЗАДАЧА", field: "name" },
-	{ label: "НАЗНАЧЕНА", field: "assignee" },
-	{ label: "ВОПРОСЫ", field: "questionCount", align: "right" },
+	{ label: "ВОПРОС", field: "name" },
+	{ label: "НАЗНАЧЕН", field: "assignee" },
+	{ label: "КОЛИЧЕСТВО", field: "questionCount", align: "right" },
 	{ label: "ДЕДЛАЙН", field: "deadlineAt", align: "right" },
 	{ label: "ДАТА И ВРЕМЯ СОЗДАНИЯ", field: "createdAt", align: "right" },
 ];
@@ -165,7 +165,7 @@ function csvEscape(value: string): string {
 }
 
 function downloadTasksCsv(tasks: Task[]) {
-	const header = ["Задача", "Запрос", "Назначена", "Вопросы", "Дедлайн", "Дата и время создания"];
+	const header = ["Вопрос", "Запрос", "Назначен", "Количество", "Дедлайн", "Дата и время создания"];
 	const rows = tasks.map((t) => [
 		csvEscape(t.name),
 		csvEscape(t.tender.name),
@@ -504,7 +504,7 @@ export function TasksPage() {
 		const ids = [...selectedIds];
 		for (const id of ids) updateStatus.mutate({ id, status: "archived" });
 		setSelectedIds(new Set());
-		toast.success(`Архивировано ${formatRussianPlural(ids.length, ["задача", "задачи", "задач"])}`);
+		toast.success(`Архивировано ${formatRussianPlural(ids.length, ["вопрос", "вопроса", "вопросов"])}`);
 	}
 
 	function handleUnarchiveSelected() {
@@ -513,7 +513,7 @@ export function TasksPage() {
 			updateStatus.mutate({ id: t.id, status: t.statusBeforeArchive ?? "assigned" });
 		}
 		setSelectedIds(new Set());
-		toast.success(`Разархивировано ${formatRussianPlural(selectedTasks.length, ["задача", "задачи", "задач"])}`);
+		toast.success(`Разархивировано ${formatRussianPlural(selectedTasks.length, ["вопрос", "вопроса", "вопросов"])}`);
 	}
 
 	function handleArchiveRow(id: string) {
@@ -538,7 +538,7 @@ export function TasksPage() {
 
 	function handleDownload() {
 		if (tasks.length === 0) {
-			toast.info("Нет задач для экспорта");
+			toast.info("Нет вопросов для экспорта");
 			return;
 		}
 		downloadTasksCsv(tasks);
@@ -570,7 +570,7 @@ export function TasksPage() {
 				<ToolbarSearch
 					value={search}
 					onChange={setSearch}
-					ariaLabel="Поиск задач"
+					ariaLabel="Поиск вопросов"
 					debounceMs={250}
 					expanded={searchUserExpanded}
 					onExpandedChange={setSearchUserExpanded}
@@ -606,21 +606,25 @@ export function TasksPage() {
 		);
 
 	const emptyMessage =
-		statusFilter === "archived" ? "Архив пуст" : statusFilter === "completed" ? "Нет завершённых задач" : "Нет задач";
+		statusFilter === "archived"
+			? "Архив пуст"
+			: statusFilter === "completed"
+				? "Нет завершённых вопросов"
+				: "Нет вопросов";
 
 	return (
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">
 			<PageToolbar
 				left={
 					<>
-						<h1 className="text-sm font-semibold text-foreground leading-none">Задачи</h1>
+						<h1 className="text-sm font-semibold text-foreground leading-none">Вопросы</h1>
 						<span aria-hidden="true" className="text-sm text-border leading-none">
 							/
 						</span>
 						<TotalCount
 							value={query.totalCount}
 							isLoading={query.isLoading && query.totalCount === undefined}
-							forms={["задача", "задачи", "задач"]}
+							forms={["вопрос", "вопроса", "вопросов"]}
 							className="text-sm font-normal text-muted-foreground leading-none"
 						/>
 					</>

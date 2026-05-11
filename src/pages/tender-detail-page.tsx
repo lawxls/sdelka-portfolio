@@ -64,7 +64,7 @@ type TenderDetailTab = "suppliers" | "offers" | "tasks" | "details";
 const TABS: { key: TenderDetailTab; label: string; mobileLabel?: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "offers", label: "Предложения" },
-	{ key: "tasks", label: "Задачи" },
+	{ key: "tasks", label: "Вопросы" },
 	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
@@ -512,13 +512,13 @@ const FILTER_BUTTONS: { key: TasksFilter; label: string }[] = [
 const TASK_TABLE_COLUMNS: DataTableColumn<Task>[] = [
 	{
 		id: "name",
-		header: "ЗАДАЧА",
+		header: "ВОПРОС",
 		sortable: true,
 		cell: (t) => <span className="font-medium">{t.name}</span>,
 	},
 	{
 		id: "questionCount",
-		header: "ВОПРОСЫ",
+		header: "КОЛИЧЕСТВО",
 		sortable: true,
 		align: "right",
 		cell: (t) => (t.questionCount > 0 ? formatRussianPlural(t.questionCount, ["вопрос", "вопроса", "вопросов"]) : "—"),
@@ -1104,14 +1104,14 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 			<div className="flex items-center gap-2 px-3">
 				{!(isMobile && searchExpanded) && (
 					<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-						{formatRussianPlural(tasksTotalCount, ["задача", "задачи", "задач"])}
+						{formatRussianPlural(tasksTotalCount, ["вопрос", "вопроса", "вопросов"])}
 					</span>
 				)}
 				<div className={cn("ml-auto flex items-center gap-1", isMobile && searchExpanded && "flex-1")}>
 					<ToolbarSearch
 						value={search}
 						onChange={setSearch}
-						ariaLabel="Поиск задач"
+						ariaLabel="Поиск вопросов"
 						debounceMs={250}
 						expanded={searchUserExpanded}
 						onExpandedChange={setSearchUserExpanded}
@@ -1161,7 +1161,7 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 				rows={tasks}
 				getRowId={(t) => t.id}
 				isLoading={isLoading}
-				emptyMessage="Нет задач"
+				emptyMessage="Нет вопросов"
 				selection={{
 					selectedIds,
 					onChange: handleSelectionChange,

@@ -95,7 +95,7 @@ describe("TenderDetailPage", () => {
 		expect(tabs.map((t) => t.getAttribute("aria-label"))).toEqual([
 			"Поставщики",
 			"Предложения",
-			"Задачи",
+			"Вопросы",
 			"Информация",
 		]);
 	});
@@ -120,7 +120,7 @@ describe("TenderDetailPage", () => {
 		expect(screen.getByTestId("tender-item-item-2")).toBeInTheDocument();
 	});
 
-	test("Задачи tab renders tasks for the tender; clicking a row opens the task drawer", async () => {
+	test("Вопросы tab renders tasks for the tender; clicking a row opens the task drawer", async () => {
 		const queryClient = new QueryClient({
 			defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 		});
@@ -129,7 +129,7 @@ describe("TenderDetailPage", () => {
 			tender: { id: "T-001", name: "Упаковочные материалы Q2", companyId: "company-1" },
 		});
 		const taskForOther = makeTask("task-other", {
-			name: "Не наша задача",
+			name: "Не наш вопрос",
 			tender: { id: "T-002", name: "Другой запрос", companyId: "company-1" },
 		});
 		render(
@@ -156,12 +156,12 @@ describe("TenderDetailPage", () => {
 		);
 
 		await screen.findByRole("heading", { name: "Запрос T-001" });
-		fireEvent.click(screen.getByRole("tab", { name: "Задачи" }));
+		fireEvent.click(screen.getByRole("tab", { name: "Вопросы" }));
 
 		await waitFor(() => expect(screen.getByTestId("tender-tab-tasks")).toBeInTheDocument());
 		await waitFor(() => expect(screen.getByText("Согласовать спецификацию")).toBeInTheDocument());
 		// Tasks belonging to a different tender stay out of this tab.
-		expect(screen.queryByText("Не наша задача")).not.toBeInTheDocument();
+		expect(screen.queryByText("Не наш вопрос")).not.toBeInTheDocument();
 
 		fireEvent.click(screen.getByText("Согласовать спецификацию"));
 		await waitFor(() => {

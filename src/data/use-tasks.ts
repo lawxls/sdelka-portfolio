@@ -279,7 +279,7 @@ export function useUpdateTaskStatus() {
 		},
 		onError: (_err, _vars, context) => {
 			rollbackTaskSnapshots(queryClient, context);
-			toast.error("Не удалось обновить статус задачи");
+			toast.error("Не удалось обновить статус вопроса");
 		},
 		onSettled: (_data, _err, vars) => invalidateAllTaskQueries(queryClient, vars.id),
 	});

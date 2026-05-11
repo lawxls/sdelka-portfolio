@@ -19,7 +19,7 @@ import type {
  * `cursor`), keeping the surface narrow.
  */
 export interface TasksClient {
-	/** All tasks across statuses (no filter / pagination). Drives the global "Все задачи" surface. */
+	/** All tasks across statuses (no filter / pagination). Drives the global "Все вопросы" surface. */
 	listAll(): Promise<Task[]>;
 	/** Page-based list. Filter + sort + status set narrow the result; `page_size` defaults to 20. */
 	list(params?: FetchTasksParams): Promise<TaskListResponse>;
