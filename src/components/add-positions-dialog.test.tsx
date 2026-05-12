@@ -3,50 +3,65 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import * as mockParser from "@/data/mock-file-parser";
 import type { NewItemInput } from "@/data/types";
-import { PositionsUploadDialog } from "./positions-upload-dialog";
+import { AddPositionsDialog } from "./add-positions-dialog";
 
 function renderDialog(
 	overrides: Partial<{
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
+		onManual: () => void;
 		onImport: (items: NewItemInput[]) => void;
 	}> = {},
 ) {
 	const props = {
 		open: overrides.open ?? true,
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
+		onManual: overrides.onManual ?? vi.fn(),
 		onImport: overrides.onImport ?? vi.fn(),
 	};
-	return { ...render(<PositionsUploadDialog {...props} />), ...props };
+	return { ...render(<AddPositionsDialog {...props} />), ...props };
 }
 
-describe("PositionsUploadDialog", () => {
-	test("opens directly on the upload step (no choice screen)", () => {
+describe("AddPositionsDialog", () => {
+	test("opens on the choice step with «Добавить вручную» and «Загрузить из файла»", () => {
 		renderDialog();
-		expect(screen.getByText("Добавить позиции")).toBeInTheDocument();
+		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить вручную/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Загрузить из файла/ })).toBeInTheDocument();
+		expect(screen.queryByTestId("dropzone")).not.toBeInTheDocument();
+	});
+
+	test("clicking «Добавить вручную» closes the dialog and fires onManual", async () => {
+		const onManual = vi.fn();
+		const onOpenChange = vi.fn();
+		renderDialog({ onManual, onOpenChange });
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Добавить вручную/ }));
+
+		expect(onOpenChange).toHaveBeenCalledWith(false);
+		expect(onManual).toHaveBeenCalled();
+	});
+
+	test("clicking «Загрузить из файла» shows the dropzone", async () => {
+		renderDialog();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
+
 		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /Вручную/ })).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /^Из файла$/ })).not.toBeInTheDocument();
-	});
-
-	test("does not render the AI grouping hint", () => {
-		renderDialog();
-		expect(
-			screen.queryByText((content) =>
-				content.replace(/ /g, " ").includes("ИИ сам сформирует запросы на основе загруженных позиций"),
-			),
-		).not.toBeInTheDocument();
-	});
-
-	test("renders «Как это работает» button next to the example file download", () => {
-		renderDialog();
-		expect(screen.getByRole("button", { name: "Как это работает" })).toBeInTheDocument();
-	});
-
-	test("renders «Скачать пример файла с позициями» button (renamed from «Скачать шаблон»)", () => {
-		renderDialog();
 		expect(screen.getByRole("button", { name: /Скачать пример файла с\s*позициями/ })).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /Скачать шаблон/ })).not.toBeInTheDocument();
+	});
+
+	test("«Назад» on the upload step returns to the choice screen", async () => {
+		renderDialog();
+		const user = userEvent.setup();
+
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
+		await user.click(screen.getByRole("button", { name: /Назад/ }));
+
+		expect(screen.getByRole("button", { name: /Добавить вручную/ })).toBeInTheDocument();
+		expect(screen.queryByTestId("dropzone")).not.toBeInTheDocument();
 	});
 
 	test("does not render when closed", () => {
@@ -54,8 +69,10 @@ describe("PositionsUploadDialog", () => {
 		expect(screen.queryByText("Добавить позиции")).not.toBeInTheDocument();
 	});
 
-	test("dropping a file shows loading state", () => {
+	test("dropping a file shows loading state", async () => {
 		renderDialog();
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 
 		const zone = screen.getByTestId("dropzone");
 		const file = new File(["data"], "items.xlsx");
@@ -70,6 +87,8 @@ describe("PositionsUploadDialog", () => {
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 
 		renderDialog();
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 
 		fireEvent.drop(screen.getByTestId("dropzone"), {
 			dataTransfer: { files: [new File(["data"], "items.xlsx")] },
@@ -90,6 +109,7 @@ describe("PositionsUploadDialog", () => {
 		renderDialog({ onImport, onOpenChange });
 		const user = userEvent.setup();
 
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), {
 			dataTransfer: { files: [new File(["data"], "items.xlsx")] },
 		});
@@ -108,6 +128,7 @@ describe("PositionsUploadDialog", () => {
 		renderDialog();
 		const user = userEvent.setup();
 
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), {
 			dataTransfer: { files: [new File(["data"], "items.xlsx")] },
 		});
@@ -126,6 +147,7 @@ describe("PositionsUploadDialog", () => {
 		renderDialog({ onOpenChange });
 		const user = userEvent.setup();
 
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), {
 			dataTransfer: { files: [new File(["data"], "items.xlsx")] },
 		});
@@ -137,7 +159,7 @@ describe("PositionsUploadDialog", () => {
 		expect(onOpenChange).not.toHaveBeenCalled();
 	});
 
-	test("closing dialog on upload step closes silently (no warning)", async () => {
+	test("closing dialog on choice step closes silently (no warning)", async () => {
 		const onOpenChange = vi.fn();
 		renderDialog({ onOpenChange });
 		const user = userEvent.setup();
@@ -152,6 +174,8 @@ describe("PositionsUploadDialog", () => {
 		vi.spyOn(mockParser, "parseFile").mockRejectedValue(new Error("bad file"));
 
 		renderDialog();
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 
 		fireEvent.drop(screen.getByTestId("dropzone"), {
 			dataTransfer: { files: [new File(["data"], "items.xlsx")] },

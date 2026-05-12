@@ -405,16 +405,16 @@ describe("ProcurementPage", () => {
 		expect(rows).toHaveLength(16);
 	});
 
-	test("clicking Добавить позиции on /positions opens upload dialog directly (no choice screen)", async () => {
+	test("clicking Добавить позиции on /positions opens choice dialog (Вручную / Из файла)", async () => {
 		await renderAppReady();
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(screen.getByText("Добавить позиции", { selector: "[data-slot='dialog-title']" })).toBeInTheDocument();
-		expect(screen.getByTestId("dropzone")).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /Вручную/ })).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Скачать пример файла/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Добавить вручную/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Загрузить из файла/ })).toBeInTheDocument();
+		expect(screen.queryByTestId("dropzone")).not.toBeInTheDocument();
 	});
 
 	test("shows error state with retry button on items load failure", async () => {
@@ -522,6 +522,7 @@ describe("ProcurementPage", () => {
 		const user = userEvent.setup();
 
 		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Загрузить из файла/ }));
 		fireEvent.drop(screen.getByTestId("dropzone"), { dataTransfer: { files: [new File(["data"], "items.xlsx")] } });
 		await waitFor(() => expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument());
 

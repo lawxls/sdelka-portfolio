@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { AddPositionsDialog } from "@/components/add-positions-dialog";
+import { AddPositionsManualDrawer } from "@/components/add-positions-manual-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { PageToolbar } from "@/components/page-toolbar";
-import { PositionsUploadDialog } from "@/components/positions-upload-dialog";
 import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
@@ -24,6 +25,7 @@ import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdate
 import {
 	buildFilterParams,
 	useArchiveItem,
+	useCreateItems,
 	useDeleteItem,
 	useExportItems,
 	useItems,
@@ -121,10 +123,12 @@ export function ProcurementPage() {
 	const deleteItemMutation = useDeleteItem();
 	const archiveItemMutation = useArchiveItem();
 	const createProcurementInquiryWithItemsMutation = useCreateProcurementInquiryWithItems();
+	const createItemsMutation = useCreateItems();
 	const exportItemsMutation = useExportItems();
 
 	const isMobile = useIsMobile();
 	const [dialogOpen, setDialogOpen] = useState(false);
+	const [manualDrawerOpen, setManualDrawerOpen] = useState(false);
 
 	function handleExport() {
 		exportItemsMutation.mutate(buildFilterParams({ search, filters, folder, sort, company }));
@@ -180,6 +184,15 @@ export function ProcurementPage() {
 			return;
 		}
 		setDialogOpen(true);
+	}
+
+	function handleManualSubmit(items: NewItemInput[]) {
+		const withStatus = items.map((item) => ({ ...item, status: "ready_for_analytics" as const }));
+		createItemsMutation.mutate(withStatus, {
+			onSuccess: () => {
+				toast.success(withStatus.length === 1 ? "Позиция добавлена" : `Добавлено позиций: ${withStatus.length}`);
+			},
+		});
 	}
 
 	function handleImportItems(items: NewItemInput[]) {
@@ -377,7 +390,17 @@ export function ProcurementPage() {
 				/>
 			</main>
 
-			<PositionsUploadDialog open={dialogOpen} onOpenChange={setDialogOpen} onImport={handleImportItems} />
+			<AddPositionsDialog
+				open={dialogOpen}
+				onOpenChange={setDialogOpen}
+				onManual={() => setManualDrawerOpen(true)}
+				onImport={handleImportItems}
+			/>
+			<AddPositionsManualDrawer
+				open={manualDrawerOpen}
+				onOpenChange={setManualDrawerOpen}
+				onSubmit={handleManualSubmit}
+			/>
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>
 	);

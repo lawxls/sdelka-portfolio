@@ -308,7 +308,7 @@ describe("ProcurementPage — multi-company import guard", () => {
 		await waitForToolbar();
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(toast.error).toHaveBeenCalledWith("Выберите компанию, чтобы добавить позиции");
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -320,10 +320,48 @@ describe("ProcurementPage — multi-company import guard", () => {
 		await waitForToolbar();
 
 		const user = userEvent.setup();
-		await user.click(screen.getByRole("button", { name: /Добавить/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
 
 		expect(toast.error).not.toHaveBeenCalled();
 		await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+		expect(screen.getByRole("button", { name: /Добавить вручную/ })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /Загрузить из файла/ })).toBeInTheDocument();
+	});
+});
+
+describe("ProcurementPage — manual-add flow", () => {
+	test("«Добавить вручную» opens the manual drawer", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+		await waitForToolbar();
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить вручную/ }));
+
+		await waitFor(() => {
+			expect(screen.getByRole("heading", { name: "Добавить позиции" })).toBeInTheDocument();
+		});
+		expect(screen.getByRole("button", { name: "Добавить позицию" })).toBeInTheDocument();
+	});
+
+	test("submitting the manual drawer creates items with status «Готово к аналитике»", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		renderPage();
+		await waitForToolbar();
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Добавить позиции/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить вручную/ }));
+
+		const drawer = await screen.findByRole("dialog");
+		const nameInput = within(drawer).getByLabelText("Название", { selector: "input" });
+		await user.type(nameInput, "Болт М10");
+		await user.click(within(drawer).getByRole("button", { name: /^Добавить$/ }));
+
+		await waitFor(() => {
+			expect(toast.success).toHaveBeenCalledWith("Позиция добавлена");
+		});
 	});
 });
 
