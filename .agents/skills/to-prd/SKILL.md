@@ -5,7 +5,6 @@ description: Turn the current conversation context into a PRD and publish it to 
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 
-The backlog backend and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
 
 ## Process
 
@@ -15,9 +14,9 @@ The backlog backend and triage label vocabulary should have been provided to you
 
 A deep module (as opposed to a shallow module) is one which encapsulates a lot of functionality in a simple, testable interface which rarely changes.
 
-Check with the user that these modules match their expectations. Check with the user which modules they want tests written for.
+Plan to write tests for every module that can be tested, using TDD where possible.
 
-3. Write the PRD using the template below, then publish it to the project backlog. Apply the `needs-triage` triage label so it enters the normal triage flow.
+3. Write the PRD using the template below. Publish it as a GitHub issue by default — only save it as a `.md` document when the user explicitly asks.
 
 <prd-template>
 

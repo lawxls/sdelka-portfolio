@@ -17,7 +17,7 @@
 			"sourceType": "github",
 			"computedHash": "055e73cddeec68e7eb75eab0c3f8490415384f72e98ac05405821427ed0e74b1"
 		},
-		"grill-me": {
+		"interview-me": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",
 			"computedHash": "f343ef02aa0ada0f8b13a77b6db7fb6a11f88d8067128215585500ef4fd3b5e0"
@@ -37,11 +37,6 @@
 			"source": "jakubkrehel/make-interfaces-feel-better",
 			"sourceType": "github",
 			"computedHash": "54b6e221bbe4e2d1a8461c3f9ecabe69daf891f964e9ee5e699c323daa018f2e"
-		},
-		"prd-to-issues": {
-			"source": "mattpocock/skills",
-			"sourceType": "github",
-			"computedHash": "32192340c1a14317b25741f5a0a38d162b387b6d4bfd09e0ed3859367321e98f"
 		},
 		"shadcn": {
 			"source": "shadcn/ui",
