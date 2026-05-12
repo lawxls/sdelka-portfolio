@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { SettingsLayout } from "@/components/settings-layout";
+import { INQUIRIES_PATH } from "@/lib/nav-items";
 import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
 import { EmailsSettingsPage } from "@/pages/emails-settings-page";
@@ -32,7 +33,7 @@ function ProcurementInquiriesOutletHost() {
 
 function RootRedirect() {
 	const { search, hash } = useLocation();
-	return <Navigate to={`/inquiries${search}${hash}`} replace />;
+	return <Navigate to={`${INQUIRIES_PATH}${search}${hash}`} replace />;
 }
 
 function ProcurementRedirect() {
@@ -59,7 +60,7 @@ function App() {
 				<Route path="/procurement" element={<ProcurementRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path="/inquiries" element={<ProcurementInquiriesOutletHost />}>
+					<Route path={INQUIRIES_PATH} element={<ProcurementInquiriesOutletHost />}>
 						<Route path=":slug" element={<ProcurementInquiryDetailPage />} />
 					</Route>
 					<Route path="/positions" element={<ProcurementPage />} />

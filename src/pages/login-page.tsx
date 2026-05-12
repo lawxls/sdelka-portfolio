@@ -7,12 +7,13 @@ import { extractFormErrors, isEmailNotVerified } from "@/data/auth-errors";
 import { TooManyRequestsError } from "@/data/errors";
 import { useLogin } from "@/data/use-session";
 import { useCountdown } from "@/hooks/use-countdown";
+import { INQUIRIES_PATH } from "@/lib/nav-items";
 
 export function LoginPage() {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const from =
-		(location.state as { from?: { pathname: string; search?: string; hash?: string } })?.from ?? "/inquiries";
+		(location.state as { from?: { pathname: string; search?: string; hash?: string } })?.from ?? INQUIRIES_PATH;
 
 	const login = useLogin();
 

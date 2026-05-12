@@ -57,6 +57,7 @@ import {
 	formatShortDate,
 	isOverdue,
 } from "@/lib/format";
+import { INQUIRIES_PATH } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
 type ProcurementInquiryDetailTab = "suppliers" | "offers" | "tasks" | "details";
@@ -133,7 +134,7 @@ export function ProcurementInquiryDetailPage() {
 	const { data: supplier } = useSupplierById(supplierId);
 
 	function handleClose() {
-		navigate({ pathname: "/inquiries", search: searchParams.toString() });
+		navigate({ pathname: INQUIRIES_PATH, search: searchParams.toString() });
 	}
 
 	function handleSupplierOpen(id: string, origin: SupplierDrawerTab = "info") {

@@ -61,6 +61,7 @@ import {
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatDayMonthShort, formatRussianPlural } from "@/lib/format";
+import { inquiryDetailPath } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
 interface ColumnDef {
@@ -500,7 +501,7 @@ export function ProcurementInquiriesPage() {
 	);
 
 	function handleRowClick(procurementInquiry: ProcurementInquirySummary) {
-		navigate({ pathname: `/inquiries/${procurementInquiry.id}`, search: searchParams.toString() });
+		navigate({ pathname: inquiryDetailPath(procurementInquiry.id), search: searchParams.toString() });
 	}
 
 	function handleArchive(id: string, isArchived: boolean) {

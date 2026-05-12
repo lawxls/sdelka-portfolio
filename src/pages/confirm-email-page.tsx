@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { extractFormErrors } from "@/data/auth-errors";
 import { useConfirmEmail } from "@/data/use-session";
 import { useMountEffect } from "@/hooks/use-mount-effect";
+import { INQUIRIES_PATH } from "@/lib/nav-items";
 
 type Status = "loading" | "error";
 
@@ -23,7 +24,7 @@ export function ConfirmEmailPage() {
 			{ uid, token },
 			{
 				onSuccess: () => {
-					navigate("/inquiries", { replace: true });
+					navigate(INQUIRIES_PATH, { replace: true });
 				},
 				onError: (err) => {
 					const { error } = extractFormErrors(err);

@@ -5,7 +5,7 @@ import { LogoWordmark } from "@/components/logo-wordmark";
 import { SupportDialog } from "@/components/support-dialog";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
 import { useActiveTasksCount } from "@/data/use-tasks";
-import { NAV_ITEMS } from "@/lib/nav-items";
+import { INQUIRIES_PATH, NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
 const TOP_NAV = NAV_ITEMS.filter((item) => item.placement === "top");
@@ -64,7 +64,7 @@ export function AppRail() {
 				data-testid="app-rail"
 			>
 				<div className="flex h-12 shrink-0 items-center px-3">
-					<Link to="/inquiries" aria-label="На главную" className="flex shrink-0 items-center">
+					<Link to={INQUIRIES_PATH} aria-label="На главную" className="flex shrink-0 items-center">
 						<LogoWordmark className="h-5 w-auto" />
 					</Link>
 				</div>
