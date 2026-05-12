@@ -1,11 +1,12 @@
 import type { ListCompaniesParams } from "./domains/companies";
 import type { ListItemsParams, TotalsParams } from "./domains/items";
+import type { ListProcurementInquiriesParams } from "./domains/procurement-inquiries";
 
 /**
  * Per-domain query-key factory. The single source of truth for every cache
  * namespace this app reads or writes. Hooks construct keys via these factories;
  * mutations invalidate via the policy module (which builds keys via these
- * factories). No inline string arrays should remain in companies/items hooks.
+ * factories). No inline string arrays should remain in hooks.
  *
  * Each factory returns a tuple typed `as const` so React Query's structural
  * comparison picks up exact-match vs. prefix-match correctly:
@@ -38,5 +39,10 @@ export const keys = {
 	},
 	folders: {
 		stats: () => ["folderStats"] as const,
+	},
+	procurementInquiries: {
+		all: () => ["procurementInquiries"] as const,
+		list: (params: ListProcurementInquiriesParams) => ["procurementInquiries", params] as const,
+		detail: (slug: string | null) => ["procurementInquiries", "detail", slug] as const,
 	},
 } as const;

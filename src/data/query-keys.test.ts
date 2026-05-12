@@ -27,6 +27,16 @@ describe("keys factory", () => {
 			"items.totalsAll": keys.items.totalsAll(),
 			"items.search": keys.items.search("query"),
 			"folders.stats": keys.folders.stats(),
+			"procurementInquiries.all": keys.procurementInquiries.all(),
+			"procurementInquiries.list": keys.procurementInquiries.list({
+				q: "альф",
+				folder: "f1",
+				sort: "createdAt",
+				dir: "desc",
+			}),
+			"procurementInquiries.list (empty params)": keys.procurementInquiries.list({}),
+			"procurementInquiries.detail": keys.procurementInquiries.detail("T-001"),
+			"procurementInquiries.detail (null)": keys.procurementInquiries.detail(null),
 		}).toMatchInlineSnapshot(`
 			{
 			  "companies.all": [
@@ -109,6 +119,32 @@ describe("keys factory", () => {
 			  "items.totalsAll": [
 			    "totals",
 			  ],
+			  "procurementInquiries.all": [
+			    "procurementInquiries",
+			  ],
+			  "procurementInquiries.detail": [
+			    "procurementInquiries",
+			    "detail",
+			    "T-001",
+			  ],
+			  "procurementInquiries.detail (null)": [
+			    "procurementInquiries",
+			    "detail",
+			    null,
+			  ],
+			  "procurementInquiries.list": [
+			    "procurementInquiries",
+			    {
+			      "dir": "desc",
+			      "folder": "f1",
+			      "q": "альф",
+			      "sort": "createdAt",
+			    },
+			  ],
+			  "procurementInquiries.list (empty params)": [
+			    "procurementInquiries",
+			    {},
+			  ],
 			}
 		`);
 	});
@@ -131,5 +167,13 @@ describe("keys factory", () => {
 		const totalsAll = keys.items.totalsAll();
 		const totals = keys.items.totals({ q: "x" });
 		expect(totals[0]).toBe(totalsAll[0]);
+	});
+
+	it("procurementInquiries.list and detail live under the procurementInquiries.all prefix", () => {
+		const all = keys.procurementInquiries.all();
+		const list = keys.procurementInquiries.list({});
+		const detail = keys.procurementInquiries.detail("T-001");
+		expect(list[0]).toBe(all[0]);
+		expect(detail[0]).toBe(all[0]);
 	});
 });
