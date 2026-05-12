@@ -7,13 +7,12 @@ import type {
 } from "../domains/procurement-inquiries";
 import { NotFoundError } from "../errors";
 import {
-	_setProcurementInquiries,
 	createProcurementInquiryMock,
 	deleteProcurementInquiryMock,
-	fetchProcurementInquiriesListMock,
-	fetchProcurementInquiryMock,
 	updateProcurementInquiryMock,
-} from "../procurement-inquiries-mock-data";
+} from "../procurement-inquiries-mock/mutations";
+import { fetchProcurementInquiriesListMock, fetchProcurementInquiryMock } from "../procurement-inquiries-mock/queries";
+import { _setProcurementInquiries } from "../procurement-inquiries-mock/store";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
 
 export interface InMemoryProcurementInquiriesOptions {
@@ -24,7 +23,7 @@ export interface InMemoryProcurementInquiriesOptions {
 
 /**
  * Build an in-memory inquiries adapter wrapping the module-level mock store
- * (`procurement-inquiries-mock-data`). Singleton-wrapping (rather than closure-isolated)
+ * (`procurement-inquiries-mock/`). Singleton-wrapping (rather than closure-isolated)
  * because list-time joins read the items + suppliers singletons for
  * positionsCount / kpCount derivation. Closure isolation lands once the
  * cross-entity rules migrate via the procurement-operations module.
