@@ -70,8 +70,8 @@ interface CreateProcurementInquiryDrawerProps {
 	onSubmit: (payload: CreateProcurementInquiryPayload) => void;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
+export const MAX_FILE_SIZE = 10 * 1024 * 1024;
+export const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
 const STEP_TITLES: Record<WizardStep, string> = {
 	1: "Заполните данные по запросу",
@@ -92,7 +92,7 @@ const DEADLINE_TOOLTIP =
 
 /** Subtle surface tint used for header, footer, and position cards — slightly darker than `--muted`
  * so chrome reads as a layer above the popover body in both themes. */
-const SURFACE_TINT =
+export const SURFACE_TINT =
 	"bg-[color-mix(in_oklch,var(--muted)_99%,var(--foreground)_0.4%)] dark:bg-[color-mix(in_oklch,var(--muted)_95%,var(--foreground)_1.5%)]";
 
 function SectionGroupHeader({ title }: { title: string }) {
@@ -850,7 +850,7 @@ function SingleSupplierBanner() {
 	);
 }
 
-interface PositionCardProps {
+export interface PositionCardProps {
 	index: number;
 	position: PositionDraft;
 	error: { name?: string } | undefined;
@@ -861,7 +861,7 @@ interface PositionCardProps {
 	nameInputRef: (el: HTMLInputElement | null) => void;
 }
 
-function PositionCard({
+export function PositionCard({
 	index,
 	position,
 	error,

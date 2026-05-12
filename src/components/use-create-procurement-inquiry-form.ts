@@ -63,7 +63,7 @@ interface Step1Errors {
 	positions: PositionErrors[];
 }
 
-function defaultPosition(): PositionDraft {
+export function defaultPosition(): PositionDraft {
 	return {
 		name: "",
 		description: "",
@@ -74,6 +74,19 @@ function defaultPosition(): PositionDraft {
 		currentSupplierInn: "",
 		files: [],
 	};
+}
+
+export function isPositionDraftDirty(p: PositionDraft): boolean {
+	return (
+		p.name !== "" ||
+		p.description !== "" ||
+		p.unit !== "" ||
+		p.quantityPerDelivery !== "" ||
+		p.annualQuantity !== "" ||
+		p.pricePerUnit !== "" ||
+		p.currentSupplierInn !== "" ||
+		p.files.length > 0
+	);
 }
 
 function defaultStep1(initialDeadline: string): Step1State {
@@ -353,16 +366,7 @@ export function useCreateProcurementInquiryForm() {
 	}
 
 	function isPositionDirty(p: PositionDraft) {
-		return (
-			p.name !== "" ||
-			p.description !== "" ||
-			p.unit !== "" ||
-			p.quantityPerDelivery !== "" ||
-			p.annualQuantity !== "" ||
-			p.pricePerUnit !== "" ||
-			p.currentSupplierInn !== "" ||
-			p.files.length > 0
-		);
+		return isPositionDraftDirty(p);
 	}
 
 	const isDirty =
