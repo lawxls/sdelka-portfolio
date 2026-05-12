@@ -183,7 +183,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 				permissions: {
 					id: nextId("perm"),
 					employeeId: id,
-					tenders: "none",
+					procurementInquiries: "none",
 					positions: "none",
 					tasks: "none",
 					companies: "none",

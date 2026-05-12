@@ -5,11 +5,11 @@ import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
+import type { ProcurementInquiriesClient } from "./clients/procurement-inquiries-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SessionClient } from "./clients/session-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
-import type { TendersClient } from "./clients/tenders-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 
 /**
@@ -22,7 +22,7 @@ export interface DataClients {
 	items?: ItemsClient;
 	suppliers?: SuppliersClient;
 	tasks?: TasksClient;
-	tenders?: TendersClient;
+	procurementInquiries?: ProcurementInquiriesClient;
 	folders?: FoldersClient;
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
@@ -74,10 +74,10 @@ export function useTasksClient(): TasksClient {
 	return tasks;
 }
 
-export function useTendersClient(): TendersClient {
-	const { tenders } = useClients();
-	if (!tenders) throw new Error("tenders client not provided");
-	return tenders;
+export function useProcurementInquiriesClient(): ProcurementInquiriesClient {
+	const { procurementInquiries } = useClients();
+	if (!procurementInquiries) throw new Error("procurementInquiries client not provided");
+	return procurementInquiries;
 }
 
 export function useFoldersClient(): FoldersClient {

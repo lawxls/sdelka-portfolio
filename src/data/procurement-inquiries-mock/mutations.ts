@@ -1,17 +1,24 @@
 import { delay } from "../mock-utils";
-import { generateTenderSlug } from "../tenders/generate-tender-slug";
+import { generateProcurementInquirySlug } from "../procurement-inquiries/generate-procurement-inquiry-slug";
 import type {
 	AttachedFile,
 	CurrentSupplier,
 	PaymentMethod,
 	ProcurementInquiry,
-	TenderEmailDraft,
-	TenderSendMode,
+	ProcurementInquiryEmailDraft,
+	ProcurementInquirySendMode,
 	UnloadingType,
 } from "../types";
-import { findTenderIndex, listSlugs, pushTender, readTenders, removeTender, writeTenderAt } from "./store";
+import {
+	findProcurementInquiryIndex,
+	listSlugs,
+	pushProcurementInquiry,
+	readProcurementInquiries,
+	removeProcurementInquiry,
+	writeProcurementInquiryAt,
+} from "./store";
 
-export interface CreateTenderInput {
+export interface CreateProcurementInquiryInput {
 	name: string;
 	companyId: string;
 	folderId?: string | null;
@@ -27,14 +34,14 @@ export interface CreateTenderInput {
 	analoguesAllowed?: boolean;
 	additionalInfo?: string;
 	attachedFiles?: AttachedFile[];
-	email?: TenderEmailDraft;
-	sendMode?: TenderSendMode;
+	email?: ProcurementInquiryEmailDraft;
+	sendMode?: ProcurementInquirySendMode;
 }
 
-export async function createTenderMock(input: CreateTenderInput): Promise<ProcurementInquiry> {
+export async function createProcurementInquiryMock(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry> {
 	await delay();
-	const tender: ProcurementInquiry = {
-		id: generateTenderSlug(listSlugs()),
+	const procurementInquiry: ProcurementInquiry = {
+		id: generateProcurementInquirySlug(listSlugs()),
 		name: input.name,
 		companyId: input.companyId,
 		folderId: input.folderId ?? null,
@@ -53,22 +60,25 @@ export async function createTenderMock(input: CreateTenderInput): Promise<Procur
 		...(input.email && { email: input.email }),
 		...(input.sendMode && { sendMode: input.sendMode }),
 	};
-	pushTender(tender);
-	return { ...tender };
+	pushProcurementInquiry(procurementInquiry);
+	return { ...procurementInquiry };
 }
 
-export async function updateTenderMock(id: string, patch: Partial<ProcurementInquiry>): Promise<ProcurementInquiry> {
+export async function updateProcurementInquiryMock(
+	id: string,
+	patch: Partial<ProcurementInquiry>,
+): Promise<ProcurementInquiry> {
 	await delay();
-	const idx = findTenderIndex(id);
-	if (idx === -1) throw new Error(`Tender ${id} not found`);
-	const current = readTenders()[idx];
+	const idx = findProcurementInquiryIndex(id);
+	if (idx === -1) throw new Error(`ProcurementInquiry ${id} not found`);
+	const current = readProcurementInquiries()[idx];
 	const updated: ProcurementInquiry = { ...current, ...patch, id: current.id };
-	writeTenderAt(idx, updated);
+	writeProcurementInquiryAt(idx, updated);
 	return { ...updated };
 }
 
-export async function deleteTenderMock(id: string): Promise<void> {
+export async function deleteProcurementInquiryMock(id: string): Promise<void> {
 	await delay();
-	const ok = removeTender(id);
-	if (!ok) throw new Error(`Tender ${id} not found`);
+	const ok = removeProcurementInquiry(id);
+	if (!ok) throw new Error(`ProcurementInquiry ${id} not found`);
 }

@@ -11,7 +11,7 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { TenderSummary } from "@/data/domains/tenders";
+import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
 import type { Folder } from "@/data/types";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -21,23 +21,23 @@ import { InlineRenameInput } from "./inline-rename-input";
 import { TruncatedName } from "./truncated-name";
 
 interface InquiryCardProps {
-	tender: TenderSummary;
+	procurementInquiry: ProcurementInquirySummary;
 	folders: Folder[];
 	folder?: Folder;
 	index: number;
 	isEditing: boolean;
 	isArchiveView: boolean;
-	onClick: (tender: TenderSummary) => void;
+	onClick: (procurementInquiry: ProcurementInquirySummary) => void;
 	onArchive: (id: string, isArchived: boolean) => void;
 	onRename: (id: string) => void;
 	onSaveRename: (id: string, name: string) => void;
 	onCancelRename: () => void;
 	onMoveToFolder: (id: string, folderId: string | null) => void;
-	onDelete: (tender: TenderSummary) => void;
+	onDelete: (procurementInquiry: ProcurementInquirySummary) => void;
 }
 
 export function InquiryCard({
-	tender,
+	procurementInquiry,
 	folders,
 	folder,
 	index,
@@ -51,7 +51,7 @@ export function InquiryCard({
 	onMoveToFolder,
 	onDelete,
 }: InquiryCardProps) {
-	const status = STATUS_CONFIG[tender.status];
+	const status = STATUS_CONFIG[procurementInquiry.status];
 	const [menuOpen, setMenuOpen] = useState(false);
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 
@@ -102,25 +102,25 @@ export function InquiryCard({
 
 	function handleClick() {
 		if (longPressFiredRef.current || isEditing) return;
-		onClick(tender);
+		onClick(procurementInquiry);
 	}
 
 	function handleKeyDown(e: React.KeyboardEvent) {
 		if (isEditing) return;
 		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
-			onClick(tender);
+			onClick(procurementInquiry);
 		}
 	}
 
 	const nameContent = isEditing ? (
 		<InlineRenameInput
-			defaultValue={tender.name}
-			onSave={(name) => onSaveRename(tender.id, name)}
+			defaultValue={procurementInquiry.name}
+			onSave={(name) => onSaveRename(procurementInquiry.id, name)}
 			onCancel={onCancelRename}
 		/>
 	) : (
-		<TruncatedName name={tender.name} className="font-medium text-sm" />
+		<TruncatedName name={procurementInquiry.name} className="font-medium text-sm" />
 	);
 
 	return (
@@ -135,7 +135,7 @@ export function InquiryCard({
 			onTouchCancel={handleTouchEnd}
 			tabIndex={isEditing ? undefined : 0}
 			role={isEditing ? undefined : "button"}
-			data-testid={`tender-card-${tender.id}`}
+			data-testid={`procurement-inquiry-card-${procurementInquiry.id}`}
 		>
 			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center gap-1.5">
@@ -143,7 +143,7 @@ export function InquiryCard({
 					{folder && !isEditing && (
 						<div
 							className="flex items-center gap-1 rounded-md bg-[#ebebed] px-2 py-0.5 dark:bg-[#35353a]"
-							data-testid={`folder-badge-${tender.id}`}
+							data-testid={`folder-badge-${procurementInquiry.id}`}
 						>
 							<span
 								className="size-2 shrink-0 rounded-full"
@@ -169,7 +169,7 @@ export function InquiryCard({
 						<DropdownMenuItem
 							onSelect={() => {
 								willEditRef.current = true;
-								onRename(tender.id);
+								onRename(procurementInquiry.id);
 							}}
 						>
 							<Pencil className="size-3.5" />
@@ -181,15 +181,18 @@ export function InquiryCard({
 								Переместить в категорию
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
-								<DropdownMenuItem onSelect={() => onMoveToFolder(tender.id, null)} disabled={tender.folderId === null}>
+								<DropdownMenuItem
+									onSelect={() => onMoveToFolder(procurementInquiry.id, null)}
+									disabled={procurementInquiry.folderId === null}
+								>
 									Без категории
 								</DropdownMenuItem>
 								{folders.length > 0 && <DropdownMenuSeparator />}
 								{folders.map((f) => (
 									<DropdownMenuItem
 										key={f.id}
-										onSelect={() => onMoveToFolder(tender.id, f.id)}
-										disabled={tender.folderId === f.id}
+										onSelect={() => onMoveToFolder(procurementInquiry.id, f.id)}
+										disabled={procurementInquiry.folderId === f.id}
 									>
 										<span
 											className="size-2 rounded-full"
@@ -203,18 +206,18 @@ export function InquiryCard({
 						</DropdownMenuSub>
 						<DropdownMenuSeparator />
 						{isArchiveView ? (
-							<DropdownMenuItem onSelect={() => onArchive(tender.id, false)}>
+							<DropdownMenuItem onSelect={() => onArchive(procurementInquiry.id, false)}>
 								<ArchiveRestore className="size-3.5" />
 								Восстановить из архива
 							</DropdownMenuItem>
 						) : (
-							<DropdownMenuItem onSelect={() => onArchive(tender.id, true)}>
+							<DropdownMenuItem onSelect={() => onArchive(procurementInquiry.id, true)}>
 								<Archive className="size-3.5" />
 								Архив
 							</DropdownMenuItem>
 						)}
 						<DropdownMenuSeparator />
-						<DropdownMenuItem variant="destructive" onSelect={() => onDelete(tender)}>
+						<DropdownMenuItem variant="destructive" onSelect={() => onDelete(procurementInquiry)}>
 							<Trash2 className="size-3.5" />
 							Удалить
 						</DropdownMenuItem>
@@ -224,26 +227,26 @@ export function InquiryCard({
 			<div className="mt-1 flex items-start justify-between gap-2">
 				<div className="min-w-0 flex-1">{nameContent}</div>
 				<span className={cn("shrink-0 inline-flex items-center gap-1.5 text-xs", status.className)}>
-					<ProcurementStatusIcon status={tender.status} />
+					<ProcurementStatusIcon status={procurementInquiry.status} />
 					{status.label}
 				</span>
 			</div>
 			<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 				<div>
 					<dt className="text-xs text-muted-foreground">Бюджет</dt>
-					<dd className="tabular-nums">{formatCurrency(tender.budget)}</dd>
+					<dd className="tabular-nums">{formatCurrency(procurementInquiry.budget)}</dd>
 				</div>
 				<div>
 					<dt className="text-xs text-muted-foreground">Дедлайн</dt>
-					<dd className="tabular-nums">{formatDayMonthShort(tender.deadline)}</dd>
+					<dd className="tabular-nums">{formatDayMonthShort(procurementInquiry.deadline)}</dd>
 				</div>
 				<div>
 					<dt className="text-xs text-muted-foreground">Поставщики</dt>
-					<dd className="tabular-nums">{tender.suppliersCount}</dd>
+					<dd className="tabular-nums">{procurementInquiry.suppliersCount}</dd>
 				</div>
 				<div>
 					<dt className="text-xs text-muted-foreground">Получено&nbsp;КП</dt>
-					<dd className="tabular-nums">{tender.kpCount}</dd>
+					<dd className="tabular-nums">{procurementInquiry.kpCount}</dd>
 				</div>
 			</dl>
 		</article>

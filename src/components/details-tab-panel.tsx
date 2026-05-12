@@ -11,7 +11,7 @@ import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS }
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
-import { useTender } from "@/data/use-tenders";
+import { useProcurementInquiry } from "@/data/use-procurement-inquiries";
 import { formatCurrency, formatFileSize, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
@@ -62,28 +62,31 @@ function answerValueText(answer: GeneratedAnswer): string {
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: item, isLoading, isError } = useItemDetail(itemId);
 	const { data: folders = [] } = useFolders();
-	// Tender-level meta (company, category, address, payment method, current
-	// supplier, requirements) lives on the parent tender after the schema
+	// ProcurementInquiry-level meta (company, category, address, payment method, current
+	// supplier, requirements) lives on the parent inquiry after the schema
 	// migration. Read-only here in the item drawer; edits are deferred to the
-	// tender detail page in a later slice.
-	const { data: tender } = useTender(item?.tenderId ?? null);
-	const { data: company } = useCompanyDetail(tender?.companyId ?? null);
+	// inquiry detail page in a later slice.
+	const { data: procurementInquiry } = useProcurementInquiry(item?.procurementInquiryId ?? null);
+	const { data: company } = useCompanyDetail(procurementInquiry?.companyId ?? null);
 	const updateMutation = useUpdateItemDetail();
 
 	const [editingSection, setEditingSection] = useState<SectionKey>(null);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
 	const [answersForm, setAnswersForm] = useState<AnswersFormState | null>(null);
 
-	const folder = useMemo(() => folders.find((f) => f.id === tender?.folderId), [folders, tender?.folderId]);
+	const folder = useMemo(
+		() => folders.find((f) => f.id === procurementInquiry?.folderId),
+		[folders, procurementInquiry?.folderId],
+	);
 
 	const addressesText = useMemo(() => {
-		if (!tender?.addressIds || !company?.addresses) return "";
-		const set = new Set(tender.addressIds);
+		if (!procurementInquiry?.addressIds || !company?.addresses) return "";
+		const set = new Set(procurementInquiry.addressIds);
 		return company.addresses
 			.filter((a) => set.has(a.id))
 			.map((a) => a.address)
 			.join("; ");
-	}, [tender?.addressIds, company?.addresses]);
+	}, [procurementInquiry?.addressIds, company?.addresses]);
 
 	if (isLoading) {
 		return (
@@ -188,7 +191,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 	const answers = item.generatedAnswers ?? [];
-	const currentSupplier = tender?.currentSupplier;
+	const currentSupplier = procurementInquiry?.currentSupplier;
 
 	return (
 		<div data-testid="tab-panel-details" className="flex flex-col gap-6">
@@ -292,11 +295,11 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Логистика (read-only, owned by parent tender) --- */}
+			{/* --- Логистика (read-only, owned by parent inquiry) --- */}
 			<Section title="Логистика" editing={false}>
 				<CardGrid>
 					<FieldCard label="Разгрузка">
-						<ValueText value={tender?.unloading ? UNLOADING_LABELS[tender.unloading] : ""} />
+						<ValueText value={procurementInquiry?.unloading ? UNLOADING_LABELS[procurementInquiry.unloading] : ""} />
 					</FieldCard>
 
 					<FieldCard label="Адрес доставки" span="full">
@@ -305,24 +308,25 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Дополнительно (read-only, owned by parent tender) --- */}
-			{tender && (
+			{/* --- Дополнительно (read-only, owned by parent inquiry) --- */}
+			{procurementInquiry && (
 				<Section title="Дополнительно" editing={false}>
 					<CardGrid>
 						<FieldCard label="Условия" span="half">
 							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 								<li>
 									<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-									{yesNo(tender.paymentMethod === "cash")}
+									{yesNo(procurementInquiry.paymentMethod === "cash")}
 								</li>
 								<li>
-									<span className="text-muted-foreground">Аналоги допускаются:</span> {yesNo(tender.analoguesAllowed)}
+									<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
+									{yesNo(procurementInquiry.analoguesAllowed)}
 								</li>
 							</ul>
 						</FieldCard>
 
 						<FieldCard label="Комментарий" span="full">
-							<ValueText value={tender.additionalInfo ?? ""} />
+							<ValueText value={procurementInquiry.additionalInfo ?? ""} />
 						</FieldCard>
 					</CardGrid>
 
@@ -331,9 +335,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							<Paperclip className="size-3" aria-hidden="true" />
 							Прикреплённые файлы
 						</div>
-						{tender.attachedFiles && tender.attachedFiles.length > 0 ? (
+						{procurementInquiry.attachedFiles && procurementInquiry.attachedFiles.length > 0 ? (
 							<ul className="flex flex-wrap gap-1.5">
-								{tender.attachedFiles.map((file) => (
+								{procurementInquiry.attachedFiles.map((file) => (
 									<li
 										key={`${file.name}-${file.size}`}
 										className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm"
@@ -351,7 +355,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</Section>
 			)}
 
-			{/* --- Ваш поставщик (read-only, owned by parent tender) --- */}
+			{/* --- Ваш поставщик (read-only, owned by parent inquiry) --- */}
 			<Section title="Ваш поставщик" editing={false}>
 				<CardGrid>
 					<FieldCard label="Название">

@@ -22,6 +22,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getProcurementInquiryStatus } from "@/data/procurement-inquiries/get-procurement-inquiry-status";
 import {
 	SUPPLIER_STATUSES,
 	type Supplier,
@@ -32,12 +33,12 @@ import {
 	supplierIdentity,
 } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
-import { getTenderStatus } from "@/data/tenders/get-tender-status";
-import type { Folder, PaymentType, ProcurementInquiry, ProcurementItem, TenderStatus } from "@/data/types";
+import type { Folder, PaymentType, ProcurementInquiry, ProcurementInquiryStatus, ProcurementItem } from "@/data/types";
 import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
-import { useTenderItems } from "@/data/use-items";
+import { useProcurementInquiryItems } from "@/data/use-items";
+import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
 import {
 	useAllSuppliers,
 	useArchiveSuppliers,
@@ -46,7 +47,6 @@ import {
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
-import { useTender, useUpdateTender } from "@/data/use-tenders";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
@@ -59,16 +59,16 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type TenderDetailTab = "suppliers" | "offers" | "tasks" | "details";
+type ProcurementInquiryDetailTab = "suppliers" | "offers" | "tasks" | "details";
 
-const TABS: { key: TenderDetailTab; label: string; mobileLabel?: string }[] = [
+const TABS: { key: ProcurementInquiryDetailTab; label: string; mobileLabel?: string }[] = [
 	{ key: "suppliers", label: "Поставщики" },
 	{ key: "offers", label: "Предложения" },
 	{ key: "tasks", label: "Вопросы" },
 	{ key: "details", label: "Информация", mobileLabel: "Инфо" },
 ];
 
-const DEFAULT_TAB: TenderDetailTab = "suppliers";
+const DEFAULT_TAB: ProcurementInquiryDetailTab = "suppliers";
 const VALID_TABS = new Set<string>(TABS.map((t) => t.key));
 const VALID_SUPPLIER_TABS = new Set<string>(SUPPLIER_DRAWER_TABS);
 
@@ -107,8 +107,8 @@ function groupSupplierIdsByItem(rows: readonly Supplier[], ids: readonly string[
 	return byItem;
 }
 
-function parseTenderTab(param: string | null): TenderDetailTab {
-	if (param && VALID_TABS.has(param)) return param as TenderDetailTab;
+function parseProcurementInquiryTab(param: string | null): ProcurementInquiryDetailTab {
+	if (param && VALID_TABS.has(param)) return param as ProcurementInquiryDetailTab;
 	return DEFAULT_TAB;
 }
 
@@ -117,19 +117,19 @@ function formatInquiryNumber(id: string): string {
 	return match ? String(Number(match[0])) : id;
 }
 
-export function TenderDetailPage() {
+export function ProcurementInquiryDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const isMobile = useIsMobile();
-	const activeTab = parseTenderTab(searchParams.get("tab"));
+	const activeTab = parseProcurementInquiryTab(searchParams.get("tab"));
 	const taskId = searchParams.get("task");
 	const supplierId = searchParams.get("supplier");
 	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
 
-	const { data: tender, isLoading, isError } = useTender(slug);
+	const { data: procurementInquiry, isLoading, isError } = useProcurementInquiry(slug);
 	const { data: folders = [] } = useFolders();
-	const { data: items = [] } = useTenderItems(slug || undefined);
+	const { data: items = [] } = useProcurementInquiryItems(slug || undefined);
 	const { data: supplier } = useSupplierById(supplierId);
 
 	function handleClose() {
@@ -193,7 +193,7 @@ export function TenderDetailPage() {
 		);
 	}
 
-	function handleTabChange(tab: TenderDetailTab) {
+	function handleTabChange(tab: ProcurementInquiryDetailTab) {
 		setSearchParams(
 			(prev) => {
 				const next = new URLSearchParams(prev);
@@ -227,18 +227,18 @@ export function TenderDetailPage() {
 							<SheetHeader className="sr-only">
 								<SheetTitle>Загрузка запроса</SheetTitle>
 							</SheetHeader>
-							<Skeleton className="h-6 w-64" data-testid="tender-detail-skeleton" />
+							<Skeleton className="h-6 w-64" data-testid="procurement-inquiry-detail-skeleton" />
 							<Skeleton className="h-4 w-40" />
 						</div>
 					)}
-					{!isLoading && (isError || !tender) && (
+					{!isLoading && (isError || !procurementInquiry) && (
 						<div className="flex h-full flex-col p-6">
 							<SheetHeader className="sr-only">
 								<SheetTitle>Запрос недоступен</SheetTitle>
 							</SheetHeader>
 							<div
 								className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
-								data-testid="tender-not-found"
+								data-testid="procurement-inquiry-not-found"
 							>
 								<p className="text-sm font-medium">Запрос не найден</p>
 								<p className="max-w-[20rem] text-pretty text-sm text-muted-foreground">
@@ -247,9 +247,9 @@ export function TenderDetailPage() {
 							</div>
 						</div>
 					)}
-					{!isLoading && tender && (
-						<TenderDrawerBody
-							tender={tender}
+					{!isLoading && procurementInquiry && (
+						<ProcurementInquiryDrawerBody
+							procurementInquiry={procurementInquiry}
 							items={items}
 							folders={folders}
 							activeTab={activeTab}
@@ -272,42 +272,42 @@ export function TenderDetailPage() {
 	);
 }
 
-interface TenderDrawerBodyProps {
-	tender: ProcurementInquiry;
+interface ProcurementInquiryDrawerBodyProps {
+	procurementInquiry: ProcurementInquiry;
 	items: readonly ProcurementItem[];
 	folders: Folder[];
-	activeTab: TenderDetailTab;
-	onTabChange: (tab: TenderDetailTab) => void;
+	activeTab: ProcurementInquiryDetailTab;
+	onTabChange: (tab: ProcurementInquiryDetailTab) => void;
 	onTaskOpen: (id: string) => void;
 	onSupplierOpen: (id: string, origin?: SupplierDrawerTab) => void;
 }
 
-function TenderDrawerBody({
-	tender,
+function ProcurementInquiryDrawerBody({
+	procurementInquiry,
 	items,
 	folders,
 	activeTab,
 	onTabChange,
 	onTaskOpen,
 	onSupplierOpen,
-}: TenderDrawerBodyProps) {
-	const folder = folders.find((f) => f.id === tender.folderId);
-	const status = getTenderStatus(items);
+}: ProcurementInquiryDrawerBodyProps) {
+	const folder = folders.find((f) => f.id === procurementInquiry.folderId);
+	const status = getProcurementInquiryStatus(items);
 	const statusCfg = STATUS_CONFIG[status];
-	const updateTenderMutation = useUpdateTender();
+	const updateProcurementInquiryMutation = useUpdateProcurementInquiry();
 	const [isEditingName, setIsEditingName] = useState(false);
 
 	function handleSaveName(name: string) {
 		const trimmed = name.trim();
-		if (trimmed && trimmed !== tender.name) {
-			updateTenderMutation.mutate({ id: tender.id, patch: { name: trimmed } });
+		if (trimmed && trimmed !== procurementInquiry.name) {
+			updateProcurementInquiryMutation.mutate({ id: procurementInquiry.id, patch: { name: trimmed } });
 		}
 		setIsEditingName(false);
 	}
 
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [] } = useAllSuppliers();
-	// Identity-deduped so one supplier counts once across all tender positions.
+	// Identity-deduped so one supplier counts once across all inquiry positions.
 	const metrics = useMemo(() => {
 		const total = new Set<string>();
 		const contacted = new Set<string>();
@@ -329,8 +329,8 @@ function TenderDrawerBody({
 			refusals: refusals.size,
 		};
 	}, [allSuppliers, itemIds]);
-	const taskColumnsForCounts = useTaskColumns({ tender: tender.id });
-	const tabCounts: Partial<Record<TenderDetailTab, number>> = {
+	const taskColumnsForCounts = useTaskColumns({ procurementInquiry: procurementInquiry.id });
+	const tabCounts: Partial<Record<ProcurementInquiryDetailTab, number>> = {
 		suppliers: metrics.total,
 		offers: metrics.quotesReceived,
 		tasks: taskColumnsForCounts.assigned.count + taskColumnsForCounts.in_progress.count,
@@ -341,7 +341,7 @@ function TenderDrawerBody({
 			<SheetHeader>
 				<div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
 					<span className="font-heading text-base font-medium text-foreground tabular-nums">
-						№{formatInquiryNumber(tender.id)}
+						№{formatInquiryNumber(procurementInquiry.id)}
 					</span>
 					<span aria-hidden="true" className="font-heading text-base font-medium text-foreground">
 						•
@@ -349,14 +349,14 @@ function TenderDrawerBody({
 					{isEditingName ? (
 						<SheetTitle className="flex-1 min-w-0 leading-snug text-balance">
 							<InlineRenameInput
-								defaultValue={tender.name}
+								defaultValue={procurementInquiry.name}
 								onSave={handleSaveName}
 								onCancel={() => setIsEditingName(false)}
 							/>
 						</SheetTitle>
 					) : (
 						<div className="group flex min-w-0 flex-1 items-center gap-1.5">
-							<SheetTitle className="leading-snug text-balance">{tender.name}</SheetTitle>
+							<SheetTitle className="leading-snug text-balance">{procurementInquiry.name}</SheetTitle>
 							<button
 								type="button"
 								onClick={() => setIsEditingName(true)}
@@ -366,7 +366,7 @@ function TenderDrawerBody({
 									"transition-[opacity,background-color,color,scale] duration-150 ease-out active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100",
 									"after:absolute after:inset-[-8px] after:content-['']",
 								)}
-								data-testid="tender-rename-button"
+								data-testid="procurement-inquiry-rename-button"
 							>
 								<Pencil aria-hidden="true" className="size-3.5" />
 							</button>
@@ -388,21 +388,21 @@ function TenderDrawerBody({
 							count={metrics.contacted}
 							label="Написали поставщикам"
 							colorClass="text-muted-foreground"
-							testId="tender-metric-contacted"
+							testId="procurement-inquiry-metric-contacted"
 						/>
 						<HeaderMetric
 							icon={Check}
 							count={metrics.quotesReceived}
 							label="Получено КП"
 							colorClass="text-green-600 dark:text-green-400"
-							testId="tender-metric-quotes"
+							testId="procurement-inquiry-metric-quotes"
 						/>
 						<HeaderMetric
 							icon={Ban}
 							count={metrics.refusals}
 							label="Отказ"
 							colorClass="text-destructive"
-							testId="tender-metric-refusals"
+							testId="procurement-inquiry-metric-refusals"
 						/>
 					</div>
 				</div>
@@ -457,13 +457,26 @@ function TenderDrawerBody({
 				)}
 			>
 				{activeTab === "suppliers" && (
-					<TenderSuppliersTab items={items} onSupplierClick={(id) => onSupplierOpen(id, "info")} />
+					<ProcurementInquirySuppliersTab items={items} onSupplierClick={(id) => onSupplierOpen(id, "info")} />
 				)}
 				{activeTab === "offers" && (
-					<TenderOffersTab tenderId={tender.id} items={items} onSupplierClick={(id) => onSupplierOpen(id, "offers")} />
+					<ProcurementInquiryOffersTab
+						procurementInquiryId={procurementInquiry.id}
+						items={items}
+						onSupplierClick={(id) => onSupplierOpen(id, "offers")}
+					/>
 				)}
-				{activeTab === "tasks" && <TenderTasksTab tenderId={tender.id} onTaskClick={onTaskOpen} />}
-				{activeTab === "details" && <TenderDetailsTab tender={tender} items={items} folder={folder} status={status} />}
+				{activeTab === "tasks" && (
+					<ProcurementInquiryTasksTab procurementInquiryId={procurementInquiry.id} onTaskClick={onTaskOpen} />
+				)}
+				{activeTab === "details" && (
+					<ProcurementInquiryDetailsTab
+						procurementInquiry={procurementInquiry}
+						items={items}
+						folder={folder}
+						status={status}
+					/>
+				)}
 			</div>
 		</div>
 	);
@@ -562,7 +575,7 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 	return (av - bv) * sign;
 }
 
-function TenderSuppliersTab({
+function ProcurementInquirySuppliersTab({
 	items,
 	onSupplierClick,
 }: {
@@ -570,10 +583,10 @@ function TenderSuppliersTab({
 	onSupplierClick: (id: string) => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
-	return <TenderConsolidatedSuppliersPanel items={items} onSupplierClick={onSupplierClick} />;
+	return <ProcurementInquiryConsolidatedSuppliersPanel items={items} onSupplierClick={onSupplierClick} />;
 }
 
-function TenderConsolidatedSuppliersPanel({
+function ProcurementInquiryConsolidatedSuppliersPanel({
 	items,
 	onSupplierClick,
 }: {
@@ -593,14 +606,14 @@ function TenderConsolidatedSuppliersPanel({
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
 
-	const tenderSuppliers = useMemo(
+	const procurementInquirySuppliers = useMemo(
 		() => allSuppliers.filter((s) => itemIds.has(s.itemId) && s.archived === showArchived),
 		[allSuppliers, itemIds, showArchived],
 	);
 
 	const dedupedSuppliers = useMemo(() => {
 		const byIdentity = new Map<string, Supplier>();
-		for (const s of tenderSuppliers) {
+		for (const s of procurementInquirySuppliers) {
 			const identity = supplierIdentity(s);
 			const existing = byIdentity.get(identity);
 			if (!existing) {
@@ -612,7 +625,7 @@ function TenderConsolidatedSuppliersPanel({
 			}
 		}
 		return [...byIdentity.values()];
-	}, [tenderSuppliers]);
+	}, [procurementInquirySuppliers]);
 
 	const statusCounts = useMemo(() => {
 		const counts: Partial<Record<SupplierStatus, number>> = {};
@@ -737,7 +750,7 @@ function TenderConsolidatedSuppliersPanel({
 	}
 
 	return (
-		<div data-testid="tender-tab-suppliers" className="h-full">
+		<div data-testid="procurement-inquiry-tab-suppliers" className="h-full">
 			<SuppliersTable
 				suppliers={visibleSuppliers}
 				totalCount={sortedSuppliers.length}
@@ -774,31 +787,37 @@ function TenderConsolidatedSuppliersPanel({
 	);
 }
 
-function TenderOffersTab({
-	tenderId,
+function ProcurementInquiryOffersTab({
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 }: {
-	tenderId: string;
+	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
-	return <TenderConsolidatedOffersPanel tenderId={tenderId} items={items} onSupplierClick={onSupplierClick} />;
+	return (
+		<ProcurementInquiryConsolidatedOffersPanel
+			procurementInquiryId={procurementInquiryId}
+			items={items}
+			onSupplierClick={onSupplierClick}
+		/>
+	);
 }
 
-function TenderConsolidatedOffersPanel({
-	tenderId,
+function ProcurementInquiryConsolidatedOffersPanel({
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 }: {
-	tenderId: string;
+	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
-	const { data: tender } = useTender(tenderId);
-	const currentSupplier = tender?.currentSupplier;
+	const { data: procurementInquiry } = useProcurementInquiry(procurementInquiryId);
+	const currentSupplier = procurementInquiry?.currentSupplier;
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
 	const archiveMutation = useArchiveSuppliers();
 
@@ -810,7 +829,7 @@ function TenderConsolidatedOffersPanel({
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
 
-	const tenderQuotesByIdentity = useMemo(() => {
+	const procurementInquiryQuotesByIdentity = useMemo(() => {
 		const map = new Map<string, Map<string, number>>();
 		for (const s of allSuppliers) {
 			if (s.archived) continue;
@@ -937,7 +956,7 @@ function TenderConsolidatedOffersPanel({
 	}
 
 	return (
-		<div data-testid="tender-tab-offers" className="h-full">
+		<div data-testid="procurement-inquiry-tab-offers" className="h-full">
 			<OffersTable
 				suppliers={visibleSuppliers}
 				totalCount={totalCount}
@@ -965,8 +984,8 @@ function TenderConsolidatedOffersPanel({
 				onArchiveSupplier={handleArchiveSupplier}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}
-				tenderItems={items}
-				tenderQuotesByIdentity={tenderQuotesByIdentity}
+				procurementInquiryItems={items}
+				procurementInquiryQuotesByIdentity={procurementInquiryQuotesByIdentity}
 				activeItemIds={activeItemIds}
 				onItemFilter={handleItemFilter}
 				showSavings={false}
@@ -1005,7 +1024,13 @@ function sortConsolidatedSuppliers(suppliers: Supplier[], sort: SupplierSortStat
 	});
 }
 
-function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskClick: (id: string) => void }) {
+function ProcurementInquiryTasksTab({
+	procurementInquiryId,
+	onTaskClick,
+}: {
+	procurementInquiryId: string;
+	onTaskClick: (id: string) => void;
+}) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [search, setSearch] = useState("");
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
@@ -1019,7 +1044,7 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 	const activeFilter: TasksFilter | null =
 		statusParam === "completed" || statusParam === "archived" ? statusParam : null;
 
-	const taskColumns = useTaskColumns({ tender: tenderId, q: search || undefined });
+	const taskColumns = useTaskColumns({ procurementInquiry: procurementInquiryId, q: search || undefined });
 
 	function handleFilterToggle(filter: TasksFilter) {
 		setSearchParams(
@@ -1152,11 +1177,11 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 		);
 
 	function renderMobileCard(t: Task) {
-		return <TaskCard task={t} onClick={onTaskClick} hideTenderName />;
+		return <TaskCard task={t} onClick={onTaskClick} hideProcurementInquiryName />;
 	}
 
 	return (
-		<div data-testid="tender-tab-tasks" className="h-full">
+		<div data-testid="procurement-inquiry-tab-tasks" className="h-full">
 			<DataTable<Task>
 				columns={TASK_TABLE_COLUMNS}
 				rows={tasks}
@@ -1186,32 +1211,32 @@ function TenderTasksTab({ tenderId, onTaskClick }: { tenderId: string; onTaskCli
 	);
 }
 
-function TenderDetailsTab({
-	tender,
+function ProcurementInquiryDetailsTab({
+	procurementInquiry,
 	items,
 	folder,
 	status,
 }: {
-	tender: ProcurementInquiry;
+	procurementInquiry: ProcurementInquiry;
 	items: readonly ProcurementItem[];
 	folder?: Folder;
-	status: TenderStatus;
+	status: ProcurementInquiryStatus;
 }) {
-	const { data: company } = useCompanyDetail(tender.companyId ?? null);
+	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
 	const addressesText = useMemo(() => {
-		if (!tender.addressIds || !company?.addresses) return "";
-		const set = new Set(tender.addressIds);
+		if (!procurementInquiry.addressIds || !company?.addresses) return "";
+		const set = new Set(procurementInquiry.addressIds);
 		return company.addresses
 			.filter((a) => set.has(a.id))
 			.map((a) => a.address)
 			.join("; ");
-	}, [tender.addressIds, company?.addresses]);
+	}, [procurementInquiry.addressIds, company?.addresses]);
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
-	const currentSupplier = tender.currentSupplier;
+	const currentSupplier = procurementInquiry.currentSupplier;
 	const rfqEditable = RFQ_EDITABLE_STATUSES.has(status);
 
 	return (
-		<div data-testid="tender-tab-details" className="flex flex-col gap-6">
+		<div data-testid="procurement-inquiry-tab-details" className="flex flex-col gap-6">
 			<Section title="Основное">
 				<CardGrid>
 					<FieldCard label="Компания">
@@ -1221,13 +1246,13 @@ function TenderDetailsTab({
 						<ValueText value={folder?.name ?? ""} />
 					</FieldCard>
 					<FieldCard label="Название" span="full">
-						<ValueText value={tender.name} />
+						<ValueText value={procurementInquiry.name} />
 					</FieldCard>
 					<FieldCard label="Дедлайн">
-						<ValueText value={formatShortDate(tender.deadline)} />
+						<ValueText value={formatShortDate(procurementInquiry.deadline)} />
 					</FieldCard>
 					<FieldCard label="Дата создания">
-						<ValueText value={formatShortDate(tender.createdAt)} />
+						<ValueText value={formatShortDate(procurementInquiry.createdAt)} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -1236,9 +1261,9 @@ function TenderDetailsTab({
 				{items.length === 0 ? (
 					<p className="py-2 text-sm text-muted-foreground">Позиций пока нет.</p>
 				) : (
-					<div className="flex flex-col gap-3" data-testid="tender-items-list">
+					<div className="flex flex-col gap-3" data-testid="procurement-inquiry-items-list">
 						{items.map((item, index) => (
-							<TenderPositionCard key={item.id} item={item} index={index} />
+							<ProcurementInquiryPositionCard key={item.id} item={item} index={index} />
 						))}
 					</div>
 				)}
@@ -1247,7 +1272,7 @@ function TenderDetailsTab({
 			<Section title="Логистика">
 				<CardGrid>
 					<FieldCard label="Разгрузка">
-						<ValueText value={tender.unloading ? UNLOADING_LABELS[tender.unloading] : ""} />
+						<ValueText value={procurementInquiry.unloading ? UNLOADING_LABELS[procurementInquiry.unloading] : ""} />
 					</FieldCard>
 					<FieldCard label="Адрес доставки" span="full">
 						<ValueText value={addressesText} />
@@ -1255,7 +1280,7 @@ function TenderDetailsTab({
 				</CardGrid>
 			</Section>
 
-			<TenderRfqSection tender={tender} editable={rfqEditable} />
+			<ProcurementInquiryRfqSection procurementInquiry={procurementInquiry} editable={rfqEditable} />
 
 			<Section title="Дополнительно">
 				<CardGrid>
@@ -1263,15 +1288,16 @@ function TenderDetailsTab({
 						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 							<li>
 								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-								{yesNo(tender.paymentMethod === "cash")}
+								{yesNo(procurementInquiry.paymentMethod === "cash")}
 							</li>
 							<li>
-								<span className="text-muted-foreground">Аналоги допускаются:</span> {yesNo(tender.analoguesAllowed)}
+								<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
+								{yesNo(procurementInquiry.analoguesAllowed)}
 							</li>
 						</ul>
 					</FieldCard>
 					<FieldCard label="Комментарий" span="full">
-						<ValueText value={tender.additionalInfo ?? ""} />
+						<ValueText value={procurementInquiry.additionalInfo ?? ""} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -1307,14 +1333,20 @@ function TenderDetailsTab({
 	);
 }
 
-function TenderRfqSection({ tender, editable }: { tender: ProcurementInquiry; editable: boolean }) {
-	const updateMutation = useUpdateTender();
+function ProcurementInquiryRfqSection({
+	procurementInquiry,
+	editable,
+}: {
+	procurementInquiry: ProcurementInquiry;
+	editable: boolean;
+}) {
+	const updateMutation = useUpdateProcurementInquiry();
 	const [editing, setEditing] = useState(false);
 	const [bodyDraft, setBodyDraft] = useState("");
 	const [autoSendDraft, setAutoSendDraft] = useState(false);
 
-	const currentBody = tender.email?.body ?? "";
-	const currentAutoSend = tender.sendMode === "auto";
+	const currentBody = procurementInquiry.email?.body ?? "";
+	const currentAutoSend = procurementInquiry.sendMode === "auto";
 
 	function handleEdit() {
 		setBodyDraft(currentBody);
@@ -1329,11 +1361,11 @@ function TenderRfqSection({ tender, editable }: { tender: ProcurementInquiry; ed
 	function handleSave() {
 		const trimmedBody = bodyDraft.trim();
 		const patch: Partial<ProcurementInquiry> = {
-			email: trimmedBody ? { subject: tender.email?.subject ?? "", body: trimmedBody } : undefined,
+			email: trimmedBody ? { subject: procurementInquiry.email?.subject ?? "", body: trimmedBody } : undefined,
 			sendMode: autoSendDraft ? "auto" : "manual",
 		};
 		updateMutation.mutate(
-			{ id: tender.id, patch },
+			{ id: procurementInquiry.id, patch },
 			{
 				onSuccess: () => setEditing(false),
 			},
@@ -1373,7 +1405,7 @@ function TenderRfqSection({ tender, editable }: { tender: ProcurementInquiry; ed
 					{editing ? (
 						<div>
 							<CheckboxBadge
-								id="tender-rfq-autosend"
+								id="procurement-inquiry-rfq-autosend"
 								checked={autoSendDraft}
 								onChange={setAutoSendDraft}
 								ariaLabel="Автоотправка запросов"
@@ -1393,11 +1425,11 @@ function TenderRfqSection({ tender, editable }: { tender: ProcurementInquiry; ed
 	);
 }
 
-function TenderPositionCard({ item, index }: { item: ProcurementItem; index: number }) {
+function ProcurementInquiryPositionCard({ item, index }: { item: ProcurementItem; index: number }) {
 	return (
 		<section
 			aria-label={`Позиция ${index + 1}`}
-			data-testid={`tender-item-${item.id}`}
+			data-testid={`procurement-inquiry-item-${item.id}`}
 			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4"
 		>
 			<FieldCardLine label="Название" value={item.name} />

@@ -9,7 +9,7 @@ let tasksStore: Task[] = [];
 export function cloneTask(t: Task): Task {
 	return {
 		...t,
-		tender: { ...t.tender },
+		procurementInquiry: { ...t.procurementInquiry },
 		assignee: t.assignee ? { ...t.assignee } : null,
 		attachments: t.attachments.map((a) => ({ ...a })),
 		supplierQuestions: t.supplierQuestions.map((q) => ({ ...q })),

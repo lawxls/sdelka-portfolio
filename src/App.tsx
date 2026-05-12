@@ -9,6 +9,8 @@ import { EmailsSettingsPage } from "@/pages/emails-settings-page";
 import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { LoginPage } from "@/pages/login-page";
+import { ProcurementInquiriesPage } from "@/pages/procurement-inquiries-page";
+import { ProcurementInquiryDetailPage } from "@/pages/procurement-inquiry-detail-page";
 import { ProcurementPage } from "@/pages/procurement-page";
 import { ProfileSettingsPage } from "@/pages/profile-settings-page";
 import { RegisterPage } from "@/pages/register-page";
@@ -17,14 +19,12 @@ import { ResetPasswordPage } from "@/pages/reset-password-page";
 import { SettingsIndexPage } from "@/pages/settings-index-page";
 import { TariffsSettingsPage } from "@/pages/tariffs-settings-page";
 import { TasksPage } from "@/pages/tasks-page";
-import { TenderDetailPage } from "@/pages/tender-detail-page";
-import { TendersPage } from "@/pages/tenders-page";
 import { WorkspaceSettingsPage } from "@/pages/workspace-settings-page";
 
-function TendersOutletHost() {
+function ProcurementInquiriesOutletHost() {
 	return (
 		<>
-			<TendersPage />
+			<ProcurementInquiriesPage />
 			<Outlet />
 		</>
 	);
@@ -59,8 +59,8 @@ function App() {
 				<Route path="/procurement" element={<ProcurementRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path="/inquiries" element={<TendersOutletHost />}>
-						<Route path=":slug" element={<TenderDetailPage />} />
+					<Route path="/inquiries" element={<ProcurementInquiriesOutletHost />}>
+						<Route path=":slug" element={<ProcurementInquiryDetailPage />} />
 					</Route>
 					<Route path="/positions" element={<ProcurementPage />} />
 					<Route path="/tasks" element={<TasksPage />} />

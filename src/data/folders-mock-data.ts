@@ -1,6 +1,6 @@
 import { _archivedCount, _statsByFolder } from "./items-mock-data";
 import { delay, nextId } from "./mock-utils";
-import { readTenders, writeTenderAt } from "./tenders-mock/store";
+import { readProcurementInquiries, writeProcurementInquiryAt } from "./procurement-inquiries-mock/store";
 import type { Folder } from "./types";
 
 // --- Seed data ---
@@ -79,11 +79,12 @@ export async function deleteFolderMock(id: string): Promise<void> {
 	const existed = foldersStore.some((f) => f.id === id);
 	foldersStore = foldersStore.filter((f) => f.id !== id);
 	if (!existed) return;
-	// Cascade: tenders that referenced this folder become uncategorized.
-	// Items inherit categorization from their parent tender, so no item-level
+	// Cascade: inquiries that referenced this folder become uncategorized.
+	// Items inherit categorization from their parent inquiry, so no item-level
 	// cleanup is needed.
-	const tenders = readTenders();
-	for (let i = 0; i < tenders.length; i++) {
-		if (tenders[i].folderId === id) writeTenderAt(i, { ...tenders[i], folderId: null });
+	const procurementInquiries = readProcurementInquiries();
+	for (let i = 0; i < procurementInquiries.length; i++) {
+		if (procurementInquiries[i].folderId === id)
+			writeProcurementInquiryAt(i, { ...procurementInquiries[i], folderId: null });
 	}
 }

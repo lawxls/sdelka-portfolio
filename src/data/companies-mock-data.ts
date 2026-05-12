@@ -241,7 +241,7 @@ export interface UpdateEmployeeData {
 }
 
 export interface UpdatePermissionsData {
-	tenders?: PermissionLevel;
+	procurementInquiries?: PermissionLevel;
 	positions?: PermissionLevel;
 	tasks?: PermissionLevel;
 	companies?: PermissionLevel;
@@ -274,7 +274,7 @@ export async function createEmployeeMock(
 		permissions: {
 			id: nextId("perm"),
 			employeeId: id,
-			tenders: "none",
+			procurementInquiries: "none",
 			positions: "none",
 			tasks: "none",
 			companies: "none",

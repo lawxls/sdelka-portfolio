@@ -7,19 +7,19 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry } from "@/data/types";
 import { makeCompanyDetail } from "@/test-utils";
-import { TendersPage } from "./tenders-page";
+import { ProcurementInquiriesPage } from "./procurement-inquiries-page";
 
 const FOLDERS: Folder[] = [
 	{ id: "folder-packaging", name: "Упаковка", color: "blue" },
 	{ id: "folder-fillings", name: "Наполнители", color: "green" },
 ];
 
-const TENDERS: ProcurementInquiry[] = [
+const PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
 	{
 		id: "T-001",
 		name: "Тестовый запрос 1",
@@ -40,7 +40,10 @@ const TENDERS: ProcurementInquiry[] = [
 	},
 ];
 
-function renderPage(initialEntries: string[] = ["/inquiries"], tenders: ProcurementInquiry[] = TENDERS) {
+function renderPage(
+	initialEntries: string[] = ["/inquiries"],
+	procurementInquiries: ProcurementInquiry[] = PROCUREMENT_INQUIRIES,
+) {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -50,14 +53,14 @@ function renderPage(initialEntries: string[] = ["/inquiries"], tenders: Procurem
 			clients={{
 				companies: createInMemoryCompaniesClient([makeCompanyDetail("company-1", { name: "Альфа", isMain: true })]),
 				items: createInMemoryItemsClient({ seed: [] }),
-				tenders: createInMemoryTendersClient({ seed: tenders }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
 				folders: createInMemoryFoldersClient({ seed: FOLDERS }),
 			}}
 		>
 			<TooltipProvider>
 				<MemoryRouter initialEntries={initialEntries}>
 					<Routes>
-						<Route path="/inquiries" element={<TendersPage />} />
+						<Route path="/inquiries" element={<ProcurementInquiriesPage />} />
 					</Routes>
 				</MemoryRouter>
 			</TooltipProvider>
@@ -74,7 +77,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-describe("TendersPage", () => {
+describe("ProcurementInquiriesPage", () => {
 	test("renders the «Запросы» heading", async () => {
 		renderPage();
 		expect(screen.getByRole("heading", { name: "Запросы" })).toBeInTheDocument();
@@ -90,23 +93,28 @@ describe("TendersPage", () => {
 		expect(labels[2]).toBe("ВСЕГО ПОСТАВЩИКОВ");
 		expect(labels[3]).toBe("ПОЛУЧЕНО КП");
 		expect(labels[4]).toBe("ВОПРОСЫ");
-		expect(labels[5]).toBe("ДАТА СОЗДАНИЯ");
-		expect(labels[6]).toBe("ДЕДЛАЙН");
+		expect(labels[5]).toBe("ДЕДЛАЙН");
+		expect(labels[6]).toBe("ДАТА СОЗДАНИЯ");
 	});
 
-	test("renders one row per seeded tender, sorted by createdAt desc", async () => {
+	test("renders one row per seeded inquiry, sorted by createdAt desc", async () => {
 		renderPage();
 		await waitFor(() => {
-			expect(screen.getByTestId("tender-row-T-001")).toBeInTheDocument();
+			expect(screen.getByTestId("procurement-inquiry-row-T-001")).toBeInTheDocument();
 		});
-		const rows = screen.getAllByRole("row").filter((r) => r.getAttribute("data-testid")?.startsWith("tender-row-"));
-		expect(rows.map((r) => r.getAttribute("data-testid"))).toEqual(["tender-row-T-002", "tender-row-T-001"]);
+		const rows = screen
+			.getAllByRole("row")
+			.filter((r) => r.getAttribute("data-testid")?.startsWith("procurement-inquiry-row-"));
+		expect(rows.map((r) => r.getAttribute("data-testid"))).toEqual([
+			"procurement-inquiry-row-T-002",
+			"procurement-inquiry-row-T-001",
+		]);
 	});
 
 	test("each row exposes row number, name, and category badge", async () => {
 		renderPage();
 		// Sorted by createdAt desc: T-002 is row #1, T-001 is row #2.
-		const row = await screen.findByTestId("tender-row-T-001");
+		const row = await screen.findByTestId("procurement-inquiry-row-T-001");
 		expect(within(row).getByText("2")).toBeInTheDocument();
 		expect(within(row).getByText("Тестовый запрос 1")).toBeInTheDocument();
 		expect(within(row).getByText("Упаковка")).toBeInTheDocument();
@@ -114,7 +122,7 @@ describe("TendersPage", () => {
 
 	test("does not render «Отклонение / переплата» filters", async () => {
 		renderPage();
-		await screen.findByTestId("tender-row-T-001");
+		await screen.findByTestId("procurement-inquiry-row-T-001");
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.queryByText("Отклонение")).not.toBeInTheDocument();
@@ -124,7 +132,7 @@ describe("TendersPage", () => {
 
 	test("deadline filter exposes a date range and a Просрочены preset inside the Фильтры popover", async () => {
 		renderPage();
-		await screen.findByTestId("tender-row-T-001");
+		await screen.findByTestId("procurement-inquiry-row-T-001");
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Фильтры" }));
 		expect(screen.getByLabelText("Дедлайн с")).toBeInTheDocument();
@@ -135,7 +143,7 @@ describe("TendersPage", () => {
 
 	test("archive toggle button has aria-pressed and toggles folder=archive", async () => {
 		renderPage();
-		await screen.findByTestId("tender-row-T-001");
+		await screen.findByTestId("procurement-inquiry-row-T-001");
 
 		const archive = screen.getByRole("button", { name: "Архив" });
 		expect(archive).toHaveAttribute("aria-pressed", "false");
@@ -148,9 +156,9 @@ describe("TendersPage", () => {
 		});
 	});
 
-	test("archive view shows only archived tenders; active view excludes them", async () => {
+	test("archive view shows only archived procurementInquiries; active view excludes them", async () => {
 		const SEED: ProcurementInquiry[] = [
-			...TENDERS,
+			...PROCUREMENT_INQUIRIES,
 			{
 				id: "T-099",
 				name: "Архивный запрос",
@@ -163,16 +171,16 @@ describe("TendersPage", () => {
 			},
 		];
 		renderPage(["/inquiries"], SEED);
-		await screen.findByTestId("tender-row-T-001");
-		expect(screen.queryByTestId("tender-row-T-099")).not.toBeInTheDocument();
+		await screen.findByTestId("procurement-inquiry-row-T-001");
+		expect(screen.queryByTestId("procurement-inquiry-row-T-099")).not.toBeInTheDocument();
 
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("button", { name: "Архив" }));
 
 		await waitFor(() => {
-			expect(screen.getByTestId("tender-row-T-099")).toBeInTheDocument();
+			expect(screen.getByTestId("procurement-inquiry-row-T-099")).toBeInTheDocument();
 		});
-		expect(screen.queryByTestId("tender-row-T-001")).not.toBeInTheDocument();
-		expect(screen.queryByTestId("tender-row-T-002")).not.toBeInTheDocument();
+		expect(screen.queryByTestId("procurement-inquiry-row-T-001")).not.toBeInTheDocument();
+		expect(screen.queryByTestId("procurement-inquiry-row-T-002")).not.toBeInTheDocument();
 	});
 });

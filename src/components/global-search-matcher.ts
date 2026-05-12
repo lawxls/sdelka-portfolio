@@ -153,7 +153,7 @@ export function matchGlobal(input: MatchInput): GroupResult[] {
 			group: "tasks",
 			id: t.id,
 			name: t.name,
-			meta: t.tender?.name,
+			meta: t.procurementInquiry?.name,
 			href: `/tasks?task=${encodeURIComponent(t.id)}`,
 		}),
 	);

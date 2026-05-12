@@ -69,7 +69,7 @@ interface SuppliersTableProps {
 	searchBlocked?: boolean;
 	/** Default `true`. When `false`, all KP-request UI is hidden (top-right CTA, batch
 	 * action, and per-row «Запросить КП» button — replaced by the status indicator).
-	 * Used by the item drawer where KP requests are scoped to the parent tender. */
+	 * Used by the item drawer where KP requests are scoped to the parent inquiry. */
 	kpRequestEnabled?: boolean;
 	/** INN of the item's currentSupplier, if any — drives the «Ваш поставщик» subtext that
 	 * replaces «ИНН: …» on the matching row. Falls back to companyName when INN is absent. */

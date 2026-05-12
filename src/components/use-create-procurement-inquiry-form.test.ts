@@ -1,12 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { useCreateTenderForm } from "./use-create-tender-form";
+import { useCreateProcurementInquiryForm } from "./use-create-procurement-inquiry-form";
 
 function setup() {
-	return renderHook(() => useCreateTenderForm());
+	return renderHook(() => useCreateProcurementInquiryForm());
 }
 
-function fillStep1Required(result: { current: ReturnType<typeof useCreateTenderForm> }) {
+function fillStep1Required(result: { current: ReturnType<typeof useCreateProcurementInquiryForm> }) {
 	act(() => {
 		result.current.update1("deadline", "2026-06-01");
 		result.current.update1("companyId", "c1");
@@ -14,7 +14,7 @@ function fillStep1Required(result: { current: ReturnType<typeof useCreateTenderF
 	});
 }
 
-describe("useCreateTenderForm", () => {
+describe("useCreateProcurementInquiryForm", () => {
 	test("starts on step 1 with one empty position and a deadline default ~14 days out", () => {
 		const { result } = setup();
 		expect(result.current.step).toBe(1);
@@ -59,7 +59,7 @@ describe("useCreateTenderForm", () => {
 		expect(outcome?.focus).toBe("deadline");
 	});
 
-	test("advance from step 1 succeeds with all required tender meta + name", () => {
+	test("advance from step 1 succeeds with all required inquiry meta + name", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
@@ -189,7 +189,7 @@ describe("useCreateTenderForm", () => {
 
 	// --- toPayload() ---
 
-	test("toPayload returns { tender, items } with tender meta + per-position items", () => {
+	test("toPayload returns { procurementInquiry, items } with inquiry meta + per-position items", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
@@ -199,27 +199,27 @@ describe("useCreateTenderForm", () => {
 
 		const payload = result.current.toPayload();
 
-		expect(payload.tender).toMatchObject({
+		expect(payload.procurementInquiry).toMatchObject({
 			// Name is auto-generated from the first position when the user-facing field is omitted.
 			name: "Арматура",
 			companyId: "c1",
 			folderId: "folder-metal",
 			deadline: "2026-06-01",
 		});
-		expect(payload.tender.budget).toBe(0);
+		expect(payload.procurementInquiry.budget).toBe(0);
 		expect(payload.items).toHaveLength(1);
 		expect(payload.items[0]).toMatchObject({ name: "Арматура", currentPrice: 100 });
 	});
 
-	test("toPayload omits tender currentSupplier when no position INN is set", () => {
+	test("toPayload omits inquiry currentSupplier when no position INN is set", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.currentSupplier).toBeUndefined();
+		expect(payload.procurementInquiry.currentSupplier).toBeUndefined();
 	});
 
-	test("toPayload picks the first non-empty position INN as tender supplier", () => {
+	test("toPayload picks the first non-empty position INN as inquiry supplier", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
@@ -227,7 +227,7 @@ describe("useCreateTenderForm", () => {
 		});
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.currentSupplier).toMatchObject({ inn: "1234567890" });
+		expect(payload.procurementInquiry.currentSupplier).toMatchObject({ inn: "1234567890" });
 	});
 
 	test("toPayload emits one item per position card", () => {
@@ -244,12 +244,12 @@ describe("useCreateTenderForm", () => {
 		expect(payload.items[1]).toMatchObject({ name: "Цемент", currentPrice: 500 });
 	});
 
-	test("per-item payload does not carry tenderId — operation stamps it after tender create", () => {
+	test("per-item payload does not carry procurementInquiryId — operation stamps it after inquiry create", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
 		const payload = result.current.toPayload();
-		expect(payload.items[0]).not.toHaveProperty("tenderId");
+		expect(payload.items[0]).not.toHaveProperty("procurementInquiryId");
 	});
 
 	test("toPayload emits generatedAnswers on first item only when answered", () => {
@@ -266,20 +266,20 @@ describe("useCreateTenderForm", () => {
 		fillStep1Required(result);
 
 		// Default — checkbox unchecked → analogues remain allowed.
-		expect(result.current.toPayload().tender.analoguesAllowed).toBe(true);
+		expect(result.current.toPayload().procurementInquiry.analoguesAllowed).toBe(true);
 
 		act(() => result.current.update1("analoguesNotAllowed", true));
-		expect(result.current.toPayload().tender.analoguesAllowed).toBe(false);
+		expect(result.current.toPayload().procurementInquiry.analoguesAllowed).toBe(false);
 	});
 
 	test("toPayload paymentMethod = cash only when cashPaymentAllowed is checked", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
-		expect(result.current.toPayload().tender.paymentMethod).toBeUndefined();
+		expect(result.current.toPayload().procurementInquiry.paymentMethod).toBeUndefined();
 
 		act(() => result.current.update1("cashPaymentAllowed", true));
-		expect(result.current.toPayload().tender.paymentMethod).toBe("cash");
+		expect(result.current.toPayload().procurementInquiry.paymentMethod).toBe("cash");
 	});
 
 	// --- Step 3 — supplier email ---
@@ -321,8 +321,8 @@ describe("useCreateTenderForm", () => {
 		act(() => result.current.seedEmail("Металлопрокат"));
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.sendMode).toBe("manual");
-		expect(payload.tender.email?.subject).toContain("Металлопрокат");
+		expect(payload.procurementInquiry.sendMode).toBe("manual");
+		expect(payload.procurementInquiry.email?.subject).toContain("Металлопрокат");
 	});
 
 	test("toPayload reports sendMode='auto' when autoSend is checked", () => {
@@ -331,7 +331,7 @@ describe("useCreateTenderForm", () => {
 		act(() => result.current.update3("autoSend", true));
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.sendMode).toBe("auto");
+		expect(payload.procurementInquiry.sendMode).toBe("auto");
 	});
 
 	test("toPayload omits email block when subject and body are empty", () => {
@@ -339,7 +339,7 @@ describe("useCreateTenderForm", () => {
 		fillStep1Required(result);
 
 		const payload = result.current.toPayload();
-		expect(payload.tender.email).toBeUndefined();
+		expect(payload.procurementInquiry.email).toBeUndefined();
 	});
 
 	test("isDirty flips true when autoSend toggled on", () => {

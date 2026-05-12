@@ -10,7 +10,7 @@ import {
 	updateFolderMock,
 } from "./folders-mock-data";
 import { _resetItemsStore, _setItems } from "./items-mock-data";
-import { _resetTendersStore, _setTenders } from "./tenders-mock/store";
+import { _resetProcurementInquiriesStore, _setProcurementInquiries } from "./procurement-inquiries-mock/store";
 import type { ProcurementInquiry, ProcurementItem } from "./types";
 
 function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {
@@ -26,10 +26,10 @@ function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): Procure
 	};
 }
 
-function makeTender(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
+function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
 	return {
 		id,
-		name: `Tender ${id}`,
+		name: `ProcurementInquiry ${id}`,
 		companyId: "c1",
 		folderId: null,
 		budget: 0,
@@ -42,7 +42,7 @@ function makeTender(id: string, overrides: Partial<ProcurementInquiry> = {}): Pr
 beforeEach(() => {
 	_resetFoldersStore();
 	_resetItemsStore();
-	_resetTendersStore();
+	_resetProcurementInquiriesStore();
 });
 
 describe("fetchFoldersMock", () => {
@@ -59,19 +59,23 @@ describe("fetchFoldersMock", () => {
 });
 
 describe("fetchFolderStatsMock", () => {
-	it("returns counts grouped by folder (joined via parent tender) + archive count", async () => {
+	it("returns counts grouped by folder (joined via parent inquiry) + archive count", async () => {
 		_setFolders([
 			{ id: "f1", name: "A", color: "red" },
 			{ id: "f2", name: "B", color: "blue" },
 		]);
-		_setTenders([makeTender("T-1", { folderId: "f1" }), makeTender("T-2", { folderId: "f2" }), makeTender("T-3")]);
+		_setProcurementInquiries([
+			makeProcurementInquiry("T-1", { folderId: "f1" }),
+			makeProcurementInquiry("T-2", { folderId: "f2" }),
+			makeProcurementInquiry("T-3"),
+		]);
 		_setItems(
 			[
-				makeItem("a", { tenderId: "T-1" }),
-				makeItem("b", { tenderId: "T-1" }),
-				makeItem("c", { tenderId: "T-2" }),
-				makeItem("d", { tenderId: "T-3" }),
-				makeItem("e", { tenderId: "T-1" }),
+				makeItem("a", { procurementInquiryId: "T-1" }),
+				makeItem("b", { procurementInquiryId: "T-1" }),
+				makeItem("c", { procurementInquiryId: "T-2" }),
+				makeItem("d", { procurementInquiryId: "T-3" }),
+				makeItem("e", { procurementInquiryId: "T-1" }),
 			],
 			["e"],
 		);
@@ -87,8 +91,8 @@ describe("fetchFolderStatsMock", () => {
 
 	it("skips folders with no items", async () => {
 		_setFolders([{ id: "empty", name: "Empty", color: "pink" }]);
-		_setTenders([makeTender("T-1")]);
-		_setItems([makeItem("a", { tenderId: "T-1" })]);
+		_setProcurementInquiries([makeProcurementInquiry("T-1")]);
+		_setItems([makeItem("a", { procurementInquiryId: "T-1" })]);
 		const result = await fetchFolderStatsMock();
 		expect(result.stats.find((s) => s.folderId === "empty")).toBeUndefined();
 	});
@@ -134,10 +138,10 @@ describe("deleteFolderMock", () => {
 		expect(_getFolders().map((f) => f.id)).toEqual(["f2"]);
 	});
 
-	it("cascades to parent tenders, uncategorizing items via the tender", async () => {
+	it("cascades to parent procurementInquiries, uncategorizing items via the inquiry", async () => {
 		_setFolders([{ id: "f1", name: "A", color: "red" }]);
-		_setTenders([makeTender("T-1", { folderId: "f1" }), makeTender("T-2")]);
-		_setItems([makeItem("a", { tenderId: "T-1" }), makeItem("b", { tenderId: "T-2" })]);
+		_setProcurementInquiries([makeProcurementInquiry("T-1", { folderId: "f1" }), makeProcurementInquiry("T-2")]);
+		_setItems([makeItem("a", { procurementInquiryId: "T-1" }), makeItem("b", { procurementInquiryId: "T-2" })]);
 		await deleteFolderMock("f1");
 		const stats = await fetchFolderStatsMock();
 		const none = stats.stats.find((s) => s.folderId === null);

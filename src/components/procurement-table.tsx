@@ -127,10 +127,10 @@ function SortableHeaderButton({
 interface ProcurementTableProps {
 	items: ProcurementItem[];
 	folders?: Folder[];
-	/** Map of tender id → category + company derived from the parent tender.
-	 * After the schema migration items reference only `tenderId`; the table
+	/** Map of inquiry id → category + company derived from the parent inquiry.
+	 * After the schema migration items reference only `procurementInquiryId`; the table
 	 * looks up category badge / company name through this map. */
-	tenderMap?: Record<string, { companyId: string; folderId: string | null }>;
+	procurementInquiryMap?: Record<string, { companyId: string; folderId: string | null }>;
 	sort: SortState | null;
 	hasNextPage: boolean;
 	loadMore: () => void;
@@ -152,7 +152,7 @@ interface ProcurementTableProps {
 export function ProcurementTable({
 	items,
 	folders,
-	tenderMap,
+	procurementInquiryMap,
 	sort,
 	hasNextPage,
 	loadMore,
@@ -184,13 +184,13 @@ export function ProcurementTable({
 		return map;
 	}, [folders]);
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onArchiveItem);
-	function tenderFolderId(item: ProcurementItem): string | null {
-		if (!item.tenderId) return null;
-		return tenderMap?.[item.tenderId]?.folderId ?? null;
+	function procurementInquiryFolderId(item: ProcurementItem): string | null {
+		if (!item.procurementInquiryId) return null;
+		return procurementInquiryMap?.[item.procurementInquiryId]?.folderId ?? null;
 	}
-	function tenderCompanyId(item: ProcurementItem): string | undefined {
-		if (!item.tenderId) return undefined;
-		return tenderMap?.[item.tenderId]?.companyId;
+	function procurementInquiryCompanyId(item: ProcurementItem): string | undefined {
+		if (!item.procurementInquiryId) return undefined;
+		return procurementInquiryMap?.[item.procurementInquiryId]?.companyId;
 	}
 	const [editingItemId, setEditingItemId] = useState<string | null>(null);
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
@@ -237,8 +237,8 @@ export function ProcurementTable({
 					{!isLoading && !error && items.length > 0 && (
 						<div className="flex flex-col gap-3 p-4">
 							{items.map((item, index) => {
-								const folderId = tenderFolderId(item);
-								const companyId = tenderCompanyId(item);
+								const folderId = procurementInquiryFolderId(item);
+								const companyId = procurementInquiryCompanyId(item);
 								return (
 									<ProcurementCard
 										key={item.id}
@@ -282,7 +282,7 @@ export function ProcurementTable({
 				<Table>
 					<TableHeader>
 						<TableRow className="border-b-0">
-							<TableHead className={`w-12 text-center ${stickyHead}`}>№</TableHead>
+							<TableHead className={`w-14 pr-lg text-center ${stickyHead}`}>№</TableHead>
 							<TableHead className={stickyNameHead}>НАИМЕНОВАНИЕ</TableHead>
 							<TableHead className={stickyHead}>КАТЕГОРИЯ</TableHead>
 							{INPUT_COLUMNS.map((col) => (
@@ -332,9 +332,9 @@ export function ProcurementTable({
 								const dev = formatDeviation(deviation);
 								const displayStatus = getDisplayStatus(item);
 								const status = STATUS_CONFIG[displayStatus];
-								const folderId = tenderFolderId(item);
+								const folderId = procurementInquiryFolderId(item);
 								const folder = folderId ? folderMap[folderId] : undefined;
-								const companyId = tenderCompanyId(item);
+								const companyId = procurementInquiryCompanyId(item);
 								const companyName = companyId ? companyMap?.[companyId] : undefined;
 								const isEditing = editingItemId === item.id;
 								const rowCls = onRowClick && !isEditing ? "cursor-pointer group" : "group";
@@ -403,7 +403,7 @@ export function ProcurementTable({
 								};
 								const rowChildren = (
 									<>
-										<TableCell className="text-center tabular-nums text-muted-foreground">{index + 1}</TableCell>
+										<TableCell className="pr-lg text-center tabular-nums text-muted-foreground">{index + 1}</TableCell>
 										{nameCell}
 										{categoryCell}
 										<TableCell className="text-right tabular-nums">{formatCurrency(getAnnualCost(item))}</TableCell>

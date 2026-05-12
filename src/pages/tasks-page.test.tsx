@@ -4,9 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
@@ -54,7 +54,7 @@ function renderPage(initialEntries?: string[]) {
 			clients={{
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: allTasks }),
-				tenders: createInMemoryTendersClient({ seed: [] }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: [] }),
 			}}
 		>
 			<TooltipProvider>
@@ -212,10 +212,10 @@ describe("TasksPage", () => {
 		}
 	});
 
-	it("shows tender name under task name in the same cell", async () => {
+	it("shows inquiry name under task name in the same cell", async () => {
 		renderPage();
 		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
-		// Tender is rendered via makeTask as "Запрос арматуры" — should appear inline.
+		// ProcurementInquiry is rendered via makeTask as "Запрос арматуры" — should appear inline.
 		expect(screen.getAllByText("Запрос арматуры").length).toBeGreaterThan(0);
 	});
 

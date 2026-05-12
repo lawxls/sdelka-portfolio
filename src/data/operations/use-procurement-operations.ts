@@ -1,12 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useItemsClient, useSuppliersClient, useTendersClient } from "../clients-context";
+import { useItemsClient, useProcurementInquiriesClient, useSuppliersClient } from "../clients-context";
 import { invalidateAfterItemListChange } from "../invalidation-policies";
 import { invalidateSupplierLists } from "../use-suppliers";
 import {
-	archiveTenderCascade,
-	type CreateTenderWithItemsInput,
-	createTenderWithItems,
+	archiveProcurementInquiryCascade,
+	type CreateProcurementInquiryWithItemsInput,
+	createProcurementInquiryWithItems,
 	selectSupplierForItem,
 	setCurrentSupplierFromQuote,
 } from "./procurement-operations";
@@ -14,27 +14,28 @@ import {
 export function useSelectSupplierForItem() {
 	const items = useItemsClient();
 	const suppliers = useSuppliersClient();
-	const tenders = useTendersClient();
+	const procurementInquiries = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, supplierId }: { itemId: string; supplierId: string }) =>
-			selectSupplierForItem(itemId, supplierId, { items, suppliers, tenders }),
+			selectSupplierForItem(itemId, supplierId, { items, suppliers, procurementInquiries }),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 			invalidateSupplierLists(queryClient, itemId);
 		},
 	});
 }
 
-export function useCreateTenderWithItems() {
+export function useCreateProcurementInquiryWithItems() {
 	const items = useItemsClient();
-	const tenders = useTendersClient();
+	const procurementInquiries = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (input: CreateTenderWithItemsInput) => createTenderWithItems(input, { items, tenders }),
+		mutationFn: (input: CreateProcurementInquiryWithItemsInput) =>
+			createProcurementInquiryWithItems(input, { items, procurementInquiries }),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 			invalidateAfterItemListChange(queryClient);
 		},
 		onError: () => {
@@ -43,14 +44,14 @@ export function useCreateTenderWithItems() {
 	});
 }
 
-export function useArchiveTenderCascade() {
-	const tenders = useTendersClient();
+export function useArchiveProcurementInquiryCascade() {
+	const procurementInquiries = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ id, isArchived }: { id: string; isArchived: boolean }) =>
-			archiveTenderCascade(id, isArchived, { tenders }),
+			archiveProcurementInquiryCascade(id, isArchived, { procurementInquiries }),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 			invalidateAfterItemListChange(queryClient);
 		},
 		onError: () => {
@@ -62,16 +63,16 @@ export function useArchiveTenderCascade() {
 export function useSetCurrentSupplierFromQuote() {
 	const items = useItemsClient();
 	const suppliers = useSuppliersClient();
-	const tenders = useTendersClient();
+	const procurementInquiries = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ itemId, inn }: { itemId: string; inn: string }) =>
-			setCurrentSupplierFromQuote(itemId, inn, { items, suppliers, tenders }),
+			setCurrentSupplierFromQuote(itemId, inn, { items, suppliers, procurementInquiries }),
 		onSuccess: (_data, { itemId }) => {
 			queryClient.invalidateQueries({ queryKey: ["itemDetail", itemId] });
 			queryClient.invalidateQueries({ queryKey: ["items"] });
 			queryClient.invalidateQueries({ queryKey: ["totals"] });
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 			invalidateSupplierLists(queryClient, itemId);
 		},
 	});

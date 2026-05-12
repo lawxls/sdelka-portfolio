@@ -33,25 +33,18 @@ function renderRail(initialPath = "/positions", tasksSeed: Task[] = []) {
 describe("AppRail items", () => {
 	test("renders Запросы, Позиции, Вопросы, and Настройки with aria-labels", () => {
 		renderRail();
-		expect(screen.getByRole("link", { name: "Запросы" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Позиции" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Вопросы" })).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: "Настройки" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Запросы" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Позиции" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Вопросы" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Настройки" })).toBeInTheDocument();
 	});
 
 	test("Запросы is the first top-nav item, above Позиции", () => {
 		renderRail();
 		const mainNav = screen.getByRole("navigation", { name: "Основная навигация" });
-		const links = within(mainNav).getAllByRole("link");
-		expect(links[0]).toHaveAccessibleName("Запросы");
-		expect(links[1]).toHaveAccessibleName("Позиции");
-	});
-
-	test("items link to /positions, /tasks, and /settings", () => {
-		renderRail();
-		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("href", "/positions");
-		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("href", "/tasks");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("href", "/settings");
+		const buttons = within(mainNav).getAllByRole("button");
+		expect(buttons[0]).toHaveAccessibleName("Запросы");
+		expect(buttons[1]).toHaveAccessibleName("Позиции");
 	});
 
 	test("nav has aria-label", () => {
@@ -62,23 +55,17 @@ describe("AppRail items", () => {
 	test("Настройки and Помощь live in the bottom section", () => {
 		renderRail();
 		const bottom = screen.getByTestId("app-rail-bottom");
-		expect(bottom).toContainElement(screen.getByRole("link", { name: "Настройки" }));
+		expect(bottom).toContainElement(screen.getByRole("button", { name: "Настройки" }));
 		expect(bottom).toContainElement(screen.getByRole("button", { name: "Помощь" }));
 	});
 
 	test("top navigation does not contain Настройки", () => {
 		renderRail();
 		const mainNav = screen.getByRole("navigation", { name: "Основная навигация" });
-		expect(mainNav).not.toContainElement(screen.getByRole("link", { name: "Настройки" }));
+		expect(mainNav).not.toContainElement(screen.getByRole("button", { name: "Настройки" }));
 	});
 
-	test("Помощь renders as a button (no navigation)", () => {
-		renderRail();
-		expect(screen.queryByRole("link", { name: "Помощь" })).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Помощь" })).toBeInTheDocument();
-	});
-
-	test("clicking Помощь opens the support dialog", async () => {
+	test("Помощь opens the support dialog", async () => {
 		renderRail();
 		expect(screen.queryByRole("dialog", { name: "Поддержка" })).not.toBeInTheDocument();
 		await userEvent.setup().click(screen.getByRole("button", { name: "Помощь" }));
@@ -95,28 +82,28 @@ describe("AppRail items", () => {
 describe("AppRail active state", () => {
 	test("marks Позиции active at /positions", () => {
 		renderRail("/positions");
-		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
-		expect(screen.getByRole("link", { name: "Вопросы" })).not.toHaveAttribute("aria-current");
+		expect(screen.getByRole("button", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("button", { name: "Вопросы" })).not.toHaveAttribute("aria-current");
 	});
 
 	test("marks Вопросы active at /tasks", () => {
 		renderRail("/tasks");
-		expect(screen.getByRole("link", { name: "Вопросы" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("button", { name: "Вопросы" })).toHaveAttribute("aria-current", "page");
 	});
 
 	test("marks Настройки active at /settings", () => {
 		renderRail("/settings");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("button", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
 	});
 
 	test("marks Настройки active for deep settings routes (/settings/profile)", () => {
 		renderRail("/settings/profile");
-		expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("button", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
 	});
 
 	test("marks Позиции active when query params are present", () => {
 		renderRail("/positions?folder=archive");
-		expect(screen.getByRole("link", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
+		expect(screen.getByRole("button", { name: "Позиции" })).toHaveAttribute("aria-current", "page");
 	});
 });
 
@@ -138,21 +125,21 @@ describe("AppRail task count badge", () => {
 			makeTask("t-4", { status: "completed" }),
 			makeTask("t-5", { status: "archived" }),
 		]);
-		const tasksLink = screen.getByRole("link", { name: "Вопросы" });
-		expect(await within(tasksLink).findByTestId("nav-tasks-count")).toHaveTextContent("3");
+		const tasksButton = screen.getByRole("button", { name: "Вопросы" });
+		expect(await within(tasksButton).findByTestId("nav-tasks-count")).toHaveTextContent("3");
 	});
 
 	test("hides badge when there are no active tasks", async () => {
 		renderRail("/positions", [makeTask("t-1", { status: "completed" }), makeTask("t-2", { status: "archived" })]);
 		// Wait for query settle so a missing badge isn't a race
-		expect(await screen.findByRole("link", { name: "Вопросы" })).toBeInTheDocument();
+		expect(await screen.findByRole("button", { name: "Вопросы" })).toBeInTheDocument();
 		expect(screen.queryByTestId("nav-tasks-count")).not.toBeInTheDocument();
 	});
 
 	test("badge is hidden from accessible name", async () => {
 		renderRail("/positions", [makeTask("t-1", { status: "assigned" })]);
-		const tasksLink = await screen.findByRole("link", { name: "Вопросы" });
-		const badge = await within(tasksLink).findByTestId("nav-tasks-count");
+		const tasksButton = await screen.findByRole("button", { name: "Вопросы" });
+		const badge = await within(tasksButton).findByTestId("nav-tasks-count");
 		expect(badge).toHaveAttribute("aria-hidden", "true");
 	});
 });
@@ -179,7 +166,7 @@ describe("AppRail navigation", () => {
 				</TooltipWrapper>
 			</TestClientsProvider>,
 		);
-		await userEvent.setup().click(screen.getByRole("link", { name: "Вопросы" }));
+		await userEvent.setup().click(screen.getByRole("button", { name: "Вопросы" }));
 		expect(screen.getByText("tasks-page")).toBeInTheDocument();
 	});
 });

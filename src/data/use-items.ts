@@ -14,7 +14,7 @@ interface ItemQueryParams {
 	sort: SortState | null;
 	folder?: string;
 	company?: string;
-	tender?: string;
+	procurementInquiry?: string;
 }
 
 export function buildFilterParams({
@@ -23,7 +23,7 @@ export function buildFilterParams({
 	folder,
 	sort,
 	company,
-	tender,
+	procurementInquiry,
 }: ItemQueryParams): ListItemsParams {
 	return {
 		q: search || undefined,
@@ -31,7 +31,7 @@ export function buildFilterParams({
 		deviation: filters.deviation !== "all" ? filters.deviation : undefined,
 		folder,
 		company,
-		tender,
+		procurementInquiry,
 		sort: sort?.field,
 		dir: sort?.direction,
 	};
@@ -70,12 +70,12 @@ export function useAllItems(options?: { enabled?: boolean }) {
 	});
 }
 
-export function useTenderItems(tenderId: string | undefined) {
+export function useProcurementInquiryItems(procurementInquiryId: string | undefined) {
 	const client = useItemsClient();
 	return useQuery({
-		queryKey: keys.items.byTender(tenderId ?? ""),
-		queryFn: () => client.listByTender(tenderId as string),
-		enabled: !!tenderId,
+		queryKey: keys.items.byProcurementInquiry(procurementInquiryId ?? ""),
+		queryFn: () => client.listByProcurementInquiry(procurementInquiryId as string),
+		enabled: !!procurementInquiryId,
 	});
 }
 

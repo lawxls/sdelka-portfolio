@@ -44,30 +44,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { TenderSummary } from "@/data/domains/tenders";
+import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateAddress } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useAllItems } from "@/data/use-items";
-import { useTenders } from "@/data/use-tenders";
+import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { digitsOnly, formatFileSize, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
-	type CreateTenderPayload,
+	type CreateProcurementInquiryPayload,
 	type PositionDraft,
-	useCreateTenderForm,
+	useCreateProcurementInquiryForm,
 	type WizardStep,
-} from "./use-create-tender-form";
+} from "./use-create-procurement-inquiry-form";
 
-interface CreateTenderDrawerProps {
+interface CreateProcurementInquiryDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (payload: CreateTenderPayload) => void;
+	onSubmit: (payload: CreateProcurementInquiryPayload) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -155,14 +155,14 @@ function Field({
 	);
 }
 
-export function CreateTenderDrawer({ open, onOpenChange, onSubmit }: CreateTenderDrawerProps) {
+export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }: CreateProcurementInquiryDrawerProps) {
 	const { data: companies } = useProcurementCompanies();
 	const { data: folders = [] } = useFolders();
 	const createFolderMutation = useCreateFolder();
 
 	const companiesById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
 
-	const form = useCreateTenderForm();
+	const form = useCreateProcurementInquiryForm();
 
 	const { step, step1 } = form;
 
@@ -391,7 +391,7 @@ function Step2Body({
 	ready,
 	onReady,
 }: {
-	form: ReturnType<typeof useCreateTenderForm>;
+	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	ready: boolean;
 	onReady: () => void;
 }) {
@@ -483,7 +483,7 @@ function Step3Body({
 	regenerating,
 	onRegenerate,
 }: {
-	form: ReturnType<typeof useCreateTenderForm>;
+	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	folderName: string | null;
 	ready: boolean;
 	onReady: () => void;
@@ -491,7 +491,7 @@ function Step3Body({
 	onRegenerate: () => void;
 }) {
 	const { step3, update3, seedEmail } = form;
-	const bodyId = "tender-email-body";
+	const bodyId = "procurement-inquiry-email-body";
 
 	useMountEffect(() => {
 		seedEmail(folderName);
@@ -561,7 +561,7 @@ function Step3Body({
 			<SectionGroupHeader title="Отправка" />
 			<div className="flex flex-col gap-2 border-t border-border py-4">
 				<CheckboxBadge
-					id="tender-email-autosend"
+					id="procurement-inquiry-email-autosend"
 					checked={step3.autoSend}
 					onChange={(v) => update3("autoSend", v)}
 					ariaLabel="Автоотправка запросов"
@@ -580,7 +580,7 @@ type CompanyList = ReturnType<typeof useProcurementCompanies>["data"];
 type FolderList = NonNullable<ReturnType<typeof useFolders>["data"]>;
 
 interface Step1BodyProps {
-	form: ReturnType<typeof useCreateTenderForm>;
+	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	companies: CompanyList;
 	lockedCompany: CompanyList[number] | undefined;
 	selectedCompany: CompanyList[number] | undefined;
@@ -614,7 +614,7 @@ function Step1Body({
 	function addFilesTo(positionIndex: number, newFiles: FileList | null) {
 		if (!newFiles || newFiles.length === 0) return;
 		const position = step1.positions[positionIndex];
-		// Budget against ALL positions' files — `attachedFiles` is a single tender-level
+		// Budget against ALL positions' files — `attachedFiles` is a single procurement-inquiry-level
 		// list once submitted, so the limit applies to the aggregate.
 		let runningTotal = step1.positions.reduce((sum, p) => sum + p.files.reduce((s, f) => s + f.size, 0), 0);
 		const toAdd: File[] = [];
@@ -641,19 +641,25 @@ function Step1Body({
 			<SectionGroupHeader title="Запрос" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-					<Field label="Дедлайн" htmlFor="tender-deadline" hint={DEADLINE_TOOLTIP} required className="flex-1">
+					<Field
+						label="Дедлайн"
+						htmlFor="procurement-inquiry-deadline"
+						hint={DEADLINE_TOOLTIP}
+						required
+						className="flex-1"
+					>
 						<DateField
-							id="tender-deadline"
+							id="procurement-inquiry-deadline"
 							inputRef={deadlineInputRef}
 							value={step1.deadline}
 							onChange={(v) => update1("deadline", v)}
 							ariaRequired
 							ariaInvalid={!!step1Errors.deadline}
-							ariaDescribedBy={step1Errors.deadline ? "tender-deadline-error" : undefined}
+							ariaDescribedBy={step1Errors.deadline ? "procurement-inquiry-deadline-error" : undefined}
 							hasError={!!step1Errors.deadline}
 						/>
 						{step1Errors.deadline && (
-							<p id="tender-deadline-error" className="text-sm text-destructive">
+							<p id="procurement-inquiry-deadline-error" className="text-sm text-destructive">
 								{step1Errors.deadline}
 							</p>
 						)}
@@ -706,13 +712,10 @@ function Step1Body({
 					/>
 				</Field>
 
-				<Field
-					label="Скопировать поставщиков"
-					hint="Используйте пул поставщиков уже существующего запроса вместо поиска заново"
-				>
+				<Field label="Скопировать поставщиков" hint="Скопируйте поставщиков из уже существующего запроса">
 					<CopySuppliersSelect
-						value={step1.copySuppliersFromTenderId}
-						onChange={(id) => update1("copySuppliersFromTenderId", id)}
+						value={step1.copySuppliersFromProcurementInquiryId}
+						onChange={(id) => update1("copySuppliersFromProcurementInquiryId", id)}
 					/>
 				</Field>
 			</div>
@@ -1026,7 +1029,7 @@ function DescriptionWithAttachments({
 	return (
 		<Field
 			label="Описание и спецификация"
-			hint="Опишите позицию — макеты, ГОСТ, чертежи помогут поставщикам"
+			hint="Добавьте спецификацию: опишите позицию, укажите требования и прикрепите макеты, чертежи или другие материалы, которые помогут поставщикам подготовить наиболее подходящее предложение"
 			htmlFor={id}
 		>
 			<div className="relative">
@@ -1072,7 +1075,7 @@ function DescriptionWithAttachments({
 					size="icon-sm"
 					onClick={() => fileInputRef.current?.click()}
 					aria-label="Прикрепить файлы"
-					className="absolute right-1.5 bottom-1.5 text-muted-foreground hover:text-foreground active:scale-[0.96] transition-[color,scale] duration-100 motion-reduce:transition-none motion-reduce:active:scale-100 before:absolute before:-inset-1.5 before:content-['']"
+					className="absolute right-1.5 top-1.5 text-muted-foreground hover:text-foreground active:scale-[0.96] transition-[color,scale] duration-100 motion-reduce:transition-none motion-reduce:active:scale-100 before:absolute before:-inset-1.5 before:content-['']"
 				>
 					<Paperclip aria-hidden="true" className="size-4" />
 				</Button>
@@ -1170,7 +1173,10 @@ const NEW_SEARCH_LABEL = "Новый поиск";
 
 function CopySuppliersSelect({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
 	const [open, setOpen] = useState(false);
-	const { items, isLoading } = useTenders({ sort: "createdAt", dir: "desc", limit: 50 }, { enabled: open });
+	const { items, isLoading } = useProcurementInquiries(
+		{ sort: "createdAt", dir: "desc", limit: 50 },
+		{ enabled: open },
+	);
 	const candidates = useMemo(() => items.filter((t) => t.suppliersCount > 0), [items]);
 	const selected = value ? items.find((t) => t.id === value) : undefined;
 	const labelId = useId();
@@ -1219,12 +1225,12 @@ function CopySuppliersSelect({ value, onChange }: { value: string | null; onChan
 				{!isLoading && candidates.length === 0 && (
 					<p className="px-2 py-2 text-sm text-muted-foreground">Нет запросов с поставщиками</p>
 				)}
-				{candidates.map((tender) => (
+				{candidates.map((procurementInquiry) => (
 					<CopySuppliersRow
-						key={tender.id}
-						tender={tender}
-						selected={tender.id === value}
-						onSelect={() => handlePick(tender.id)}
+						key={procurementInquiry.id}
+						procurementInquiry={procurementInquiry}
+						selected={procurementInquiry.id === value}
+						onSelect={() => handlePick(procurementInquiry.id)}
 					/>
 				))}
 			</PopoverContent>
@@ -1233,15 +1239,15 @@ function CopySuppliersSelect({ value, onChange }: { value: string | null; onChan
 }
 
 function CopySuppliersRow({
-	tender,
+	procurementInquiry,
 	selected,
 	onSelect,
 }: {
-	tender: TenderSummary;
+	procurementInquiry: ProcurementInquirySummary;
 	selected: boolean;
 	onSelect: () => void;
 }) {
-	const status = STATUS_CONFIG[tender.status];
+	const status = STATUS_CONFIG[procurementInquiry.status];
 	return (
 		<button
 			type="button"
@@ -1254,19 +1260,19 @@ function CopySuppliersRow({
 		>
 			<div className="flex items-center gap-2">
 				<span className="flex min-w-0 flex-1 items-center gap-1.5">
-					<span className="min-w-0 truncate font-medium">{tender.name}</span>
+					<span className="min-w-0 truncate font-medium">{procurementInquiry.name}</span>
 					<span
 						role="img"
 						aria-label={status.label}
 						className={cn("inline-flex shrink-0 items-center", status.className)}
 					>
-						<ProcurementStatusIcon status={tender.status} iconClassName="size-3.5" />
+						<ProcurementStatusIcon status={procurementInquiry.status} iconClassName="size-3.5" />
 					</span>
 				</span>
 				{selected && <Check aria-hidden="true" className="size-3.5 shrink-0 opacity-70" />}
 			</div>
 			<p className="text-xs text-muted-foreground tabular-nums">
-				{pluralizeRu(tender.suppliersCount, "поставщик", "поставщика", "поставщиков")}
+				{pluralizeRu(procurementInquiry.suppliersCount, "поставщик", "поставщика", "поставщиков")}
 			</p>
 		</button>
 	);

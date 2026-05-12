@@ -5,10 +5,10 @@ import { cn } from "@/lib/utils";
 interface TaskCardProps {
 	task: Task;
 	onClick: (id: string) => void;
-	hideTenderName?: boolean;
+	hideProcurementInquiryName?: boolean;
 }
 
-export function TaskCard({ task, onClick, hideTenderName }: TaskCardProps) {
+export function TaskCard({ task, onClick, hideProcurementInquiryName }: TaskCardProps) {
 	const overdue = isOverdue(task.deadlineAt);
 	const assigneeName = formatAssigneeName(task.assignee);
 
@@ -20,7 +20,9 @@ export function TaskCard({ task, onClick, hideTenderName }: TaskCardProps) {
 			className="w-full rounded-lg border bg-background p-4 text-left touch-manipulation transition-[background-color,border-color,scale] duration-150 ease-out hover:bg-muted/50 active:bg-muted active:scale-[0.96] motion-reduce:active:scale-100"
 		>
 			<div className="min-w-0 line-clamp-2 text-sm font-medium break-words">{task.name}</div>
-			{!hideTenderName && <div className="mt-0.5 truncate text-xs text-muted-foreground">{task.tender.name}</div>}
+			{!hideProcurementInquiryName && (
+				<div className="mt-0.5 truncate text-xs text-muted-foreground">{task.procurementInquiry.name}</div>
+			)}
 			<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 				<div>
 					<div className="text-xs text-muted-foreground">Назначен</div>

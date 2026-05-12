@@ -45,7 +45,6 @@ function validRegisterInput(overrides: Partial<RegisterInput> = {}): RegisterInp
 		first_name: "Иван",
 		last_name: "Иванов",
 		phone: "+79991234567",
-		inn: "7707083893",
 		...overrides,
 	};
 }

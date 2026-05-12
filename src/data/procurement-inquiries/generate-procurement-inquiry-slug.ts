@@ -1,4 +1,4 @@
-/** Generate the next available T-prefixed tender slug.
+/** Generate the next available T-prefixed inquiry slug.
  *
  * Format: `T-NNN` zero-padded to 3 digits (T-001..T-999); 4+ digits are
  * rendered naturally (T-1000, T-1001…). Always returns the lowest unused
@@ -6,7 +6,7 @@
  *
  * Centralizing slug generation here means the `T-NNN` shape is the only
  * place to change if the format ever moves. */
-export function generateTenderSlug(existingSlugs: readonly string[]): string {
+export function generateProcurementInquirySlug(existingSlugs: readonly string[]): string {
 	const used = new Set<number>();
 	for (const slug of existingSlugs) {
 		const n = parseSlug(slug);

@@ -37,7 +37,7 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-1",
 			employeeId: "1",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
@@ -59,7 +59,7 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-2",
 			employeeId: "2",
-			tenders: "none",
+			procurementInquiries: "none",
 			positions: "none",
 			tasks: "none",
 			companies: "none",

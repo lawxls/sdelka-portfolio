@@ -178,7 +178,7 @@ function httpAdapter(seed: Company[]): HttpHarness {
 					permissions: {
 						id: `perm-${employeeIdCounter}`,
 						employeeId: String(employeeIdCounter),
-						tenders: "none" as const,
+						procurementInquiries: "none" as const,
 						positions: "none" as const,
 						tasks: "none" as const,
 						companies: "none" as const,
@@ -323,7 +323,7 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 			email: "a@b",
 		});
 		expect(employee.id).toMatch(/^\d+$/);
-		expect(employee.permissions.tenders).toBe("none");
+		expect(employee.permissions.procurementInquiries).toBe("none");
 		expect(employee.permissions.positions).toBe("none");
 	});
 });

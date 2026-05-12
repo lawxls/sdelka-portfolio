@@ -47,7 +47,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-1",
 			employeeId: "1",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
@@ -69,7 +69,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-2",
 			employeeId: "2",
-			tenders: "view",
+			procurementInquiries: "view",
 			positions: "view",
 			tasks: "view",
 			companies: "none",
@@ -91,7 +91,7 @@ const SEED: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-3",
 			employeeId: "3",
-			tenders: "none",
+			procurementInquiries: "none",
 			positions: "none",
 			tasks: "none",
 			companies: "none",
@@ -180,7 +180,7 @@ function httpAdapter(): Adapter {
 						permissions: {
 							id: `perm-${counter}`,
 							employeeId: String(counter),
-							tenders: "none",
+							procurementInquiries: "none",
 							positions: "none",
 							tasks: "none",
 							companies: "none",
@@ -296,7 +296,7 @@ describe.each(
 	it("get returns detail with permissions for known id", async () => {
 		const detail = await client.get("2");
 		expect(detail.id).toBe("2");
-		expect(detail.permissions.tenders).toBe("view");
+		expect(detail.permissions.procurementInquiries).toBe("view");
 		expect(detail.permissions.positions).toBe("view");
 	});
 
@@ -349,16 +349,18 @@ describe.each(
 	});
 
 	it("updatePermissions patches only provided levels", async () => {
-		const result = await client.updatePermissions("2", { tenders: "edit" });
-		expect(result.tenders).toBe("edit");
+		const result = await client.updatePermissions("2", { procurementInquiries: "edit" });
+		expect(result.procurementInquiries).toBe("edit");
 		expect(result.positions).toBe("view");
 		expect(result.tasks).toBe("view");
 		const detail = await client.get("2");
-		expect(detail.permissions.tenders).toBe("edit");
+		expect(detail.permissions.procurementInquiries).toBe("edit");
 	});
 
 	it("updatePermissions throws NotFoundError for unknown id", async () => {
-		await expect(client.updatePermissions("99999", { tenders: "edit" })).rejects.toBeInstanceOf(NotFoundError);
+		await expect(client.updatePermissions("99999", { procurementInquiries: "edit" })).rejects.toBeInstanceOf(
+			NotFoundError,
+		);
 	});
 });
 

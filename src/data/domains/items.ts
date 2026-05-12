@@ -14,8 +14,8 @@ export interface ListItemsParams {
 	deviation?: string;
 	folder?: string;
 	company?: string;
-	/** Restrict the items list to a single parent tender (procurement inquiry). */
-	tender?: string;
+	/** Restrict the items list to a single parent inquiry (procurement inquiry). */
+	procurementInquiry?: string;
 	sort?: string;
 	dir?: string;
 	cursor?: string;

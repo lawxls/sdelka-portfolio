@@ -5,12 +5,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Address, Company, Folder } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
-import { CreateTenderDrawer } from "./create-tender-drawer";
-import type { CreateTenderPayload } from "./use-create-tender-form";
+import { CreateProcurementInquiryDrawer } from "./create-procurement-inquiry-drawer";
+import type { CreateProcurementInquiryPayload } from "./use-create-procurement-inquiry-form";
 
 const TEST_ADDRESSES: Address[] = [
 	{ id: "addr-1", name: "Главный офис", address: "г. Москва, ул. Ленина, д. 15", phone: "", isMain: true },
@@ -58,7 +58,7 @@ function renderDrawer(
 	overrides: Partial<{
 		open: boolean;
 		onOpenChange: (open: boolean) => void;
-		onSubmit: (payload: CreateTenderPayload) => void;
+		onSubmit: (payload: CreateProcurementInquiryPayload) => void;
 	}> = {},
 ) {
 	const props = {
@@ -69,7 +69,7 @@ function renderDrawer(
 	const queryClient = createTestQueryClient();
 	const companiesClient = createInMemoryCompaniesClient(companies);
 	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
-	const tendersClient = createInMemoryTendersClient({ seed: [] });
+	const procurementInquiriesClient = createInMemoryProcurementInquiriesClient({ seed: [] });
 	const itemsClient = createInMemoryItemsClient({ seed: [] });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<TestClientsProvider
@@ -77,7 +77,7 @@ function renderDrawer(
 			clients={{
 				companies: companiesClient,
 				folders: foldersClient,
-				tenders: tendersClient,
+				procurementInquiries: procurementInquiriesClient,
 				items: itemsClient,
 			}}
 		>
@@ -85,7 +85,7 @@ function renderDrawer(
 		</TestClientsProvider>
 	);
 	return {
-		...render(<CreateTenderDrawer {...props} />, { wrapper: Wrapper }),
+		...render(<CreateProcurementInquiryDrawer {...props} />, { wrapper: Wrapper }),
 		...props,
 	};
 }
@@ -108,7 +108,7 @@ async function create(user: ReturnType<typeof userEvent.setup>) {
 	await user.click(screen.getByRole("button", { name: "Создать" }));
 }
 
-describe("CreateTenderDrawer — wizard chrome", () => {
+describe("CreateProcurementInquiryDrawer — wizard chrome", () => {
 	test("renders «Создать запрос» title and step 1 progress (33%)", () => {
 		renderDrawer();
 		expect(screen.getByRole("heading", { name: "Создать запрос" })).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe("CreateTenderDrawer — wizard chrome", () => {
 	});
 });
 
-describe("CreateTenderDrawer — Step 1 tender meta", () => {
+describe("CreateProcurementInquiryDrawer — Step 1 inquiry meta", () => {
 	test("renders deadline + company; budget field is gone", () => {
 		renderDrawer();
 		expect(screen.queryByLabelText("Название запроса")).not.toBeInTheDocument();
@@ -244,7 +244,7 @@ describe("CreateTenderDrawer — Step 1 tender meta", () => {
 	});
 });
 
-describe("CreateTenderDrawer — multi-position cards", () => {
+describe("CreateProcurementInquiryDrawer — multi-position cards", () => {
 	test("Добавить позицию gates on first card name", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -270,14 +270,14 @@ describe("CreateTenderDrawer — multi-position cards", () => {
 		await create(user);
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
 		expect(payload.items).toHaveLength(2);
 		expect(payload.items[0]).toMatchObject({ name: "Арматура" });
 		expect(payload.items[1]).toMatchObject({ name: "Цемент" });
 	});
 });
 
-describe("CreateTenderDrawer — discard confirmation", () => {
+describe("CreateProcurementInquiryDrawer — discard confirmation", () => {
 	test("Отмена on dirty form shows confirmation", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -301,7 +301,7 @@ describe("CreateTenderDrawer — discard confirmation", () => {
 	});
 });
 
-describe("CreateTenderDrawer — Position-level supplier INN", () => {
+describe("CreateProcurementInquiryDrawer — Position-level supplier INN", () => {
 	test("ИНН field is rendered disabled until Текущая цена is filled", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -315,7 +315,7 @@ describe("CreateTenderDrawer — Position-level supplier INN", () => {
 		});
 	});
 
-	test("Position INN flows to tender.currentSupplier on submit", async () => {
+	test("Position INN flows to inquiry.currentSupplier on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -328,13 +328,13 @@ describe("CreateTenderDrawer — Position-level supplier INN", () => {
 		await advance(user);
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.tender.currentSupplier).toMatchObject({ inn: "1234567890" });
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.currentSupplier).toMatchObject({ inn: "1234567890" });
 	});
 });
 
-describe("CreateTenderDrawer — submit payload shape", () => {
-	test("emits { tender, items } with tender meta fields and zero budget", async () => {
+describe("CreateProcurementInquiryDrawer — submit payload shape", () => {
+	test("emits { procurementInquiry, items } with inquiry meta fields and zero budget", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -347,8 +347,8 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		await create(user);
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.tender).toMatchObject({
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry).toMatchObject({
 			// Auto-derived from the first position when no user-provided name exists.
 			name: "Арматура",
 			deadline: "2026-06-15",
@@ -359,7 +359,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		expect(payload.items[0]).toMatchObject({ name: "Арматура" });
 	});
 
-	test("per-item payload omits tenderId — operation stamps it after tender create", async () => {
+	test("per-item payload omits procurementInquiryId — operation stamps it after inquiry create", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -369,8 +369,8 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 		await advance(user);
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.items[0]).not.toHaveProperty("tenderId");
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.items[0]).not.toHaveProperty("procurementInquiryId");
 	});
 
 	test("submit closes drawer", async () => {
@@ -387,7 +387,7 @@ describe("CreateTenderDrawer — submit payload shape", () => {
 	});
 });
 
-describe("CreateTenderDrawer — Step 3 supplier email", () => {
+describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 	async function reachStep3(user: ReturnType<typeof userEvent.setup>) {
 		await fillFirstPositionName(user, "Арматура");
 		await advance(user);
@@ -449,9 +449,9 @@ describe("CreateTenderDrawer — Step 3 supplier email", () => {
 
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.tender.sendMode).toBe("manual");
-		expect(payload.tender.email?.body).toContain("Арматура");
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.sendMode).toBe("manual");
+		expect(payload.procurementInquiry.email?.body).toContain("Арматура");
 	});
 
 	test("checking Автоотправка flips sendMode to 'auto' on submit", async () => {
@@ -463,7 +463,7 @@ describe("CreateTenderDrawer — Step 3 supplier email", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Автоотправка запросов" }));
 		await create(user);
 
-		const [payload] = onSubmit.mock.calls[0] as [CreateTenderPayload];
-		expect(payload.tender.sendMode).toBe("auto");
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.sendMode).toBe("auto");
 	});
 });

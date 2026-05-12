@@ -37,7 +37,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-1",
 			employeeId: "1",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
@@ -59,7 +59,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-2",
 			employeeId: "2",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "edit",
@@ -81,7 +81,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-3",
 			employeeId: "3",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "view",
@@ -103,7 +103,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-4",
 			employeeId: "4",
-			tenders: "view",
+			procurementInquiries: "view",
 			positions: "view",
 			tasks: "view",
 			companies: "view",
@@ -125,7 +125,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-5",
 			employeeId: "5",
-			tenders: "edit",
+			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
 			companies: "view",
@@ -147,7 +147,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-6",
 			employeeId: "6",
-			tenders: "view",
+			procurementInquiries: "view",
 			positions: "view",
 			tasks: "view",
 			companies: "none",
@@ -169,7 +169,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		permissions: {
 			id: "perm-w-7",
 			employeeId: "7",
-			tenders: "none",
+			procurementInquiries: "none",
 			positions: "none",
 			tasks: "none",
 			companies: "none",

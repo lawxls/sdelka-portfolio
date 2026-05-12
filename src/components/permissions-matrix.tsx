@@ -5,7 +5,7 @@ import { PERMISSION_MODULE_LABELS } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 const PERMISSION_MODULES: { key: PermissionModuleKey; Icon: LucideIcon }[] = [
-	{ key: "tenders", Icon: FileText },
+	{ key: "procurementInquiries", Icon: FileText },
 	{ key: "positions", Icon: Layers },
 	{ key: "tasks", Icon: ListTodo },
 	{ key: "companies", Icon: Building2 },

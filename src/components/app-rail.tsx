@@ -1,6 +1,6 @@
 import { LifeBuoy } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { LogoWordmark } from "@/components/logo-wordmark";
 import { SupportDialog } from "@/components/support-dialog";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
@@ -12,17 +12,19 @@ const TOP_NAV = NAV_ITEMS.filter((item) => item.placement === "top");
 const BOTTOM_NAV = NAV_ITEMS.filter((item) => item.placement === "bottom");
 
 const NAV_ITEM_CLASSES =
-	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-[background-color,color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-[background-color,color,scale] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.96] motion-reduce:active:scale-100";
 
 type NavItem = (typeof NAV_ITEMS)[number];
 
 function NavLinkItem({ item, pathname, badge }: { item: NavItem; pathname: string; badge?: ReactNode }) {
+	const navigate = useNavigate();
 	const Icon = item.icon;
 	const matchPath = "activePrefix" in item ? item.activePrefix : item.path;
 	const active = pathname.startsWith(matchPath);
 	return (
-		<Link
-			to={item.path}
+		<button
+			type="button"
+			onClick={() => navigate(item.path)}
 			aria-current={active ? "page" : undefined}
 			className={cn(
 				NAV_ITEM_CLASSES,
@@ -33,7 +35,7 @@ function NavLinkItem({ item, pathname, badge }: { item: NavItem; pathname: strin
 			<Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden="true" />
 			<span className="flex-1 text-left">{item.label}</span>
 			{badge}
-		</Link>
+		</button>
 	);
 }
 

@@ -77,7 +77,7 @@ export interface UpdateEmployeeData {
 }
 
 export interface UpdatePermissionsData {
-	tenders?: PermissionLevel;
+	procurementInquiries?: PermissionLevel;
 	positions?: PermissionLevel;
 	tasks?: PermissionLevel;
 	companies?: PermissionLevel;

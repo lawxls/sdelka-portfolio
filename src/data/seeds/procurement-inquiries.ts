@@ -1,9 +1,9 @@
 import type { ProcurementInquiry } from "../types";
 
-/** Map item id → parent tender slug. The single source of truth that pairs the
- * existing item seeds with the seeded tender roster. Items not in this map have
- * no tender (treated as legacy/unbundled). */
-export const SEED_ITEM_TENDER: Readonly<Record<string, string>> = {
+/** Map item id → parent inquiry slug. The single source of truth that pairs the
+ * existing item seeds with the seeded inquiry roster. Items not in this map have
+ * no inquiry (treated as legacy/unbundled). */
+export const SEED_ITEM_PROCUREMENT_INQUIRY: Readonly<Record<string, string>> = {
 	"item-1": "T-001",
 	"item-8": "T-001",
 	"item-2": "T-002",
@@ -19,12 +19,12 @@ export const SEED_ITEM_TENDER: Readonly<Record<string, string>> = {
 	"item-7": "T-006",
 };
 
-/** Hand-curated tenders grouping the existing item seeds by category affinity.
+/** Hand-curated inquiries grouping the existing item seeds by category affinity.
  * createdAt is spread 30–60 days back; deadlines 7–30 days out, with one
  * overdue example (T-006) so the deadline filter has something to surface.
  * `currentSupplier` carries the «Ваш поставщик» context that used to live on
- * each item — one per tender after the schema migration. */
-export const SEED_TENDERS: ProcurementInquiry[] = [
+ * each item — one per inquiry after the schema migration. */
+export const SEED_PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
 	{
 		id: "T-001",
 		name: "Упаковочные материалы Q2",

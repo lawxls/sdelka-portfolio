@@ -35,7 +35,7 @@ const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
 	permissions: {
 		id: "perm-1",
 		employeeId: "1",
-		tenders: "view",
+		procurementInquiries: "view",
 		positions: "view",
 		tasks: "edit",
 		companies: "none",
@@ -58,7 +58,7 @@ const MOCK_EMPLOYEE_PENDING: WorkspaceEmployeeDetail = {
 	permissions: {
 		id: "perm-2",
 		employeeId: "2",
-		tenders: "none",
+		procurementInquiries: "none",
 		positions: "none",
 		tasks: "none",
 		companies: "none",
@@ -141,7 +141,7 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 
 		expect(screen.getByTestId("employee-permissions-tab")).toBeInTheDocument();
 		expect(screen.getByTestId("permissions-matrix")).toBeInTheDocument();
-		expect(screen.getByTestId("perm-row-tenders")).toBeInTheDocument();
+		expect(screen.getByTestId("perm-row-procurementInquiries")).toBeInTheDocument();
 		expect(screen.getByTestId("perm-row-positions")).toBeInTheDocument();
 		expect(screen.getByTestId("perm-row-tasks")).toBeInTheDocument();
 		expect(screen.getByTestId("perm-row-companies")).toBeInTheDocument();
@@ -158,11 +158,11 @@ describe("EmployeeDetailDrawer — Права доступа tab", () => {
 
 		const user = userEvent.setup();
 		await user.click(screen.getByTestId("employee-tab-permissions"));
-		await user.click(screen.getByTestId("perm-tenders-edit"));
+		await user.click(screen.getByTestId("perm-procurementInquiries-edit"));
 
 		await waitFor(async () => {
 			const detail = await workspaceEmployees.get("1");
-			expect(detail.permissions.tenders).toBe("edit");
+			expect(detail.permissions.procurementInquiries).toBe("edit");
 		});
 	});
 });

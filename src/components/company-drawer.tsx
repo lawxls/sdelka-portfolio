@@ -593,7 +593,7 @@ interface EmployeeFormState {
 }
 
 const ADMIN_PERMISSIONS: UpdatePermissionsData = {
-	tenders: "edit",
+	procurementInquiries: "edit",
 	positions: "edit",
 	tasks: "edit",
 	companies: "edit",

@@ -50,7 +50,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 				permissions: {
 					id: "perm-1",
 					employeeId: "1",
-					tenders: "edit",
+					procurementInquiries: "edit",
 					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
@@ -114,7 +114,7 @@ describe("fetchCompaniesMock", () => {
 				permissions: {
 					id: `p${i}`,
 					employeeId: String(i + 1),
-					tenders: "none" as const,
+					procurementInquiries: "none" as const,
 					positions: "none" as const,
 					tasks: "none" as const,
 					companies: "none" as const,
@@ -283,7 +283,7 @@ describe("createEmployeeMock", () => {
 		expect(created.id).toMatch(/^\d+$/);
 		expect(created.firstName).toBe("Анна");
 		expect(created.permissions.employeeId).toBe(created.id);
-		expect(created.permissions.tenders).toBe("none");
+		expect(created.permissions.procurementInquiries).toBe("none");
 		expect(created.permissions.positions).toBe("none");
 		expect(created.permissions.emails).toBe("none");
 		expect(_getCompanies()[0].employees).toHaveLength(1);
@@ -329,7 +329,7 @@ describe("updateEmployeePermissionsMock", () => {
 		const empId = _getCompanies()[0].employees[0].id;
 		const result = await updateEmployeePermissionsMock("c1", empId, { tasks: "none" });
 		expect(result.tasks).toBe("none");
-		expect(result.tenders).toBe("edit");
+		expect(result.procurementInquiries).toBe("edit");
 		expect(result.positions).toBe("edit");
 	});
 });

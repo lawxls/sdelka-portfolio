@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProcurementInquiry } from "../domains/tenders";
+import type { ProcurementInquiry } from "../domains/procurement-inquiries";
 import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetItemsStore } from "../items-mock-data";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
-import type { TendersClient } from "./tenders-client";
-import { createHttpTendersClient } from "./tenders-http";
-import { createInMemoryTendersClient } from "./tenders-in-memory";
+import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
+import { createHttpProcurementInquiriesClient } from "./procurement-inquiries-http";
+import { createInMemoryProcurementInquiriesClient } from "./procurement-inquiries-in-memory";
 
 /**
  * Layer B — adapter contract tests. The same suite runs once against the
@@ -14,14 +14,14 @@ import { createInMemoryTendersClient } from "./tenders-in-memory";
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
  *
- * The tenders list response is `CursorPage<TenderSummary>`; `get` returns the
+ * The inquiries list response is `CursorPage<ProcurementInquirySummary>`; `get` returns the
  * full `ProcurementInquiry` record.
  */
 
-function makeTender(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
+function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
 	return {
 		id,
-		name: `Tender ${id}`,
+		name: `ProcurementInquiry ${id}`,
 		companyId: "company-1",
 		folderId: null,
 		budget: 1_000_000,
@@ -33,13 +33,13 @@ function makeTender(id: string, overrides: Partial<ProcurementInquiry> = {}): Pr
 
 interface Adapter {
 	name: string;
-	build: () => TendersClient;
+	build: () => ProcurementInquiriesClient;
 }
 
 function memoryAdapter(seed: ProcurementInquiry[]): Adapter {
 	return {
 		name: "memory",
-		build: () => createInMemoryTendersClient({ seed: seed.map((t) => ({ ...t })) }),
+		build: () => createInMemoryProcurementInquiriesClient({ seed: seed.map((t) => ({ ...t })) }),
 	};
 }
 
@@ -73,7 +73,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/tenders(\?|$)/,
+			path: /^\/procurement-inquiries(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
@@ -84,7 +84,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/tenders\/([^/]+)$/,
+			path: /^\/procurement-inquiries\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -95,20 +95,23 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/tenders$/,
+			path: /^\/procurement-inquiries$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as Partial<ProcurementInquiry>;
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
 				if (data.name === "__conflict__") return { status: 409, body: { detail: "name taken" } };
 				counter += 1;
-				const tender = makeTender(`T-${String(counter).padStart(3, "0")}`, data as Partial<ProcurementInquiry>);
-				store.set(tender.id, tender);
-				return { status: 201, body: tender };
+				const procurementInquiry = makeProcurementInquiry(
+					`T-${String(counter).padStart(3, "0")}`,
+					data as Partial<ProcurementInquiry>,
+				);
+				store.set(procurementInquiry.id, procurementInquiry);
+				return { status: 201, body: procurementInquiry };
 			},
 		},
 		{
 			method: "PATCH",
-			path: /^\/tenders\/([^/]+)$/,
+			path: /^\/procurement-inquiries\/([^/]+)$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -123,7 +126,7 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/tenders\/([^/]+)$/,
+			path: /^\/procurement-inquiries\/([^/]+)$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
 				const id = decodeURIComponent(path.split("/").pop() ?? "");
@@ -152,20 +155,22 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter {
 
 	return {
 		name: "http",
-		build: () => createHttpTendersClient(http),
+		build: () => createHttpProcurementInquiriesClient(http),
 	};
 }
 
 const SEED: ProcurementInquiry[] = [
-	makeTender("T-001", { name: "Альфа", createdAt: "2026-04-01" }),
-	makeTender("T-002", { name: "Бета", createdAt: "2026-04-10" }),
-	makeTender("T-003", { name: "Гамма", createdAt: "2026-04-20" }),
+	makeProcurementInquiry("T-001", { name: "Альфа", createdAt: "2026-04-01" }),
+	makeProcurementInquiry("T-002", { name: "Бета", createdAt: "2026-04-10" }),
+	makeProcurementInquiry("T-003", { name: "Гамма", createdAt: "2026-04-20" }),
 ];
 
 const adapters: Array<() => Adapter> = [() => memoryAdapter(SEED), () => httpAdapter(SEED)];
 
-describe.each(adapters.map((make) => [make().name, make]))("TendersClient contract — %s adapter", (_label, make) => {
-	let client: TendersClient;
+describe.each(
+	adapters.map((make) => [make().name, make]),
+)("ProcurementInquiriesClient contract — %s adapter", (_label, make) => {
+	let client: ProcurementInquiriesClient;
 
 	beforeEach(() => {
 		_setMockDelay(0, 0);
@@ -204,9 +209,9 @@ describe.each(adapters.map((make) => [make().name, make]))("TendersClient contra
 	});
 
 	it("get returns the full ProcurementInquiry", async () => {
-		const tender = await client.get("T-001");
-		expect(tender.id).toBe("T-001");
-		expect(tender.budget).toBe(1_000_000);
+		const procurementInquiry = await client.get("T-001");
+		expect(procurementInquiry.id).toBe("T-001");
+		expect(procurementInquiry.budget).toBe(1_000_000);
 	});
 
 	it("get throws NotFoundError when missing", async () => {
@@ -237,7 +242,7 @@ describe.each(adapters.map((make) => [make().name, make]))("TendersClient contra
 		await expect(client.update("T-999", { name: "x" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 
-	it("delete removes the tender", async () => {
+	it("delete removes the inquiry", async () => {
 		await client.delete("T-001");
 		await expect(client.get("T-001")).rejects.toBeInstanceOf(NotFoundError);
 	});
@@ -274,7 +279,7 @@ describe("HTTP-only error branches", () => {
 	it("network failures bubble up as NetworkError", async () => {
 		const fetchStub = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });
-		const client = createHttpTendersClient(http);
+		const client = createHttpProcurementInquiriesClient(http);
 		await expect(client.get("T-001")).rejects.toMatchObject({ name: "NetworkError" });
 	});
 });

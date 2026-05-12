@@ -6,7 +6,7 @@ import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { TenderSummary } from "@/data/domains/tenders";
+import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
 import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
 import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -35,9 +35,9 @@ interface ToolbarProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
-	tenders?: TenderSummary[];
-	selectedTender?: string | undefined;
-	onTenderSelect?: (tenderId: string | undefined) => void;
+	procurementInquiries?: ProcurementInquirySummary[];
+	selectedProcurementInquiry?: string | undefined;
+	onProcurementInquirySelect?: (procurementInquiryId: string | undefined) => void;
 }
 
 const SORT_FIELD_PRESETS: { label: string; field: SortField }[] = [
@@ -75,9 +75,9 @@ export function Toolbar({
 	selectedCompany,
 	onCompanySelect,
 	showCompanies,
-	tenders,
-	selectedTender,
-	onTenderSelect,
+	procurementInquiries,
+	selectedProcurementInquiry,
+	onProcurementInquirySelect,
 }: ToolbarProps) {
 	const isMobile = useIsMobile();
 	const { current, setDebounced } = useDebouncedSearchParam("q", 300);
@@ -172,9 +172,9 @@ export function Toolbar({
 			selectedCompany={selectedCompany}
 			onCompanySelect={onCompanySelect}
 			showCompanies={showCompanies}
-			tenders={tenders}
-			selectedTender={selectedTender}
-			onTenderSelect={onTenderSelect}
+			procurementInquiries={procurementInquiries}
+			selectedProcurementInquiry={selectedProcurementInquiry}
+			onProcurementInquirySelect={onProcurementInquirySelect}
 			triggerVariant={variant}
 		/>
 	);
@@ -183,7 +183,7 @@ export function Toolbar({
 		!!sort ||
 		filters.deviation !== "all" ||
 		filters.status !== "all" ||
-		!!selectedTender ||
+		!!selectedProcurementInquiry ||
 		(activeFolder !== undefined && activeFolder !== "archive");
 
 	return (

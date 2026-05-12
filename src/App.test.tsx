@@ -11,11 +11,11 @@ import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
@@ -27,17 +27,17 @@ const ITEMS_PAGE_1 = Array.from({ length: 25 }, (_, i) =>
 	makeItem(`item-${i + 1}`, {
 		name: i === 0 ? "Арматура А500С ∅12" : `Item ${i + 1}`,
 		status: i < 12 ? "searching" : i < 20 ? "negotiating" : "completed",
-		tenderId: i < 5 ? "T-folder-1" : i < 10 ? "T-folder-2" : "T-no-folder",
+		procurementInquiryId: i < 5 ? "T-folder-1" : i < 10 ? "T-folder-2" : "T-no-folder",
 		// Ensure deviation=overpaying filter captures some rows
 		currentPrice: 100,
 		bestPrice: 80,
 	}),
 );
 
-const TEST_TENDERS = [
+const TEST_PROCUREMENT_INQUIRIES = [
 	{
 		id: "T-folder-1",
-		name: "Tender folder-1",
+		name: "ProcurementInquiry folder-1",
 		companyId: "company-1",
 		folderId: "folder-1" as string | null,
 		budget: 0,
@@ -46,7 +46,7 @@ const TEST_TENDERS = [
 	},
 	{
 		id: "T-folder-2",
-		name: "Tender folder-2",
+		name: "ProcurementInquiry folder-2",
 		companyId: "company-1",
 		folderId: "folder-2" as string | null,
 		budget: 0,
@@ -55,7 +55,7 @@ const TEST_TENDERS = [
 	},
 	{
 		id: "T-no-folder",
-		name: "Tender no folder",
+		name: "ProcurementInquiry no folder",
 		companyId: "company-1",
 		folderId: null as string | null,
 		budget: 0,
@@ -95,7 +95,7 @@ const TEST_COMPANIES: Company[] = [
 				permissions: {
 					id: "p1",
 					employeeId: "1",
-					tenders: "edit",
+					procurementInquiries: "edit",
 					positions: "edit",
 					tasks: "edit",
 					companies: "edit",
@@ -122,7 +122,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
-				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
 				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
@@ -485,7 +485,7 @@ describe("ProcurementPage", () => {
 		});
 	});
 
-	test("«Создать запрос» on /inquiries opens the create-tender drawer and submitting persists the tender + items", async () => {
+	test("«Создать запрос» on /inquiries opens the create-procurement-inquiry drawer and submitting persists the procurementInquiry + items", async () => {
 		await renderAppReady(["/inquiries"]);
 		const user = userEvent.setup();
 
@@ -505,13 +505,13 @@ describe("ProcurementPage", () => {
 		await waitFor(() => {
 			expect(screen.queryByRole("heading", { name: "Создать запрос" })).not.toBeInTheDocument();
 		});
-		// Tender name is auto-derived from the first position when the user-facing field is omitted.
+		// ProcurementInquiry name is auto-derived from the first position when the user-facing field is omitted.
 		await waitFor(() => {
 			expect(screen.getByText("Позиция А")).toBeInTheDocument();
 		});
 	});
 
-	test("file import via dialog dispatches a tender per AI-grouped batch and closes the dialog", async () => {
+	test("file import via dialog dispatches a inquiry per AI-grouped batch and closes the dialog", async () => {
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue([
 			{ name: "Кабель ВВГнг 3x2.5" },
 			{ name: "Кабель ВВГнг 3x4" },
@@ -533,9 +533,9 @@ describe("ProcurementPage", () => {
 			).not.toBeInTheDocument();
 		});
 
-		// Two AI-grouped tenders should land on /inquiries: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
+		// Two AI-grouped inquiries should land on /inquiries: «Кабель ВВГнг 3x2.5» (group of 2) and «Розетка серая» (group of 1).
 		const rail = screen.getByTestId("app-rail");
-		await user.click(within(rail).getByRole("link", { name: /Запросы/ }));
+		await user.click(within(rail).getByRole("button", { name: /Запросы/ }));
 		await waitFor(() => {
 			expect(screen.getByText("Кабель ВВГнг 3x2.5")).toBeInTheDocument();
 			expect(screen.getByText("Розетка серая")).toBeInTheDocument();

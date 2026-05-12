@@ -1,23 +1,23 @@
 import type { NewItemInput } from "../types";
 
-export interface TenderProposal {
-	/** Suggested tender name (derived from the group's first position name). */
+export interface ProcurementInquiryProposal {
+	/** Suggested inquiry name (derived from the group's first position name). */
 	name: string;
 	items: NewItemInput[];
 }
 
-/** Mock heuristic: group parsed positions into proposed tenders by name affinity.
+/** Mock heuristic: group parsed positions into proposed inquiries by name affinity.
  *
  * This is a stand-in for the real backend AI. The heuristic groups by the first
  * meaningful word in the position name (case-insensitive); items without a
- * shared first word land in their own single-item tenders. Folder hints, once
- * the AI is wired up, will come from the parent tender (the
- * CreateTenderDrawer flow in slice #8 lets the user pick the category for
+ * shared first word land in their own single-item inquiries. Folder hints, once
+ * the AI is wired up, will come from the parent inquiry (the
+ * CreateProcurementInquiryDrawer flow in slice #8 lets the user pick the category for
  * each proposed group).
  *
  * Pinned by tests so demo grouping behavior stays stable across refactors;
  * re-baselined when the real AI replaces the mock. */
-export function groupItemsIntoTenders(items: readonly NewItemInput[]): TenderProposal[] {
+export function groupItemsIntoProcurementInquiries(items: readonly NewItemInput[]): ProcurementInquiryProposal[] {
 	const groups = new Map<string, NewItemInput[]>();
 	const order: string[] = [];
 

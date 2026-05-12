@@ -14,24 +14,24 @@ import type {
 import { NotFoundError } from "../errors";
 import { _getAllItems, _getItem, _isArchived, _patchItem, _setItems } from "../items-mock-data";
 import { delay, nextId, paginate } from "../mock-utils";
+import { _getProcurementInquiry, _isProcurementInquiryArchived } from "../procurement-inquiries-mock/store";
 import { _addYourSupplier } from "../supplier-mock-data";
-import { _getTender, _isTenderArchived } from "../tenders-mock/store";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, type ProcurementStatus } from "../types";
 import type { ItemsClient } from "./items-client";
 
-function tenderFolderId(item: ProcurementItem): string | null {
-	if (!item.tenderId) return null;
-	return _getTender(item.tenderId)?.folderId ?? null;
+function procurementInquiryFolderId(item: ProcurementItem): string | null {
+	if (!item.procurementInquiryId) return null;
+	return _getProcurementInquiry(item.procurementInquiryId)?.folderId ?? null;
 }
 
-function tenderCompanyId(item: ProcurementItem): string | null {
-	if (!item.tenderId) return null;
-	return _getTender(item.tenderId)?.companyId ?? null;
+function procurementInquiryCompanyId(item: ProcurementItem): string | null {
+	if (!item.procurementInquiryId) return null;
+	return _getProcurementInquiry(item.procurementInquiryId)?.companyId ?? null;
 }
 
 function isEffectivelyArchived(item: ProcurementItem, itemArchived: boolean): boolean {
 	if (itemArchived) return true;
-	if (item.tenderId && _isTenderArchived(item.tenderId)) return true;
+	if (item.procurementInquiryId && _isProcurementInquiryArchived(item.procurementInquiryId)) return true;
 	return false;
 }
 
@@ -39,7 +39,7 @@ function matchesFolder(item: ProcurementItem, folder: string | undefined, archiv
 	if (folder === "archive") return archived;
 	if (archived) return false;
 	if (folder === undefined || folder === "all") return true;
-	const folderId = tenderFolderId(item);
+	const folderId = procurementInquiryFolderId(item);
 	if (folder === "none") return folderId === null;
 	return folderId === folder;
 }
@@ -62,7 +62,7 @@ function applyFilters(items: ProcurementItem[], params: ListItemsParams): Procur
 	return items.filter((item) => {
 		const archived = isEffectivelyArchived(item, _isArchived(item.id));
 		if (!matchesFolder(item, params.folder, archived)) return false;
-		if (params.company && tenderCompanyId(item) !== params.company) return false;
+		if (params.company && procurementInquiryCompanyId(item) !== params.company) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
@@ -140,9 +140,9 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 			return _getAllItems().filter((i) => !isEffectivelyArchived(i, _isArchived(i.id)));
 		},
 
-		async listByTender(tenderId: string): Promise<ProcurementItem[]> {
+		async listByProcurementInquiry(procurementInquiryId: string): Promise<ProcurementItem[]> {
 			await delay();
-			return _getAllItems().filter((i) => i.tenderId === tenderId);
+			return _getAllItems().filter((i) => i.procurementInquiryId === procurementInquiryId);
 		},
 
 		async totals(params: TotalsParams): Promise<Totals> {
@@ -193,7 +193,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
 				generatedAnswers: input.generatedAnswers,
-				tenderId: input.tenderId,
+				procurementInquiryId: input.procurementInquiryId,
 			}));
 			const current = _getAllItems();
 			const archivedNow = current.filter((c) => _isArchived(c.id)).map((c) => c.id);
@@ -234,11 +234,11 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 		async export(params: ExportItemsParams): Promise<{ blob: Blob; filename: string }> {
 			await delay();
 			const filtered = applyFilters(_getAllItems(), params as ListItemsParams);
-			const header = "id\tname\tstatus\ttenderId\tcurrentPrice\tbestPrice\tannualQuantity\n";
+			const header = "id\tname\tstatus\tprocurementInquiryId\tcurrentPrice\tbestPrice\tannualQuantity\n";
 			const rows = filtered
 				.map(
 					(i) =>
-						`${i.id}\t${i.name}\t${i.status}\t${i.tenderId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
+						`${i.id}\t${i.name}\t${i.status}\t${i.procurementInquiryId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
 				)
 				.join("\n");
 			const blob = new Blob([header + rows], {

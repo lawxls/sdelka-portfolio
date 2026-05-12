@@ -17,7 +17,7 @@ vi.mock("sonner", () => ({
 
 const unansweredTask = makeTask("task-1", {
 	name: "Согласование цены на арматуру",
-	tender: { id: "T-77", name: "Арматура А500С", companyId: "c-1" },
+	procurementInquiry: { id: "T-77", name: "Арматура А500С", companyId: "c-1" },
 	createdAt: "2026-03-01T10:00:00.000Z",
 	description: "Поставщик прислал обновлённое КП. Необходимо проверить соответствие спецификации и подтвердить объёмы.",
 	status: "assigned",
@@ -96,7 +96,7 @@ function renderDrawer(taskId: string | null, opts: { onClose?: () => void; seed?
 }
 
 describe("TaskDrawer", () => {
-	it("displays task name, tender name, description", async () => {
+	it("displays task name, inquiry name, description", async () => {
 		renderDrawer("task-1");
 
 		await waitFor(() => {

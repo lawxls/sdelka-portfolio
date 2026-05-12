@@ -14,9 +14,9 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem } from "@/test-utils";
@@ -36,18 +36,18 @@ const MULTI_COMPANIES: Company[] = [
 const SINGLE_COMPANY: Company[] = [makeCompanyDetail("c1", { name: "Альфа", isMain: true, procurementItemCount: 15 })];
 
 const ITEMS_C1: ProcurementItem[] = [
-	makeItem("i1", { name: "Труба стальная", tenderId: "T-c1-f1" }),
-	makeItem("i2", { name: "Швеллер", tenderId: "T-c1-no-folder" }),
+	makeItem("i1", { name: "Труба стальная", procurementInquiryId: "T-c1-f1" }),
+	makeItem("i2", { name: "Швеллер", procurementInquiryId: "T-c1-no-folder" }),
 ];
 
-const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", tenderId: "T-c2-no-folder" })];
+const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150", procurementInquiryId: "T-c2-no-folder" })];
 
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
 
-function makeTender(id: string, companyId: string, folderId: string | null = null): ProcurementInquiry {
+function makeProcurementInquiry(id: string, companyId: string, folderId: string | null = null): ProcurementInquiry {
 	return {
 		id,
-		name: `Tender ${id}`,
+		name: `ProcurementInquiry ${id}`,
 		companyId,
 		folderId,
 		budget: 0,
@@ -56,10 +56,10 @@ function makeTender(id: string, companyId: string, folderId: string | null = nul
 	};
 }
 
-const TEST_TENDERS: ProcurementInquiry[] = [
-	makeTender("T-c1-f1", "c1", "f1"),
-	makeTender("T-c1-no-folder", "c1"),
-	makeTender("T-c2-no-folder", "c2"),
+const TEST_PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
+	makeProcurementInquiry("T-c1-f1", "c1", "f1"),
+	makeProcurementInquiry("T-c1-no-folder", "c1"),
+	makeProcurementInquiry("T-c2-no-folder", "c2"),
 ];
 
 let queryClient: QueryClient;
@@ -78,7 +78,7 @@ function renderPage(initialEntries?: string[]) {
 				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
-				tenders: createInMemoryTendersClient({ seed: TEST_TENDERS }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
 				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
 			}}
 		>

@@ -158,7 +158,6 @@ describe("useRegister", () => {
 				first_name: "Иван",
 				last_name: "Иванов",
 				phone: "+79991234567",
-				inn: "7707083893",
 			});
 			expect(res.user.email).toBe("newuser@example.com");
 		});
@@ -167,7 +166,6 @@ describe("useRegister", () => {
 			expect.objectContaining({
 				email: "newuser@example.com",
 				password_confirm: "fresh-pass-1",
-				inn: "7707083893",
 			}),
 		);
 		// Register does not auto-login — the user must confirm their email first.
@@ -191,7 +189,6 @@ describe("useRegister", () => {
 					first_name: "Иван",
 					last_name: "Иванов",
 					phone: "+79991234567",
-					inn: "7707083893",
 				}),
 			).rejects.toBeInstanceOf(ValidationError);
 		});

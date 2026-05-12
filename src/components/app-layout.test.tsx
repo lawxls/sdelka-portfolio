@@ -34,7 +34,7 @@ function renderLayout(initialEntry = "/positions") {
 				<MemoryRouter initialEntries={[initialEntry]}>
 					<Routes>
 						<Route element={<AppLayout />}>
-							<Route path="/inquiries" element={<div>tenders-content</div>} />
+							<Route path="/inquiries" element={<div>procurement-inquiries-content</div>} />
 							<Route path="/positions" element={<div>positions-content</div>} />
 							<Route path="/tasks" element={<div>tasks-content</div>} />
 							<Route path="/settings" element={<div>settings-content</div>} />
@@ -58,7 +58,7 @@ describe("AppLayout — sidebar", () => {
 		renderLayout("/tasks");
 		const user = userEvent.setup();
 		await user.click(screen.getByRole("link", { name: "На главную" }));
-		expect(screen.getByText("tenders-content")).toBeInTheDocument();
+		expect(screen.getByText("procurement-inquiries-content")).toBeInTheDocument();
 	});
 });
 

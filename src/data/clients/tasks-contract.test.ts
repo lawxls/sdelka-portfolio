@@ -19,7 +19,7 @@ function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 		id,
 		name: `Task ${id}`,
 		status: "assigned",
-		tender: { id: "T-001", name: "Tender", companyId: "company-1" },
+		procurementInquiry: { id: "T-001", name: "ProcurementInquiry", companyId: "company-1" },
 		assignee: {
 			id: "user-1",
 			firstName: "Иван",
@@ -70,13 +70,13 @@ function httpAdapter(): Adapter {
 
 	function applyFilters(params: URLSearchParams): Task[] {
 		const q = params.get("q")?.toLowerCase();
-		const tender = params.get("tender");
+		const procurementInquiry = params.get("procurementInquiry");
 		const company = params.get("company");
 		const statuses = params.getAll("statuses");
 		return Array.from(store.values()).filter((t) => {
 			if (q && !t.name.toLowerCase().includes(q)) return false;
-			if (tender && t.tender.id !== tender) return false;
-			if (company && t.tender.companyId !== company) return false;
+			if (procurementInquiry && t.procurementInquiry.id !== procurementInquiry) return false;
+			if (company && t.procurementInquiry.companyId !== company) return false;
 			if (statuses.length > 0 && !statuses.includes(t.status)) return false;
 			return true;
 		});

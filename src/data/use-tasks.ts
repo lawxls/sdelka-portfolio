@@ -47,7 +47,7 @@ export function useTaskColumns(params?: TaskFilterParams) {
 		queryFn: () =>
 			tasks.board({
 				q: queryParams.q,
-				tender: queryParams.tender,
+				procurementInquiry: queryParams.procurementInquiry,
 				company: queryParams.company,
 				sort: queryParams.sort,
 				dir: queryParams.dir,
@@ -62,7 +62,7 @@ export function useTaskColumns(params?: TaskFilterParams) {
 		tasks
 			.board({
 				q: queryParams.q,
-				tender: queryParams.tender,
+				procurementInquiry: queryParams.procurementInquiry,
 				company: queryParams.company,
 				sort: queryParams.sort,
 				dir: queryParams.dir,
@@ -118,7 +118,7 @@ export function useTasksList(params?: TasksListParams) {
 				page: pageParam,
 				page_size: 25,
 				q: queryParams.q,
-				tender: queryParams.tender,
+				procurementInquiry: queryParams.procurementInquiry,
 				company: queryParams.company,
 				statuses: queryParams.statuses,
 				sort: queryParams.sort,
@@ -148,7 +148,7 @@ export function useTasksCount(params?: TasksListParams) {
 				page: 1,
 				page_size: 1,
 				q: queryParams.q,
-				tender: queryParams.tender,
+				procurementInquiry: queryParams.procurementInquiry,
 				company: queryParams.company,
 				statuses: queryParams.statuses,
 			}),

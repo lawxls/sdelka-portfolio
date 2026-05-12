@@ -7,11 +7,11 @@ import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
+import type { ProcurementInquiriesClient } from "./clients/procurement-inquiries-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SessionClient } from "./clients/session-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
-import type { TendersClient } from "./clients/tenders-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
 
@@ -68,7 +68,7 @@ export function fakeItemsClient(overrides: Partial<ItemsClient> = {}): ItemsClie
 	return {
 		list: notImplemented("list"),
 		listAll: notImplemented("listAll"),
-		listByTender: notImplemented("listByTender"),
+		listByProcurementInquiry: notImplemented("listByProcurementInquiry"),
 		totals: notImplemented("totals"),
 		get: notImplemented("get"),
 		create: notImplemented("create"),
@@ -120,11 +120,13 @@ export function fakeTasksClient(overrides: Partial<TasksClient> = {}): TasksClie
 	};
 }
 
-/** Build a fake `TendersClient` for hook tests — methods default to throwing
+/** Build a fake `ProcurementInquiriesClient` for hook tests — methods default to throwing
  * "not implemented" so a test that forgets to stub a call fails loudly. */
-export function fakeTendersClient(overrides: Partial<TendersClient> = {}): TendersClient {
+export function fakeProcurementInquiriesClient(
+	overrides: Partial<ProcurementInquiriesClient> = {},
+): ProcurementInquiriesClient {
 	const notImplemented = (method: string) => () => {
-		throw new Error(`fakeTendersClient.${method} not stubbed`);
+		throw new Error(`fakeProcurementInquiriesClient.${method} not stubbed`);
 	};
 	return {
 		list: notImplemented("list"),

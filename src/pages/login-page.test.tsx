@@ -42,7 +42,7 @@ function renderLogin(initialEntries: InitialEntries = ["/login"], session: Sessi
 						<Route element={<AuthLayout />}>
 							<Route path="/login" element={<LoginPage />} />
 						</Route>
-						<Route path="/inquiries" element={<div>Tenders Page</div>} />
+						<Route path="/inquiries" element={<div>ProcurementInquiries Page</div>} />
 						<Route path="/positions" element={<div>Positions Page</div>} />
 						<Route path="/analytics" element={<div>Analytics Page</div>} />
 						<Route path="/forgot-password" element={<div>Forgot Password</div>} />
@@ -103,7 +103,7 @@ describe("LoginPage", () => {
 		await user.click(screen.getByRole("button", { name: "Войти" }));
 
 		await waitFor(() => {
-			expect(screen.getByText("Tenders Page")).toBeInTheDocument();
+			expect(screen.getByText("ProcurementInquiries Page")).toBeInTheDocument();
 		});
 		expect(sessionStorage.getItem("auth-access-token")).toBeTruthy();
 	});

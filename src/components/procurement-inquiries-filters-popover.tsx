@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { CompanySummary, TenderStatus } from "@/data/types";
+import type { CompanySummary, ProcurementInquiryStatus } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
-import type { DeadlineFilter } from "./tenders-toolbar";
+import type { DeadlineFilter } from "./procurement-inquiries-toolbar";
 
 function DateRangePicker({
 	idPrefix,
@@ -91,7 +91,7 @@ function DateRangePicker({
 	);
 }
 
-const STATUS_PRESETS: { label: string; value: TenderStatus }[] = [
+const STATUS_PRESETS: { label: string; value: ProcurementInquiryStatus }[] = [
 	{ label: STATUS_LABELS.searching, value: "searching" },
 	{ label: STATUS_LABELS.searching_completed, value: "searching_completed" },
 	{ label: STATUS_LABELS.negotiating, value: "negotiating" },
@@ -104,9 +104,9 @@ const ROW_BTN =
 const ROW_BTN_ACTIVE = "font-medium text-highlight-foreground";
 const SECTION_LABEL = "px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foreground";
 
-interface TendersFiltersPopoverProps {
-	status: TenderStatus | undefined;
-	onStatusChange: (status: TenderStatus | undefined) => void;
+interface ProcurementInquiriesFiltersPopoverProps {
+	status: ProcurementInquiryStatus | undefined;
+	onStatusChange: (status: ProcurementInquiryStatus | undefined) => void;
 	deadline: DeadlineFilter;
 	onDeadlineChange: (deadline: DeadlineFilter) => void;
 	deadlineFrom?: string;
@@ -122,7 +122,7 @@ interface TendersFiltersPopoverProps {
 	triggerVariant?: "icon" | "row";
 }
 
-export function TendersFiltersPopover({
+export function ProcurementInquiriesFiltersPopover({
 	status,
 	onStatusChange,
 	deadline,
@@ -138,7 +138,7 @@ export function TendersFiltersPopover({
 	onCompanySelect,
 	showCompanies = false,
 	triggerVariant = "icon",
-}: TendersFiltersPopoverProps) {
+}: ProcurementInquiriesFiltersPopoverProps) {
 	const active =
 		status !== undefined ||
 		deadline !== "all" ||
@@ -174,7 +174,7 @@ export function TendersFiltersPopover({
 				<div className="flex max-h-[70vh] flex-col overflow-y-auto p-1.5">
 					{showCompanies && onCompanySelect && (
 						<>
-							<div data-testid="tenders-filters-section-company" className="flex flex-col gap-0.5">
+							<div data-testid="procurement-inquiries-filters-section-company" className="flex flex-col gap-0.5">
 								<div className={SECTION_LABEL}>Компания</div>
 								{(companies ?? []).map((company) => {
 									const isActive = selectedCompany === company.id;
@@ -193,7 +193,7 @@ export function TendersFiltersPopover({
 							<div className="my-1 h-px bg-border" />
 						</>
 					)}
-					<div data-testid="tenders-filters-section-status" className="flex flex-col gap-0.5">
+					<div data-testid="procurement-inquiries-filters-section-status" className="flex flex-col gap-0.5">
 						<div className={SECTION_LABEL}>Статус</div>
 						{STATUS_PRESETS.map((preset) => (
 							<button
@@ -209,7 +209,10 @@ export function TendersFiltersPopover({
 					{onDeadlineRangeChange && (
 						<>
 							<div className="my-1 h-px bg-border" />
-							<div data-testid="tenders-filters-section-deadline" className="flex flex-col gap-1.5 px-2 py-1.5">
+							<div
+								data-testid="procurement-inquiries-filters-section-deadline"
+								className="flex flex-col gap-1.5 px-2 py-1.5"
+							>
 								<div className="text-xs font-medium text-muted-foreground">Дедлайн</div>
 								<DateRangePicker
 									idPrefix="deadline"
@@ -235,7 +238,10 @@ export function TendersFiltersPopover({
 					{onCreatedAtRangeChange && (
 						<>
 							<div className="my-1 h-px bg-border" />
-							<div data-testid="tenders-filters-section-created-at" className="flex flex-col gap-1.5 px-2 py-1.5">
+							<div
+								data-testid="procurement-inquiries-filters-section-created-at"
+								className="flex flex-col gap-1.5 px-2 py-1.5"
+							>
 								<div className="text-xs font-medium text-muted-foreground">Дата создания</div>
 								<DateRangePicker
 									idPrefix="created-at"

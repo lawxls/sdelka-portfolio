@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { TenderSummary } from "@/data/domains/tenders";
+import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
 import type { CompanySummary, DeviationFilter, FilterState, StatusFilter } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
@@ -28,8 +28,8 @@ const ROW_BTN =
 const ROW_BTN_ACTIVE = "font-medium text-highlight-foreground";
 const SECTION_LABEL = "px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foreground";
 
-function hasActiveFilter(filters: FilterState, selectedTender?: string): boolean {
-	return filters.deviation !== "all" || filters.status !== "all" || Boolean(selectedTender);
+function hasActiveFilter(filters: FilterState, selectedProcurementInquiry?: string): boolean {
+	return filters.deviation !== "all" || filters.status !== "all" || Boolean(selectedProcurementInquiry);
 }
 
 interface FiltersPopoverProps {
@@ -39,9 +39,9 @@ interface FiltersPopoverProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
-	tenders?: TenderSummary[];
-	selectedTender?: string | undefined;
-	onTenderSelect?: (tenderId: string | undefined) => void;
+	procurementInquiries?: ProcurementInquirySummary[];
+	selectedProcurementInquiry?: string | undefined;
+	onProcurementInquirySelect?: (procurementInquiryId: string | undefined) => void;
 	triggerVariant?: "icon" | "row";
 }
 
@@ -52,13 +52,13 @@ export function FiltersPopover({
 	selectedCompany,
 	onCompanySelect,
 	showCompanies = false,
-	tenders,
-	selectedTender,
-	onTenderSelect,
+	procurementInquiries,
+	selectedProcurementInquiry,
+	onProcurementInquirySelect,
 	triggerVariant = "icon",
 }: FiltersPopoverProps) {
-	const active = hasActiveFilter(filters, selectedTender);
-	const showTenders = !!onTenderSelect && (tenders?.length ?? 0) > 0;
+	const active = hasActiveFilter(filters, selectedProcurementInquiry);
+	const showProcurementInquiries = !!onProcurementInquirySelect && (procurementInquiries?.length ?? 0) > 0;
 	return (
 		<Popover>
 			{triggerVariant === "row" ? (
@@ -94,9 +94,13 @@ export function FiltersPopover({
 							<Divider />
 						</>
 					)}
-					{showTenders && onTenderSelect && (
+					{showProcurementInquiries && onProcurementInquirySelect && (
 						<>
-							<TenderSection tenders={tenders ?? []} selectedTender={selectedTender} onTenderSelect={onTenderSelect} />
+							<ProcurementInquirySection
+								procurementInquiries={procurementInquiries ?? []}
+								selectedProcurementInquiry={selectedProcurementInquiry}
+								onProcurementInquirySelect={onProcurementInquirySelect}
+							/>
 							<Divider />
 						</>
 					)}
@@ -109,23 +113,23 @@ export function FiltersPopover({
 	);
 }
 
-function TenderSection({
-	tenders,
-	selectedTender,
-	onTenderSelect,
+function ProcurementInquirySection({
+	procurementInquiries,
+	selectedProcurementInquiry,
+	onProcurementInquirySelect,
 }: {
-	tenders: TenderSummary[];
-	selectedTender: string | undefined;
-	onTenderSelect: (tenderId: string | undefined) => void;
+	procurementInquiries: ProcurementInquirySummary[];
+	selectedProcurementInquiry: string | undefined;
+	onProcurementInquirySelect: (procurementInquiryId: string | undefined) => void;
 }) {
 	const [query, setQuery] = useState("");
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
-		if (!q) return tenders;
-		return tenders.filter((t) => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
-	}, [tenders, query]);
+		if (!q) return procurementInquiries;
+		return procurementInquiries.filter((t) => t.id.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+	}, [procurementInquiries, query]);
 	return (
-		<div data-testid="filters-section-tender" className="flex flex-col gap-1">
+		<div data-testid="filters-section-procurement-inquiry" className="flex flex-col gap-1">
 			<div className={SECTION_LABEL}>Запрос</div>
 			<div className="relative px-1">
 				<Search
@@ -144,18 +148,20 @@ function TenderSection({
 				{filtered.length === 0 ? (
 					<div className="px-2 py-2 text-xs text-muted-foreground">Ничего не найдено</div>
 				) : (
-					filtered.map((tender) => {
-						const isActive = selectedTender === tender.id;
+					filtered.map((procurementInquiry) => {
+						const isActive = selectedProcurementInquiry === procurementInquiry.id;
 						return (
 							<button
-								key={tender.id}
+								key={procurementInquiry.id}
 								type="button"
 								className={cn(ROW_BTN, isActive && ROW_BTN_ACTIVE)}
-								onClick={() => onTenderSelect(isActive ? undefined : tender.id)}
+								onClick={() => onProcurementInquirySelect(isActive ? undefined : procurementInquiry.id)}
 							>
 								<span className="flex min-w-0 flex-col items-start">
-									<span className="truncate text-sm">{tender.name}</span>
-									<span className="truncate font-mono text-[0.65rem] text-muted-foreground">{tender.id}</span>
+									<span className="truncate text-sm">{procurementInquiry.name}</span>
+									<span className="truncate font-mono text-[0.65rem] text-muted-foreground">
+										{procurementInquiry.id}
+									</span>
 								</span>
 							</button>
 						);

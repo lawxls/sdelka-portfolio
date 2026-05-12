@@ -38,7 +38,6 @@ export interface RegisterInput {
 	last_name: string;
 	patronymic?: string;
 	phone: string;
-	inn: string;
 }
 
 export interface RegisterResult {

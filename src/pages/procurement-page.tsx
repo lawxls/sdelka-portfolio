@@ -8,8 +8,8 @@ import { ProcurementItemDrawer } from "@/components/procurement-item-drawer";
 import { ProcurementTable } from "@/components/procurement-table";
 import { Toolbar } from "@/components/toolbar";
 import { TotalCount } from "@/components/total-count";
-import { useCreateTenderWithItems } from "@/data/operations/use-procurement-operations";
-import { groupItemsIntoTenders } from "@/data/tenders/group-items-into-tenders";
+import { useCreateProcurementInquiryWithItems } from "@/data/operations/use-procurement-operations";
+import { groupItemsIntoProcurementInquiries } from "@/data/procurement-inquiries/group-items-into-procurement-inquiries";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -30,7 +30,7 @@ import {
 	useTotals,
 	useUpdateItem,
 } from "@/data/use-items";
-import { useTenders } from "@/data/use-tenders";
+import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { isoDateInDays } from "@/lib/format";
 
@@ -73,7 +73,7 @@ export function ProcurementPage() {
 	const sort = parseSort(searchParams);
 	const folder = searchParams.get("folder") ?? undefined;
 	const company = searchParams.get("company") ?? undefined;
-	const tender = searchParams.get("tender") ?? undefined;
+	const procurementInquiry = searchParams.get("procurementInquiry") ?? undefined;
 	const isArchiveView = folder === "archive";
 
 	const { data: companies = [] } = useProcurementCompanies();
@@ -94,9 +94,15 @@ export function ProcurementPage() {
 		isFetchingNextPage,
 		error: itemsError,
 		refetch: refetchItems,
-	} = useItems({ search, filters, sort, folder, company, tender });
+	} = useItems({ search, filters, sort, folder, company, procurementInquiry });
 
-	const { data: totals, isLoading: totalsLoading } = useTotals({ search, filters, folder, company, tender });
+	const { data: totals, isLoading: totalsLoading } = useTotals({
+		search,
+		filters,
+		folder,
+		company,
+		procurementInquiry,
+	});
 
 	const { data: folders = [], isLoading: foldersLoading } = useFolders(company);
 	const { data: counts = { all: 0, none: 0 }, isLoading: statsLoading } = useFolderStats(company);
@@ -104,17 +110,17 @@ export function ProcurementPage() {
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
 
-	const { items: tenderRows } = useTenders({ limit: 1000 });
-	const tenderMap = useMemo(() => {
+	const { items: procurementInquiryRows } = useProcurementInquiries({ limit: 1000 });
+	const procurementInquiryMap = useMemo(() => {
 		const map: Record<string, { companyId: string; folderId: string | null }> = {};
-		for (const t of tenderRows) map[t.id] = { companyId: t.companyId, folderId: t.folderId };
+		for (const t of procurementInquiryRows) map[t.id] = { companyId: t.companyId, folderId: t.folderId };
 		return map;
-	}, [tenderRows]);
+	}, [procurementInquiryRows]);
 
 	const updateItemMutation = useUpdateItem();
 	const deleteItemMutation = useDeleteItem();
 	const archiveItemMutation = useArchiveItem();
-	const createTenderWithItemsMutation = useCreateTenderWithItems();
+	const createProcurementInquiryWithItemsMutation = useCreateProcurementInquiryWithItems();
 	const exportItemsMutation = useExportItems();
 
 	const isMobile = useIsMobile();
@@ -177,7 +183,7 @@ export function ProcurementPage() {
 	}
 
 	function handleImportItems(items: NewItemInput[]) {
-		const groups = groupItemsIntoTenders(items);
+		const groups = groupItemsIntoProcurementInquiries(items);
 		if (groups.length === 0) return;
 		if (isMultiCompany && !company) {
 			toast.error("Выберите компанию для импорта позиций");
@@ -192,8 +198,8 @@ export function ProcurementPage() {
 		const deadline = isoDateInDays(DEFAULT_IMPORT_DEADLINE_DAYS);
 		Promise.allSettled(
 			groups.map((group) =>
-				createTenderWithItemsMutation.mutateAsync({
-					tender: {
+				createProcurementInquiryWithItemsMutation.mutateAsync({
+					procurementInquiry: {
 						name: group.name,
 						companyId: targetCompanyId,
 						folderId,
@@ -272,11 +278,11 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleTenderSelect(tenderId: string | undefined) {
+	function handleProcurementInquirySelect(procurementInquiryId: string | undefined) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
-			if (tenderId) next.set("tender", tenderId);
-			else next.delete("tender");
+			if (procurementInquiryId) next.set("procurementInquiry", procurementInquiryId);
+			else next.delete("procurementInquiry");
 			return next;
 		});
 	}
@@ -304,9 +310,9 @@ export function ProcurementPage() {
 			selectedCompany={company}
 			onCompanySelect={handleCompanySelect}
 			showCompanies={isMultiCompany}
-			tenders={tenderRows}
-			selectedTender={tender}
-			onTenderSelect={handleTenderSelect}
+			procurementInquiries={procurementInquiryRows}
+			selectedProcurementInquiry={procurementInquiry}
+			onProcurementInquirySelect={handleProcurementInquirySelect}
 		/>
 	);
 
@@ -351,7 +357,7 @@ export function ProcurementPage() {
 				<ProcurementTable
 					items={items}
 					folders={folders}
-					tenderMap={tenderMap}
+					procurementInquiryMap={procurementInquiryMap}
 					sort={sort}
 					hasNextPage={hasNextPage}
 					loadMore={loadMore}

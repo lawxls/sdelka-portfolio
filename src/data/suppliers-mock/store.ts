@@ -10,9 +10,9 @@ import { ITEM as ITEM_10, SUPPLIERS as SUPPLIERS_10 } from "../items/item-10";
 import { ITEM as ITEM_11, SUPPLIERS as SUPPLIERS_11 } from "../items/item-11";
 import { ITEM as ITEM_12, SUPPLIERS as SUPPLIERS_12 } from "../items/item-12";
 import { _getItem } from "../items-mock-data";
+import { _getProcurementInquiry } from "../procurement-inquiries-mock/store";
 import { ORMATEK_SUPPLIERS } from "../seeds/suppliers-ormatek";
 import type { Supplier, SupplierSeed } from "../supplier-types";
-import { _getTender } from "../tenders-mock/store";
 import {
 	enrichSeed,
 	generateCandidates,
@@ -85,17 +85,17 @@ export function listKnownItemIds(): string[] {
 	return [...itemIds];
 }
 
-/** Build a quote_received Supplier row that mirrors the parent tender's `currentSupplier`
+/** Build a quote_received Supplier row that mirrors the parent inquiry's `currentSupplier`
  * (the «Ваш поставщик»). INN/companyName come from currentSupplier verbatim; profile
  * fields (region/revenue/etc.) are deterministically derived from the INN so the row
- * looks like a real legal entity. Returns null when the item has no parent tender,
- * or the tender has no currentSupplier or no INN. */
+ * looks like a real legal entity. Returns null when the item has no parent inquiry,
+ * or the inquiry has no currentSupplier or no INN. */
 function makeYourSupplier(itemId: string): Supplier | null {
 	const item = _getItem(itemId);
-	const tender = item?.tenderId ? _getTender(item.tenderId) : null;
-	const cs = tender?.currentSupplier;
+	const procurementInquiry = item?.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
+	const cs = procurementInquiry?.currentSupplier;
 	if (!cs?.inn) return null;
-	// Multi-item tenders share one tender-level pricePerUnit; prefer the item's
+	// Multi-item inquiries share one procurement-inquiry-level pricePerUnit; prefer the item's
 	// own buyer reference price so «Ваш поставщик» reflects per-position spread.
 	// Items with currentPrice null/0 opt out so X/N coverage stays accurate.
 	const perItemPrice = item && item.currentPrice != null && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;

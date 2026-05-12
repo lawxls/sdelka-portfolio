@@ -210,7 +210,7 @@ function TaskDrawerContent({
 		<>
 			<SheetHeader className="relative border-b pb-4 max-md:pr-24 md:pr-12">
 				<SheetTitle className="pr-4">{currentTask.name}</SheetTitle>
-				<SheetDescription className="text-xs">{currentTask.tender.name}</SheetDescription>
+				<SheetDescription className="text-xs">{currentTask.procurementInquiry.name}</SheetDescription>
 				{(!isAnswered || isArchived) && (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>

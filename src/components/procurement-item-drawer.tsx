@@ -44,6 +44,7 @@ import {
 import type { PaymentType, ProcurementItem } from "@/data/types";
 import { getDisplayStatus } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
+import { useProcurementInquiry } from "@/data/use-procurement-inquiries";
 import {
 	useArchiveSuppliers,
 	useInfiniteSuppliers,
@@ -52,7 +53,6 @@ import {
 	useSuppliers,
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
-import { useTender } from "@/data/use-tenders";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -303,13 +303,13 @@ function SuppliersTabPanel({
 	itemId: string;
 	onSupplierClick: (id: string) => void;
 	/** Default `true`. Pass `false` from the item drawer where КП requests live at
-	 * the parent tender, not per-position. Hides all КП-request UI in the table. */
+	 * the parent inquiry, not per-position. Hides all КП-request UI in the table. */
 	kpRequestEnabled?: boolean;
 }) {
 	const { data: itemDetail } = useItemDetail(itemId);
-	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
+	const { data: procurementInquiry } = useProcurementInquiry(itemDetail?.procurementInquiryId ?? null);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
-	const currentSupplier = tender?.currentSupplier;
+	const currentSupplier = procurementInquiry?.currentSupplier;
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -533,20 +533,20 @@ function OffersTabPanel({
 	itemId,
 	onSupplierClick,
 	onSelectSupplier,
-	tenderItems,
-	tenderQuotesByIdentity,
+	procurementInquiryItems,
+	procurementInquiryQuotesByIdentity,
 }: {
 	itemId: string;
 	onSupplierClick: (id: string) => void;
 	onSelectSupplier?: (supplierId: string, companyName: string) => void;
-	/** When set (multi-item tender context), the «ТСО / ЕД.» cell renders X/N
+	/** When set (multi-item inquiry context), the «ТСО / ЕД.» cell renders X/N
 	 * with a tooltip listing every position's per-supplier ТСО. Single-item
-	 * tenders pass `undefined` so the cell keeps its original price rendering. */
-	tenderItems?: readonly ProcurementItem[];
-	/** Cross-item TCO lookup keyed by supplier identity, supplied by the tender
+	 * inquiries pass `undefined` so the cell keeps its original price rendering. */
+	procurementInquiryItems?: readonly ProcurementItem[];
+	/** Cross-item TCO lookup keyed by supplier identity, supplied by the inquiry
 	 * drawer parent. Lets `OffersTable` render the X/N tooltip without itself
 	 * pulling from the suppliers client. */
-	tenderQuotesByIdentity?: Map<string, Map<string, number>>;
+	procurementInquiryQuotesByIdentity?: Map<string, Map<string, number>>;
 }) {
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "savings", direction: "desc" });
@@ -568,8 +568,8 @@ function OffersTabPanel({
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
 	const { data: itemDetail } = useItemDetail(itemId);
-	const { data: tender } = useTender(itemDetail?.tenderId ?? null);
-	const currentSupplier = tender?.currentSupplier;
+	const { data: procurementInquiry } = useProcurementInquiry(itemDetail?.procurementInquiryId ?? null);
+	const currentSupplier = procurementInquiry?.currentSupplier;
 	// When no payment/delivery client-side filters are active, the server total matches.
 	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
 	// all pages just to produce a total isn't worth it for these local filters.
@@ -671,8 +671,8 @@ function OffersTabPanel({
 				hasNextPage={query.hasNextPage}
 				loadMore={query.fetchNextPage}
 				isFetchingNextPage={query.isFetchingNextPage}
-				tenderItems={tenderItems}
-				tenderQuotesByIdentity={tenderQuotesByIdentity}
+				procurementInquiryItems={procurementInquiryItems}
+				procurementInquiryQuotesByIdentity={procurementInquiryQuotesByIdentity}
 			/>
 		</div>
 	);

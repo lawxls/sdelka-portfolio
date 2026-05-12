@@ -30,7 +30,8 @@ export function createHttpItemsClient(http: HttpClient = defaultHttpClient): Ite
 
 		listAll: () => http.get<ProcurementItem[]>(`/items/all`),
 
-		listByTender: (tenderId: string) => http.get<ProcurementItem[]>(`/items/by-tender/${enc(tenderId)}`),
+		listByProcurementInquiry: (procurementInquiryId: string) =>
+			http.get<ProcurementItem[]>(`/items/by-procurement-inquiry/${enc(procurementInquiryId)}`),
 
 		totals: (params: TotalsParams) => http.get<Totals>(`/items/totals${buildListQuery(params)}`),
 

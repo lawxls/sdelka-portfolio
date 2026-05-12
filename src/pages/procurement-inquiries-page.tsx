@@ -12,13 +12,13 @@ import {
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { CreateTenderDrawer } from "@/components/create-tender-drawer";
+import { CreateProcurementInquiryDrawer } from "@/components/create-procurement-inquiry-drawer";
 import { FilterChip } from "@/components/filter-chip";
 import { InlineRenameInput } from "@/components/inline-rename-input";
 import { InquiryCard } from "@/components/inquiry-card";
 import { PageToolbar } from "@/components/page-toolbar";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
-import { type DeadlineFilter, TendersToolbar } from "@/components/tenders-toolbar";
+import { type DeadlineFilter, ProcurementInquiriesToolbar } from "@/components/procurement-inquiries-toolbar";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -41,12 +41,23 @@ import {
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { TenderSortDirection, TenderSortField, TenderSummary } from "@/data/domains/tenders";
-import { useArchiveTenderCascade, useCreateTenderWithItems } from "@/data/operations/use-procurement-operations";
-import type { Folder, TenderStatus } from "@/data/types";
+import type {
+	ProcurementInquirySortDirection,
+	ProcurementInquirySortField,
+	ProcurementInquirySummary,
+} from "@/data/domains/procurement-inquiries";
+import {
+	useArchiveProcurementInquiryCascade,
+	useCreateProcurementInquiryWithItems,
+} from "@/data/operations/use-procurement-operations";
+import type { Folder, ProcurementInquiryStatus } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
-import { useDeleteTender, useTenders, useUpdateTender } from "@/data/use-tenders";
+import {
+	useDeleteProcurementInquiry,
+	useProcurementInquiries,
+	useUpdateProcurementInquiry,
+} from "@/data/use-procurement-inquiries";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { formatDayMonthShort, formatRussianPlural } from "@/lib/format";
@@ -55,7 +66,7 @@ import { cn } from "@/lib/utils";
 interface ColumnDef {
 	label: string;
 	align: "left" | "right" | "center";
-	field?: TenderSortField;
+	field?: ProcurementInquirySortField;
 }
 
 const COLUMNS: readonly ColumnDef[] = [
@@ -64,13 +75,13 @@ const COLUMNS: readonly ColumnDef[] = [
 	{ label: "ВСЕГО ПОСТАВЩИКОВ", align: "center", field: "suppliersCount" },
 	{ label: "ПОЛУЧЕНО КП", align: "center", field: "kpCount" },
 	{ label: "ВОПРОСЫ", align: "center", field: "tasksCount" },
-	{ label: "ДАТА СОЗДАНИЯ", align: "center", field: "createdAt" },
 	{ label: "ДЕДЛАЙН", align: "center", field: "deadline" },
+	{ label: "ДАТА СОЗДАНИЯ", align: "center", field: "createdAt" },
 ] as const;
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"] as const;
 
-const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set([
+const PROCUREMENT_INQUIRY_SORT_FIELDS: ReadonlySet<string> = new Set([
 	"suppliersCount",
 	"kpCount",
 	"tasksCount",
@@ -78,21 +89,23 @@ const TENDER_SORT_FIELDS: ReadonlySet<string> = new Set([
 	"deadline",
 ]);
 
-interface TenderSortState {
-	field: TenderSortField;
-	direction: TenderSortDirection;
+interface ProcurementInquirySortState {
+	field: ProcurementInquirySortField;
+	direction: ProcurementInquirySortDirection;
 }
 
-const TENDER_STATUSES: ReadonlySet<TenderStatus> = new Set([
+const PROCUREMENT_INQUIRY_STATUSES: ReadonlySet<ProcurementInquiryStatus> = new Set([
 	"searching",
 	"searching_completed",
 	"negotiating",
 	"completed",
 ]);
 
-function parseStatus(params: URLSearchParams): TenderStatus | undefined {
+function parseStatus(params: URLSearchParams): ProcurementInquiryStatus | undefined {
 	const v = params.get("status");
-	return v && TENDER_STATUSES.has(v as TenderStatus) ? (v as TenderStatus) : undefined;
+	return v && PROCUREMENT_INQUIRY_STATUSES.has(v as ProcurementInquiryStatus)
+		? (v as ProcurementInquiryStatus)
+		: undefined;
 }
 
 function parseDeadline(params: URLSearchParams): DeadlineFilter {
@@ -100,11 +113,11 @@ function parseDeadline(params: URLSearchParams): DeadlineFilter {
 	return v === "overdue" || v === "soon" ? v : "all";
 }
 
-function parseSort(params: URLSearchParams): TenderSortState | null {
+function parseSort(params: URLSearchParams): ProcurementInquirySortState | null {
 	const field = params.get("sort");
 	const dir = params.get("dir");
-	if (!field || !TENDER_SORT_FIELDS.has(field) || (dir !== "asc" && dir !== "desc")) return null;
-	return { field: field as TenderSortField, direction: dir };
+	if (!field || !PROCUREMENT_INQUIRY_SORT_FIELDS.has(field) || (dir !== "asc" && dir !== "desc")) return null;
+	return { field: field as ProcurementInquirySortField, direction: dir };
 }
 
 function FolderBadge({ folder }: { folder?: Folder }) {
@@ -124,7 +137,7 @@ function FolderBadge({ folder }: { folder?: Folder }) {
 	);
 }
 
-function SortIcon({ field, sort }: { field: TenderSortField; sort: TenderSortState | null }) {
+function SortIcon({ field, sort }: { field: ProcurementInquirySortField; sort: ProcurementInquirySortState | null }) {
 	if (sort?.field !== field)
 		return <ArrowUpDown className="size-3.5 opacity-50 transition-opacity" aria-hidden="true" />;
 	return sort.direction === "asc" ? (
@@ -139,9 +152,9 @@ function SortableHeaderButton({
 	sort,
 	onSort,
 }: {
-	col: ColumnDef & { field: TenderSortField };
-	sort: TenderSortState | null;
-	onSort: (field: TenderSortField) => void;
+	col: ColumnDef & { field: ProcurementInquirySortField };
+	sort: ProcurementInquirySortState | null;
+	onSort: (field: ProcurementInquirySortField) => void;
 }) {
 	return (
 		<button
@@ -160,23 +173,23 @@ function SortableHeaderButton({
 	);
 }
 
-interface TenderRowProps {
-	tender: TenderSummary;
+interface ProcurementInquiryRowProps {
+	procurementInquiry: ProcurementInquirySummary;
 	rowNumber: number;
 	folders: Folder[];
 	onClick: () => void;
 	onArchive: (id: string, isArchived: boolean) => void;
 	onRename: (id: string) => void;
 	onMoveToFolder: (id: string, folderId: string | null) => void;
-	onDelete: (tender: TenderSummary) => void;
+	onDelete: (procurementInquiry: ProcurementInquirySummary) => void;
 	isArchiveView: boolean;
 	isEditing: boolean;
 	onSaveRename: (id: string, name: string) => void;
 	onCancelRename: () => void;
 }
 
-function TenderRow({
-	tender,
+function ProcurementInquiryRow({
+	procurementInquiry,
 	rowNumber,
 	folders,
 	onClick,
@@ -188,13 +201,13 @@ function TenderRow({
 	isEditing,
 	onSaveRename,
 	onCancelRename,
-}: TenderRowProps) {
-	const folder = folders.find((f) => f.id === tender.folderId);
-	const status = STATUS_CONFIG[tender.status];
+}: ProcurementInquiryRowProps) {
+	const folder = folders.find((f) => f.id === procurementInquiry.folderId);
+	const status = STATUS_CONFIG[procurementInquiry.status];
 	const { willEditRef, onCloseAutoFocus } = useMenuEditGuard();
 	const row = (
 		<TableRow
-			data-testid={`tender-row-${tender.id}`}
+			data-testid={`procurement-inquiry-row-${procurementInquiry.id}`}
 			onClick={isEditing ? undefined : onClick}
 			className={isEditing ? "" : "cursor-pointer"}
 		>
@@ -204,30 +217,34 @@ function TenderRow({
 					<div className="flex items-center gap-2 min-w-0">
 						{isEditing ? (
 							<InlineRenameInput
-								defaultValue={tender.name}
-								onSave={(name) => onSaveRename(tender.id, name)}
+								defaultValue={procurementInquiry.name}
+								onSave={(name) => onSaveRename(procurementInquiry.id, name)}
 								onCancel={onCancelRename}
 							/>
 						) : (
-							<span className="truncate">{tender.name}</span>
+							<span className="truncate">{procurementInquiry.name}</span>
 						)}
 						{folder && <FolderBadge folder={folder} />}
 					</div>
 					<div className="mt-0.5">
 						<span className={cn("relative z-10 inline-flex items-center gap-1.5 py-0.5 text-xs", status.className)}>
-							<ProcurementStatusIcon status={tender.status} />
+							<ProcurementStatusIcon status={procurementInquiry.status} />
 							{status.label}
 						</span>
 					</div>
 				</div>
 			</TableCell>
-			<TableCell className="text-center tabular-nums">{tender.suppliersCount}</TableCell>
-			<TableCell className="text-center tabular-nums">{tender.kpCount}</TableCell>
+			<TableCell className="text-center tabular-nums">{procurementInquiry.suppliersCount}</TableCell>
+			<TableCell className="text-center tabular-nums">{procurementInquiry.kpCount}</TableCell>
 			<TableCell className="text-center tabular-nums">
-				{tender.tasksCount > 0 ? tender.tasksCount : <span className="text-muted-foreground">—</span>}
+				{procurementInquiry.tasksCount > 0 ? (
+					procurementInquiry.tasksCount
+				) : (
+					<span className="text-muted-foreground">—</span>
+				)}
 			</TableCell>
-			<TableCell className="text-center tabular-nums">{formatDayMonthShort(tender.createdAt)}</TableCell>
-			<TableCell className="text-center tabular-nums">{formatDayMonthShort(tender.deadline)}</TableCell>
+			<TableCell className="text-center tabular-nums">{formatDayMonthShort(procurementInquiry.deadline)}</TableCell>
+			<TableCell className="text-center tabular-nums">{formatDayMonthShort(procurementInquiry.createdAt)}</TableCell>
 		</TableRow>
 	);
 	return (
@@ -237,7 +254,7 @@ function TenderRow({
 				<ContextMenuItem
 					onSelect={() => {
 						willEditRef.current = true;
-						onRename(tender.id);
+						onRename(procurementInquiry.id);
 					}}
 				>
 					<Pencil className="size-3.5" />
@@ -249,15 +266,18 @@ function TenderRow({
 						Переместить в категорию
 					</ContextMenuSubTrigger>
 					<ContextMenuSubContent>
-						<ContextMenuItem onSelect={() => onMoveToFolder(tender.id, null)} disabled={tender.folderId === null}>
+						<ContextMenuItem
+							onSelect={() => onMoveToFolder(procurementInquiry.id, null)}
+							disabled={procurementInquiry.folderId === null}
+						>
 							Без категории
 						</ContextMenuItem>
 						{folders.length > 0 && <ContextMenuSeparator />}
 						{folders.map((f) => (
 							<ContextMenuItem
 								key={f.id}
-								onSelect={() => onMoveToFolder(tender.id, f.id)}
-								disabled={tender.folderId === f.id}
+								onSelect={() => onMoveToFolder(procurementInquiry.id, f.id)}
+								disabled={procurementInquiry.folderId === f.id}
 							>
 								<span
 									className="size-2 rounded-full"
@@ -270,18 +290,18 @@ function TenderRow({
 					</ContextMenuSubContent>
 				</ContextMenuSub>
 				{isArchiveView ? (
-					<ContextMenuItem onSelect={() => onArchive(tender.id, false)}>
+					<ContextMenuItem onSelect={() => onArchive(procurementInquiry.id, false)}>
 						<ArchiveRestore className="size-3.5" />
 						Восстановить из архива
 					</ContextMenuItem>
 				) : (
-					<ContextMenuItem onSelect={() => onArchive(tender.id, true)}>
+					<ContextMenuItem onSelect={() => onArchive(procurementInquiry.id, true)}>
 						<Archive className="size-3.5" />
 						Архив
 					</ContextMenuItem>
 				)}
 				<ContextMenuSeparator />
-				<ContextMenuItem variant="destructive" onSelect={() => onDelete(tender)}>
+				<ContextMenuItem variant="destructive" onSelect={() => onDelete(procurementInquiry)}>
 					<Trash2 className="size-3.5" />
 					Удалить
 				</ContextMenuItem>
@@ -290,7 +310,7 @@ function TenderRow({
 	);
 }
 
-export function TendersPage() {
+export function ProcurementInquiriesPage() {
 	const navigate = useNavigate();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const isMobile = useIsMobile();
@@ -310,7 +330,7 @@ export function TendersPage() {
 	const { data: companies = [] } = useProcurementCompanies();
 	const isMultiCompany = companies.length > 1;
 
-	const { items, isLoading } = useTenders({
+	const { items, isLoading } = useProcurementInquiries({
 		q: search || undefined,
 		status,
 		deadline,
@@ -329,13 +349,13 @@ export function TendersPage() {
 	const createFolderMutation = useCreateFolder();
 	const updateFolderMutation = useUpdateFolder();
 	const deleteFolderMutation = useDeleteFolder();
-	const archiveTenderMutation = useArchiveTenderCascade();
-	const updateTenderMutation = useUpdateTender();
-	const deleteTenderMutation = useDeleteTender();
-	const createTenderMutation = useCreateTenderWithItems();
+	const archiveProcurementInquiryMutation = useArchiveProcurementInquiryCascade();
+	const updateProcurementInquiryMutation = useUpdateProcurementInquiry();
+	const deleteProcurementInquiryMutation = useDeleteProcurementInquiry();
+	const createProcurementInquiryMutation = useCreateProcurementInquiryWithItems();
 	const [drawerOpen, setDrawerOpen] = useState(false);
-	const [editingTenderId, setEditingTenderId] = useState<string | null>(null);
-	const [deletingTender, setDeletingTender] = useState<TenderSummary | null>(null);
+	const [editingProcurementInquiryId, setEditingProcurementInquiryId] = useState<string | null>(null);
+	const [deletingProcurementInquiry, setDeletingProcurementInquiry] = useState<ProcurementInquirySummary | null>(null);
 
 	const companyMap = useMemo(() => {
 		const map: Record<string, string> = {};
@@ -352,7 +372,7 @@ export function TendersPage() {
 		});
 	}
 
-	function handleStatusChange(next: TenderStatus | undefined) {
+	function handleStatusChange(next: ProcurementInquiryStatus | undefined) {
 		setParam("status", next);
 	}
 
@@ -382,7 +402,7 @@ export function TendersPage() {
 		});
 	}
 
-	function handleSort(field: TenderSortField) {
+	function handleSort(field: ProcurementInquirySortField) {
 		setSearchParams((prev) => {
 			const next = new URLSearchParams(prev);
 			const currentField = next.get("sort");
@@ -449,7 +469,7 @@ export function TendersPage() {
 	}
 
 	const toolbar = (
-		<TendersToolbar
+		<ProcurementInquiriesToolbar
 			status={status}
 			onStatusChange={handleStatusChange}
 			deadline={deadline}
@@ -475,41 +495,41 @@ export function TendersPage() {
 			showCompanies={isMultiCompany}
 			isArchiveView={isArchiveView}
 			onArchiveToggle={handleArchiveToggle}
-			onCreateTender={() => setDrawerOpen(true)}
+			onCreateProcurementInquiry={() => setDrawerOpen(true)}
 		/>
 	);
 
-	function handleRowClick(tender: TenderSummary) {
-		navigate({ pathname: `/inquiries/${tender.id}`, search: searchParams.toString() });
+	function handleRowClick(procurementInquiry: ProcurementInquirySummary) {
+		navigate({ pathname: `/inquiries/${procurementInquiry.id}`, search: searchParams.toString() });
 	}
 
 	function handleArchive(id: string, isArchived: boolean) {
-		archiveTenderMutation.mutate({ id, isArchived });
+		archiveProcurementInquiryMutation.mutate({ id, isArchived });
 	}
 
 	function handleRename(id: string) {
-		setEditingTenderId(id);
+		setEditingProcurementInquiryId(id);
 	}
 
 	function handleSaveRename(id: string, name: string) {
-		updateTenderMutation.mutate({ id, patch: { name } });
-		setEditingTenderId(null);
+		updateProcurementInquiryMutation.mutate({ id, patch: { name } });
+		setEditingProcurementInquiryId(null);
 	}
 
 	function handleCancelRename() {
-		setEditingTenderId(null);
+		setEditingProcurementInquiryId(null);
 	}
 
 	function handleMoveToFolder(id: string, folderId: string | null) {
-		updateTenderMutation.mutate({ id, patch: { folderId } });
+		updateProcurementInquiryMutation.mutate({ id, patch: { folderId } });
 	}
 
 	function handleConfirmDelete() {
-		if (!deletingTender) return;
-		deleteTenderMutation.mutate(deletingTender.id, {
-			onSuccess: () => toast.success(`Запрос ${deletingTender.id} удалён`),
+		if (!deletingProcurementInquiry) return;
+		deleteProcurementInquiryMutation.mutate(deletingProcurementInquiry.id, {
+			onSuccess: () => toast.success(`Запрос ${deletingProcurementInquiry.id} удалён`),
 		});
-		setDeletingTender(null);
+		setDeletingProcurementInquiry(null);
 	}
 
 	return (
@@ -551,7 +571,11 @@ export function TendersPage() {
 						{isLoading && (
 							<div className="flex flex-col gap-3 p-4">
 								{SKELETON_KEYS.map((key) => (
-									<div key={key} data-testid="tenders-skeleton-card" className="rounded-lg border bg-background p-4">
+									<div
+										key={key}
+										data-testid="procurement-inquiries-skeleton-card"
+										className="rounded-lg border bg-background p-4"
+									>
 										<Skeleton className="h-3 w-6" />
 										<Skeleton className="mt-2 h-4 w-48" />
 										<Skeleton className="mt-1 h-3 w-24" />
@@ -573,14 +597,14 @@ export function TendersPage() {
 						)}
 						{!isLoading && items.length > 0 && (
 							<div className="flex flex-col gap-3 p-4">
-								{items.map((tender, index) => (
+								{items.map((procurementInquiry, index) => (
 									<InquiryCard
-										key={tender.id}
-										tender={tender}
+										key={procurementInquiry.id}
+										procurementInquiry={procurementInquiry}
 										folders={folders}
-										folder={folders.find((f) => f.id === tender.folderId)}
+										folder={folders.find((f) => f.id === procurementInquiry.folderId)}
 										index={index}
-										isEditing={editingTenderId === tender.id}
+										isEditing={editingProcurementInquiryId === procurementInquiry.id}
 										isArchiveView={isArchiveView}
 										onClick={handleRowClick}
 										onArchive={handleArchive}
@@ -588,7 +612,7 @@ export function TendersPage() {
 										onSaveRename={handleSaveRename}
 										onCancelRename={handleCancelRename}
 										onMoveToFolder={handleMoveToFolder}
-										onDelete={setDeletingTender}
+										onDelete={setDeletingProcurementInquiry}
 									/>
 								))}
 							</div>
@@ -608,7 +632,7 @@ export function TendersPage() {
 										return col.field ? (
 											<TableHead key={col.label} className={headClass}>
 												<SortableHeaderButton
-													col={col as ColumnDef & { field: TenderSortField }}
+													col={col as ColumnDef & { field: ProcurementInquirySortField }}
 													sort={sort}
 													onSort={handleSort}
 												/>
@@ -624,7 +648,7 @@ export function TendersPage() {
 							<TableBody>
 								{isLoading
 									? SKELETON_KEYS.map((key) => (
-											<TableRow key={key} data-testid="tenders-skeleton-row">
+											<TableRow key={key} data-testid="procurement-inquiries-skeleton-row">
 												{COLUMNS.map((col) => (
 													<TableCell
 														key={col.label}
@@ -644,19 +668,19 @@ export function TendersPage() {
 												))}
 											</TableRow>
 										))
-									: items.map((tender, index) => (
-											<TenderRow
-												key={tender.id}
-												tender={tender}
+									: items.map((procurementInquiry, index) => (
+											<ProcurementInquiryRow
+												key={procurementInquiry.id}
+												procurementInquiry={procurementInquiry}
 												rowNumber={index + 1}
 												folders={folders}
-												onClick={() => handleRowClick(tender)}
+												onClick={() => handleRowClick(procurementInquiry)}
 												onArchive={handleArchive}
 												onRename={handleRename}
 												onMoveToFolder={handleMoveToFolder}
-												onDelete={setDeletingTender}
+												onDelete={setDeletingProcurementInquiry}
 												isArchiveView={isArchiveView}
-												isEditing={editingTenderId === tender.id}
+												isEditing={editingProcurementInquiryId === procurementInquiry.id}
 												onSaveRename={handleSaveRename}
 												onCancelRename={handleCancelRename}
 											/>
@@ -666,28 +690,28 @@ export function TendersPage() {
 					</div>
 				)}
 			</main>
-			<CreateTenderDrawer
+			<CreateProcurementInquiryDrawer
 				open={drawerOpen}
 				onOpenChange={setDrawerOpen}
 				onSubmit={(payload) => {
-					createTenderMutation.mutate(payload, {
-						onSuccess: ({ tender }) => {
-							toast.success(`Запрос ${tender.id} создан`);
+					createProcurementInquiryMutation.mutate(payload, {
+						onSuccess: ({ procurementInquiry }) => {
+							toast.success(`Запрос ${procurementInquiry.id} создан`);
 						},
 					});
 				}}
 			/>
-			{deletingTender && (
-				<AlertDialog open onOpenChange={(open) => !open && setDeletingTender(null)}>
+			{deletingProcurementInquiry && (
+				<AlertDialog open onOpenChange={(open) => !open && setDeletingProcurementInquiry(null)}>
 					<AlertDialogContent size="sm">
 						<AlertDialogHeader>
 							<AlertDialogTitle>Удалить запрос?</AlertDialogTitle>
 							<AlertDialogDescription className="text-pretty">
-								«{deletingTender.name}» будет удалён вместе с привязанными позициями.
+								«{deletingProcurementInquiry.name}» будет удалён вместе с привязанными позициями.
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
-							<AlertDialogCancel onClick={() => setDeletingTender(null)}>Отмена</AlertDialogCancel>
+							<AlertDialogCancel onClick={() => setDeletingProcurementInquiry(null)}>Отмена</AlertDialogCancel>
 							<AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
 								Удалить
 							</AlertDialogAction>

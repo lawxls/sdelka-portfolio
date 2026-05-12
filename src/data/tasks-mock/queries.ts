@@ -27,8 +27,8 @@ function applyFilters(tasks: Task[], params: TaskFilterParams): Task[] {
 	const q = params.q?.trim().toLowerCase();
 	return tasks.filter((t) => {
 		if (q && !t.name.toLowerCase().includes(q)) return false;
-		if (params.tender && t.tender.id !== params.tender) return false;
-		if (params.company && t.tender.companyId !== params.company) return false;
+		if (params.procurementInquiry && t.procurementInquiry.id !== params.procurementInquiry) return false;
+		if (params.company && t.procurementInquiry.companyId !== params.company) return false;
 		return true;
 	});
 }
@@ -41,7 +41,7 @@ function applySortIfAny(tasks: Task[], params: TaskFilterParams): Task[] {
 function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: string): BoardColumn {
 	const filterParams: TaskFilterParams = {
 		q: params.q,
-		tender: params.tender,
+		procurementInquiry: params.procurementInquiry,
 		company: params.company,
 		sort: params.sort,
 		dir: params.dir,
@@ -84,7 +84,7 @@ export async function fetchTasksMock(params: FetchTasksParams = {}): Promise<Tas
 	await delay();
 	const filterParams: TaskFilterParams = {
 		q: params.q,
-		tender: params.tender,
+		procurementInquiry: params.procurementInquiry,
 		company: params.company,
 		sort: params.sort,
 		dir: params.dir,

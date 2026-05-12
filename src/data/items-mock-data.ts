@@ -1,7 +1,7 @@
 import { delay, nextId, paginate } from "./mock-utils";
+import { _getProcurementInquiry, _isProcurementInquiryArchived } from "./procurement-inquiries-mock/store";
 import { SEED_ARCHIVED, SEED_ITEMS } from "./seeds/items";
 import { _addYourSupplier } from "./supplier-mock-data";
-import { _getTender, _isTenderArchived } from "./tenders-mock/store";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment } from "./types";
 
@@ -56,26 +56,26 @@ export interface FilterParams {
 	deviation?: string;
 	folder?: string;
 	company?: string;
-	tender?: string;
+	procurementInquiry?: string;
 	sort?: string;
 	dir?: string;
 	cursor?: string;
 	limit?: number;
 }
 
-function tenderFolderId(item: ProcurementItem): string | null {
-	if (!item.tenderId) return null;
-	return _getTender(item.tenderId)?.folderId ?? null;
+function procurementInquiryFolderId(item: ProcurementItem): string | null {
+	if (!item.procurementInquiryId) return null;
+	return _getProcurementInquiry(item.procurementInquiryId)?.folderId ?? null;
 }
 
-function tenderCompanyId(item: ProcurementItem): string | null {
-	if (!item.tenderId) return null;
-	return _getTender(item.tenderId)?.companyId ?? null;
+function procurementInquiryCompanyId(item: ProcurementItem): string | null {
+	if (!item.procurementInquiryId) return null;
+	return _getProcurementInquiry(item.procurementInquiryId)?.companyId ?? null;
 }
 
 function isEffectivelyArchived(item: ProcurementItem): boolean {
 	if (archivedIds.has(item.id)) return true;
-	if (item.tenderId && _isTenderArchived(item.tenderId)) return true;
+	if (item.procurementInquiryId && _isProcurementInquiryArchived(item.procurementInquiryId)) return true;
 	return false;
 }
 
@@ -83,7 +83,7 @@ function matchesFolder(item: ProcurementItem, folder: string | undefined, archiv
 	if (folder === "archive") return archived;
 	if (archived) return false;
 	if (folder === undefined || folder === "all") return true;
-	const folderId = tenderFolderId(item);
+	const folderId = procurementInquiryFolderId(item);
 	if (folder === "none") return folderId === null;
 	return folderId === folder;
 }
@@ -105,8 +105,8 @@ function applyFilters(items: ProcurementItem[], params: FilterParams): Procureme
 	const q = params.q?.trim().toLowerCase();
 	return items.filter((item) => {
 		if (!matchesFolder(item, params.folder, isEffectivelyArchived(item))) return false;
-		if (params.company && tenderCompanyId(item) !== params.company) return false;
-		if (params.tender && item.tenderId !== params.tender) return false;
+		if (params.company && procurementInquiryCompanyId(item) !== params.company) return false;
+		if (params.procurementInquiry && item.procurementInquiryId !== params.procurementInquiry) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
@@ -235,7 +235,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 	});
 	itemsStore = [...created, ...itemsStore];
 	// Seed the «Ваш поставщик» Supplier row for each newly-created item so it surfaces in
-	// the Поставщики/Предложения tabs immediately. No-op when the parent tender has no
+	// the Поставщики/Предложения tabs immediately. No-op when the parent inquiry has no
 	// currentSupplier or no INN.
 	for (const item of created) _addYourSupplier(item.id);
 	return { items: created, isAsync: false };
@@ -246,11 +246,11 @@ export async function exportItemsMock(
 ): Promise<{ blob: Blob; filename: string }> {
 	await delay();
 	const filtered = applyFilters(itemsStore, params);
-	const header = "id\tname\tstatus\ttenderId\tcurrentPrice\tbestPrice\tannualQuantity\n";
+	const header = "id\tname\tstatus\tprocurementInquiryId\tcurrentPrice\tbestPrice\tannualQuantity\n";
 	const rows = filtered
 		.map(
 			(i) =>
-				`${i.id}\t${i.name}\t${i.status}\t${i.tenderId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
+				`${i.id}\t${i.name}\t${i.status}\t${i.procurementInquiryId ?? ""}\t${i.currentPrice}\t${i.bestPrice ?? ""}\t${i.annualQuantity}`,
 		)
 		.join("\n");
 	const blob = new Blob([header + rows], {
@@ -261,16 +261,16 @@ export async function exportItemsMock(
 
 // --- Filter helpers for folder stats (used by folders-mock-data) ---
 
-/** Group active items by their parent tender's folder. Items whose parent
- * tender is archived (or item itself archived) are excluded. Items with no
- * tender — or whose tender has no folder — fall into the `null` bucket. */
+/** Group active items by their parent inquiry's folder. Items whose parent
+ * inquiry is archived (or item itself archived) are excluded. Items with no
+ * inquiry — or whose inquiry has no folder — fall into the `null` bucket. */
 export function _statsByFolder(company?: string): Map<string | null, number> {
 	const counts = new Map<string | null, number>();
 	for (const item of itemsStore) {
 		if (isEffectivelyArchived(item)) continue;
-		const tender = item.tenderId ? _getTender(item.tenderId) : null;
-		if (company && tender?.companyId !== company) continue;
-		const folderId = tender?.folderId ?? null;
+		const procurementInquiry = item.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
+		if (company && procurementInquiry?.companyId !== company) continue;
+		const folderId = procurementInquiry?.folderId ?? null;
 		counts.set(folderId, (counts.get(folderId) ?? 0) + 1);
 	}
 	return counts;
@@ -281,8 +281,8 @@ export function _archivedCount(company?: string): number {
 	for (const item of itemsStore) {
 		if (!isEffectivelyArchived(item)) continue;
 		if (company) {
-			const tender = item.tenderId ? _getTender(item.tenderId) : null;
-			if (tender?.companyId !== company) continue;
+			const procurementInquiry = item.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
+			if (procurementInquiry?.companyId !== company) continue;
 		}
 		count += 1;
 	}

@@ -23,8 +23,8 @@ import {
 	type TaskFilterParams,
 	type TaskStatus,
 } from "@/data/task-types";
+import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useTasksCount, useTasksList, useUpdateTaskStatus } from "@/data/use-tasks";
-import { useTenders } from "@/data/use-tenders";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMountEffect } from "@/hooks/use-mount-effect";
@@ -175,7 +175,7 @@ function downloadTasksCsv(tasks: Task[]) {
 	const header = ["Вопрос", "Запрос", "Назначен", "Количество", "Дедлайн", "Дата и время создания"];
 	const rows = tasks.map((t) => [
 		csvEscape(t.name),
-		csvEscape(t.tender.name),
+		csvEscape(t.procurementInquiry.name),
 		csvEscape(formatAssigneeName(t.assignee)),
 		String(t.questionCount),
 		formatDayMonthShort(t.deadlineAt),
@@ -193,12 +193,12 @@ function downloadTasksCsv(tasks: Task[]) {
 	URL.revokeObjectURL(url);
 }
 
-interface TenderFilterPopoverProps {
-	activeTender?: string;
-	onSelect: (tenderId: string | undefined) => void;
+interface ProcurementInquiryFilterPopoverProps {
+	activeProcurementInquiry?: string;
+	onSelect: (procurementInquiryId: string | undefined) => void;
 }
 
-function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProps) {
+function ProcurementInquiryFilterPopover({ activeProcurementInquiry, onSelect }: ProcurementInquiryFilterPopoverProps) {
 	const [searchInput, setSearchInput] = useState("");
 	const [effectiveSearch, setEffectiveSearch] = useState("");
 	const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -211,9 +211,12 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 		debounceRef.current = setTimeout(() => setEffectiveSearch(next), 200);
 	}
 
-	const query = useTenders({ q: effectiveSearch || undefined, limit: 25 });
-	const tenders = query.items;
-	const activeTenderName = useMemo(() => tenders.find((t) => t.id === activeTender)?.name, [tenders, activeTender]);
+	const query = useProcurementInquiries({ q: effectiveSearch || undefined, limit: 25 });
+	const procurementInquiries = query.items;
+	const activeProcurementInquiryName = useMemo(
+		() => procurementInquiries.find((t) => t.id === activeProcurementInquiry)?.name,
+		[procurementInquiries, activeProcurementInquiry],
+	);
 
 	const sentinelRef = useIntersectionObserver(() => {
 		if (query.hasNextPage && !query.isFetchingNextPage) query.loadMore();
@@ -226,19 +229,23 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 					<PopoverTrigger asChild>
 						<button
 							type="button"
-							aria-label={activeTenderName ? `Фильтр: ${activeTenderName}` : "Фильтр по запросу"}
+							aria-label={
+								activeProcurementInquiryName ? `Фильтр: ${activeProcurementInquiryName}` : "Фильтр по запросу"
+							}
 							className={cn(
 								"relative inline-flex h-8 items-center gap-1.5 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm transition-colors",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-								activeTender ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
+								activeProcurementInquiry ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted",
 							)}
 						>
 							<ListFilter className="size-4" aria-hidden="true" />
-							{activeTender && <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />}
+							{activeProcurementInquiry && <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />}
 						</button>
 					</PopoverTrigger>
 				</TooltipTrigger>
-				<TooltipContent>{activeTenderName ? `Запрос: ${activeTenderName}` : "Фильтр по запросу"}</TooltipContent>
+				<TooltipContent>
+					{activeProcurementInquiryName ? `Запрос: ${activeProcurementInquiryName}` : "Фильтр по запросу"}
+				</TooltipContent>
 			</Tooltip>
 			<PopoverContent align="end" className="w-72 p-0">
 				<div className="border-b p-2">
@@ -252,8 +259,8 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 						className="h-8"
 					/>
 				</div>
-				<div className="flex max-h-72 flex-col overflow-y-auto p-1" data-testid="tender-filter-list">
-					{activeTender && (
+				<div className="flex max-h-72 flex-col overflow-y-auto p-1" data-testid="procurement-inquiry-filter-list">
+					{activeProcurementInquiry && (
 						<>
 							<button
 								type="button"
@@ -272,24 +279,24 @@ function TenderFilterPopover({ activeTender, onSelect }: TenderFilterPopoverProp
 							<Skeleton className="h-7 w-5/6" />
 						</div>
 					)}
-					{!query.isLoading && tenders.length === 0 && (
+					{!query.isLoading && procurementInquiries.length === 0 && (
 						<div className="px-2 py-3 text-sm text-muted-foreground">Ничего не найдено</div>
 					)}
-					{tenders.map((tender) => {
-						const isActive = activeTender === tender.id;
+					{procurementInquiries.map((procurementInquiry) => {
+						const isActive = activeProcurementInquiry === procurementInquiry.id;
 						return (
 							<button
-								key={tender.id}
+								key={procurementInquiry.id}
 								type="button"
 								aria-pressed={isActive}
-								onClick={() => onSelect(isActive ? undefined : tender.id)}
+								onClick={() => onSelect(isActive ? undefined : procurementInquiry.id)}
 								className={cn(
 									"truncate rounded-md px-2 py-1.5 text-left text-sm transition-colors",
 									"hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
 									isActive && "bg-accent font-medium text-accent-foreground",
 								)}
 							>
-								{tender.name}
+								{procurementInquiry.name}
 							</button>
 						);
 					})}
@@ -353,7 +360,9 @@ function TaskTableRow({ task, isSelected, onToggleSelect, onRowClick, onArchive,
 			<TableCell className="w-[1%] font-medium">
 				<div className="max-w-[440px]">
 					<div className="truncate">{task.name}</div>
-					<div className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{task.tender.name}</div>
+					<div className="mt-0.5 truncate text-xs font-normal text-muted-foreground">
+						{task.procurementInquiry.name}
+					</div>
 				</div>
 			</TableCell>
 			<TableCell className="text-center">
@@ -392,7 +401,7 @@ export function TasksPage() {
 
 	const taskId = searchParams.get("task");
 	const search = searchParams.get("q") ?? "";
-	const activeTender = searchParams.get("tender") ?? undefined;
+	const activeProcurementInquiry = searchParams.get("procurementInquiry") ?? undefined;
 	const statusFilter = parseStatusFilter(searchParams.get("status"));
 	const sort = parseSort(searchParams);
 
@@ -423,8 +432,10 @@ export function TasksPage() {
 		setSelectedIds(new Set());
 	}
 
-	function setTenderFilter(tender: string | undefined) {
-		updateParams((p) => (tender ? p.set("tender", tender) : p.delete("tender")));
+	function setProcurementInquiryFilter(procurementInquiry: string | undefined) {
+		updateParams((p) =>
+			procurementInquiry ? p.set("procurementInquiry", procurementInquiry) : p.delete("procurementInquiry"),
+		);
 		setSelectedIds(new Set());
 	}
 
@@ -456,14 +467,14 @@ export function TasksPage() {
 
 	const listParams: TaskFilterParams = {
 		...(search && { q: search }),
-		...(activeTender && { tender: activeTender }),
+		...(activeProcurementInquiry && { procurementInquiry: activeProcurementInquiry }),
 	};
 
 	const activeStatuses = STATUS_FILTER_TO_STATUSES[statusFilter];
 
 	const query = useTasksList({
 		q: listParams.q,
-		tender: listParams.tender,
+		procurementInquiry: listParams.procurementInquiry,
 		statuses: activeStatuses,
 	});
 
@@ -477,8 +488,16 @@ export function TasksPage() {
 
 	const sentinelRef = useIntersectionObserver(query.loadMore, { root: scrollContainerRef.current });
 
-	const completedCount = useTasksCount({ q: listParams.q, tender: listParams.tender, statuses: ["completed"] });
-	const archivedCount = useTasksCount({ q: listParams.q, tender: listParams.tender, statuses: ["archived"] });
+	const completedCount = useTasksCount({
+		q: listParams.q,
+		procurementInquiry: listParams.procurementInquiry,
+		statuses: ["completed"],
+	});
+	const archivedCount = useTasksCount({
+		q: listParams.q,
+		procurementInquiry: listParams.procurementInquiry,
+		statuses: ["archived"],
+	});
 
 	const allSelected = tasks.length > 0 && tasks.every((t) => selectedIds.has(t.id));
 
@@ -598,7 +617,10 @@ export function TasksPage() {
 							active={statusFilter === "archived"}
 							onClick={() => setStatusFilter(statusFilter === "archived" ? "active" : "archived")}
 						/>
-						<TenderFilterPopover activeTender={activeTender} onSelect={setTenderFilter} />
+						<ProcurementInquiryFilterPopover
+							activeProcurementInquiry={activeProcurementInquiry}
+							onSelect={setProcurementInquiryFilter}
+						/>
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button variant="ghost" size="icon-sm" aria-label="Скачать таблицу" onClick={handleDownload}>

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
 import { useCheckEmail, useRegister } from "@/data/use-session";
-import { digitsOnly } from "@/lib/format";
 
 type Stage = "email" | "details" | "confirmation";
 
@@ -19,7 +18,6 @@ export function RegisterPage() {
 	const [lastName, setLastName] = useState("");
 	const [patronymic, setPatronymic] = useState("");
 	const [phone, setPhone] = useState("");
-	const [inn, setInn] = useState("");
 	const [password, setPassword] = useState("");
 	const [passwordConfirm, setPasswordConfirm] = useState("");
 
@@ -67,7 +65,6 @@ export function RegisterPage() {
 				last_name: lastName,
 				patronymic: patronymic || undefined,
 				phone,
-				inn,
 			});
 			setStage("confirmation");
 		} catch (err: unknown) {
@@ -171,18 +168,6 @@ export function RegisterPage() {
 						/>
 						{fieldErrors.phone && <p className="mt-1 text-xs text-destructive">{fieldErrors.phone}</p>}
 					</div>
-
-					<FloatingInput
-						label="ИНН компании"
-						name="inn"
-						value={inn}
-						onChange={(e) => setInn(digitsOnly(e.target.value))}
-						error={fieldErrors.inn}
-						inputMode="numeric"
-						maxLength={12}
-						autoComplete="off"
-						required
-					/>
 
 					<div className="grid grid-cols-2 gap-3">
 						<FloatingInput

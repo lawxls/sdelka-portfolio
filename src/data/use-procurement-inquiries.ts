@@ -1,12 +1,15 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useTendersClient } from "./clients-context";
-import type { ListTendersParams, ProcurementInquiry } from "./domains/tenders";
+import { useProcurementInquiriesClient } from "./clients-context";
+import type { ListProcurementInquiriesParams, ProcurementInquiry } from "./domains/procurement-inquiries";
 
-export function useTenders(params: ListTendersParams = {}, options: { enabled?: boolean } = {}) {
-	const client = useTendersClient();
+export function useProcurementInquiries(
+	params: ListProcurementInquiriesParams = {},
+	options: { enabled?: boolean } = {},
+) {
+	const client = useProcurementInquiriesClient();
 	const query = useInfiniteQuery({
-		queryKey: ["tenders", params] as const,
+		queryKey: ["procurementInquiries", params] as const,
 		queryFn: ({ pageParam }) => client.list({ ...params, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -26,39 +29,39 @@ export function useTenders(params: ListTendersParams = {}, options: { enabled?: 
 	};
 }
 
-export function useTender(slug: string | null) {
-	const client = useTendersClient();
+export function useProcurementInquiry(slug: string | null) {
+	const client = useProcurementInquiriesClient();
 	return useQuery({
-		queryKey: ["tenders", "detail", slug] as const,
+		queryKey: ["procurementInquiries", "detail", slug] as const,
 		queryFn: () => client.get(slug as string),
 		enabled: slug !== null,
 	});
 }
 
-interface UpdateTenderVars {
+interface UpdateProcurementInquiryVars {
 	id: string;
 	patch: Partial<ProcurementInquiry>;
 }
 
-export function useUpdateTender() {
-	const client = useTendersClient();
+export function useUpdateProcurementInquiry() {
+	const client = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ id, patch }: UpdateTenderVars) => client.update(id, patch),
+		mutationFn: ({ id, patch }: UpdateProcurementInquiryVars) => client.update(id, patch),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 		},
 		onError: () => toast.error("Не удалось обновить запрос"),
 	});
 }
 
-export function useDeleteTender() {
-	const client = useTendersClient();
+export function useDeleteProcurementInquiry() {
+	const client = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (id: string) => client.delete(id),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["tenders"] });
+			queryClient.invalidateQueries({ queryKey: ["procurementInquiries"] });
 			queryClient.invalidateQueries({ queryKey: ["items"] });
 		},
 		onError: () => toast.error("Не удалось удалить запрос"),

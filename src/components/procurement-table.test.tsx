@@ -320,55 +320,72 @@ const testFolders: Folder[] = [
 	{ id: "f-2", name: "Стройматериалы", color: "green" },
 ];
 
-const itemsWithTenders: ProcurementItem[] = [
-	{ ...mockItems[0], tenderId: "T-1" },
-	{ ...mockItems[1], tenderId: "T-no-folder" },
-	{ ...mockItems[2], tenderId: "T-2" },
+const itemsWithProcurementInquiries: ProcurementItem[] = [
+	{ ...mockItems[0], procurementInquiryId: "T-1" },
+	{ ...mockItems[1], procurementInquiryId: "T-no-folder" },
+	{ ...mockItems[2], procurementInquiryId: "T-2" },
 ];
 
-const tenderMap = {
+const procurementInquiryMap = {
 	"T-1": { companyId: "company-1", folderId: "f-1" },
 	"T-no-folder": { companyId: "company-1", folderId: null },
 	"T-2": { companyId: "company-1", folderId: "f-2" },
 };
 
 describe("ProcurementTable folder badges", () => {
-	test("renders folder badge for items whose parent tender has a folder", () => {
+	test("renders folder badge for items whose parent inquiry has a folder", () => {
 		renderWithTooltip(
-			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+			<ProcurementTable
+				{...defaultProps}
+				items={itemsWithProcurementInquiries}
+				folders={testFolders}
+				procurementInquiryMap={procurementInquiryMap}
+			/>,
 		);
 		const badge = screen.getByTestId("folder-badge-1");
 		expect(badge).toBeInTheDocument();
 		expect(badge.textContent).toContain("Металлопрокат");
 	});
 
-	test("does not render badge when parent tender has no folder", () => {
+	test("does not render badge when parent inquiry has no folder", () => {
 		renderWithTooltip(
-			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+			<ProcurementTable
+				{...defaultProps}
+				items={itemsWithProcurementInquiries}
+				folders={testFolders}
+				procurementInquiryMap={procurementInquiryMap}
+			/>,
 		);
 		expect(screen.queryByTestId("folder-badge-2")).not.toBeInTheDocument();
 	});
 
 	test("badge shows correct folder color", () => {
 		renderWithTooltip(
-			<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} tenderMap={tenderMap} />,
+			<ProcurementTable
+				{...defaultProps}
+				items={itemsWithProcurementInquiries}
+				folders={testFolders}
+				procurementInquiryMap={procurementInquiryMap}
+			/>,
 		);
 		const badge = screen.getByTestId("folder-badge-1");
 		const dot = badge.querySelector("span[aria-hidden]") as HTMLElement;
 		expect(dot.style.backgroundColor).toBe("var(--folder-blue)");
 	});
 
-	test("does not render badges when tenderMap prop is omitted", () => {
-		renderWithTooltip(<ProcurementTable {...defaultProps} items={itemsWithTenders} folders={testFolders} />);
+	test("does not render badges when procurementInquiryMap prop is omitted", () => {
+		renderWithTooltip(
+			<ProcurementTable {...defaultProps} items={itemsWithProcurementInquiries} folders={testFolders} />,
+		);
 		expect(screen.queryByTestId("folder-badge-1")).not.toBeInTheDocument();
 	});
 });
 
 const contextMenuProps = {
 	...defaultProps,
-	items: itemsWithTenders,
+	items: itemsWithProcurementInquiries,
 	folders: testFolders,
-	tenderMap,
+	procurementInquiryMap,
 	onDeleteItem: vi.fn(),
 	onRenameItem: vi.fn(),
 };
@@ -430,9 +447,9 @@ describe("ProcurementTable context menu", () => {
 		renderWithTooltip(
 			<ProcurementTable
 				{...defaultProps}
-				items={itemsWithTenders}
+				items={itemsWithProcurementInquiries}
 				folders={testFolders}
-				tenderMap={tenderMap}
+				procurementInquiryMap={procurementInquiryMap}
 				onRenameItem={vi.fn()}
 				onDeleteItem={vi.fn()}
 			/>,

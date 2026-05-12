@@ -6,9 +6,9 @@ export type ProcurementStatus = "searching" | "negotiating" | "completed" | "rea
  * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
 export type DisplayStatus = ProcurementStatus | "searching_completed";
 
-/** Tender display status — pure rollup of item DisplayStatus across one tender.
+/** ProcurementInquiry display status — pure rollup of item DisplayStatus across one inquiry.
  * Same vocabulary as items, no separate transition UI. */
-export type TenderStatus = DisplayStatus;
+export type ProcurementInquiryStatus = DisplayStatus;
 
 export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching: "Ищем поставщиков",
@@ -18,9 +18,12 @@ export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	ready_for_analytics: "Готово к аналитике",
 };
 
-/** Tender statuses while suppliers are still being sourced — RFQ email/auto-send
+/** ProcurementInquiry statuses while suppliers are still being sourced — RFQ email/auto-send
  * are still tunable here; once negotiations begin, the email is locked. */
-export const RFQ_EDITABLE_STATUSES: ReadonlySet<TenderStatus> = new Set(["searching", "searching_completed"]);
+export const RFQ_EDITABLE_STATUSES: ReadonlySet<ProcurementInquiryStatus> = new Set([
+	"searching",
+	"searching_completed",
+]);
 
 /** Item statuses that can be imported into a fresh inquiry via «Выбрать позиции». */
 export const PICKABLE_ITEM_STATUSES: ReadonlySet<ProcurementStatus> = new Set(["ready_for_analytics", "completed"]);
@@ -107,9 +110,9 @@ export interface ProcurementItem {
 	currentPrice: number | null;
 	bestPrice: number | null;
 	averagePrice: number | null;
-	/** Parent tender slug. Items belong to exactly one tender. Company, folder,
-	 * current supplier, and all shared step1 meta live on the parent tender. */
-	tenderId?: string;
+	/** Parent inquiry slug. Items belong to exactly one inquiry. Company, folder,
+	 * current supplier, and all shared step1 meta live on the parent inquiry. */
+	procurementInquiryId?: string;
 	description?: string;
 	unit?: Unit;
 	quantityPerDelivery?: number;
@@ -124,12 +127,12 @@ export interface ProcurementItem {
 /** Запрос — primary procurement container that bundles a 1:N collection of
  * `ProcurementItem`s sharing one budget, deadline, company, and category.
  * Slug `id` (e.g. `T-001`) doubles as URL param. */
-export interface TenderEmailDraft {
+export interface ProcurementInquiryEmailDraft {
 	subject: string;
 	body: string;
 }
 
-export type TenderSendMode = "auto" | "manual";
+export type ProcurementInquirySendMode = "auto" | "manual";
 
 export interface ProcurementInquiry {
 	id: string;
@@ -141,8 +144,8 @@ export interface ProcurementInquiry {
 	/** Required deadline ISO date (YYYY-MM-DD or full ISO). */
 	deadline: string;
 	createdAt: string;
-	/** Archive flag — archiving cascades to items: archived tender's items
-	 * disappear from /positions non-archive views (see archiveTenderCascade
+	/** Archive flag — archiving cascades to items: archived inquiry's items
+	 * disappear from /positions non-archive views (see archiveProcurementInquiryCascade
 	 * operation). */
 	isArchived?: boolean;
 	currentSupplier?: CurrentSupplier;
@@ -155,9 +158,9 @@ export interface ProcurementInquiry {
 	additionalInfo?: string;
 	attachedFiles?: AttachedFile[];
 	/** RFQ email draft sent to suppliers when an RFQ is dispatched. */
-	email?: TenderEmailDraft;
+	email?: ProcurementInquiryEmailDraft;
 	/** Whether RFQ emails are dispatched automatically once suppliers are found. */
-	sendMode?: TenderSendMode;
+	sendMode?: ProcurementInquirySendMode;
 }
 
 export interface Folder {
@@ -213,10 +216,10 @@ export interface NewItemInput {
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
 	generatedAnswers?: GeneratedAnswer[];
-	/** Parent tender slug. Set by `createTenderWithItems` so the new items
+	/** Parent inquiry slug. Set by `createProcurementInquiryWithItems` so the new items
 	 * inherit company / folder / supplier context from the freshly-created
-	 * tender. Direct callers (legacy import flows) leave it unset. */
-	tenderId?: string;
+	 * inquiry. Direct callers (legacy import flows) leave it unset. */
+	procurementInquiryId?: string;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. Null when no current price recorded. */
@@ -260,11 +263,18 @@ export interface Address {
 
 export type PermissionLevel = "none" | "view" | "edit";
 
-export const PERMISSION_MODULE_KEYS = ["tenders", "positions", "tasks", "companies", "employees", "emails"] as const;
+export const PERMISSION_MODULE_KEYS = [
+	"procurementInquiries",
+	"positions",
+	"tasks",
+	"companies",
+	"employees",
+	"emails",
+] as const;
 export type PermissionModuleKey = (typeof PERMISSION_MODULE_KEYS)[number];
 
 export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
-	tenders: "Запросы",
+	procurementInquiries: "Запросы",
 	positions: "Позиции",
 	tasks: "Вопросы",
 	companies: "Компании",
@@ -275,7 +285,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 export interface EmployeePermissions {
 	id: string;
 	employeeId: string;
-	tenders: PermissionLevel;
+	procurementInquiries: PermissionLevel;
 	positions: PermissionLevel;
 	tasks: PermissionLevel;
 	companies: PermissionLevel;

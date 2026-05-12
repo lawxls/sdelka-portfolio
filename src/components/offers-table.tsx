@@ -69,15 +69,15 @@ interface OffersTableProps {
 	hasNextPage?: boolean;
 	loadMore?: () => void;
 	isFetchingNextPage?: boolean;
-	/** When the parent tender holds multiple positions, render the «ТСО / ЕД.»
+	/** When the parent inquiry holds multiple positions, render the «ТСО / ЕД.»
 	 * cell as `X/N` with a tooltip listing every position's per-supplier ТСО.
 	 * Single-position contexts pass `undefined`. */
-	tenderItems?: readonly ProcurementItem[];
+	procurementInquiryItems?: readonly ProcurementItem[];
 	/** Cross-item TCO lookup keyed by supplier identity (`inn || companyName`),
 	 * mapping each `itemId` to that supplier's ТСО / ЕД. for that position.
-	 * Built by the tender drawer parent and only consumed when `tenderItems` has
+	 * Built by the inquiry drawer parent and only consumed when `procurementInquiryItems` has
 	 * more than one entry. */
-	tenderQuotesByIdentity?: Map<string, Map<string, number>>;
+	procurementInquiryQuotesByIdentity?: Map<string, Map<string, number>>;
 	/** Item IDs the user has selected from the «Позиция» filter section in the
 	 * popover. Used by the consolidated multi-item panel to narrow rows to
 	 * suppliers that quoted at least one of the selected items. */
@@ -150,8 +150,8 @@ export function OffersTable({
 	hasNextPage,
 	loadMore,
 	isFetchingNextPage,
-	tenderItems,
-	tenderQuotesByIdentity,
+	procurementInquiryItems,
+	procurementInquiryQuotesByIdentity,
 	activeItemIds,
 	onItemFilter,
 	showSavings = true,
@@ -172,15 +172,15 @@ export function OffersTable({
 		return map;
 	}, [suppliers]);
 
-	const isMultiItemTender = (tenderItems?.length ?? 0) > 1;
-	const showItemFilter = isMultiItemTender && !!onItemFilter;
+	const isMultiItemProcurementInquiry = (procurementInquiryItems?.length ?? 0) > 1;
+	const showItemFilter = isMultiItemProcurementInquiry && !!onItemFilter;
 	const activeItemIdsSet = useMemo(() => new Set(activeItemIds ?? []), [activeItemIds]);
 	const [itemFilterQuery, setItemFilterQuery] = useState("");
-	const filteredTenderItems = useMemo(() => {
+	const filteredProcurementInquiryItems = useMemo(() => {
 		const q = itemFilterQuery.trim().toLowerCase();
-		if (!q) return tenderItems ?? [];
-		return (tenderItems ?? []).filter((it) => it.name.toLowerCase().includes(q));
-	}, [tenderItems, itemFilterQuery]);
+		if (!q) return procurementInquiryItems ?? [];
+		return (procurementInquiryItems ?? []).filter((it) => it.name.toLowerCase().includes(q));
+	}, [procurementInquiryItems, itemFilterQuery]);
 
 	const rowsCount = totalCount;
 
@@ -254,10 +254,10 @@ export function OffersTable({
 												/>
 											</div>
 											<div className="flex max-h-44 flex-col gap-0.5 overflow-y-auto pt-0.5">
-												{filteredTenderItems.length === 0 ? (
+												{filteredProcurementInquiryItems.length === 0 ? (
 													<div className="px-3 py-2 text-xs text-muted-foreground">Ничего не найдено</div>
 												) : (
-													filteredTenderItems.map((it) => {
+													filteredProcurementInquiryItems.map((it) => {
 														const active = activeItemIdsSet.has(it.id);
 														return (
 															<button
@@ -390,10 +390,10 @@ export function OffersTable({
 			sortable: true,
 			align: "right",
 			cell: (s) => {
-				if (!isMultiItemTender) return formatCurrency(s.tco);
-				const perItem = tenderQuotesByIdentity?.get(supplierIdentity(s));
+				if (!isMultiItemProcurementInquiry) return formatCurrency(s.tco);
+				const perItem = procurementInquiryQuotesByIdentity?.get(supplierIdentity(s));
 				const quoted = perItem?.size ?? 0;
-				const total = tenderItems?.length ?? 0;
+				const total = procurementInquiryItems?.length ?? 0;
 				return (
 					<Tooltip>
 						<TooltipTrigger asChild>
@@ -413,7 +413,7 @@ export function OffersTable({
 							className="block max-w-[min(28rem,90vw)] p-2"
 						>
 							<ul className="flex flex-col gap-1 text-xs">
-								{(tenderItems ?? []).map((it) => {
+								{(procurementInquiryItems ?? []).map((it) => {
 									const tco = perItem?.get(it.id);
 									return (
 										<li key={it.id} className="flex items-baseline justify-between gap-6">

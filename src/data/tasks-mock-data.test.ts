@@ -17,7 +17,7 @@ function makeStoredTask(id: string, overrides: Partial<Task> = {}): Task {
 		id,
 		name: `Task ${id}`,
 		status: "assigned",
-		tender: { id: "T-001", name: "Tender", companyId: "company-1" },
+		procurementInquiry: { id: "T-001", name: "ProcurementInquiry", companyId: "company-1" },
 		assignee: {
 			id: "user-1",
 			firstName: "Иван",
@@ -76,20 +76,20 @@ describe("fetchTaskBoardMock", () => {
 		expect(result.assigned?.results[0].id).toBe("t1");
 	});
 
-	it("filters by tender id", async () => {
+	it("filters by inquiry id", async () => {
 		_setTasks([
-			makeStoredTask("t1", { status: "assigned", tender: { id: "T-A", name: "A", companyId: "c1" } }),
-			makeStoredTask("t2", { status: "assigned", tender: { id: "T-B", name: "B", companyId: "c1" } }),
+			makeStoredTask("t1", { status: "assigned", procurementInquiry: { id: "T-A", name: "A", companyId: "c1" } }),
+			makeStoredTask("t2", { status: "assigned", procurementInquiry: { id: "T-B", name: "B", companyId: "c1" } }),
 		]);
-		const result = await fetchTaskBoardMock({ tender: "T-A" });
+		const result = await fetchTaskBoardMock({ procurementInquiry: "T-A" });
 		expect(result.assigned?.results).toHaveLength(1);
 		expect(result.assigned?.results[0].id).toBe("t1");
 	});
 
 	it("filters by company id", async () => {
 		_setTasks([
-			makeStoredTask("t1", { status: "assigned", tender: { id: "T-1", name: "A", companyId: "c1" } }),
-			makeStoredTask("t2", { status: "assigned", tender: { id: "T-2", name: "B", companyId: "c2" } }),
+			makeStoredTask("t1", { status: "assigned", procurementInquiry: { id: "T-1", name: "A", companyId: "c1" } }),
+			makeStoredTask("t2", { status: "assigned", procurementInquiry: { id: "T-2", name: "B", companyId: "c2" } }),
 		]);
 		const result = await fetchTaskBoardMock({ company: "c2" });
 		expect(result.assigned?.results).toHaveLength(1);
@@ -279,14 +279,14 @@ describe("deleteTaskAttachmentMock", () => {
 });
 
 describe("seed coherence", () => {
-	it("references real tender ids from tenders seed", async () => {
+	it("references real inquiry ids from inquiries seed", async () => {
 		_resetTasksStore();
 		const all = _getAllTasks();
-		const tenderIds = new Set(all.map((t) => t.tender.id));
-		expect(tenderIds.has("T-001")).toBe(true);
-		expect(tenderIds.has("T-002")).toBe(true);
-		expect(tenderIds.has("T-003")).toBe(true);
-		expect(tenderIds.has("T-004")).toBe(true);
+		const procurementInquiryIds = new Set(all.map((t) => t.procurementInquiry.id));
+		expect(procurementInquiryIds.has("T-001")).toBe(true);
+		expect(procurementInquiryIds.has("T-002")).toBe(true);
+		expect(procurementInquiryIds.has("T-003")).toBe(true);
+		expect(procurementInquiryIds.has("T-004")).toBe(true);
 	});
 
 	it("distributes seed tasks across all four statuses", async () => {

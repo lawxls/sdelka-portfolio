@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { CreateTenderInput } from "@/data/domains/tenders";
+import type { CreateProcurementInquiryInput } from "@/data/domains/procurement-inquiries";
 import type { GeneratedAnswer, NewItemInput, Unit, UnloadingType } from "@/data/types";
 import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
-import { buildEmailVariant } from "./tender-email-templates";
+import { buildEmailVariant } from "./procurement-inquiry-email-templates";
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -33,7 +33,7 @@ interface Step1State {
 	cashPaymentAllowed: boolean;
 	analoguesNotAllowed: boolean;
 	additionalInfo: string;
-	copySuppliersFromTenderId: string | null;
+	copySuppliersFromProcurementInquiryId: string | null;
 }
 
 interface Step2Answer {
@@ -87,7 +87,7 @@ function defaultStep1(initialDeadline: string): Step1State {
 		cashPaymentAllowed: false,
 		analoguesNotAllowed: false,
 		additionalInfo: "",
-		copySuppliersFromTenderId: null,
+		copySuppliersFromProcurementInquiryId: null,
 	};
 }
 
@@ -149,7 +149,7 @@ function buildNewItemInput(position: PositionDraft, step2: Step2State): NewItemI
 	return payload;
 }
 
-function generateTenderName(step1: Step1State): string {
+function generateProcurementInquiryName(step1: Step1State): string {
 	const firstNamed = step1.positions.find((p) => p.name.trim() !== "");
 	if (firstNamed) {
 		const base = firstNamed.name.trim();
@@ -159,29 +159,29 @@ function generateTenderName(step1: Step1State): string {
 	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
 }
 
-function buildTenderInput(step1: Step1State, step3: Step3State): CreateTenderInput {
-	const tender: CreateTenderInput = {
-		name: generateTenderName(step1),
+function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): CreateProcurementInquiryInput {
+	const procurementInquiry: CreateProcurementInquiryInput = {
+		name: generateProcurementInquiryName(step1),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
 		budget: 0,
 		deadline: step1.deadline,
 	};
 
-	if (step1.addressIds.length > 0) tender.addressIds = step1.addressIds;
-	if (step1.unloading) tender.unloading = step1.unloading;
-	if (step1.cashPaymentAllowed) tender.paymentMethod = "cash";
-	tender.analoguesAllowed = !step1.analoguesNotAllowed;
+	if (step1.addressIds.length > 0) procurementInquiry.addressIds = step1.addressIds;
+	if (step1.unloading) procurementInquiry.unloading = step1.unloading;
+	if (step1.cashPaymentAllowed) procurementInquiry.paymentMethod = "cash";
+	procurementInquiry.analoguesAllowed = !step1.analoguesNotAllowed;
 	const info = step1.additionalInfo.trim();
-	if (info) tender.additionalInfo = info;
+	if (info) procurementInquiry.additionalInfo = info;
 	const aggregatedFiles = step1.positions.flatMap((p) => p.files);
 	if (aggregatedFiles.length > 0) {
-		tender.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
+		procurementInquiry.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
 	}
 
 	const supplierInn = step1.positions.map((p) => p.currentSupplierInn.trim()).find((inn) => inn !== "");
 	if (supplierInn) {
-		tender.currentSupplier = {
+		procurementInquiry.currentSupplier = {
 			companyName: "",
 			inn: supplierInn,
 			deferralDays: 0,
@@ -191,21 +191,21 @@ function buildTenderInput(step1: Step1State, step3: Step3State): CreateTenderInp
 
 	const subject = step3.subject.trim();
 	const body = step3.body.trim();
-	if (subject || body) tender.email = { subject, body };
+	if (subject || body) procurementInquiry.email = { subject, body };
 
-	tender.sendMode = step3.autoSend ? "auto" : "manual";
+	procurementInquiry.sendMode = step3.autoSend ? "auto" : "manual";
 
-	return tender;
+	return procurementInquiry;
 }
 
-export interface CreateTenderPayload {
-	tender: CreateTenderInput;
+export interface CreateProcurementInquiryPayload {
+	procurementInquiry: CreateProcurementInquiryInput;
 	items: NewItemInput[];
 }
 
 type SharedStep1Key = Exclude<keyof Step1State, "positions">;
 
-export function useCreateTenderForm() {
+export function useCreateProcurementInquiryForm() {
 	const [initialDeadline] = useState(defaultDeadline);
 	const [step, setStep] = useState<WizardStep>(1);
 	const [step1, setStep1] = useState<Step1State>(() => defaultStep1(initialDeadline));
@@ -376,7 +376,7 @@ export function useCreateTenderForm() {
 		step1.cashPaymentAllowed ||
 		step1.analoguesNotAllowed ||
 		step1.additionalInfo !== "" ||
-		step1.copySuppliersFromTenderId !== null ||
+		step1.copySuppliersFromProcurementInquiryId !== null ||
 		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText) ||
 		step3.autoSend ||
 		step3.generated;
@@ -386,10 +386,10 @@ export function useCreateTenderForm() {
 		return !!last && last.name.trim() !== "";
 	})();
 
-	function toPayload(): CreateTenderPayload {
-		const tender = buildTenderInput(step1, step3);
+	function toPayload(): CreateProcurementInquiryPayload {
+		const procurementInquiry = buildProcurementInquiryInput(step1, step3);
 		const items = step1.positions.map((p) => buildNewItemInput(p, step2));
-		return { tender, items };
+		return { procurementInquiry, items };
 	}
 
 	return {

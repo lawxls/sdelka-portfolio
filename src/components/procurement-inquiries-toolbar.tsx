@@ -1,12 +1,12 @@
 import { Archive, ArchiveRestore, EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import { CategoriesPopover } from "@/components/categories-popover";
-import { TendersFiltersPopover } from "@/components/tenders-filters-popover";
+import { ProcurementInquiriesFiltersPopover } from "@/components/procurement-inquiries-filters-popover";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { CompanySummary, Folder, TenderStatus } from "@/data/types";
+import type { CompanySummary, Folder, ProcurementInquiryStatus } from "@/data/types";
 import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 
 export type DeadlineFilter = "all" | "overdue" | "soon";
 
-interface TendersToolbarProps {
-	status: TenderStatus | undefined;
-	onStatusChange: (status: TenderStatus | undefined) => void;
+interface ProcurementInquiriesToolbarProps {
+	status: ProcurementInquiryStatus | undefined;
+	onStatusChange: (status: ProcurementInquiryStatus | undefined) => void;
 	deadline: DeadlineFilter;
 	onDeadlineChange: (deadline: DeadlineFilter) => void;
 	deadlineFrom?: string;
@@ -40,10 +40,10 @@ interface TendersToolbarProps {
 	showCompanies?: boolean;
 	isArchiveView?: boolean;
 	onArchiveToggle?: () => void;
-	onCreateTender?: () => void;
+	onCreateProcurementInquiry?: () => void;
 }
 
-export function TendersToolbar({
+export function ProcurementInquiriesToolbar({
 	status,
 	onStatusChange,
 	deadline,
@@ -69,8 +69,8 @@ export function TendersToolbar({
 	showCompanies,
 	isArchiveView = false,
 	onArchiveToggle,
-	onCreateTender,
-}: TendersToolbarProps) {
+	onCreateProcurementInquiry,
+}: ProcurementInquiriesToolbarProps) {
 	const isMobile = useIsMobile();
 	const { current, setDebounced } = useDebouncedSearchParam("q", 300);
 	const [userExpanded, setUserExpanded] = useState(false);
@@ -106,7 +106,7 @@ export function TendersToolbar({
 	);
 
 	const renderFiltersPopover = (variant: "icon" | "row") => (
-		<TendersFiltersPopover
+		<ProcurementInquiriesFiltersPopover
 			status={status}
 			onStatusChange={onStatusChange}
 			deadline={deadline}
@@ -206,8 +206,13 @@ export function TendersToolbar({
 				</div>
 			)}
 
-			{onCreateTender && (
-				<Button type="button" size="sm" onClick={onCreateTender} className="btn-cta ml-2 rounded-full border-0">
+			{onCreateProcurementInquiry && (
+				<Button
+					type="button"
+					size="sm"
+					onClick={onCreateProcurementInquiry}
+					className="btn-cta ml-2 rounded-full border-0"
+				>
 					<span className="hidden sm:inline">Создать запрос</span>
 					<span className="sm:hidden">Создать</span>
 				</Button>

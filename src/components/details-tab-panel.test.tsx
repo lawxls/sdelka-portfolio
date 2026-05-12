@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
-import { createInMemoryTendersClient } from "@/data/clients/tenders-in-memory";
+import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
 import { SEED_ITEMS } from "@/data/seeds/items";
-import { SEED_TENDERS } from "@/data/seeds/tenders";
+import { SEED_PROCUREMENT_INQUIRIES } from "@/data/seeds/procurement-inquiries";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import { DetailsTabPanel } from "./details-tab-panel";
@@ -23,7 +23,7 @@ function renderPanel(itemId = "item-1") {
 				companies: createInMemoryCompaniesClient(),
 				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
 				folders: createInMemoryFoldersClient(),
-				tenders: createInMemoryTendersClient({ seed: SEED_TENDERS }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: SEED_PROCUREMENT_INQUIRIES }),
 			}}
 		>
 			<DetailsTabPanel itemId={itemId} />
@@ -42,7 +42,7 @@ describe("DetailsTabPanel", () => {
 	test("renders the four always-visible sections in order (plus Ответы на уточнения when present)", async () => {
 		renderPanel();
 
-		// Wait for the parent tender to load — Дополнительно gates on tender data.
+		// Wait for the parent inquiry to load — Дополнительно gates on inquiry data.
 		await waitFor(() => {
 			expect(screen.getByText("Дополнительно")).toBeInTheDocument();
 		});
@@ -51,11 +51,11 @@ describe("DetailsTabPanel", () => {
 		expect(headings).toEqual(["Основное", "Логистика", "Дополнительно", "Ваш поставщик", "Ответы на уточнения"]);
 	});
 
-	test("reads tender-level fields from the parent tender (current supplier name in Ваш поставщик)", async () => {
+	test("reads inquiry-level fields from the parent inquiry (current supplier name in Ваш поставщик)", async () => {
 		renderPanel();
 
 		await waitFor(() => {
-			// item-1's parent tender T-001 carries currentSupplier = ПолимерПром
+			// item-1's parent inquiry T-001 carries currentSupplier = ПолимерПром
 			expect(screen.getByText("ПолимерПром")).toBeInTheDocument();
 		});
 		// item name renders read-only
@@ -69,7 +69,7 @@ describe("DetailsTabPanel", () => {
 			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		// Tender-level sections are read-only after the schema migration; item-level
+		// ProcurementInquiry-level sections are read-only after the schema migration; item-level
 		// sections still allow edits in the item drawer.
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: "Редактировать ответы на уточнения" })).toBeInTheDocument();
