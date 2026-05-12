@@ -216,6 +216,10 @@ export interface NewItemInput {
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
 	generatedAnswers?: GeneratedAnswer[];
+	/** Initial status. Defaults to "searching" when omitted. The manual-add flow on
+	 * /positions sets this to "ready_for_analytics" so the position is immediately
+	 * pickable in a future inquiry without going through supplier sourcing. */
+	status?: ProcurementStatus;
 	/** Parent inquiry slug. Set by `createProcurementInquiryWithItems` so the new items
 	 * inherit company / folder / supplier context from the freshly-created
 	 * inquiry. Direct callers (legacy import flows) leave it unset. */

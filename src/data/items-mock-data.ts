@@ -218,7 +218,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 		const item: ProcurementItem = {
 			id: nextId("item"),
 			name: input.name,
-			status: "searching" as ProcurementStatus,
+			status: input.status ?? ("searching" as ProcurementStatus),
 			annualQuantity: input.annualQuantity ?? 0,
 			currentPrice: input.currentPrice ?? 0,
 			bestPrice: null,
