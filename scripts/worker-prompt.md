@@ -42,10 +42,17 @@ Keep it concise.
 
 # THE ISSUE
 
-If the task is complete, close the original GitHub issue.
+Leave a comment on the GitHub issue summarizing what was done in this iteration. Do NOT close the issue — the PR merge will close it via the `Closes #N` reference in the final PR body.
 
-If the task is not complete, leave a comment on the GitHub issue with what was done.
+# DO NOT
+
+- Do NOT `git push` the branch.
+- Do NOT run `gh pr create` or `gh pr edit`.
+- Do NOT close GitHub issues.
+
+The orchestrator pushes and opens ONE PR after every iteration of the loop finishes. Your output ends at the local commit + issue comment.
 
 # FINAL RULES
 
-ONLY WORK ON A SINGLE TASK.
+- ONLY WORK ON A SINGLE TASK.
+- End your turn with `<promise>ITERATION_DONE</promise>` after committing the slice, or `<promise>COMPLETE</promise>` only when every provided issue is genuinely done across the full run.
