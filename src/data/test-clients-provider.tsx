@@ -93,6 +93,7 @@ export function fakeSuppliersClient(overrides: Partial<SuppliersClient> = {}): S
 		get: notImplemented("get"),
 		getById: notImplemented("getById"),
 		quotesByInn: notImplemented("quotesByInn"),
+		identityByInn: notImplemented("identityByInn"),
 		archive: notImplemented("archive"),
 		unarchive: notImplemented("unarchive"),
 		delete: notImplemented("delete"),

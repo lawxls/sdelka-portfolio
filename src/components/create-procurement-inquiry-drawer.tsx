@@ -54,11 +54,13 @@ import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { digitsOnly, formatFileSize, pluralizeRu } from "@/lib/format";
+import { formatCurrency, formatFileSize, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
 	type CreateProcurementInquiryPayload,
+	type CurrentSupplierDraft,
 	type PositionDraft,
 	useCreateProcurementInquiryForm,
 	type WizardStep,
@@ -610,6 +612,9 @@ function Step1Body({
 	const companyDisabled = !!lockedCompany;
 	const showRemove = step1.positions.length > 1;
 	const [pickerOpen, setPickerOpen] = useState(false);
+	const [activeSupplierPositionIndex, setActiveSupplierPositionIndex] = useState<number | null>(null);
+	const activeSupplierInitial =
+		activeSupplierPositionIndex !== null ? step1.positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
 
 	function addFilesTo(positionIndex: number, newFiles: FileList | null) {
 		if (!newFiles || newFiles.length === 0) return;
@@ -755,8 +760,22 @@ function Step1Body({
 						nameInputRef={(el) => {
 							nameInputRefs.current[index] = el;
 						}}
+						onOpenSupplier={() => setActiveSupplierPositionIndex(index)}
 					/>
 				))}
+				{activeSupplierPositionIndex !== null && (
+					<CurrentSupplierDialog
+						open
+						onOpenChange={(o) => {
+							if (!o) setActiveSupplierPositionIndex(null);
+						}}
+						initial={activeSupplierInitial}
+						onSave={(supplier: CurrentSupplierDraft) => {
+							updatePosition(activeSupplierPositionIndex, "currentSupplier", supplier);
+							setActiveSupplierPositionIndex(null);
+						}}
+					/>
+				)}
 				<div>
 					<Button
 						type="button"
@@ -859,6 +878,7 @@ export interface PositionCardProps {
 	onFilesAdd: (files: FileList | null) => void;
 	onFileRemove: (fileIndex: number) => void;
 	nameInputRef: (el: HTMLInputElement | null) => void;
+	onOpenSupplier: () => void;
 }
 
 export function PositionCard({
@@ -870,15 +890,14 @@ export function PositionCard({
 	onFilesAdd,
 	onFileRemove,
 	nameInputRef,
+	onOpenSupplier,
 }: PositionCardProps) {
 	const nameId = `position-${index}-name`;
 	const descId = `position-${index}-description`;
 	const qtyId = `position-${index}-qty`;
 	const annualId = `position-${index}-annual`;
-	const priceId = `position-${index}-price`;
-	const innId = `position-${index}-inn`;
 	const nameError = error?.name;
-	const innEnabled = position.pricePerUnit.trim() !== "";
+	const supplier = position.currentSupplier;
 
 	return (
 		<section
@@ -967,37 +986,76 @@ export function PositionCard({
 				</Field>
 			</div>
 
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-				<Field label="Текущая цена без НДС" htmlFor={priceId} className="flex-1 min-w-0">
-					<div className="flex items-center gap-1.5">
-						<Input
-							id={priceId}
-							placeholder="1250"
-							value={position.pricePerUnit}
-							onChange={(e) => onChange("pricePerUnit", e.target.value.replace(/[^\d.]/g, ""))}
-							inputMode="decimal"
-							autoComplete="off"
-							aria-label="Текущая цена без НДС"
-							className="flex-1 tabular-nums"
-						/>
-						<span className="text-sm text-muted-foreground">₽</span>
-					</div>
-				</Field>
-				<Field label="ИНН текущего поставщика" htmlFor={innId} className="flex-1 min-w-0">
-					<Input
-						id={innId}
-						value={position.currentSupplierInn}
-						onChange={(e) => onChange("currentSupplierInn", digitsOnly(e.target.value))}
-						inputMode="numeric"
-						autoComplete="off"
-						spellCheck={false}
-						aria-label="ИНН текущего поставщика"
-						disabled={!innEnabled}
-						className="tabular-nums"
-					/>
-				</Field>
-			</div>
+			{supplier ? (
+				<CurrentSupplierSummary
+					supplier={supplier}
+					onEdit={onOpenSupplier}
+					onRemove={() => onChange("currentSupplier", undefined)}
+				/>
+			) : (
+				<Button
+					type="button"
+					variant="outline"
+					onClick={onOpenSupplier}
+					aria-label="Добавить текущего поставщика"
+					className="w-full border-dashed border-foreground/25 text-foreground/80 hover:border-foreground/45 hover:bg-background hover:text-foreground dark:border-foreground/30 dark:hover:bg-background"
+				>
+					<Plus aria-hidden="true" className="size-4" />
+					Добавить текущего поставщика
+				</Button>
+			)}
 		</section>
+	);
+}
+
+interface CurrentSupplierSummaryProps {
+	supplier: NonNullable<PositionDraft["currentSupplier"]>;
+	onEdit: () => void;
+	onRemove: () => void;
+}
+
+function CurrentSupplierSummary({ supplier, onEdit, onRemove }: CurrentSupplierSummaryProps) {
+	const priceNum = supplier.pricePerUnit.trim() === "" ? null : Number(supplier.pricePerUnit);
+	const deliveryNum = supplier.deliveryCost.trim() === "" ? null : Number(supplier.deliveryCost);
+	return (
+		<div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/60 p-3 dark:bg-input/20">
+			<div className="flex items-start gap-2">
+				<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+					<span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+						Текущий поставщик
+					</span>
+					<span className="text-sm font-medium text-foreground break-words">
+						{supplier.companyName || supplier.inn}
+					</span>
+					{supplier.companyName && (
+						<span className="text-xs text-muted-foreground tabular-nums">ИНН {supplier.inn}</span>
+					)}
+				</div>
+				<div className="flex shrink-0 items-center gap-1">
+					<Button type="button" variant="ghost" size="sm" onClick={onEdit}>
+						Изменить
+					</Button>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						onClick={onRemove}
+						aria-label="Удалить текущего поставщика"
+						className="relative text-muted-foreground hover:text-foreground before:absolute before:-inset-1.5 before:content-['']"
+					>
+						<X aria-hidden="true" className="size-4" />
+					</Button>
+				</div>
+			</div>
+			<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
+				<span className="text-muted-foreground">
+					Цена: <span className="text-foreground">{priceNum !== null ? formatCurrency(priceNum) : "—"}</span>
+				</span>
+				<span className="text-muted-foreground">
+					Доставка: <span className="text-foreground">{deliveryNum !== null ? formatCurrency(deliveryNum) : "—"}</span>
+				</span>
+			</div>
+		</div>
 	);
 }
 
@@ -1285,8 +1343,6 @@ function itemToPositionDraft(item: ProcurementItem): PositionDraft {
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery !== undefined ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
-		pricePerUnit: item.currentPrice !== null ? String(item.currentPrice) : "",
-		currentSupplierInn: "",
 		files: [],
 	};
 }

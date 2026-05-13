@@ -6,6 +6,7 @@ import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memor
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Address, Company, Folder } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
@@ -71,6 +72,7 @@ function renderDrawer(
 	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
 	const procurementInquiriesClient = createInMemoryProcurementInquiriesClient({ seed: [] });
 	const itemsClient = createInMemoryItemsClient({ seed: [] });
+	const suppliersClient = createInMemorySuppliersClient();
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -79,6 +81,7 @@ function renderDrawer(
 				folders: foldersClient,
 				procurementInquiries: procurementInquiriesClient,
 				items: itemsClient,
+				suppliers: suppliersClient,
 			}}
 		>
 			{children}
@@ -301,28 +304,28 @@ describe("CreateProcurementInquiryDrawer — discard confirmation", () => {
 	});
 });
 
-describe("CreateProcurementInquiryDrawer — Position-level supplier INN", () => {
-	test("ИНН field is rendered disabled until Текущая цена is filled", async () => {
+describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () => {
+	test("«Добавить текущего поставщика» button opens the modal on each position card", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
 
-		const innInput = screen.getByLabelText("ИНН текущего поставщика");
-		expect(innInput).toBeDisabled();
-
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1250");
-		await vi.waitFor(() => {
-			expect(screen.getByLabelText("ИНН текущего поставщика")).not.toBeDisabled();
-		});
+		expect(screen.queryByRole("dialog", { name: "Добавить текущего поставщика" })).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Добавить текущего поставщика" }));
+		expect(await screen.findByRole("dialog", { name: "Добавить текущего поставщика" })).toBeInTheDocument();
 	});
 
-	test("Position INN flows to inquiry.currentSupplier on submit", async () => {
+	test("Saved supplier flows to inquiry.currentSupplier on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
 
 		await fillFirstPositionName(user);
+		await user.click(screen.getByRole("button", { name: "Добавить текущего поставщика" }));
+
+		const innInput = await screen.findByLabelText("ИНН");
+		await user.type(innInput, "1234567890");
 		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1250");
-		await user.type(await screen.findByLabelText("ИНН текущего поставщика"), "1234567890");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await advance(user);
 		await advance(user);
@@ -330,6 +333,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier INN", () =>
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
 		expect(payload.procurementInquiry.currentSupplier).toMatchObject({ inn: "1234567890" });
+		expect(payload.items[0]).toMatchObject({ currentPrice: 1250 });
 	});
 });
 

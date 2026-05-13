@@ -1,4 +1,5 @@
 import { hash } from "@/lib/hash";
+import type { SupplierIdentity } from "../domains/suppliers";
 import { _getItem } from "../items-mock-data";
 import type {
 	MessageEvent,
@@ -300,6 +301,22 @@ const CANDIDATE_POOL: { name: string; type: SupplierCompanyType; domain: string 
 	}
 	return pool;
 })();
+
+/** Builds a deterministic public-facing identity for an arbitrary INN by hashing
+ * it into the candidate pool and identity-profile generators. Used by the
+ * «Добавить текущего поставщика» modal so any non-sentinel INN resolves to a
+ * plausible company without a real backend. */
+export function synthesizeSupplierIdentity(inn: string): SupplierIdentity {
+	const identityHash = hash(inn);
+	const pool = CANDIDATE_POOL[identityHash % CANDIDATE_POOL.length];
+	const profile = makeIdentityProfile(identityHash);
+	return {
+		companyName: pool.name,
+		website: `https://${pool.domain}`,
+		address: profile.address,
+		email: `info@${pool.domain}`,
+	};
+}
 
 export function targetSupplierCount(itemId: string): number {
 	// item-8 stays small per product decision — every other item spreads across 200–300.

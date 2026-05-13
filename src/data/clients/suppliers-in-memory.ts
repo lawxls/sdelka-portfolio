@@ -2,6 +2,7 @@ import type {
 	Supplier,
 	SupplierChatMessage,
 	SupplierFilterParams,
+	SupplierIdentity,
 	SupplierQuote,
 	SupplierSeed,
 	SuppliersList,
@@ -16,6 +17,7 @@ import {
 	getAllSuppliers,
 	getSupplier,
 	getSupplierById,
+	getSupplierIdentityByInn,
 	getSupplierQuotesByInn,
 	getSuppliers,
 	sendSupplierMessage,
@@ -73,6 +75,10 @@ export function createInMemorySuppliersClient(options?: InMemorySuppliersOptions
 
 		async quotesByInn(inn: string, contextItemId: string): Promise<SupplierQuote[]> {
 			return getSupplierQuotesByInn(inn, contextItemId);
+		},
+
+		async identityByInn(inn: string): Promise<SupplierIdentity | null> {
+			return getSupplierIdentityByInn(inn);
 		},
 
 		async archive(itemId: string, supplierIds: string[]): Promise<void> {

@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
-import { useCreateProcurementInquiryForm } from "./use-create-procurement-inquiry-form";
+import { type CurrentSupplierDraft, useCreateProcurementInquiryForm } from "./use-create-procurement-inquiry-form";
 
 function setup() {
 	return renderHook(() => useCreateProcurementInquiryForm());
@@ -12,6 +12,19 @@ function fillStep1Required(result: { current: ReturnType<typeof useCreateProcure
 		result.current.update1("companyId", "c1");
 		result.current.updatePosition(0, "name", "Арматура");
 	});
+}
+
+function makeSupplier(overrides: Partial<CurrentSupplierDraft> = {}): CurrentSupplierDraft {
+	return {
+		inn: "",
+		companyName: "",
+		website: "",
+		address: "",
+		email: "",
+		pricePerUnit: "",
+		deliveryCost: "",
+		...overrides,
+	};
 }
 
 describe("useCreateProcurementInquiryForm", () => {
@@ -194,7 +207,7 @@ describe("useCreateProcurementInquiryForm", () => {
 		fillStep1Required(result);
 		act(() => {
 			result.current.update1("folderId", "folder-metal");
-			result.current.updatePosition(0, "pricePerUnit", "100");
+			result.current.updatePosition(0, "currentSupplier", makeSupplier({ pricePerUnit: "100" }));
 		});
 
 		const payload = result.current.toPayload();
@@ -223,7 +236,7 @@ describe("useCreateProcurementInquiryForm", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
-			result.current.updatePosition(0, "currentSupplierInn", "1234567890");
+			result.current.updatePosition(0, "currentSupplier", makeSupplier({ inn: "1234567890" }));
 		});
 
 		const payload = result.current.toPayload();
@@ -233,10 +246,10 @@ describe("useCreateProcurementInquiryForm", () => {
 	test("toPayload emits one item per position card", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.updatePosition(0, "pricePerUnit", "1000"));
+		act(() => result.current.updatePosition(0, "currentSupplier", makeSupplier({ pricePerUnit: "1000" })));
 		act(() => result.current.addPosition());
 		act(() => result.current.updatePosition(1, "name", "Цемент"));
-		act(() => result.current.updatePosition(1, "pricePerUnit", "500"));
+		act(() => result.current.updatePosition(1, "currentSupplier", makeSupplier({ pricePerUnit: "500" })));
 
 		const payload = result.current.toPayload();
 		expect(payload.items).toHaveLength(2);

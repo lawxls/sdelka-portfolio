@@ -18,6 +18,7 @@ export {
 	getAllSuppliers,
 	getSupplier,
 	getSupplierById,
+	getSupplierIdentityByInn,
 	getSupplierQuotesByInn,
 	getSuppliers,
 } from "./suppliers-mock/queries";

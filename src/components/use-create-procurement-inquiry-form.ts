@@ -12,14 +12,23 @@ type AdvanceResult = { advanced: boolean; focus?: AdvanceFocus; positionIndex?: 
 const DEFAULT_DEADLINE_DAYS = 14;
 const defaultDeadline = () => isoDateInDays(DEFAULT_DEADLINE_DAYS);
 
+export interface CurrentSupplierDraft {
+	inn: string;
+	companyName: string;
+	website: string;
+	address: string;
+	email: string;
+	pricePerUnit: string;
+	deliveryCost: string;
+}
+
 export interface PositionDraft {
 	name: string;
 	description: string;
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
-	pricePerUnit: string;
-	currentSupplierInn: string;
+	currentSupplier?: CurrentSupplierDraft;
 	files: File[];
 }
 
@@ -70,8 +79,6 @@ export function defaultPosition(): PositionDraft {
 		unit: "",
 		quantityPerDelivery: "",
 		annualQuantity: "",
-		pricePerUnit: "",
-		currentSupplierInn: "",
 		files: [],
 	};
 }
@@ -83,8 +90,7 @@ export function isPositionDraftDirty(p: PositionDraft): boolean {
 		p.unit !== "" ||
 		p.quantityPerDelivery !== "" ||
 		p.annualQuantity !== "" ||
-		p.pricePerUnit !== "" ||
-		p.currentSupplierInn !== "" ||
+		p.currentSupplier !== undefined ||
 		p.files.length > 0
 	);
 }
@@ -153,7 +159,7 @@ function buildNewItemInput(position: PositionDraft, step2: Step2State): NewItemI
 	const perDelivery = toNumberOrUndefined(position.quantityPerDelivery);
 	if (perDelivery !== undefined) payload.quantityPerDelivery = perDelivery;
 
-	const price = toNumberOrUndefined(position.pricePerUnit);
+	const price = toNumberOrUndefined(position.currentSupplier?.pricePerUnit ?? "");
 	if (price !== undefined) payload.currentPrice = price;
 
 	const answers = buildGeneratedAnswers(step2);
@@ -192,13 +198,14 @@ function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): Cre
 		procurementInquiry.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
 	}
 
-	const supplierInn = step1.positions.map((p) => p.currentSupplierInn.trim()).find((inn) => inn !== "");
-	if (supplierInn) {
+	const firstSupplier = step1.positions.find((p) => p.currentSupplier?.inn.trim())?.currentSupplier;
+	if (firstSupplier) {
+		const price = toNumberOrUndefined(firstSupplier.pricePerUnit);
 		procurementInquiry.currentSupplier = {
-			companyName: "",
-			inn: supplierInn,
+			companyName: firstSupplier.companyName,
+			inn: firstSupplier.inn.trim(),
 			deferralDays: 0,
-			pricePerUnit: null,
+			pricePerUnit: price ?? null,
 		};
 	}
 

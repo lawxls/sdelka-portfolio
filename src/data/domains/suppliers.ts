@@ -23,3 +23,10 @@ export interface SuppliersPage {
 export interface SuppliersList {
 	suppliers: Supplier[];
 }
+
+export interface SupplierIdentity {
+	companyName: string;
+	website: string;
+	address: string;
+	email: string;
+}

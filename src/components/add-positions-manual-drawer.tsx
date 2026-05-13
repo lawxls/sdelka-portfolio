@@ -17,7 +17,13 @@ import type { NewItemInput } from "@/data/types";
 import { toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { MAX_FILE_SIZE, MAX_TOTAL_SIZE, PositionCard, SURFACE_TINT } from "./create-procurement-inquiry-drawer";
-import { defaultPosition, isPositionDraftDirty, type PositionDraft } from "./use-create-procurement-inquiry-form";
+import { CurrentSupplierDialog } from "./current-supplier-dialog";
+import {
+	type CurrentSupplierDraft,
+	defaultPosition,
+	isPositionDraftDirty,
+	type PositionDraft,
+} from "./use-create-procurement-inquiry-form";
 
 interface PositionError {
 	name?: string;
@@ -42,7 +48,7 @@ function toItemInput(position: PositionDraft): NewItemInput {
 	const perDelivery = toNumberOrUndefined(position.quantityPerDelivery);
 	if (perDelivery !== undefined) payload.quantityPerDelivery = perDelivery;
 
-	const price = toNumberOrUndefined(position.pricePerUnit);
+	const price = toNumberOrUndefined(position.currentSupplier?.pricePerUnit ?? "");
 	if (price !== undefined) payload.currentPrice = price;
 
 	return payload;
@@ -52,6 +58,9 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPo
 	const [positions, setPositions] = useState<PositionDraft[]>(() => [defaultPosition()]);
 	const [errors, setErrors] = useState<PositionError[]>(() => [{}]);
 	const [showDiscard, setShowDiscard] = useState(false);
+	const [activeSupplierPositionIndex, setActiveSupplierPositionIndex] = useState<number | null>(null);
+	const activeSupplierInitial =
+		activeSupplierPositionIndex !== null ? positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
 	const isDirty = positions.length > 1 || positions.some(isPositionDraftDirty);
@@ -190,8 +199,22 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPo
 										nameInputRef={(el) => {
 											nameInputRefs.current[index] = el;
 										}}
+										onOpenSupplier={() => setActiveSupplierPositionIndex(index)}
 									/>
 								))}
+								{activeSupplierPositionIndex !== null && (
+									<CurrentSupplierDialog
+										open
+										onOpenChange={(o) => {
+											if (!o) setActiveSupplierPositionIndex(null);
+										}}
+										initial={activeSupplierInitial}
+										onSave={(supplier: CurrentSupplierDraft) => {
+											updatePosition(activeSupplierPositionIndex, "currentSupplier", supplier);
+											setActiveSupplierPositionIndex(null);
+										}}
+									/>
+								)}
 								<div>
 									<Button
 										type="button"

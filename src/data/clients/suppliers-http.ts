@@ -1,4 +1,11 @@
-import type { Supplier, SupplierChatMessage, SupplierQuote, SuppliersList, SuppliersPage } from "../domains/suppliers";
+import type {
+	Supplier,
+	SupplierChatMessage,
+	SupplierIdentity,
+	SupplierQuote,
+	SuppliersList,
+	SuppliersPage,
+} from "../domains/suppliers";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import { filesToAttachments } from "../supplier-types";
 import type { SuppliersClient } from "./suppliers-client";
@@ -33,6 +40,8 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 
 		quotesByInn: (inn, contextItemId) =>
 			http.get<SupplierQuote[]>(`/suppliers/quotes${buildQuery({ inn, contextItemId })}`),
+
+		identityByInn: (inn) => http.get<SupplierIdentity | null>(`/suppliers/identity${buildQuery({ inn })}`),
 
 		archive: (itemId, supplierIds) =>
 			http.post<void>(`/items/${enc(itemId)}/suppliers/archive`, { body: { supplierIds } }),
