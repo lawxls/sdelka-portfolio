@@ -12,7 +12,7 @@ type Item =
 	| { kind: "button"; onClick: () => void; label: string; icon: IconComponent; destructive?: boolean };
 
 interface Section {
-	title: string;
+	title: string | null;
 	items: Item[];
 }
 
@@ -26,7 +26,14 @@ export function SettingsIndexPage() {
 	}
 
 	const sections: Section[] = [
-		{ title: "Пользователь", items: [{ kind: "link", path: "/settings/profile", label: "Профиль", icon: User }] },
+		{
+			title: "Аккаунт",
+			items: [
+				{ kind: "link", path: "/settings/profile", label: "Профиль", icon: User },
+				{ kind: "link", path: "/settings/tariffs", label: "Тарифы", icon: CreditCard },
+				{ kind: "button", onClick: () => setSupportOpen(true), label: "Помощь", icon: LifeBuoy },
+			],
+		},
 		{
 			title: "Рабочее пространство",
 			items: [
@@ -37,12 +44,8 @@ export function SettingsIndexPage() {
 			],
 		},
 		{
-			title: "Аккаунт",
-			items: [
-				{ kind: "link", path: "/settings/tariffs", label: "Тарифы", icon: CreditCard },
-				{ kind: "button", onClick: () => setSupportOpen(true), label: "Помощь", icon: LifeBuoy },
-				{ kind: "button", onClick: () => logout.mutate(), label: "Выйти", icon: LogOut, destructive: true },
-			],
+			title: null,
+			items: [{ kind: "button", onClick: () => logout.mutate(), label: "Выйти", icon: LogOut, destructive: true }],
 		},
 	];
 
@@ -53,9 +56,13 @@ export function SettingsIndexPage() {
 			data-testid="settings-index"
 		>
 			<div className="flex flex-col gap-6">
-				{sections.map((section) => (
-					<section key={section.title} className="flex flex-col gap-2">
-						<h2 className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">{section.title}</h2>
+				{sections.map((section, sectionIdx) => (
+					<section key={section.title ?? `unlabeled-${sectionIdx}`} className="flex flex-col gap-2">
+						{section.title && (
+							<h2 className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								{section.title}
+							</h2>
+						)}
 						<div className="overflow-hidden rounded-lg border border-border bg-background">
 							{section.items.map((item, idx) => {
 								const Icon = item.icon;

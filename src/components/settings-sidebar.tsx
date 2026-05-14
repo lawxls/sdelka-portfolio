@@ -9,17 +9,16 @@ interface NavItemDef {
 	icon: React.ReactNode;
 }
 
-const USER_ITEMS: NavItemDef[] = [{ path: "/settings/profile", label: "Профиль", icon: <User className="size-4" /> }];
+const ACCOUNT_ITEMS: NavItemDef[] = [
+	{ path: "/settings/profile", label: "Профиль", icon: <User className="size-4" /> },
+	{ path: "/settings/tariffs", label: "Тарифы", icon: <CreditCard className="size-4" /> },
+];
 
 const WORKSPACE_ITEMS: NavItemDef[] = [
 	{ path: "/settings/workspace", label: "Общие настройки", icon: <Settings className="size-4" /> },
 	{ path: "/settings/companies", label: "Компании", icon: <Building2 className="size-4" /> },
 	{ path: "/settings/employees", label: "Сотрудники", icon: <Users className="size-4" /> },
 	{ path: "/settings/emails", label: "Почты", icon: <Mail className="size-4" /> },
-];
-
-const ACCOUNT_ITEMS: NavItemDef[] = [
-	{ path: "/settings/tariffs", label: "Тарифы", icon: <CreditCard className="size-4" /> },
 ];
 
 function NavItem({ path, label, icon, isActive }: NavItemDef & { isActive: boolean }) {
@@ -81,15 +80,12 @@ export function SettingsSidebar() {
 			data-testid="settings-sidebar"
 		>
 			<nav className="flex-1 overflow-y-auto p-2" aria-label="Настройки">
-				<NavSection title="Пользователь" items={USER_ITEMS} currentPath={location.pathname} />
-				<NavSection title="Рабочее пространство" items={WORKSPACE_ITEMS} currentPath={location.pathname} />
 				<NavSection title="Аккаунт" items={ACCOUNT_ITEMS} currentPath={location.pathname} />
-				<div className="mb-3">
-					<div className="space-y-0.5">
-						<LogoutItem />
-					</div>
-				</div>
+				<NavSection title="Рабочее пространство" items={WORKSPACE_ITEMS} currentPath={location.pathname} />
 			</nav>
+			<div className="p-2">
+				<LogoutItem />
+			</div>
 		</aside>
 	);
 }

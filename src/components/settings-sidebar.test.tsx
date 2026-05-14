@@ -26,10 +26,19 @@ function renderSidebar(
 }
 
 describe("SettingsSidebar sections", () => {
-	test("renders Пользователь section with Профиль item", () => {
+	test("Аккаунт section is first and contains Профиль then Тарифы", () => {
 		renderSidebar();
-		expect(screen.getByText("Пользователь")).toBeInTheDocument();
-		expect(screen.getByText("Профиль")).toBeInTheDocument();
+		expect(screen.getByText("Аккаунт")).toBeInTheDocument();
+		const sectionLabel = screen.getByText("Аккаунт");
+		const section = sectionLabel.closest("div")?.parentElement as HTMLElement;
+		const buttons = section.querySelectorAll("button");
+		expect(buttons[0]).toHaveTextContent("Профиль");
+		expect(buttons[1]).toHaveTextContent("Тарифы");
+	});
+
+	test("does not render the legacy Пользователь section header", () => {
+		renderSidebar();
+		expect(screen.queryByText("Пользователь")).not.toBeInTheDocument();
 	});
 
 	test("renders Рабочее пространство section with all items including Почты", () => {
@@ -39,13 +48,6 @@ describe("SettingsSidebar sections", () => {
 		expect(screen.getByText("Компании")).toBeInTheDocument();
 		expect(screen.getByText("Сотрудники")).toBeInTheDocument();
 		expect(screen.getByText("Почты")).toBeInTheDocument();
-	});
-
-	test("Аккаунт section contains Тарифы and no Выход", () => {
-		renderSidebar();
-		expect(screen.getByText("Аккаунт")).toBeInTheDocument();
-		expect(screen.getByText("Тарифы")).toBeInTheDocument();
-		expect(screen.queryByText("Выход")).not.toBeInTheDocument();
 	});
 
 	test("workspace items appear in expected order", () => {

@@ -29,7 +29,7 @@ export function useSettingsOutletContext() {
 }
 
 const BREADCRUMBS: Record<string, [parent: string, current: string]> = {
-	"/settings/profile": ["Пользователь", "Профиль"],
+	"/settings/profile": ["Аккаунт", "Профиль"],
 	"/settings/workspace": ["Рабочее пространство", "Общие настройки"],
 	"/settings/companies": ["Рабочее пространство", "Компании"],
 	"/settings/employees": ["Рабочее пространство", "Сотрудники"],
