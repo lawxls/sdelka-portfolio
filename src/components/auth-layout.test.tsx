@@ -26,4 +26,9 @@ describe("AuthLayout", () => {
 		const svg = document.querySelector('svg[viewBox="0 0 1121 203"]');
 		expect(svg).toBeInTheDocument();
 	});
+
+	test("owns scrolling inside the locked document root", () => {
+		renderWithRouter();
+		expect(screen.getByText("Login Form").closest("[data-theme='light']")).toHaveClass("h-dvh", "overflow-auto");
+	});
 });

@@ -23,3 +23,11 @@ describe("Fluid design tokens", () => {
 		expect(css).not.toMatch(/--text-sm\s*:\s*clamp\(/);
 	});
 });
+
+describe("Viewport scroll ownership", () => {
+	test("locks document and root scrolling to app-owned scroll containers", () => {
+		expect(css).toMatch(/body\s*\{[^}]*overflow:\s*hidden;/s);
+		expect(css).toMatch(/body,\s*\n\s*#root\s*\{[^}]*height:\s*100%;/s);
+		expect(css).toMatch(/#root\s*\{[^}]*overflow:\s*hidden;/s);
+	});
+});

@@ -77,6 +77,11 @@ describe("AppLayout — global header", () => {
 		renderLayout();
 		expect(screen.getByText("positions-content")).toBeInTheDocument();
 	});
+
+	test("clips the app shell to the dynamic viewport", () => {
+		renderLayout();
+		expect(screen.getByTestId("app-layout")).toHaveClass("h-dvh", "overflow-hidden");
+	});
 });
 
 describe("AppLayout — top-level navigation", () => {

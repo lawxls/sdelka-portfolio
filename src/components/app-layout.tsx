@@ -17,7 +17,7 @@ function handleToggleTheme() {
 export function AppLayout() {
 	const [supportOpen, setSupportOpen] = useState(false);
 	return (
-		<div className="flex h-svh w-full flex-col bg-sidebar text-foreground" data-testid="app-layout">
+		<div className="flex h-dvh w-full flex-col overflow-hidden bg-sidebar text-foreground" data-testid="app-layout">
 			<div className="flex min-h-0 flex-1">
 				<AppRail />
 				<div className="flex min-w-0 flex-1 flex-col">

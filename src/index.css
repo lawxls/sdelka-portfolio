@@ -348,13 +348,22 @@ tbody tr.negotiating-stripe:hover {
 	}
 	body {
 		@apply bg-background text-foreground;
+		overflow: hidden;
 		text-wrap: pretty;
 	}
 	html {
 		@apply font-sans;
+		height: 100%;
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		-webkit-tap-highlight-color: transparent;
+	}
+	body,
+	#root {
+		height: 100%;
+	}
+	#root {
+		overflow: hidden;
 	}
 	h1,
 	h2,
