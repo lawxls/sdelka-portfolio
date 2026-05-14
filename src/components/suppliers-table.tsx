@@ -11,7 +11,7 @@ import {
 	UserCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DataTable, type DataTableColumn, type DataTablePlaceholderRow } from "@/components/data-table";
 import { STATUS_ICONS, SupplierStatusIndicator } from "@/components/supplier-status-indicator";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,13 @@ interface SuppliersTableProps {
 	 * replaces «ИНН: …» on the matching row. Falls back to companyName when INN is absent. */
 	currentSupplierInn?: string;
 	currentSupplierName?: string;
+	/** Multiple identities to badge as «Ваш поставщик» — used by the inquiry-level tab where
+	 * each position has its own current supplier. Takes precedence over the singular fields. */
+	currentSupplierIdentities?: ReadonlyArray<{ inn?: string; companyName: string }>;
+	/** Suppliers to pin at the top of the table (above body rows). */
+	pinnedSuppliers?: Supplier[];
+	/** Empty placeholder rows rendered in the pinned area for positions awaiting a supplier. */
+	placeholderPinnedRows?: DataTablePlaceholderRow[];
 }
 
 const SEARCH_IN_PROGRESS_TOOLTIP = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
@@ -130,8 +137,14 @@ export function SuppliersTable({
 	kpRequestEnabled = true,
 	currentSupplierInn,
 	currentSupplierName,
+	currentSupplierIdentities,
+	pinnedSuppliers,
+	placeholderPinnedRows,
 }: SuppliersTableProps) {
 	const isYourSupplier = (s: Supplier) => {
+		if (currentSupplierIdentities && currentSupplierIdentities.length > 0) {
+			return currentSupplierIdentities.some((id) => (id.inn ? s.inn === id.inn : s.companyName === id.companyName));
+		}
 		if (currentSupplierInn) return s.inn === currentSupplierInn;
 		if (currentSupplierName) return s.companyName === currentSupplierName;
 		return false;
@@ -459,6 +472,8 @@ export function SuppliersTable({
 		<DataTable<Supplier>
 			columns={columns}
 			rows={suppliers}
+			pinnedRows={pinnedSuppliers}
+			placeholderPinnedRows={placeholderPinnedRows}
 			getRowId={(s) => s.id}
 			isLoading={isLoading}
 			emptyMessage={showArchived ? "В архиве пусто" : "Ничего не найдено"}

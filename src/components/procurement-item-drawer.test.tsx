@@ -53,6 +53,13 @@ const TEST_ITEM: ProcurementItem = {
 	bestPrice: null,
 	averagePrice: null,
 	procurementInquiryId: "T-001",
+	currentSupplier: {
+		companyName: "ПолимерПром",
+		inn: "6164012345",
+		paymentType: "prepayment",
+		deferralDays: 0,
+		pricePerUnit: 1776,
+	},
 };
 
 let queryClient: QueryClient;

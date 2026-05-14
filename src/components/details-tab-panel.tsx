@@ -191,7 +191,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 	const answers = item.generatedAnswers ?? [];
-	const currentSupplier = procurementInquiry?.currentSupplier;
+	const currentSupplier = item.currentSupplier;
 
 	return (
 		<div data-testid="tab-panel-details" className="flex flex-col gap-6">

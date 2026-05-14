@@ -10,7 +10,6 @@ import { ITEM as ITEM_10, SUPPLIERS as SUPPLIERS_10 } from "../items/item-10";
 import { ITEM as ITEM_11, SUPPLIERS as SUPPLIERS_11 } from "../items/item-11";
 import { ITEM as ITEM_12, SUPPLIERS as SUPPLIERS_12 } from "../items/item-12";
 import { _getItem } from "../items-mock-data";
-import { _getProcurementInquiry } from "../procurement-inquiries-mock/store";
 import { ORMATEK_SUPPLIERS } from "../seeds/suppliers-ormatek";
 import type { Supplier, SupplierSeed } from "../supplier-types";
 import {
@@ -85,20 +84,19 @@ export function listKnownItemIds(): string[] {
 	return [...itemIds];
 }
 
-/** Build a quote_received Supplier row that mirrors the parent inquiry's `currentSupplier`
+/** Build a quote_received Supplier row that mirrors the item's `currentSupplier`
  * (the «Ваш поставщик»). INN/companyName come from currentSupplier verbatim; profile
  * fields (region/revenue/etc.) are deterministically derived from the INN so the row
- * looks like a real legal entity. Returns null when the item has no parent inquiry,
- * or the inquiry has no currentSupplier or no INN. */
+ * looks like a real legal entity. Returns null when the item has no currentSupplier,
+ * no INN, or no usable price. */
 function makeYourSupplier(itemId: string): Supplier | null {
 	const item = _getItem(itemId);
-	const procurementInquiry = item?.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
-	const cs = procurementInquiry?.currentSupplier;
+	if (!item) return null;
+	const cs = item.currentSupplier;
 	if (!cs?.inn) return null;
-	// Multi-item inquiries share one procurement-inquiry-level pricePerUnit; prefer the item's
-	// own buyer reference price so «Ваш поставщик» reflects per-position spread.
-	// Items with currentPrice null/0 opt out so X/N coverage stays accurate.
-	const perItemPrice = item && item.currentPrice != null && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;
+	// Prefer the item's own buyer reference price so «Ваш поставщик» reflects per-position spread.
+	// Items with currentPrice null/0 fall back to the supplier-attached price.
+	const perItemPrice = item.currentPrice != null && item.currentPrice > 0 ? item.currentPrice : cs.pricePerUnit;
 	if (perItemPrice == null || perItemPrice <= 0) return null;
 	const identityHash = hash(cs.inn);
 	const profile = makeIdentityProfile(identityHash);
@@ -115,15 +113,16 @@ function makeYourSupplier(itemId: string): Supplier | null {
 		// Override the hash-derived INN with the one the user actually entered.
 		inn: cs.inn,
 		companyType: inferCompanyType(cs.companyName),
-		email: `info@${domain}`,
-		website: `https://${domain}`,
+		email: cs.email && cs.email.trim() !== "" ? cs.email : `info@${domain}`,
+		website: cs.website && cs.website.trim() !== "" ? cs.website : `https://${domain}`,
+		address: cs.address && cs.address.trim() !== "" ? cs.address : profile.address,
 		pricePerUnit: perItemPrice,
-		tco: perItemPrice,
-		deliveryCost: null,
+		tco: perItemPrice + (cs.deliveryCost ?? 0),
+		deliveryCost: cs.deliveryCost ?? null,
 		paymentType: cs.paymentType ?? "prepayment",
 		deferralDays: cs.deferralDays,
 		prepaymentPercent: cs.prepaymentPercent,
-		leadTimeDays: null,
+		leadTimeDays: cs.leadTimeDays ?? null,
 		agentComment: "",
 		documents: [],
 		chatHistory: [],
@@ -137,14 +136,21 @@ function yourSupplierId(itemId: string): string {
 	return `supplier-${itemId}-current`;
 }
 
-/** Add (or replace) the item's «Ваш поставщик» row. Called from createItemsBatchMock when a
- * brand-new item carries a currentSupplier with INN; the lazy seed path uses makeYourSupplier
- * directly. Idempotent: replacing keeps the existing user-entered ИНН as the stable identity. */
+/** Add, replace, or remove the item's «Ваш поставщик» row to match the current
+ * `item.currentSupplier`. Called when items are created or when `currentSupplier`
+ * is updated. Idempotent. */
 export function _addYourSupplier(itemId: string): void {
 	const yours = makeYourSupplier(itemId);
-	if (!yours) return;
-	const existing = store.get(itemId) ?? [];
-	const filtered = existing.filter((s) => s.id !== yours.id);
+	const existing = store.get(itemId);
+	const yoursId = yourSupplierId(itemId);
+	if (!yours) {
+		if (!existing) return;
+		const filtered = existing.filter((s) => s.id !== yoursId);
+		if (filtered.length !== existing.length) store.set(itemId, filtered);
+		return;
+	}
+	const base = existing ?? [];
+	const filtered = base.filter((s) => s.id !== yoursId);
 	store.set(itemId, [yours, ...filtered]);
 }
 

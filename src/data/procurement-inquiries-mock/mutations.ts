@@ -2,7 +2,6 @@ import { delay } from "../mock-utils";
 import { generateProcurementInquirySlug } from "../procurement-inquiries/generate-procurement-inquiry-slug";
 import type {
 	AttachedFile,
-	CurrentSupplier,
 	PaymentMethod,
 	ProcurementInquiry,
 	ProcurementInquiryEmailDraft,
@@ -25,7 +24,6 @@ export interface CreateProcurementInquiryInput {
 	budget: number;
 	deadline: string;
 	createdAt?: string;
-	currentSupplier?: CurrentSupplier;
 	addressIds?: string[];
 	unloading?: UnloadingType;
 	paymentMethod?: PaymentMethod;
@@ -48,7 +46,6 @@ export async function createProcurementInquiryMock(input: CreateProcurementInqui
 		budget: input.budget,
 		deadline: input.deadline,
 		createdAt: input.createdAt ?? new Date().toISOString(),
-		...(input.currentSupplier && { currentSupplier: input.currentSupplier }),
 		...(input.addressIds && { addressIds: input.addressIds }),
 		...(input.unloading && { unloading: input.unloading }),
 		...(input.paymentMethod && { paymentMethod: input.paymentMethod }),

@@ -206,6 +206,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 			await delay();
 			const updated = _patchItem(id, data);
 			if (!updated) throw new NotFoundError({ id });
+			if ("currentSupplier" in data) _addYourSupplier(id);
 			return updated;
 		},
 

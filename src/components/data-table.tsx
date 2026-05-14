@@ -35,11 +35,23 @@ export interface DataTableAction {
 	onSelect: () => void;
 }
 
+/** A placeholder slot rendered as a pinned-area row that doesn't represent a real data row.
+ * Used for empty «Нажмите, чтобы добавить» prompts in supplier tables when a position
+ * has no current supplier yet. */
+export interface DataTablePlaceholderRow {
+	id: string;
+	content: ReactNode;
+	onClick?: () => void;
+}
+
 export interface DataTableProps<T> {
 	columns: DataTableColumn<T>[];
 	rows: T[];
 	getRowId: (row: T) => string;
 	pinnedRows?: T[];
+	/** Full-width placeholder rows rendered in the pinned area above real pinned rows.
+	 * Each spans every column; styling lives in `content`. */
+	placeholderPinnedRows?: DataTablePlaceholderRow[];
 	isLoading?: boolean;
 	loadingRows?: number;
 	emptyMessage?: string;
@@ -67,6 +79,7 @@ export function DataTable<T>({
 	rows,
 	getRowId,
 	pinnedRows,
+	placeholderPinnedRows,
 	isLoading,
 	loadingRows = 5,
 	emptyMessage = "Ничего не найдено",
@@ -85,6 +98,8 @@ export function DataTable<T>({
 	const allSelected = !!selection && rows.length > 0 && rows.every((r) => selection.selectedIds.has(getRowId(r)));
 
 	const emptyText = hasFilters && emptyMessageWhenFiltered ? emptyMessageWhenFiltered : emptyMessage;
+	const hasAnyPinned = (pinnedRows?.length ?? 0) + (placeholderPinnedRows?.length ?? 0) > 0;
+	const columnSpan = columns.length + (selection ? 1 : 0);
 
 	if (isMobile) {
 		return (
@@ -97,12 +112,28 @@ export function DataTable<T>({
 							<Skeleton key={i} data-testid="data-table-card-skeleton" className="h-24 w-full" />
 						))}
 					</div>
-				) : rows.length === 0 && (!pinnedRows || pinnedRows.length === 0) ? (
+				) : rows.length === 0 && !hasAnyPinned ? (
 					<div className="mx-3 flex flex-1 items-center justify-center rounded-md bg-muted/20 text-sm text-muted-foreground">
 						{emptyText}
 					</div>
 				) : (
 					<div className="flex flex-col gap-3 px-3">
+						{placeholderPinnedRows?.map((p) => (
+							<button
+								key={`placeholder-${p.id}`}
+								type="button"
+								onClick={p.onClick}
+								disabled={!p.onClick}
+								data-testid="data-table-placeholder-card"
+								className={cn(
+									"flex w-full items-center rounded-lg border border-dashed border-foreground/25 bg-accent/30 px-4 py-3 text-left",
+									p.onClick &&
+										"transition-[background-color,border-color,scale] duration-150 ease-out hover:border-foreground/40 hover:bg-accent/50 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
+								)}
+							>
+								{p.content}
+							</button>
+						))}
 						{pinnedRows?.map((row) => {
 							const id = getRowId(row);
 							return (
@@ -122,7 +153,7 @@ export function DataTable<T>({
 		);
 	}
 
-	const isEmpty = !isLoading && rows.length === 0 && (!pinnedRows || pinnedRows.length === 0);
+	const isEmpty = !isLoading && rows.length === 0 && !hasAnyPinned;
 
 	return (
 		<div className="flex h-full flex-col gap-3" data-testid="data-table">
@@ -178,6 +209,21 @@ export function DataTable<T>({
 							))
 						) : isEmpty ? null : (
 							<>
+								{placeholderPinnedRows?.map((p) => (
+									<TableRow
+										key={`placeholder-${p.id}`}
+										data-testid="data-table-placeholder-row"
+										className={cn(
+											"bg-accent/30 hover:bg-accent/50",
+											p.onClick && "cursor-pointer transition-colors motion-reduce:transition-none",
+										)}
+										onClick={p.onClick}
+									>
+										<TableCell colSpan={columnSpan} className="py-2.5">
+											{p.content}
+										</TableCell>
+									</TableRow>
+								))}
 								{pinnedRows?.map((row) => (
 									<DataTableRow
 										key={`pinned-${getRowId(row)}`}

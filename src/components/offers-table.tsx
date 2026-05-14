@@ -1,6 +1,6 @@
 import { Archive, Download, ListFilter, LoaderCircle, Search, UserCheck } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { DataTable, type DataTableColumn, type DataTablePlaceholderRow } from "@/components/data-table";
 import { DeliveryValue } from "@/components/supplier-value-displays";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,11 @@ interface OffersTableProps {
 	/** Real Supplier id of the «Ваш поставщик» row — used as the pinned card's click target.
 	 * When omitted, the pinned card stays un-clickable (legacy items without a seeded supplier). */
 	currentSupplierRowId?: string;
+	/** Extra suppliers to pin at the top (beyond the single currentSupplier-derived pin).
+	 * Used by the inquiry-level tab where each position contributes its own pinned row. */
+	extraPinnedSuppliers?: Supplier[];
+	/** Empty placeholder rows rendered above real pinned rows for positions awaiting a supplier. */
+	placeholderPinnedRows?: DataTablePlaceholderRow[];
 	isLoading: boolean;
 	search: string;
 	onSearchChange: (query: string) => void;
@@ -129,6 +134,8 @@ export function OffersTable({
 	item,
 	currentSupplier,
 	currentSupplierRowId,
+	extraPinnedSuppliers,
+	placeholderPinnedRows,
 	isLoading,
 	search,
 	onSearchChange,
@@ -445,11 +452,16 @@ export function OffersTable({
 			: []),
 	];
 
-	// Only pin when we have a real Supplier row backing the click target. Legacy items without
-	// a seeded «Ваш поставщик» (no INN, or imported pre-seed) skip the pinned card altogether
-	// rather than showing a card that looks interactive but isn't.
+	// Build the pinned-row set from two sources:
+	//   1. `currentSupplier`/`currentSupplierRowId` — the single pin used by the item-level drawer.
+	//   2. `extraPinnedSuppliers` — the multi-pin set passed by the inquiry-level tab.
+	// Item-drawer callers leave (2) empty; inquiry-level callers leave (1) empty.
+	const singlePin =
+		currentSupplier && currentSupplierRowId ? [buildPinnedSupplier(currentSupplier, currentSupplierRowId)] : [];
 	const pinnedRows =
-		currentSupplier && currentSupplierRowId ? [buildPinnedSupplier(currentSupplier, currentSupplierRowId)] : undefined;
+		singlePin.length + (extraPinnedSuppliers?.length ?? 0) > 0
+			? [...singlePin, ...(extraPinnedSuppliers ?? [])]
+			: undefined;
 
 	const sentinel = (
 		<>
@@ -554,6 +566,7 @@ export function OffersTable({
 			columns={columns}
 			rows={suppliers}
 			pinnedRows={pinnedRows}
+			placeholderPinnedRows={placeholderPinnedRows}
 			getRowId={(s) => s.id}
 			isLoading={isLoading}
 			emptyMessage="Нет предложений"

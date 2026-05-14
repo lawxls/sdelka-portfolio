@@ -2,6 +2,8 @@ import { Ban, Check, Mail } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { AddSupplierPlaceholderCell, CurrentSupplierDialog } from "@/components/current-supplier-dialog";
+import type { DataTablePlaceholderRow } from "@/components/data-table";
 import { DetailsTabPanel } from "@/components/details-tab-panel";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "@/components/procurement-card";
@@ -32,6 +34,11 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+	buildCurrentSupplierDraft,
+	buildCurrentSupplierFromDraft,
+	type CurrentSupplierDraft,
+} from "@/components/use-create-procurement-inquiry-form";
 import { useSelectSupplierForItem, useSetCurrentSupplierFromQuote } from "@/data/operations/use-procurement-operations";
 import {
 	SUPPLIER_STATUSES,
@@ -44,7 +51,7 @@ import {
 import type { PaymentType, ProcurementItem } from "@/data/types";
 import { getDisplayStatus } from "@/data/types";
 import { useItemDetail } from "@/data/use-item-detail";
-import { useProcurementInquiry } from "@/data/use-procurement-inquiries";
+import { useUpdateItemCurrentSupplier } from "@/data/use-items";
 import {
 	useArchiveSuppliers,
 	useInfiniteSuppliers,
@@ -307,15 +314,31 @@ function SuppliersTabPanel({
 	kpRequestEnabled?: boolean;
 }) {
 	const { data: itemDetail } = useItemDetail(itemId);
-	const { data: procurementInquiry } = useProcurementInquiry(itemDetail?.procurementInquiryId ?? null);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
-	const currentSupplier = procurementInquiry?.currentSupplier;
+	const currentSupplier = itemDetail?.currentSupplier;
+	const updateSupplierMutation = useUpdateItemCurrentSupplier();
+	const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
 	const [activeStatuses, setActiveStatuses] = useState<SupplierStatus[]>([]);
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
+
+	const placeholderPinnedRows: DataTablePlaceholderRow[] = currentSupplier
+		? []
+		: [
+				{
+					id: `add-supplier-${itemId}`,
+					onClick: () => setSupplierDialogOpen(true),
+					content: <AddSupplierPlaceholderCell />,
+				},
+			];
+
+	function handleSaveSupplier(draft: CurrentSupplierDraft) {
+		updateSupplierMutation.mutate({ id: itemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
+		setSupplierDialogOpen(false);
+	}
 	const [confirmingRequestAll, setConfirmingRequestAll] = useState(false);
 
 	// Pipeline = all statuses except quote_received. If the user has picked a subset via filter,
@@ -478,6 +501,7 @@ function SuppliersTabPanel({
 				kpRequestEnabled={kpRequestEnabled}
 				currentSupplierInn={currentSupplier?.inn}
 				currentSupplierName={currentSupplier?.companyName}
+				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
 				statusCounts={statusCounts}
 				search={search}
 				onSearchChange={setSearch}
@@ -525,6 +549,16 @@ function SuppliersTabPanel({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+			{supplierDialogOpen && (
+				<CurrentSupplierDialog
+					open
+					onOpenChange={(o) => {
+						if (!o) setSupplierDialogOpen(false);
+					}}
+					initial={currentSupplier ? buildCurrentSupplierDraft(currentSupplier) : undefined}
+					onSave={handleSaveSupplier}
+				/>
+			)}
 		</div>
 	);
 }
@@ -568,8 +602,24 @@ function OffersTabPanel({
 	const query = useInfiniteSuppliers(itemId, filterParams);
 	const archiveMutation = useArchiveSuppliers();
 	const { data: itemDetail } = useItemDetail(itemId);
-	const { data: procurementInquiry } = useProcurementInquiry(itemDetail?.procurementInquiryId ?? null);
-	const currentSupplier = procurementInquiry?.currentSupplier;
+	const currentSupplier = itemDetail?.currentSupplier;
+	const updateSupplierMutation = useUpdateItemCurrentSupplier();
+	const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+
+	const placeholderPinnedRows: DataTablePlaceholderRow[] = currentSupplier
+		? []
+		: [
+				{
+					id: `add-supplier-${itemId}`,
+					onClick: () => setSupplierDialogOpen(true),
+					content: <AddSupplierPlaceholderCell />,
+				},
+			];
+
+	function handleSaveSupplier(draft: CurrentSupplierDraft) {
+		updateSupplierMutation.mutate({ id: itemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
+		setSupplierDialogOpen(false);
+	}
 	// When no payment/delivery client-side filters are active, the server total matches.
 	// Otherwise count the loaded rows that pass the client-side filter — the UX cost of fetching
 	// all pages just to produce a total isn't worth it for these local filters.
@@ -650,6 +700,7 @@ function OffersTabPanel({
 				item={{ quantityPerDelivery: itemDetail?.quantityPerDelivery }}
 				currentSupplier={currentSupplier}
 				currentSupplierRowId={currentSupplierRowId}
+				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
 				isLoading={query.isLoading}
 				search={search}
 				onSearchChange={setSearch}
@@ -674,6 +725,16 @@ function OffersTabPanel({
 				procurementInquiryItems={procurementInquiryItems}
 				procurementInquiryQuotesByIdentity={procurementInquiryQuotesByIdentity}
 			/>
+			{supplierDialogOpen && (
+				<CurrentSupplierDialog
+					open
+					onOpenChange={(o) => {
+						if (!o) setSupplierDialogOpen(false);
+					}}
+					initial={currentSupplier ? buildCurrentSupplierDraft(currentSupplier) : undefined}
+					onSave={handleSaveSupplier}
+				/>
+			)}
 		</div>
 	);
 }

@@ -6,7 +6,7 @@ import { invalidateAfterItemListChange } from "./invalidation-policies";
 import { applyOptimistic, applyToCache, rollbackOptimistic } from "./optimistic";
 import { keys } from "./query-keys";
 import { infinitePages } from "./shape-adapters";
-import type { FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
+import type { CurrentSupplier, FilterState, NewItemInput, ProcurementItem, SortState } from "./types";
 
 interface ItemQueryParams {
 	search: string;
@@ -153,6 +153,40 @@ export function useUpdateItem() {
 			mutation.mutate(vars);
 		},
 	};
+}
+
+/** Set or clear `currentSupplier` on a procurement item. Also seeds the item's
+ * `currentPrice` from the supplier's price when present, and invalidates the
+ * suppliers cache so the «Ваш поставщик» pinned row refreshes. */
+export function useUpdateItemCurrentSupplier() {
+	const client = useItemsClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ id, currentSupplier }: { id: string; currentSupplier: CurrentSupplier | undefined }) => {
+			const patch: Partial<ProcurementItem> = { currentSupplier };
+			if (currentSupplier?.pricePerUnit != null) patch.currentPrice = currentSupplier.pricePerUnit;
+			return client.update(id, patch);
+		},
+		onSuccess: (serverItem) => {
+			applyToCache(queryClient, [
+				{
+					queryKey: keys.items.all(),
+					prefix: true,
+					update: itemsListPages.patchById(serverItem.id, () => serverItem),
+				},
+			]);
+			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+			queryClient.invalidateQueries({
+				queryKey: keys.items.byProcurementInquiry(serverItem.procurementInquiryId ?? ""),
+			});
+		},
+		onError: () => {
+			toast.error("Не удалось обновить текущего поставщика");
+		},
+	});
 }
 
 export function useArchiveItem() {

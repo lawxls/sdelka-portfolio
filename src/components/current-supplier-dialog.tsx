@@ -1,4 +1,4 @@
-import { AlertCircle, BadgeCheck, Globe, LoaderCircle, Mail, MapPin, RotateCcw } from "lucide-react";
+import { AlertCircle, BadgeCheck, Globe, LoaderCircle, Mail, MapPin, Plus, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,9 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { SupplierIdentity } from "@/data/domains/suppliers";
+import type { PaymentType } from "@/data/types";
 import { INN_INDIVIDUAL_LEN, isValidInnLength, useSupplierIdentity } from "@/data/use-suppliers";
 import { digitsOnly } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,19 @@ interface CurrentSupplierDialogProps {
 	initial?: CurrentSupplierDraft;
 	onSave: (supplier: CurrentSupplierDraft) => void;
 }
+
+const PAYMENT_OPTIONS = ["prepayment", "deferred"] as const satisfies readonly PaymentType[];
+const PAYMENT_LABELS: Record<PaymentType, string> = {
+	prepayment: "Предоплата",
+	deferred: "Отсрочка",
+};
+
+type DeliveryMode = "included" | "paid";
+const DELIVERY_OPTIONS = ["included", "paid"] as const;
+const DELIVERY_LABELS: Record<DeliveryMode, string> = {
+	included: "Включена",
+	paid: "Платная",
+};
 
 function identityFromInitial(initial: CurrentSupplierDraft | undefined): SupplierIdentity | null {
 	if (!initial || initial.companyName.trim() === "") return null;
@@ -102,7 +117,13 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 	const [innLocked, setInnLocked] = useState(editing);
 	const [inn, setInn] = useState(initial?.inn ?? "");
 	const [pricePerUnit, setPricePerUnit] = useState(initial?.pricePerUnit ?? "");
+	const [paymentType, setPaymentType] = useState<PaymentType>(initial?.paymentType ?? "prepayment");
+	const [deferralDays, setDeferralDays] = useState(initial?.deferralDays ?? "");
+	const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(
+		initial?.deliveryIncluded === false ? "paid" : "included",
+	);
 	const [deliveryCost, setDeliveryCost] = useState(initial?.deliveryCost ?? "");
+	const [leadTimeDays, setLeadTimeDays] = useState(initial?.leadTimeDays ?? "");
 	const [manualName, setManualName] = useState(initial?.companyName ?? "");
 	const [manualWebsite, setManualWebsite] = useState(initial?.website ?? "");
 	const [manualAddress, setManualAddress] = useState(initial?.address ?? "");
@@ -128,10 +149,12 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 		setManualEmail("");
 	}
 
-	const priceValid = pricePerUnit.trim() !== "";
 	const innValid = isValidInnLength(inn);
+	const priceValid = pricePerUnit.trim() !== "";
 	const manualNameValid = !isMiss || manualName.trim() !== "";
-	const canSave = innValid && priceValid && manualNameValid;
+	const deferralValid = paymentType !== "deferred" || deferralDays.trim() !== "";
+	const deliveryValid = deliveryMode !== "paid" || deliveryCost.trim() !== "";
+	const canSave = innValid && priceValid && manualNameValid && deferralValid && deliveryValid;
 
 	function handleSave() {
 		if (!canSave) {
@@ -151,17 +174,25 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 			address: identity.address,
 			email: identity.email,
 			pricePerUnit: pricePerUnit.trim(),
-			deliveryCost: deliveryCost.trim(),
+			paymentType,
+			deferralDays: paymentType === "deferred" ? deferralDays.trim() : "",
+			deliveryIncluded: deliveryMode === "included",
+			deliveryCost: deliveryMode === "paid" ? deliveryCost.trim() : "",
+			leadTimeDays: leadTimeDays.trim(),
 		});
 	}
 
 	const innErrorId = "current-supplier-inn-error";
 	const priceErrorId = "current-supplier-price-error";
 	const nameErrorId = "current-supplier-name-error";
+	const deferralErrorId = "current-supplier-deferral-error";
+	const deliveryErrorId = "current-supplier-delivery-error";
 
 	const showInnError = showErrors && !innValid;
 	const showPriceError = showErrors && !priceValid;
 	const showNameError = showErrors && isMiss && !manualNameValid;
+	const showDeferralError = showErrors && !deferralValid;
+	const showDeliveryError = showErrors && !deliveryValid;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -330,51 +361,119 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 						</div>
 					)}
 
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-						<div className="flex flex-1 min-w-0 flex-col gap-1.5">
-							<FieldLabel htmlFor="current-supplier-price" required disabled={!innFilled}>
-								Текущая цена без НДС
-							</FieldLabel>
-							<div className={cn("flex items-center gap-1.5", !innFilled && "opacity-60")}>
-								<Input
-									id="current-supplier-price"
-									value={pricePerUnit}
-									onChange={(e) => setPricePerUnit(e.target.value.replace(/[^\d.]/g, ""))}
-									inputMode="decimal"
-									autoComplete="off"
-									placeholder="1250"
-									disabled={!innFilled}
-									aria-required="true"
-									aria-invalid={showPriceError || undefined}
-									aria-describedby={showPriceError ? priceErrorId : undefined}
-									className={cn("flex-1 tabular-nums", showPriceError && "border-destructive")}
-								/>
-								<span className="text-sm text-muted-foreground">₽</span>
-							</div>
-							{showPriceError && (
-								<p id={priceErrorId} className="text-sm text-destructive">
-									Укажите цену
-								</p>
+					<div className="flex flex-col gap-1.5">
+						<FieldLabel htmlFor="current-supplier-price" required disabled={!innFilled}>
+							Текущая цена без НДС
+						</FieldLabel>
+						<div className={cn("flex items-center gap-1.5", !innFilled && "opacity-60")}>
+							<Input
+								id="current-supplier-price"
+								value={pricePerUnit}
+								onChange={(e) => setPricePerUnit(e.target.value.replace(/[^\d.]/g, ""))}
+								inputMode="decimal"
+								autoComplete="off"
+								placeholder="1250"
+								disabled={!innFilled}
+								aria-required="true"
+								aria-invalid={showPriceError || undefined}
+								aria-describedby={showPriceError ? priceErrorId : undefined}
+								className={cn("flex-1 tabular-nums", showPriceError && "border-destructive")}
+							/>
+							<span className="text-sm text-muted-foreground">₽</span>
+						</div>
+						{showPriceError && (
+							<p id={priceErrorId} className="text-sm text-destructive">
+								Укажите цену
+							</p>
+						)}
+					</div>
+
+					<div className="flex flex-col gap-1.5">
+						<FieldLabel disabled={!innFilled}>Тип оплаты</FieldLabel>
+						<div className={cn("flex flex-wrap items-center gap-2", !innFilled && "opacity-60")}>
+							<SegmentedControl
+								options={PAYMENT_OPTIONS}
+								labels={PAYMENT_LABELS}
+								value={paymentType}
+								onChange={setPaymentType}
+								disabled={!innFilled}
+							/>
+							{paymentType === "deferred" && (
+								<div className="flex items-center gap-1.5 animate-in fade-in-0 duration-150 motion-reduce:animate-none">
+									<Input
+										aria-label="Дней отсрочки"
+										value={deferralDays}
+										onChange={(e) => setDeferralDays(digitsOnly(e.target.value))}
+										inputMode="numeric"
+										autoComplete="off"
+										placeholder="30"
+										disabled={!innFilled}
+										aria-invalid={showDeferralError || undefined}
+										aria-describedby={showDeferralError ? deferralErrorId : undefined}
+										className={cn("w-20 tabular-nums", showDeferralError && "border-destructive")}
+									/>
+									<span className="text-sm text-muted-foreground">дн.</span>
+								</div>
 							)}
 						</div>
+						{showDeferralError && (
+							<p id={deferralErrorId} className="text-sm text-destructive">
+								Укажите количество дней отсрочки
+							</p>
+						)}
+					</div>
 
-						<div className="flex flex-1 min-w-0 flex-col gap-1.5">
-							<FieldLabel htmlFor="current-supplier-delivery" disabled={!innFilled}>
-								Стоимость доставки
-							</FieldLabel>
-							<div className={cn("flex items-center gap-1.5", !innFilled && "opacity-60")}>
-								<Input
-									id="current-supplier-delivery"
-									value={deliveryCost}
-									onChange={(e) => setDeliveryCost(e.target.value.replace(/[^\d.]/g, ""))}
-									inputMode="decimal"
-									autoComplete="off"
-									placeholder="300"
-									disabled={!innFilled}
-									className="flex-1 tabular-nums"
-								/>
-								<span className="text-sm text-muted-foreground">₽</span>
-							</div>
+					<div className="flex flex-col gap-1.5">
+						<FieldLabel disabled={!innFilled}>Доставка</FieldLabel>
+						<div className={cn("flex flex-wrap items-center gap-2", !innFilled && "opacity-60")}>
+							<SegmentedControl
+								options={DELIVERY_OPTIONS}
+								labels={DELIVERY_LABELS}
+								value={deliveryMode}
+								onChange={setDeliveryMode}
+								disabled={!innFilled}
+							/>
+							{deliveryMode === "paid" && (
+								<div className="flex items-center gap-1.5 animate-in fade-in-0 duration-150 motion-reduce:animate-none">
+									<Input
+										aria-label="Стоимость доставки"
+										value={deliveryCost}
+										onChange={(e) => setDeliveryCost(e.target.value.replace(/[^\d.]/g, ""))}
+										inputMode="decimal"
+										autoComplete="off"
+										placeholder="300"
+										disabled={!innFilled}
+										aria-invalid={showDeliveryError || undefined}
+										aria-describedby={showDeliveryError ? deliveryErrorId : undefined}
+										className={cn("w-24 tabular-nums", showDeliveryError && "border-destructive")}
+									/>
+									<span className="text-sm text-muted-foreground">₽</span>
+								</div>
+							)}
+						</div>
+						{showDeliveryError && (
+							<p id={deliveryErrorId} className="text-sm text-destructive">
+								Укажите стоимость доставки
+							</p>
+						)}
+					</div>
+
+					<div className="flex flex-col gap-1.5">
+						<FieldLabel htmlFor="current-supplier-lead-time" disabled={!innFilled}>
+							Срок поставки
+						</FieldLabel>
+						<div className={cn("flex items-center gap-1.5", !innFilled && "opacity-60")}>
+							<Input
+								id="current-supplier-lead-time"
+								value={leadTimeDays}
+								onChange={(e) => setLeadTimeDays(digitsOnly(e.target.value))}
+								inputMode="numeric"
+								autoComplete="off"
+								placeholder="14"
+								disabled={!innFilled}
+								className="w-24 tabular-nums"
+							/>
+							<span className="text-sm text-muted-foreground">дн.</span>
 						</div>
 					</div>
 				</div>
@@ -386,5 +485,20 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+/** «Нажмите, чтобы добавить» pinned-row content for supplier tables when a position
+ * has no `currentSupplier`. `itemName` appends a " — {name}" suffix when supplied
+ * (multi-position inquiry context); omit for single-position drawer context. */
+export function AddSupplierPlaceholderCell({ itemName }: { itemName?: string }) {
+	return (
+		<div className="flex items-center gap-2 text-sm text-foreground/75">
+			<Plus aria-hidden="true" className="size-4 shrink-0" />
+			<span className="text-pretty">
+				<span className="font-medium">Нажмите, чтобы добавить</span>
+				{itemName ? <span className="text-muted-foreground"> — {itemName}</span> : null}
+			</span>
+		</div>
 	);
 }

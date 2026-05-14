@@ -332,7 +332,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.currentSupplier).toMatchObject({ inn: "1234567890" });
+		expect(payload.items[0].currentSupplier).toMatchObject({ inn: "1234567890" });
 		expect(payload.items[0]).toMatchObject({ currentPrice: 1250 });
 	});
 });

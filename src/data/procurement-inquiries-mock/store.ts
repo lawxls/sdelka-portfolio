@@ -8,7 +8,6 @@ function cloneProcurementInquiry(t: ProcurementInquiry): ProcurementInquiry {
 		...t,
 		addressIds: t.addressIds ? [...t.addressIds] : undefined,
 		attachedFiles: t.attachedFiles ? t.attachedFiles.map((a) => ({ ...a })) : undefined,
-		currentSupplier: t.currentSupplier ? { ...t.currentSupplier } : undefined,
 	};
 }
 
@@ -29,9 +28,7 @@ export function readProcurementInquiries(): ProcurementInquiry[] {
 }
 
 /** Cross-entity lookup helper. Returns a defensive clone, or null when the slug
- * is unknown. Used by items-in-memory (filter join), folders-mock-data (stats),
- * and suppliers-mock (currentSupplier reads) since shared step1 meta now lives
- * on the inquiry, not on the item. */
+ * is unknown. Used by items-in-memory (filter join) and folders-mock-data (stats). */
 export function _getProcurementInquiry(id: string): ProcurementInquiry | null {
 	const procurementInquiry = procurementInquiriesStore.find((t) => t.id === id);
 	return procurementInquiry ? cloneProcurementInquiry(procurementInquiry) : null;

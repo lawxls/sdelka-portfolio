@@ -22,7 +22,11 @@ function makeSupplier(overrides: Partial<CurrentSupplierDraft> = {}): CurrentSup
 		address: "",
 		email: "",
 		pricePerUnit: "",
+		paymentType: "prepayment",
+		deferralDays: "",
+		deliveryIncluded: true,
 		deliveryCost: "",
+		leadTimeDays: "",
 		...overrides,
 	};
 }
@@ -224,15 +228,15 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(payload.items[0]).toMatchObject({ name: "Арматура", currentPrice: 100 });
 	});
 
-	test("toPayload omits inquiry currentSupplier when no position INN is set", () => {
+	test("toPayload omits item currentSupplier when no draft supplier is set", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
 		const payload = result.current.toPayload();
-		expect(payload.procurementInquiry.currentSupplier).toBeUndefined();
+		expect(payload.items[0].currentSupplier).toBeUndefined();
 	});
 
-	test("toPayload picks the first non-empty position INN as inquiry supplier", () => {
+	test("toPayload carries per-position currentSupplier on each item", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => {
@@ -240,7 +244,7 @@ describe("useCreateProcurementInquiryForm", () => {
 		});
 
 		const payload = result.current.toPayload();
-		expect(payload.procurementInquiry.currentSupplier).toMatchObject({ inn: "1234567890" });
+		expect(payload.items[0].currentSupplier).toMatchObject({ inn: "1234567890" });
 	});
 
 	test("toPayload emits one item per position card", () => {

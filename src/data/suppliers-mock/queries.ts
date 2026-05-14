@@ -1,7 +1,6 @@
 import { batchCost } from "../../lib/math";
 import type { SupplierIdentity } from "../domains/suppliers";
 import { _getItem } from "../items-mock-data";
-import { _getProcurementInquiry } from "../procurement-inquiries-mock/store";
 import type {
 	Supplier,
 	SupplierFilterParams,
@@ -193,8 +192,7 @@ export async function getSupplierQuotesByInn(inn: string, contextItemId: string)
 		const match = suppliers.find((s) => s.inn === inn && s.status === "quote_received" && !s.archived);
 		if (!match) continue;
 		const item = _getItem(itemId);
-		const procurementInquiry = item?.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
-		const currentSupplier = procurementInquiry?.currentSupplier;
+		const currentSupplier = item?.currentSupplier;
 		const isCurrentSupplier =
 			currentSupplier != null &&
 			(currentSupplier.inn === inn ||

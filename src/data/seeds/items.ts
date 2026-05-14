@@ -11,7 +11,7 @@ import { ITEM as ITEM_11 } from "../items/item-11";
 import { ITEM as ITEM_12 } from "../items/item-12";
 import { ITEM as ITEM_13 } from "../items/item-13";
 import type { ProcurementItem } from "../types";
-import { SEED_ITEM_PROCUREMENT_INQUIRY } from "./procurement-inquiries";
+import { SEED_INQUIRY_CURRENT_SUPPLIER, SEED_ITEM_PROCUREMENT_INQUIRY } from "./procurement-inquiries";
 
 const ITEM_1: ProcurementItem = {
 	id: "item-1",
@@ -50,7 +50,12 @@ const RAW_ITEMS: ProcurementItem[] = [
 
 export const SEED_ITEMS: ProcurementItem[] = RAW_ITEMS.map((item) => {
 	const procurementInquiryId = SEED_ITEM_PROCUREMENT_INQUIRY[item.id];
-	return procurementInquiryId ? { ...item, procurementInquiryId } : { ...item };
+	const currentSupplier = procurementInquiryId ? SEED_INQUIRY_CURRENT_SUPPLIER[procurementInquiryId] : undefined;
+	return {
+		...item,
+		...(procurementInquiryId && { procurementInquiryId }),
+		...(currentSupplier && { currentSupplier }),
+	};
 });
 
 export const SEED_ARCHIVED: string[] = [];

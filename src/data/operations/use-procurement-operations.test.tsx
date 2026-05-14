@@ -57,16 +57,14 @@ afterEach(() => {
 describe("useSelectSupplierForItem", () => {
 	it("invalidates itemDetail + supplier-list + inquiries caches after the operation runs", async () => {
 		const supplier = makeSupplier("s1", { companyName: "Альфа", pricePerUnit: 100 });
-		const itemsGet = vi.fn().mockResolvedValue(makeItem("item-1", { procurementInquiryId: "T-001" }));
 		const get = vi.fn().mockResolvedValue(supplier);
-		const procurementInquiriesUpdate = vi.fn().mockResolvedValue(makeProcurementInquiry("T-001"));
-		const items = fakeItemsClient({ get: itemsGet });
+		const itemsUpdate = vi.fn().mockResolvedValue(makeItem("item-1"));
+		const items = fakeItemsClient({ update: itemsUpdate });
 		const suppliers = fakeSuppliersClient({ get });
-		const procurementInquiries = fakeProcurementInquiriesClient({ update: procurementInquiriesUpdate });
+		const procurementInquiries = fakeProcurementInquiriesClient();
 
 		queryClient.setQueryData(["itemDetail", "item-1"], { id: "item-1" });
 		queryClient.setQueryData(["suppliers", "item-1", {}], { suppliers: [], nextCursor: null, total: 0 });
-		queryClient.setQueryData(["procurementInquiries", { foo: "bar" }], { items: [], nextCursor: null });
 
 		const { result } = renderHook(() => useSelectSupplierForItem(), {
 			wrapper: wrapperFactory(suppliers, items, procurementInquiries),
@@ -74,15 +72,14 @@ describe("useSelectSupplierForItem", () => {
 		await result.current.mutateAsync({ itemId: "item-1", supplierId: "s1" });
 
 		expect(get).toHaveBeenCalledWith("item-1", "s1");
-		expect(procurementInquiriesUpdate).toHaveBeenCalledWith(
-			"T-001",
+		expect(itemsUpdate).toHaveBeenCalledWith(
+			"item-1",
 			expect.objectContaining({
 				currentSupplier: expect.objectContaining({ companyName: "Альфа", pricePerUnit: 100 }),
 			}),
 		);
 		expect(queryClient.getQueryState(["itemDetail", "item-1"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["suppliers", "item-1", {}])?.isInvalidated).toBe(true);
-		expect(queryClient.getQueryState(["procurementInquiries", { foo: "bar" }])?.isInvalidated).toBe(true);
 	});
 });
 
@@ -183,11 +180,13 @@ describe("useSetCurrentSupplierFromQuote", () => {
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(listForItem).toHaveBeenCalledWith("item-1");
-		expect(procurementInquiriesUpdate).toHaveBeenCalledWith(
-			"T-001",
-			expect.objectContaining({ currentSupplier: expect.objectContaining({ inn: "7700" }) }),
+		expect(itemsUpdate).toHaveBeenCalledWith(
+			"item-1",
+			expect.objectContaining({
+				currentSupplier: expect.objectContaining({ inn: "7700" }),
+				currentPrice: 95,
+			}),
 		);
-		expect(itemsUpdate).toHaveBeenCalledWith("item-1", { currentPrice: 95 });
 		expect(queryClient.getQueryState(["itemDetail", "item-1"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals", {}])?.isInvalidated).toBe(true);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CreateProcurementInquiryInput } from "@/data/domains/procurement-inquiries";
-import type { GeneratedAnswer, NewItemInput, Unit, UnloadingType } from "@/data/types";
+import type { CurrentSupplier, GeneratedAnswer, NewItemInput, PaymentType, Unit, UnloadingType } from "@/data/types";
 import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
 import { buildEmailVariant } from "./procurement-inquiry-email-templates";
 
@@ -19,7 +19,56 @@ export interface CurrentSupplierDraft {
 	address: string;
 	email: string;
 	pricePerUnit: string;
+	paymentType: PaymentType;
+	deferralDays: string;
+	deliveryIncluded: boolean;
 	deliveryCost: string;
+	leadTimeDays: string;
+}
+
+/** Hydrate a `CurrentSupplierDraft` from a stored `CurrentSupplier`. Inverse of
+ * `buildCurrentSupplierFromDraft` — used by callers re-opening the modal for an
+ * existing item. */
+export function buildCurrentSupplierDraft(cs: CurrentSupplier): CurrentSupplierDraft {
+	return {
+		inn: cs.inn ?? "",
+		companyName: cs.companyName,
+		website: cs.website ?? "",
+		address: cs.address ?? "",
+		email: cs.email ?? "",
+		pricePerUnit: cs.pricePerUnit != null ? String(cs.pricePerUnit) : "",
+		paymentType: cs.paymentType ?? "prepayment",
+		deferralDays: cs.deferralDays > 0 ? String(cs.deferralDays) : "",
+		deliveryIncluded: cs.deliveryCost == null,
+		deliveryCost: cs.deliveryCost != null ? String(cs.deliveryCost) : "",
+		leadTimeDays: cs.leadTimeDays != null ? String(cs.leadTimeDays) : "",
+	};
+}
+
+/** Build the canonical `CurrentSupplier` payload from a draft. Numeric fields
+ * parse via `toNumberOrUndefined`; missing optionals are dropped. */
+export function buildCurrentSupplierFromDraft(draft: CurrentSupplierDraft): CurrentSupplier {
+	const inn = draft.inn.trim();
+	const supplier: CurrentSupplier = {
+		companyName: draft.companyName.trim(),
+		deferralDays: 0,
+		pricePerUnit: toNumberOrUndefined(draft.pricePerUnit) ?? null,
+		paymentType: draft.paymentType,
+	};
+	if (inn) supplier.inn = inn;
+	const website = draft.website.trim();
+	if (website) supplier.website = website;
+	const address = draft.address.trim();
+	if (address) supplier.address = address;
+	const email = draft.email.trim();
+	if (email) supplier.email = email;
+	if (draft.paymentType === "deferred") {
+		supplier.deferralDays = toNumberOrUndefined(draft.deferralDays) ?? 0;
+	}
+	supplier.deliveryCost = draft.deliveryIncluded ? null : (toNumberOrUndefined(draft.deliveryCost) ?? null);
+	const leadTime = toNumberOrUndefined(draft.leadTimeDays);
+	if (leadTime !== undefined) supplier.leadTimeDays = leadTime;
+	return supplier;
 }
 
 export interface PositionDraft {
@@ -162,6 +211,10 @@ function buildNewItemInput(position: PositionDraft, step2: Step2State): NewItemI
 	const price = toNumberOrUndefined(position.currentSupplier?.pricePerUnit ?? "");
 	if (price !== undefined) payload.currentPrice = price;
 
+	if (position.currentSupplier) {
+		payload.currentSupplier = buildCurrentSupplierFromDraft(position.currentSupplier);
+	}
+
 	const answers = buildGeneratedAnswers(step2);
 	if (answers) payload.generatedAnswers = answers;
 
@@ -196,17 +249,6 @@ function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): Cre
 	const aggregatedFiles = step1.positions.flatMap((p) => p.files);
 	if (aggregatedFiles.length > 0) {
 		procurementInquiry.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
-	}
-
-	const firstSupplier = step1.positions.find((p) => p.currentSupplier?.inn.trim())?.currentSupplier;
-	if (firstSupplier) {
-		const price = toNumberOrUndefined(firstSupplier.pricePerUnit);
-		procurementInquiry.currentSupplier = {
-			companyName: firstSupplier.companyName,
-			inn: firstSupplier.inn.trim(),
-			deferralDays: 0,
-			pricePerUnit: price ?? null,
-		};
 	}
 
 	const subject = step3.subject.trim();

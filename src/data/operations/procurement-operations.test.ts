@@ -20,51 +20,34 @@ import {
  * correctness is the contract test's job.
  */
 
-function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
-	return {
-		id,
-		name: `ProcurementInquiry ${id}`,
-		companyId: "company-1",
-		folderId: null,
-		budget: 0,
-		createdAt: "2026-04-01",
-		deadline: "2026-05-01",
-		...overrides,
-	};
-}
-
 describe("selectSupplierForItem", () => {
-	it("reads the item, then the supplier, then writes the procurementInquiry — in that order", async () => {
+	it("reads the supplier, then writes the item — in that order", async () => {
 		const calls: string[] = [];
-		const item = makeItem("item-1", { procurementInquiryId: "T-001" });
 		const supplier = makeSupplier("s1", {
 			companyName: "Альфа",
 			paymentType: "prepayment",
 			deferralDays: 0,
 			pricePerUnit: 100,
 		});
-		const itemsGet = vi.fn().mockImplementation(async () => {
-			calls.push("items.get");
-			return item;
-		});
+		const itemsGet = vi.fn();
 		const get = vi.fn().mockImplementation(async () => {
 			calls.push("suppliers.get");
 			return supplier;
 		});
 		const update = vi.fn().mockImplementation(async () => {
-			calls.push("procurementInquiries.update");
-			return makeProcurementInquiry("T-001");
+			calls.push("items.update");
+			return makeItem("item-1");
 		});
 
 		await selectSupplierForItem("item-1", "s1", {
-			items: fakeItemsClient({ get: itemsGet }),
+			items: fakeItemsClient({ get: itemsGet, update }),
 			suppliers: fakeSuppliersClient({ get }),
-			procurementInquiries: fakeProcurementInquiriesClient({ update }),
+			procurementInquiries: fakeProcurementInquiriesClient(),
 		});
 
-		expect(calls).toEqual(["items.get", "suppliers.get", "procurementInquiries.update"]);
+		expect(calls).toEqual(["suppliers.get", "items.update"]);
 		expect(get).toHaveBeenCalledWith("item-1", "s1");
-		expect(update).toHaveBeenCalledWith("T-001", {
+		expect(update).toHaveBeenCalledWith("item-1", {
 			currentSupplier: {
 				companyName: "Альфа",
 				paymentType: "prepayment",
@@ -74,27 +57,16 @@ describe("selectSupplierForItem", () => {
 		});
 	});
 
-	it("throws NotFoundError when the supplier is missing — does not write the inquiry", async () => {
+	it("throws NotFoundError when the supplier is missing — does not write the item", async () => {
 		const update = vi.fn();
 		await expect(
 			selectSupplierForItem("item-1", "missing", {
 				items: fakeItemsClient({
 					get: vi.fn().mockResolvedValue(makeItem("item-1", { procurementInquiryId: "T-001" })),
+					update,
 				}),
 				suppliers: fakeSuppliersClient({ get: vi.fn().mockResolvedValue(null) }),
-				procurementInquiries: fakeProcurementInquiriesClient({ update }),
-			}),
-		).rejects.toBeInstanceOf(NotFoundError);
-		expect(update).not.toHaveBeenCalled();
-	});
-
-	it("throws NotFoundError when the item has no parent inquiry", async () => {
-		const update = vi.fn();
-		await expect(
-			selectSupplierForItem("item-1", "s1", {
-				items: fakeItemsClient({ get: vi.fn().mockResolvedValue(makeItem("item-1")) }),
-				suppliers: fakeSuppliersClient({ get: vi.fn() }),
-				procurementInquiries: fakeProcurementInquiriesClient({ update }),
+				procurementInquiries: fakeProcurementInquiriesClient(),
 			}),
 		).rejects.toBeInstanceOf(NotFoundError);
 		expect(update).not.toHaveBeenCalled();
@@ -102,7 +74,7 @@ describe("selectSupplierForItem", () => {
 });
 
 describe("setCurrentSupplierFromQuote", () => {
-	it("looks up by INN, writes the procurementInquiry, and snaps the item's currentPrice to the supplier's TCO", async () => {
+	it("looks up by INN, writes the item's currentSupplier, and snaps currentPrice to the supplier's TCO", async () => {
 		const supplier = makeSupplier("s1", {
 			inn: "7700000001",
 			companyName: "Альфа",
@@ -117,16 +89,15 @@ describe("setCurrentSupplierFromQuote", () => {
 			.mockResolvedValue(makeItem("item-1", { procurementInquiryId: "T-001", currentPrice: 100 }));
 		const listForItem = vi.fn().mockResolvedValue({ suppliers: [supplier] });
 		const itemsUpdate = vi.fn().mockResolvedValue(makeItem("item-1"));
-		const procurementInquiriesUpdate = vi.fn().mockResolvedValue(makeProcurementInquiry("T-001"));
 
 		await setCurrentSupplierFromQuote("item-1", "7700000001", {
 			items: fakeItemsClient({ get: itemsGet, update: itemsUpdate }),
 			suppliers: fakeSuppliersClient({ listForItem }),
-			procurementInquiries: fakeProcurementInquiriesClient({ update: procurementInquiriesUpdate }),
+			procurementInquiries: fakeProcurementInquiriesClient(),
 		});
 
 		expect(listForItem).toHaveBeenCalledWith("item-1");
-		expect(procurementInquiriesUpdate).toHaveBeenCalledWith("T-001", {
+		expect(itemsUpdate).toHaveBeenCalledWith("item-1", {
 			currentSupplier: {
 				companyName: "Альфа",
 				inn: "7700000001",
@@ -135,8 +106,8 @@ describe("setCurrentSupplierFromQuote", () => {
 				prepaymentPercent: 50,
 				pricePerUnit: 100,
 			},
+			currentPrice: 95,
 		});
-		expect(itemsUpdate).toHaveBeenCalledWith("item-1", { currentPrice: 95 });
 	});
 
 	it("falls back to pricePerUnit when tco is null", async () => {
@@ -149,15 +120,16 @@ describe("setCurrentSupplierFromQuote", () => {
 				update: itemsUpdate,
 			}),
 			suppliers: fakeSuppliersClient({ listForItem: vi.fn().mockResolvedValue({ suppliers: [supplier] }) }),
-			procurementInquiries: fakeProcurementInquiriesClient({
-				update: vi.fn().mockResolvedValue(makeProcurementInquiry("T-001")),
-			}),
+			procurementInquiries: fakeProcurementInquiriesClient(),
 		});
 
-		expect(itemsUpdate).toHaveBeenCalledWith("item-1", { currentPrice: 200 });
+		expect(itemsUpdate).toHaveBeenCalledWith(
+			"item-1",
+			expect.objectContaining({ currentPrice: 200, currentSupplier: expect.objectContaining({ inn: "INN" }) }),
+		);
 	});
 
-	it("does not update the item when both tco and pricePerUnit are null", async () => {
+	it("writes the currentSupplier without snapping price when both tco and pricePerUnit are null", async () => {
 		const supplier = makeSupplier("s1", { inn: "INN", pricePerUnit: null, tco: null });
 		const itemsUpdate = vi.fn().mockResolvedValue(makeItem("item-1"));
 
@@ -167,12 +139,13 @@ describe("setCurrentSupplierFromQuote", () => {
 				update: itemsUpdate,
 			}),
 			suppliers: fakeSuppliersClient({ listForItem: vi.fn().mockResolvedValue({ suppliers: [supplier] }) }),
-			procurementInquiries: fakeProcurementInquiriesClient({
-				update: vi.fn().mockResolvedValue(makeProcurementInquiry("T-001")),
-			}),
+			procurementInquiries: fakeProcurementInquiriesClient(),
 		});
 
-		expect(itemsUpdate).not.toHaveBeenCalled();
+		expect(itemsUpdate).toHaveBeenCalledWith(
+			"item-1",
+			expect.not.objectContaining({ currentPrice: expect.anything() }),
+		);
 	});
 
 	it("throws NotFoundError when no supplier matches the INN — archived rows are skipped", async () => {

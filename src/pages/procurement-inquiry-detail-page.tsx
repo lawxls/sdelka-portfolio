@@ -1,8 +1,15 @@
-import { Archive, Ban, Check, Mail, Pencil } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Archive, Ban, Check, Mail, Pencil, Plus, X } from "lucide-react";
+// biome-ignore lint/style/noRestrictedImports: one-time external sync from URL state (no stable mount point fits here)
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { DataTable, type DataTableColumn, type DataTableSort } from "@/components/data-table";
+import { AddSupplierPlaceholderCell, CurrentSupplierDialog } from "@/components/current-supplier-dialog";
+import {
+	DataTable,
+	type DataTableColumn,
+	type DataTablePlaceholderRow,
+	type DataTableSort,
+} from "@/components/data-table";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { InlineRenameInput } from "@/components/inline-rename-input";
 import { type DeliveryFilter, matchesDeliveryFilter, OffersTable } from "@/components/offers-table";
@@ -22,6 +29,11 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+	buildCurrentSupplierDraft,
+	buildCurrentSupplierFromDraft,
+	type CurrentSupplierDraft,
+} from "@/components/use-create-procurement-inquiry-form";
 import { getProcurementInquiryStatus } from "@/data/procurement-inquiries/get-procurement-inquiry-status";
 import {
 	SUPPLIER_STATUSES,
@@ -37,7 +49,7 @@ import type { Folder, PaymentType, ProcurementInquiry, ProcurementInquiryStatus,
 import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
-import { useProcurementInquiryItems } from "@/data/use-items";
+import { useProcurementInquiryItems, useUpdateItemCurrentSupplier } from "@/data/use-items";
 import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
 import {
 	useAllSuppliers,
@@ -79,6 +91,52 @@ function parseSupplierTab(param: string | null): SupplierDrawerTab {
 }
 
 const CONSOLIDATED_PAGE_SIZE = 30;
+
+/** URL search-param that primes the «Информация» tab to scroll to a position card
+ * and auto-open the supplier modal — set by empty-pin clicks in the Поставщики /
+ * Предложения tabs and consumed by `ProcurementInquiryDetailsTab`. */
+const ADD_SUPPLIER_PARAM = "add_supplier";
+
+/** Build pinned `Supplier` rows + empty placeholders per position: one real row
+ * per item whose `currentSupplier` identity matches a row in `dedupedSuppliers`,
+ * or a «Нажмите, чтобы добавить» placeholder when an item has no supplier yet.
+ * `pinnedIds` is the set of real rows lifted out — callers filter the body list
+ * by it to avoid double-rendering. */
+function usePinnedAndPlaceholderRows(
+	items: readonly ProcurementItem[],
+	dedupedSuppliers: readonly Supplier[],
+	onAddSupplierForItem: (itemId: string) => void,
+) {
+	return useMemo(() => {
+		const byIdentity = new Map<string, Supplier>();
+		for (const s of dedupedSuppliers) byIdentity.set(supplierIdentity(s), s);
+		const pinnedList: Supplier[] = [];
+		const placeholders: DataTablePlaceholderRow[] = [];
+		const pinned = new Set<string>();
+		const seenIdentity = new Set<string>();
+		for (const it of items) {
+			const cs = it.currentSupplier;
+			const identityKey = cs ? (cs.inn ?? cs.companyName) : null;
+			if (cs && identityKey) {
+				const match = byIdentity.get(identityKey);
+				if (match && !seenIdentity.has(identityKey)) {
+					pinnedList.push(match);
+					pinned.add(match.id);
+					seenIdentity.add(identityKey);
+					continue;
+				}
+			}
+			if (!cs) {
+				placeholders.push({
+					id: `add-supplier-${it.id}`,
+					onClick: () => onAddSupplierForItem(it.id),
+					content: <AddSupplierPlaceholderCell itemName={it.name} />,
+				});
+			}
+		}
+		return { pinnedSuppliers: pinnedList, placeholderPinnedRows: placeholders, pinnedIds: pinned };
+	}, [dedupedSuppliers, items, onAddSupplierForItem]);
+}
 
 /** Pipeline-priority rank used when collapsing duplicate supplier rows: the
  * row with the most-advanced status wins so a received-КП entry isn't shadowed
@@ -127,6 +185,7 @@ export function ProcurementInquiryDetailPage() {
 	const taskId = searchParams.get("task");
 	const supplierId = searchParams.get("supplier");
 	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
+	const addSupplierForItemId = searchParams.get(ADD_SUPPLIER_PARAM);
 
 	const { data: procurementInquiry, isLoading, isError } = useProcurementInquiry(slug);
 	const { data: folders = [] } = useFolders();
@@ -209,6 +268,30 @@ export function ProcurementInquiryDetailPage() {
 		);
 	}
 
+	/** Empty-pin click: switch to Информация tab and queue the position card for scroll + modal open. */
+	function handleOpenSupplierForItem(itemId: string) {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set("tab", "details");
+				next.set(ADD_SUPPLIER_PARAM, itemId);
+				return next;
+			},
+			{ replace: false },
+		);
+	}
+
+	function handleClearAddSupplier() {
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.delete(ADD_SUPPLIER_PARAM);
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+
 	return (
 		<>
 			<Sheet
@@ -257,6 +340,9 @@ export function ProcurementInquiryDetailPage() {
 							onTabChange={handleTabChange}
 							onTaskOpen={handleTaskOpen}
 							onSupplierOpen={handleSupplierOpen}
+							onAddSupplierForItem={handleOpenSupplierForItem}
+							pendingSupplierItemId={addSupplierForItemId}
+							onClearPendingSupplier={handleClearAddSupplier}
 						/>
 					)}
 				</SheetContent>
@@ -281,6 +367,9 @@ interface ProcurementInquiryDrawerBodyProps {
 	onTabChange: (tab: ProcurementInquiryDetailTab) => void;
 	onTaskOpen: (id: string) => void;
 	onSupplierOpen: (id: string, origin?: SupplierDrawerTab) => void;
+	onAddSupplierForItem: (itemId: string) => void;
+	pendingSupplierItemId: string | null;
+	onClearPendingSupplier: () => void;
 }
 
 function ProcurementInquiryDrawerBody({
@@ -291,6 +380,9 @@ function ProcurementInquiryDrawerBody({
 	onTabChange,
 	onTaskOpen,
 	onSupplierOpen,
+	onAddSupplierForItem,
+	pendingSupplierItemId,
+	onClearPendingSupplier,
 }: ProcurementInquiryDrawerBodyProps) {
 	const folder = folders.find((f) => f.id === procurementInquiry.folderId);
 	const status = getProcurementInquiryStatus(items);
@@ -458,13 +550,18 @@ function ProcurementInquiryDrawerBody({
 				)}
 			>
 				{activeTab === "suppliers" && (
-					<ProcurementInquirySuppliersTab items={items} onSupplierClick={(id) => onSupplierOpen(id, "info")} />
+					<ProcurementInquirySuppliersTab
+						items={items}
+						onSupplierClick={(id) => onSupplierOpen(id, "info")}
+						onAddSupplierForItem={onAddSupplierForItem}
+					/>
 				)}
 				{activeTab === "offers" && (
 					<ProcurementInquiryOffersTab
 						procurementInquiryId={procurementInquiry.id}
 						items={items}
 						onSupplierClick={(id) => onSupplierOpen(id, "offers")}
+						onAddSupplierForItem={onAddSupplierForItem}
 					/>
 				)}
 				{activeTab === "tasks" && (
@@ -476,6 +573,8 @@ function ProcurementInquiryDrawerBody({
 						items={items}
 						folder={folder}
 						status={status}
+						pendingSupplierItemId={pendingSupplierItemId}
+						onClearPendingSupplier={onClearPendingSupplier}
 					/>
 				)}
 			</div>
@@ -579,20 +678,30 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 function ProcurementInquirySuppliersTab({
 	items,
 	onSupplierClick,
+	onAddSupplierForItem,
 }: {
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
+	onAddSupplierForItem: (itemId: string) => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
-	return <ProcurementInquiryConsolidatedSuppliersPanel items={items} onSupplierClick={onSupplierClick} />;
+	return (
+		<ProcurementInquiryConsolidatedSuppliersPanel
+			items={items}
+			onSupplierClick={onSupplierClick}
+			onAddSupplierForItem={onAddSupplierForItem}
+		/>
+	);
 }
 
 function ProcurementInquiryConsolidatedSuppliersPanel({
 	items,
 	onSupplierClick,
+	onAddSupplierForItem,
 }: {
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
+	onAddSupplierForItem: (itemId: string) => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
@@ -637,16 +746,32 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 		return counts;
 	}, [dedupedSuppliers]);
 
+	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
+		items,
+		dedupedSuppliers,
+		onAddSupplierForItem,
+	);
+
+	const currentSupplierIdentities = useMemo(
+		() =>
+			items
+				.map((it) => it.currentSupplier)
+				.filter((cs): cs is NonNullable<typeof cs> => cs != null)
+				.map((cs) => ({ inn: cs.inn, companyName: cs.companyName })),
+		[items],
+	);
+
 	const filteredSuppliers = useMemo(() => {
 		const q = search.trim().toLowerCase();
 		const effectiveStatuses = activeStatuses.length > 0 ? activeStatuses : SUPPLIER_STATUSES;
 		return dedupedSuppliers.filter((s) => {
+			if (pinnedIds.has(s.id)) return false;
 			if (q && !s.companyName.toLowerCase().includes(q) && !s.inn.includes(search)) return false;
 			if (activeCompanyTypes.length > 0 && !activeCompanyTypes.includes(s.companyType)) return false;
 			if (!effectiveStatuses.includes(s.status)) return false;
 			return true;
 		});
-	}, [dedupedSuppliers, search, activeCompanyTypes, activeStatuses]);
+	}, [dedupedSuppliers, search, activeCompanyTypes, activeStatuses, pinnedIds]);
 
 	const sortedSuppliers = useMemo(() => sortConsolidatedSuppliers(filteredSuppliers, sort), [filteredSuppliers, sort]);
 	const {
@@ -754,7 +879,10 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 		<div data-testid="procurement-inquiry-tab-suppliers" className="h-full">
 			<SuppliersTable
 				suppliers={visibleSuppliers}
-				totalCount={sortedSuppliers.length}
+				totalCount={sortedSuppliers.length + pinnedSuppliers.length}
+				pinnedSuppliers={pinnedSuppliers.length > 0 ? pinnedSuppliers : undefined}
+				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
+				currentSupplierIdentities={currentSupplierIdentities}
 				isLoading={isLoading}
 				onRowClick={onSupplierClick}
 				hasNextPage={hasNextPage}
@@ -789,36 +917,36 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 }
 
 function ProcurementInquiryOffersTab({
-	procurementInquiryId,
+	procurementInquiryId: _procurementInquiryId,
 	items,
 	onSupplierClick,
+	onAddSupplierForItem,
 }: {
 	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
+	onAddSupplierForItem: (itemId: string) => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
 	return (
 		<ProcurementInquiryConsolidatedOffersPanel
-			procurementInquiryId={procurementInquiryId}
 			items={items}
 			onSupplierClick={onSupplierClick}
+			onAddSupplierForItem={onAddSupplierForItem}
 		/>
 	);
 }
 
 function ProcurementInquiryConsolidatedOffersPanel({
-	procurementInquiryId,
 	items,
 	onSupplierClick,
+	onAddSupplierForItem,
 }: {
-	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
+	onAddSupplierForItem: (itemId: string) => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
-	const { data: procurementInquiry } = useProcurementInquiry(procurementInquiryId);
-	const currentSupplier = procurementInquiry?.currentSupplier;
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
 	const archiveMutation = useArchiveSuppliers();
 
@@ -870,22 +998,16 @@ function ProcurementInquiryConsolidatedOffersPanel({
 		return [...byIdentity.values()];
 	}, [allSuppliers, itemIds, showArchived, activeItemIdsSet]);
 
-	const currentSupplierInn = currentSupplier?.inn;
-	const currentSupplierName = currentSupplier?.companyName;
+	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
+		items,
+		dedupedSuppliers,
+		onAddSupplierForItem,
+	);
 
-	const { suppliers: filteredSuppliers, currentSupplierRowId } = useMemo(() => {
-		const isCurrent = (s: { inn: string; companyName: string }) => {
-			if (currentSupplierInn) return s.inn === currentSupplierInn;
-			if (currentSupplierName) return s.companyName === currentSupplierName;
-			return false;
-		};
-		let foundId: string | undefined;
+	const filteredSuppliers = useMemo(() => {
 		const remaining: Supplier[] = [];
 		for (const s of dedupedSuppliers) {
-			if (isCurrent(s)) {
-				foundId = s.id;
-				continue;
-			}
+			if (pinnedIds.has(s.id)) continue;
 			if (search) {
 				const q = search.toLowerCase();
 				if (!s.companyName.toLowerCase().includes(q) && !s.inn.includes(search)) continue;
@@ -894,8 +1016,8 @@ function ProcurementInquiryConsolidatedOffersPanel({
 			if (!matchesDeliveryFilter(s.deliveryCost, activeDeliveryFilters)) continue;
 			remaining.push(s);
 		}
-		return { suppliers: remaining, currentSupplierRowId: foundId };
-	}, [dedupedSuppliers, search, activePaymentTypes, activeDeliveryFilters, currentSupplierInn, currentSupplierName]);
+		return remaining;
+	}, [dedupedSuppliers, search, activePaymentTypes, activeDeliveryFilters, pinnedIds]);
 
 	const sortedSuppliers = useMemo(() => sortConsolidatedSuppliers(filteredSuppliers, sort), [filteredSuppliers, sort]);
 	const {
@@ -903,7 +1025,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 		hasNextPage,
 		loadMore,
 	} = useClientPagination(sortedSuppliers, CONSOLIDATED_PAGE_SIZE);
-	const totalCount = sortedSuppliers.length + (currentSupplierRowId ? 1 : 0);
+	const totalCount = sortedSuppliers.length + pinnedSuppliers.length;
 
 	function handleSort(field: SupplierSortField) {
 		setSort((prev) => {
@@ -963,8 +1085,10 @@ function ProcurementInquiryConsolidatedOffersPanel({
 				totalCount={totalCount}
 				// Multi-item: no single batch quantity, so СТОИМОСТЬ renders «—».
 				item={{ quantityPerDelivery: undefined }}
-				currentSupplier={currentSupplier}
-				currentSupplierRowId={currentSupplierRowId}
+				currentSupplier={undefined}
+				currentSupplierRowId={undefined}
+				extraPinnedSuppliers={pinnedSuppliers.length > 0 ? pinnedSuppliers : undefined}
+				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
 				isLoading={isLoading}
 				onRowClick={onSupplierClick}
 				hasNextPage={hasNextPage}
@@ -1217,11 +1341,15 @@ function ProcurementInquiryDetailsTab({
 	items,
 	folder,
 	status,
+	pendingSupplierItemId,
+	onClearPendingSupplier,
 }: {
 	procurementInquiry: ProcurementInquiry;
 	items: readonly ProcurementItem[];
 	folder?: Folder;
 	status: ProcurementInquiryStatus;
+	pendingSupplierItemId: string | null;
+	onClearPendingSupplier: () => void;
 }) {
 	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
 	const addressesText = useMemo(() => {
@@ -1233,8 +1361,35 @@ function ProcurementInquiryDetailsTab({
 			.join("; ");
 	}, [procurementInquiry.addressIds, company?.addresses]);
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
-	const currentSupplier = procurementInquiry.currentSupplier;
 	const rfqEditable = RFQ_EDITABLE_STATUSES.has(status);
+
+	const updateSupplierMutation = useUpdateItemCurrentSupplier();
+	const [activeSupplierItemId, setActiveSupplierItemId] = useState<string | null>(null);
+	const activeItem = activeSupplierItemId ? items.find((it) => it.id === activeSupplierItemId) : undefined;
+	const positionCardRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: items/onClearPendingSupplier are stable enough; only react to pendingSupplierItemId changes
+	useEffect(() => {
+		if (!pendingSupplierItemId) return;
+		if (!items.some((it) => it.id === pendingSupplierItemId)) {
+			onClearPendingSupplier();
+			return;
+		}
+		const node = positionCardRefs.current.get(pendingSupplierItemId);
+		if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+		setActiveSupplierItemId(pendingSupplierItemId);
+		onClearPendingSupplier();
+	}, [pendingSupplierItemId]);
+
+	function handleSaveSupplier(draft: CurrentSupplierDraft) {
+		if (!activeSupplierItemId) return;
+		updateSupplierMutation.mutate({ id: activeSupplierItemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
+		setActiveSupplierItemId(null);
+	}
+
+	function handleRemoveSupplier(itemId: string) {
+		updateSupplierMutation.mutate({ id: itemId, currentSupplier: undefined });
+	}
 
 	return (
 		<div data-testid="procurement-inquiry-tab-details" className="flex flex-col gap-6">
@@ -1264,7 +1419,17 @@ function ProcurementInquiryDetailsTab({
 				) : (
 					<div className="flex flex-col gap-3" data-testid="procurement-inquiry-items-list">
 						{items.map((item, index) => (
-							<ProcurementInquiryPositionCard key={item.id} item={item} index={index} />
+							<ProcurementInquiryPositionCard
+								key={item.id}
+								item={item}
+								index={index}
+								onEditSupplier={() => setActiveSupplierItemId(item.id)}
+								onRemoveSupplier={() => handleRemoveSupplier(item.id)}
+								registerRef={(node) => {
+									if (node) positionCardRefs.current.set(item.id, node);
+									else positionCardRefs.current.delete(item.id);
+								}}
+							/>
 						))}
 					</div>
 				)}
@@ -1303,33 +1468,16 @@ function ProcurementInquiryDetailsTab({
 				</CardGrid>
 			</Section>
 
-			<Section title="Ваш поставщик">
-				<CardGrid>
-					<FieldCard label="Название">
-						<ValueText value={currentSupplier?.companyName ?? ""} />
-					</FieldCard>
-					<FieldCard label="ИНН">
-						<ValueText value={currentSupplier?.inn ?? ""} />
-					</FieldCard>
-					<FieldCard label="Цена">
-						<ValueText
-							value={currentSupplier?.pricePerUnit != null ? formatCurrency(currentSupplier.pricePerUnit) : ""}
-						/>
-					</FieldCard>
-					<FieldCard label="Оплата">
-						<ValueText
-							value={
-								currentSupplier
-									? formatPaymentType(currentSupplier.paymentType ?? "prepayment", {
-											deferralDays: currentSupplier.deferralDays ?? 0,
-											prepaymentPercent: currentSupplier.prepaymentPercent,
-										})
-									: ""
-							}
-						/>
-					</FieldCard>
-				</CardGrid>
-			</Section>
+			{activeSupplierItemId !== null && (
+				<CurrentSupplierDialog
+					open
+					onOpenChange={(o) => {
+						if (!o) setActiveSupplierItemId(null);
+					}}
+					initial={activeItem?.currentSupplier ? buildCurrentSupplierDraft(activeItem.currentSupplier) : undefined}
+					onSave={handleSaveSupplier}
+				/>
+			)}
 		</div>
 	);
 }
@@ -1426,9 +1574,23 @@ function ProcurementInquiryRfqSection({
 	);
 }
 
-function ProcurementInquiryPositionCard({ item, index }: { item: ProcurementItem; index: number }) {
+function ProcurementInquiryPositionCard({
+	item,
+	index,
+	onEditSupplier,
+	onRemoveSupplier,
+	registerRef,
+}: {
+	item: ProcurementItem;
+	index: number;
+	onEditSupplier: () => void;
+	onRemoveSupplier: () => void;
+	registerRef: (node: HTMLElement | null) => void;
+}) {
+	const supplier = item.currentSupplier;
 	return (
 		<section
+			ref={registerRef}
 			aria-label={`Позиция ${index + 1}`}
 			data-testid={`procurement-inquiry-item-${item.id}`}
 			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4"
@@ -1443,8 +1605,94 @@ function ProcurementInquiryPositionCard({ item, index }: { item: ProcurementItem
 				/>
 				<FieldCardLine label="Объём в год" value={String(item.annualQuantity)} />
 			</div>
-			<FieldCardLine label="Текущая цена без НДС" value={formatCurrency(item.currentPrice)} />
+			{supplier ? (
+				<CurrentSupplierInlineSummary supplier={supplier} onEdit={onEditSupplier} onRemove={onRemoveSupplier} />
+			) : (
+				<Button
+					type="button"
+					variant="outline"
+					onClick={onEditSupplier}
+					aria-label="Добавить текущего поставщика"
+					className="w-full border-dashed border-foreground/25 text-foreground/80 hover:border-foreground/45 hover:bg-background hover:text-foreground dark:border-foreground/30 dark:hover:bg-background"
+				>
+					<Plus aria-hidden="true" className="size-4" />
+					Добавить текущего поставщика
+				</Button>
+			)}
 		</section>
+	);
+}
+
+function CurrentSupplierInlineSummary({
+	supplier,
+	onEdit,
+	onRemove,
+}: {
+	supplier: NonNullable<ProcurementItem["currentSupplier"]>;
+	onEdit: () => void;
+	onRemove: () => void;
+}) {
+	return (
+		<div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/60 p-3 dark:bg-input/20">
+			<div className="flex items-start gap-2">
+				<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+					<span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+						Текущий поставщик
+					</span>
+					<span className="text-sm font-medium text-foreground break-words">
+						{supplier.companyName || supplier.inn || "—"}
+					</span>
+					{supplier.companyName && supplier.inn && (
+						<span className="text-xs text-muted-foreground tabular-nums">ИНН {supplier.inn}</span>
+					)}
+				</div>
+				<div className="flex shrink-0 items-center gap-1">
+					<Button type="button" variant="ghost" size="sm" onClick={onEdit}>
+						Изменить
+					</Button>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon-sm"
+						onClick={onRemove}
+						aria-label="Удалить текущего поставщика"
+						className="relative text-muted-foreground hover:text-foreground before:absolute before:-inset-1.5 before:content-['']"
+					>
+						<X aria-hidden="true" className="size-4" />
+					</Button>
+				</div>
+			</div>
+			<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
+				<span className="text-muted-foreground">
+					Цена:{" "}
+					<span className="text-foreground">
+						{supplier.pricePerUnit != null ? formatCurrency(supplier.pricePerUnit) : "—"}
+					</span>
+				</span>
+				<span className="text-muted-foreground">
+					Доставка:{" "}
+					<span className="text-foreground">
+						{supplier.deliveryCost == null ? "Включена" : formatCurrency(supplier.deliveryCost)}
+					</span>
+				</span>
+				{supplier.leadTimeDays != null && (
+					<span className="text-muted-foreground">
+						Срок: <span className="text-foreground">{supplier.leadTimeDays} дн.</span>
+					</span>
+				)}
+				{supplier.paymentType && (
+					<span className="text-muted-foreground">
+						Оплата:{" "}
+						<span className="text-foreground">
+							{formatPaymentType(supplier.paymentType, {
+								deferralDays: supplier.deferralDays ?? 0,
+								prepaymentPercent: supplier.prepaymentPercent,
+							})}
+						</span>
+					</span>
+				)}
+			</div>
+		</div>
 	);
 }
 

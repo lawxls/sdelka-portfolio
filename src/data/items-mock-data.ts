@@ -229,6 +229,7 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 			paymentType: input.paymentType,
 			deliveryCostType: input.deliveryCostType,
 			deliveryCost: input.deliveryCost,
+			currentSupplier: input.currentSupplier,
 			generatedAnswers: input.generatedAnswers,
 		};
 		return item;

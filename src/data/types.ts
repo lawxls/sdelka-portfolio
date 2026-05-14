@@ -85,10 +85,16 @@ export const PAYMENT_TYPES = Object.keys(PAYMENT_TYPE_LABELS) as PaymentType[];
 export interface CurrentSupplier {
 	companyName: string;
 	inn?: string;
+	website?: string;
+	address?: string;
+	email?: string;
 	paymentType?: PaymentType;
 	deferralDays: number;
 	prepaymentPercent?: number;
 	pricePerUnit: number | null;
+	/** Supplier's delivery cost. `null` means «Включена» (rolled into price). */
+	deliveryCost?: number | null;
+	leadTimeDays?: number | null;
 }
 
 export interface GeneratedAnswer {
@@ -110,8 +116,7 @@ export interface ProcurementItem {
 	currentPrice: number | null;
 	bestPrice: number | null;
 	averagePrice: number | null;
-	/** Parent inquiry slug. Items belong to exactly one inquiry. Company, folder,
-	 * current supplier, and all shared step1 meta live on the parent inquiry. */
+	/** Parent inquiry slug. Items belong to exactly one inquiry. */
 	procurementInquiryId?: string;
 	description?: string;
 	unit?: Unit;
@@ -120,6 +125,9 @@ export interface ProcurementItem {
 	prepaymentPercent?: number;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
+	/** Optional «Текущий поставщик» captured for this position. Drives the «Ваш поставщик»
+	 * pinned row in supplier tables and seeds `currentPrice` when set. */
+	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
 	searchCompleted?: boolean;
 }
@@ -148,7 +156,6 @@ export interface ProcurementInquiry {
 	 * disappear from /positions non-archive views (see archiveProcurementInquiryCascade
 	 * operation). */
 	isArchived?: boolean;
-	currentSupplier?: CurrentSupplier;
 	addressIds?: string[];
 	unloading?: UnloadingType;
 	paymentMethod?: PaymentMethod;
@@ -215,6 +222,7 @@ export interface NewItemInput {
 	prepaymentPercent?: number;
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
+	currentSupplier?: CurrentSupplier;
 	generatedAnswers?: GeneratedAnswer[];
 	/** Initial status. Defaults to "searching" when omitted. The manual-add flow on
 	 * /positions sets this to "ready_for_analytics" so the position is immediately
