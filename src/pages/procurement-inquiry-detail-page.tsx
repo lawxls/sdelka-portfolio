@@ -1,9 +1,8 @@
-import { Archive, Ban, Check, Mail, Pencil, Plus, X } from "lucide-react";
-// biome-ignore lint/style/noRestrictedImports: one-time external sync from URL state (no stable mount point fits here)
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Archive, Ban, Check, ChevronRight, Mail, Pencil, Plus, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { AddSupplierPlaceholderCell, CurrentSupplierDialog } from "@/components/current-supplier-dialog";
+import { AddSupplierPlaceholderCell, CurrentSupplierDialog, PlusTile } from "@/components/current-supplier-dialog";
 import {
 	DataTable,
 	type DataTableColumn,
@@ -25,6 +24,7 @@ import { TaskDrawer } from "@/components/task-drawer";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +65,7 @@ import {
 	formatCurrency,
 	formatDayMonthShort,
 	formatDayMonthShortTime,
+	formatInteger,
 	formatRussianPlural,
 	formatShortDate,
 	isOverdue,
@@ -92,50 +93,100 @@ function parseSupplierTab(param: string | null): SupplierDrawerTab {
 
 const CONSOLIDATED_PAGE_SIZE = 30;
 
-/** URL search-param that primes the «Информация» tab to scroll to a position card
- * and auto-open the supplier modal — set by empty-pin clicks in the Поставщики /
- * Предложения tabs and consumed by `ProcurementInquiryDetailsTab`. */
-const ADD_SUPPLIER_PARAM = "add_supplier";
-
-/** Build pinned `Supplier` rows + empty placeholders per position: one real row
- * per item whose `currentSupplier` identity matches a row in `dedupedSuppliers`,
- * or a «Нажмите, чтобы добавить» placeholder when an item has no supplier yet.
- * `pinnedIds` is the set of real rows lifted out — callers filter the body list
- * by it to avoid double-rendering. */
+/** Build pinned `Supplier` rows + a single consolidated «Добавить текущего поставщика»
+ * placeholder when any item lacks a supplier. `pinnedIds` is the set of real rows
+ * lifted out — callers filter the body list by it to avoid double-rendering. */
 function usePinnedAndPlaceholderRows(
 	items: readonly ProcurementItem[],
 	dedupedSuppliers: readonly Supplier[],
-	onAddSupplierForItem: (itemId: string) => void,
+	onAddSupplier: () => void,
 ) {
 	return useMemo(() => {
 		const byIdentity = new Map<string, Supplier>();
 		for (const s of dedupedSuppliers) byIdentity.set(supplierIdentity(s), s);
 		const pinnedList: Supplier[] = [];
-		const placeholders: DataTablePlaceholderRow[] = [];
 		const pinned = new Set<string>();
 		const seenIdentity = new Set<string>();
+		let hasItemWithoutSupplier = false;
 		for (const it of items) {
 			const cs = it.currentSupplier;
-			const identityKey = cs ? (cs.inn ?? cs.companyName) : null;
-			if (cs && identityKey) {
-				const match = byIdentity.get(identityKey);
-				if (match && !seenIdentity.has(identityKey)) {
-					pinnedList.push(match);
-					pinned.add(match.id);
-					seenIdentity.add(identityKey);
-					continue;
-				}
-			}
 			if (!cs) {
-				placeholders.push({
-					id: `add-supplier-${it.id}`,
-					onClick: () => onAddSupplierForItem(it.id),
-					content: <AddSupplierPlaceholderCell itemName={it.name} />,
-				});
+				hasItemWithoutSupplier = true;
+				continue;
+			}
+			const identityKey = cs.inn ?? cs.companyName;
+			if (!identityKey || seenIdentity.has(identityKey)) continue;
+			const match = byIdentity.get(identityKey);
+			if (match) {
+				pinnedList.push(match);
+				pinned.add(match.id);
+				seenIdentity.add(identityKey);
 			}
 		}
+		const placeholders: DataTablePlaceholderRow[] = hasItemWithoutSupplier
+			? [
+					{
+						id: "add-current-supplier",
+						onClick: onAddSupplier,
+						content: <AddSupplierPlaceholderCell />,
+					},
+				]
+			: [];
 		return { pinnedSuppliers: pinnedList, placeholderPinnedRows: placeholders, pinnedIds: pinned };
-	}, [dedupedSuppliers, items, onAddSupplierForItem]);
+	}, [dedupedSuppliers, items, onAddSupplier]);
+}
+
+/** Modal listing positions without a current supplier so the user can pick which
+ * one to attach a supplier to. Opens before `CurrentSupplierDialog` when the
+ * inquiry has more than one such position. */
+function AddCurrentSupplierItemPicker({
+	open,
+	onOpenChange,
+	items,
+	onSelect,
+}: {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	items: readonly ProcurementItem[];
+	onSelect: (itemId: string) => void;
+}) {
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="sm:max-w-[30rem]">
+				<DialogHeader className="gap-1.5 pr-8">
+					<DialogTitle className="text-balance">Выберите позицию</DialogTitle>
+					<DialogDescription className="text-pretty">
+						Выберите позицию для добавления текущего поставщика
+					</DialogDescription>
+				</DialogHeader>
+				<ul className="-mx-1 flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto px-1">
+					{items.map((it) => (
+						<li key={it.id}>
+							<button
+								type="button"
+								onClick={() => onSelect(it.id)}
+								className="group flex w-full items-center gap-3 rounded-lg border border-border/60 bg-card px-3 py-3 text-left transition-[background-color,border-color,scale] duration-150 ease-out hover:border-border hover:bg-muted/60 active:scale-[0.96] focus-visible:border-ring focus-visible:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100"
+							>
+								<PlusTile size="md" />
+								<div className="min-w-0 flex-1">
+									<div className="truncate text-sm font-medium text-foreground">{it.name}</div>
+									<div className="mt-0.5 truncate text-xs text-muted-foreground tabular-nums">
+										{formatInteger(it.annualQuantity)}
+										{it.unit ? ` ${it.unit}` : ""}
+										{" / год"}
+									</div>
+								</div>
+								<ChevronRight
+									aria-hidden="true"
+									className="size-4 shrink-0 text-muted-foreground/60 transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none"
+								/>
+							</button>
+						</li>
+					))}
+				</ul>
+			</DialogContent>
+		</Dialog>
+	);
 }
 
 /** Pipeline-priority rank used when collapsing duplicate supplier rows: the
@@ -185,7 +236,6 @@ export function ProcurementInquiryDetailPage() {
 	const taskId = searchParams.get("task");
 	const supplierId = searchParams.get("supplier");
 	const supplierTab = parseSupplierTab(searchParams.get("supplier_tab"));
-	const addSupplierForItemId = searchParams.get(ADD_SUPPLIER_PARAM);
 
 	const { data: procurementInquiry, isLoading, isError } = useProcurementInquiry(slug);
 	const { data: folders = [] } = useFolders();
@@ -268,30 +318,6 @@ export function ProcurementInquiryDetailPage() {
 		);
 	}
 
-	/** Empty-pin click: switch to Информация tab and queue the position card for scroll + modal open. */
-	function handleOpenSupplierForItem(itemId: string) {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.set("tab", "details");
-				next.set(ADD_SUPPLIER_PARAM, itemId);
-				return next;
-			},
-			{ replace: false },
-		);
-	}
-
-	function handleClearAddSupplier() {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.delete(ADD_SUPPLIER_PARAM);
-				return next;
-			},
-			{ replace: true },
-		);
-	}
-
 	return (
 		<>
 			<Sheet
@@ -340,9 +366,6 @@ export function ProcurementInquiryDetailPage() {
 							onTabChange={handleTabChange}
 							onTaskOpen={handleTaskOpen}
 							onSupplierOpen={handleSupplierOpen}
-							onAddSupplierForItem={handleOpenSupplierForItem}
-							pendingSupplierItemId={addSupplierForItemId}
-							onClearPendingSupplier={handleClearAddSupplier}
 						/>
 					)}
 				</SheetContent>
@@ -367,9 +390,6 @@ interface ProcurementInquiryDrawerBodyProps {
 	onTabChange: (tab: ProcurementInquiryDetailTab) => void;
 	onTaskOpen: (id: string) => void;
 	onSupplierOpen: (id: string, origin?: SupplierDrawerTab) => void;
-	onAddSupplierForItem: (itemId: string) => void;
-	pendingSupplierItemId: string | null;
-	onClearPendingSupplier: () => void;
 }
 
 function ProcurementInquiryDrawerBody({
@@ -380,15 +400,18 @@ function ProcurementInquiryDrawerBody({
 	onTabChange,
 	onTaskOpen,
 	onSupplierOpen,
-	onAddSupplierForItem,
-	pendingSupplierItemId,
-	onClearPendingSupplier,
 }: ProcurementInquiryDrawerBodyProps) {
 	const folder = folders.find((f) => f.id === procurementInquiry.folderId);
 	const status = getProcurementInquiryStatus(items);
 	const statusCfg = STATUS_CONFIG[status];
 	const updateProcurementInquiryMutation = useUpdateProcurementInquiry();
+	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const [isEditingName, setIsEditingName] = useState(false);
+
+	const itemsWithoutSupplier = useMemo(() => items.filter((it) => !it.currentSupplier), [items]);
+	const [pickerOpen, setPickerOpen] = useState(false);
+	const [dialogItemId, setDialogItemId] = useState<string | null>(null);
+	const dialogItem = dialogItemId ? items.find((it) => it.id === dialogItemId) : undefined;
 
 	function handleSaveName(name: string) {
 		const trimmed = name.trim();
@@ -396,6 +419,25 @@ function ProcurementInquiryDrawerBody({
 			updateProcurementInquiryMutation.mutate({ id: procurementInquiry.id, patch: { name: trimmed } });
 		}
 		setIsEditingName(false);
+	}
+
+	function handleAddSupplier() {
+		if (itemsWithoutSupplier.length === 1) {
+			setDialogItemId(itemsWithoutSupplier[0].id);
+			return;
+		}
+		setPickerOpen(true);
+	}
+
+	function handlePickItem(itemId: string) {
+		setPickerOpen(false);
+		setDialogItemId(itemId);
+	}
+
+	function handleSaveSupplier(draft: CurrentSupplierDraft) {
+		if (!dialogItemId) return;
+		updateSupplierMutation.mutate({ id: dialogItemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
+		setDialogItemId(null);
 	}
 
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
@@ -553,7 +595,7 @@ function ProcurementInquiryDrawerBody({
 					<ProcurementInquirySuppliersTab
 						items={items}
 						onSupplierClick={(id) => onSupplierOpen(id, "info")}
-						onAddSupplierForItem={onAddSupplierForItem}
+						onAddSupplier={handleAddSupplier}
 					/>
 				)}
 				{activeTab === "offers" && (
@@ -561,7 +603,7 @@ function ProcurementInquiryDrawerBody({
 						procurementInquiryId={procurementInquiry.id}
 						items={items}
 						onSupplierClick={(id) => onSupplierOpen(id, "offers")}
-						onAddSupplierForItem={onAddSupplierForItem}
+						onAddSupplier={handleAddSupplier}
 					/>
 				)}
 				{activeTab === "tasks" && (
@@ -573,11 +615,27 @@ function ProcurementInquiryDrawerBody({
 						items={items}
 						folder={folder}
 						status={status}
-						pendingSupplierItemId={pendingSupplierItemId}
-						onClearPendingSupplier={onClearPendingSupplier}
 					/>
 				)}
 			</div>
+			{pickerOpen && (
+				<AddCurrentSupplierItemPicker
+					open
+					onOpenChange={setPickerOpen}
+					items={itemsWithoutSupplier}
+					onSelect={handlePickItem}
+				/>
+			)}
+			{dialogItemId !== null && (
+				<CurrentSupplierDialog
+					open
+					onOpenChange={(o) => {
+						if (!o) setDialogItemId(null);
+					}}
+					initial={dialogItem?.currentSupplier ? buildCurrentSupplierDraft(dialogItem.currentSupplier) : undefined}
+					onSave={handleSaveSupplier}
+				/>
+			)}
 		</div>
 	);
 }
@@ -678,18 +736,18 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 function ProcurementInquirySuppliersTab({
 	items,
 	onSupplierClick,
-	onAddSupplierForItem,
+	onAddSupplier,
 }: {
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplierForItem: (itemId: string) => void;
+	onAddSupplier: () => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
 	return (
 		<ProcurementInquiryConsolidatedSuppliersPanel
 			items={items}
 			onSupplierClick={onSupplierClick}
-			onAddSupplierForItem={onAddSupplierForItem}
+			onAddSupplier={onAddSupplier}
 		/>
 	);
 }
@@ -697,11 +755,11 @@ function ProcurementInquirySuppliersTab({
 function ProcurementInquiryConsolidatedSuppliersPanel({
 	items,
 	onSupplierClick,
-	onAddSupplierForItem,
+	onAddSupplier,
 }: {
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplierForItem: (itemId: string) => void;
+	onAddSupplier: () => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
@@ -749,7 +807,7 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
 		items,
 		dedupedSuppliers,
-		onAddSupplierForItem,
+		onAddSupplier,
 	);
 
 	const currentSupplierIdentities = useMemo(
@@ -920,19 +978,19 @@ function ProcurementInquiryOffersTab({
 	procurementInquiryId: _procurementInquiryId,
 	items,
 	onSupplierClick,
-	onAddSupplierForItem,
+	onAddSupplier,
 }: {
 	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplierForItem: (itemId: string) => void;
+	onAddSupplier: () => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
 	return (
 		<ProcurementInquiryConsolidatedOffersPanel
 			items={items}
 			onSupplierClick={onSupplierClick}
-			onAddSupplierForItem={onAddSupplierForItem}
+			onAddSupplier={onAddSupplier}
 		/>
 	);
 }
@@ -940,11 +998,11 @@ function ProcurementInquiryOffersTab({
 function ProcurementInquiryConsolidatedOffersPanel({
 	items,
 	onSupplierClick,
-	onAddSupplierForItem,
+	onAddSupplier,
 }: {
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplierForItem: (itemId: string) => void;
+	onAddSupplier: () => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
@@ -1001,7 +1059,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
 		items,
 		dedupedSuppliers,
-		onAddSupplierForItem,
+		onAddSupplier,
 	);
 
 	const filteredSuppliers = useMemo(() => {
@@ -1341,15 +1399,11 @@ function ProcurementInquiryDetailsTab({
 	items,
 	folder,
 	status,
-	pendingSupplierItemId,
-	onClearPendingSupplier,
 }: {
 	procurementInquiry: ProcurementInquiry;
 	items: readonly ProcurementItem[];
 	folder?: Folder;
 	status: ProcurementInquiryStatus;
-	pendingSupplierItemId: string | null;
-	onClearPendingSupplier: () => void;
 }) {
 	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
 	const addressesText = useMemo(() => {
@@ -1366,20 +1420,6 @@ function ProcurementInquiryDetailsTab({
 	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const [activeSupplierItemId, setActiveSupplierItemId] = useState<string | null>(null);
 	const activeItem = activeSupplierItemId ? items.find((it) => it.id === activeSupplierItemId) : undefined;
-	const positionCardRefs = useRef<Map<string, HTMLElement>>(new Map());
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: items/onClearPendingSupplier are stable enough; only react to pendingSupplierItemId changes
-	useEffect(() => {
-		if (!pendingSupplierItemId) return;
-		if (!items.some((it) => it.id === pendingSupplierItemId)) {
-			onClearPendingSupplier();
-			return;
-		}
-		const node = positionCardRefs.current.get(pendingSupplierItemId);
-		if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
-		setActiveSupplierItemId(pendingSupplierItemId);
-		onClearPendingSupplier();
-	}, [pendingSupplierItemId]);
 
 	function handleSaveSupplier(draft: CurrentSupplierDraft) {
 		if (!activeSupplierItemId) return;
@@ -1425,10 +1465,6 @@ function ProcurementInquiryDetailsTab({
 								index={index}
 								onEditSupplier={() => setActiveSupplierItemId(item.id)}
 								onRemoveSupplier={() => handleRemoveSupplier(item.id)}
-								registerRef={(node) => {
-									if (node) positionCardRefs.current.set(item.id, node);
-									else positionCardRefs.current.delete(item.id);
-								}}
 							/>
 						))}
 					</div>
@@ -1579,18 +1615,15 @@ function ProcurementInquiryPositionCard({
 	index,
 	onEditSupplier,
 	onRemoveSupplier,
-	registerRef,
 }: {
 	item: ProcurementItem;
 	index: number;
 	onEditSupplier: () => void;
 	onRemoveSupplier: () => void;
-	registerRef: (node: HTMLElement | null) => void;
 }) {
 	const supplier = item.currentSupplier;
 	return (
 		<section
-			ref={registerRef}
 			aria-label={`Позиция ${index + 1}`}
 			data-testid={`procurement-inquiry-item-${item.id}`}
 			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4"

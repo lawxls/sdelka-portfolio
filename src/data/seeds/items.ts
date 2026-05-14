@@ -32,6 +32,51 @@ const ITEM_1: ProcurementItem = {
 	],
 };
 
+// Companions to ITEM_7 inside inquiry T-006. Kept inline (no supplier seeds) so the
+// inquiry surfaces multiple positions without `currentSupplier` — exercises the
+// «Выберите позицию» picker before the «Добавить текущего поставщика» dialog.
+const ITEM_14: ProcurementItem = {
+	id: "item-14",
+	name: "Растворитель для ПУ-клеёв",
+	status: "searching",
+	annualQuantity: 1_200,
+	currentPrice: 380,
+	bestPrice: null,
+	averagePrice: null,
+	unit: "л",
+	quantityPerDelivery: 200,
+	paymentType: "prepayment",
+	deliveryCostType: "paid",
+};
+
+const ITEM_15: ProcurementItem = {
+	id: "item-15",
+	name: "Активатор адгезии",
+	status: "searching",
+	annualQuantity: 600,
+	currentPrice: 1_240,
+	bestPrice: null,
+	averagePrice: null,
+	unit: "л",
+	quantityPerDelivery: 50,
+	paymentType: "prepayment",
+	deliveryCostType: "paid",
+};
+
+const ITEM_16: ProcurementItem = {
+	id: "item-16",
+	name: "Очиститель форсунок клеенаносящих станков",
+	status: "searching",
+	annualQuantity: 360,
+	currentPrice: 920,
+	bestPrice: null,
+	averagePrice: null,
+	unit: "л",
+	quantityPerDelivery: 30,
+	paymentType: "prepayment",
+	deliveryCostType: "paid",
+};
+
 const RAW_ITEMS: ProcurementItem[] = [
 	ITEM_1,
 	ITEM_2,
@@ -46,6 +91,9 @@ const RAW_ITEMS: ProcurementItem[] = [
 	ITEM_11,
 	ITEM_12,
 	ITEM_13,
+	ITEM_14,
+	ITEM_15,
+	ITEM_16,
 ];
 
 export const SEED_ITEMS: ProcurementItem[] = RAW_ITEMS.map((item) => {

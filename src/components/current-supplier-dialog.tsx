@@ -562,17 +562,34 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 	);
 }
 
-/** «Нажмите, чтобы добавить» pinned-row content for supplier tables when a position
- * has no `currentSupplier`. `itemName` appends a " — {name}" suffix when supplied
- * (multi-position inquiry context); omit for single-position drawer context. */
-export function AddSupplierPlaceholderCell({ itemName }: { itemName?: string }) {
+/** Soft Plus-icon tile used as a leading affordance — at rest reads as a muted button,
+ * brightens to `bg-background` on hover of an ancestor `.group`. Two sizes match the
+ * placeholder-row CTA (`sm`) and the item-picker list-card (`md`). */
+export function PlusTile({ size = "sm" }: { size?: "sm" | "md" }) {
+	const tile = size === "md" ? "size-9" : "size-6";
+	const icon = size === "md" ? "size-4" : "size-3.5";
 	return (
-		<div className="flex items-center gap-2 text-sm text-foreground/75">
-			<Plus aria-hidden="true" className="size-4 shrink-0" />
-			<span className="text-pretty">
-				<span className="font-medium">Нажмите, чтобы добавить</span>
-				{itemName ? <span className="text-muted-foreground"> — {itemName}</span> : null}
-			</span>
+		<span
+			aria-hidden="true"
+			className={cn(
+				"inline-flex shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted text-foreground shadow-xs transition-[background-color,border-color] duration-150 ease-out group-hover:border-border group-hover:bg-background motion-reduce:transition-none",
+				tile,
+			)}
+		>
+			<Plus className={icon} />
+		</span>
+	);
+}
+
+/** «Добавить текущего поставщика» pinned-row content for supplier tables when a position
+ * has no `currentSupplier`. Renders centered across the full row via `DataTablePlaceholderRow`.
+ * Row-level `.group` brightens the `PlusTile` on hover so the placeholder reads as a button
+ * without competing with sibling pinned rows. */
+export function AddSupplierPlaceholderCell() {
+	return (
+		<div className="flex min-h-9 items-center justify-center gap-2.5 text-sm">
+			<PlusTile />
+			<span className="font-medium text-foreground">Добавить текущего поставщика</span>
 		</div>
 	);
 }

@@ -36,8 +36,9 @@ export interface DataTableAction {
 }
 
 /** A placeholder slot rendered as a pinned-area row that doesn't represent a real data row.
- * Used for empty «Нажмите, чтобы добавить» prompts in supplier tables when a position
- * has no current supplier yet. */
+ * Used for empty «Добавить текущего поставщика» prompts in supplier tables when a position
+ * has no current supplier yet. `content` is centered across the full row width on desktop
+ * and rendered full-width inside the mobile card. */
 export interface DataTablePlaceholderRow {
 	id: string;
 	content: ReactNode;
@@ -126,9 +127,9 @@ export function DataTable<T>({
 								disabled={!p.onClick}
 								data-testid="data-table-placeholder-card"
 								className={cn(
-									"flex w-full items-center rounded-lg border border-dashed border-foreground/25 bg-accent/30 px-4 py-3 text-left",
+									"group flex w-full items-center justify-center rounded-lg border border-dashed border-foreground/25 bg-accent/60 px-4 py-3 text-left",
 									p.onClick &&
-										"transition-[background-color,border-color,scale] duration-150 ease-out hover:border-foreground/40 hover:bg-accent/50 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
+										"transition-[background-color,border-color,scale] duration-150 ease-out hover:border-foreground/40 hover:bg-accent/80 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
 								)}
 							>
 								{p.content}
@@ -214,12 +215,12 @@ export function DataTable<T>({
 										key={`placeholder-${p.id}`}
 										data-testid="data-table-placeholder-row"
 										className={cn(
-											"bg-accent/30 hover:bg-accent/50",
+											"group bg-accent/60 hover:bg-accent/80",
 											p.onClick && "cursor-pointer transition-colors motion-reduce:transition-none",
 										)}
 										onClick={p.onClick}
 									>
-										<TableCell colSpan={columnSpan} className="py-2.5">
+										<TableCell colSpan={columnSpan} className="text-center">
 											{p.content}
 										</TableCell>
 									</TableRow>

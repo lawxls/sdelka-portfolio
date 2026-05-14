@@ -17,6 +17,9 @@ export const SEED_ITEM_PROCUREMENT_INQUIRY: Readonly<Record<string, string>> = {
 	"item-13": "T-002",
 	"item-5": "T-005",
 	"item-7": "T-006",
+	"item-14": "T-006",
+	"item-15": "T-006",
+	"item-16": "T-006",
 };
 
 /** «Ваш поставщик» seed per inquiry slug. Migrated from the inquiry roster after
