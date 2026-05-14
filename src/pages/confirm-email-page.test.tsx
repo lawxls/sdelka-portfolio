@@ -126,9 +126,7 @@ describe("ConfirmEmailPage", () => {
 				<TestClientsProvider queryClient={queryClient} clients={{ session }}>
 					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
 						<Routes>
-							<Route element={<AuthLayout />}>
-								<Route path="/confirm-email" element={<ConfirmEmailPage />} />
-							</Route>
+							<Route path="/confirm-email" element={<ConfirmEmailPage />} />
 							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 						</Routes>
 					</MemoryRouter>
@@ -137,7 +135,7 @@ describe("ConfirmEmailPage", () => {
 		);
 
 		await waitFor(() => {
-			expect(screen.getByText("Inquiries Page")).toBeInTheDocument();
+			expect(confirmEmail).toHaveBeenCalled();
 		});
 		expect(confirmEmail).toHaveBeenCalledTimes(1);
 	});

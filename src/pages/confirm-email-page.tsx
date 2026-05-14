@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { extractFormErrors } from "@/data/auth-errors";
 import { useConfirmEmail } from "@/data/use-session";
@@ -17,9 +17,14 @@ export function ConfirmEmailPage() {
 	const hasParams = Boolean(uid && token);
 	const [status, setStatus] = useState<Status>(hasParams ? "loading" : "error");
 	const [errorMessage, setErrorMessage] = useState<string>(hasParams ? "" : "Ссылка недействительна");
+	// Guard against StrictMode dev double-mount firing the mutation twice — the
+	// token self-invalidates after the first activate (its hash bakes in
+	// is_active), so the second POST would race or 400.
+	const submitted = useRef(false);
 
 	useMountEffect(() => {
-		if (!uid || !token) return undefined;
+		if (!uid || !token || submitted.current) return undefined;
+		submitted.current = true;
 		confirmEmail.mutate(
 			{ uid, token },
 			{
