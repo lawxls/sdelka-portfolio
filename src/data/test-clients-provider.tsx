@@ -10,6 +10,7 @@ import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProcurementInquiriesClient } from "./clients/procurement-inquiries-client";
 import type { ProfileClient } from "./clients/profile-client";
 import type { SessionClient } from "./clients/session-client";
+import type { SubscriptionClient } from "./clients/subscription-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
@@ -249,6 +250,20 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 		forgotPassword: notImplemented("forgotPassword"),
 		resetPassword: notImplemented("resetPassword"),
 		requestPasswordChange: notImplemented("requestPasswordChange"),
+		...overrides,
+	};
+}
+
+/** Build a fake `SubscriptionClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails
+ * loudly. */
+export function fakeSubscriptionClient(overrides: Partial<SubscriptionClient> = {}): SubscriptionClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeSubscriptionClient.${method} not stubbed`);
+	};
+	return {
+		current: notImplemented("current"),
+		topUp: notImplemented("topUp"),
 		...overrides,
 	};
 }

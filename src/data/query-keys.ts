@@ -45,4 +45,7 @@ export const keys = {
 		list: (params: ListProcurementInquiriesParams) => ["procurementInquiries", params] as const,
 		detail: (slug: string | null) => ["procurementInquiries", "detail", slug] as const,
 	},
+	subscription: {
+		current: () => ["subscription"] as const,
+	},
 } as const;

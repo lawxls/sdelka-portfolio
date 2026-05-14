@@ -16,6 +16,8 @@ import { createHttpProfileClient } from "./clients/profile-http";
 import { createInMemoryProfileClient } from "./clients/profile-in-memory";
 import { createHttpSessionClient } from "./clients/session-http";
 import { createInMemorySessionClient } from "./clients/session-in-memory";
+import { createHttpSubscriptionClient } from "./clients/subscription-http";
+import { createInMemorySubscriptionClient } from "./clients/subscription-in-memory";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
 import { createInMemorySuppliersClient } from "./clients/suppliers-in-memory";
 import { createHttpTasksClient } from "./clients/tasks-http";
@@ -39,6 +41,7 @@ interface AdapterConfig {
 	workspaceEmployees: AdapterMode;
 	companyInfo: AdapterMode;
 	session: AdapterMode;
+	subscription: AdapterMode;
 }
 
 /**
@@ -64,6 +67,7 @@ function resolveConfig(): AdapterConfig {
 		workspaceEmployees: read("VITE_DATA_WORKSPACE_EMPLOYEES"),
 		companyInfo: read("VITE_DATA_COMPANY_INFO"),
 		session: read("VITE_DATA_SESSION"),
+		subscription: read("VITE_DATA_SUBSCRIPTION"),
 	};
 }
 
@@ -106,5 +110,6 @@ export function buildDataClients(): DataClients {
 					}),
 		companyInfo: config.companyInfo === "http" ? createHttpCompanyInfoClient() : createInMemoryCompanyInfoClient(),
 		session: config.session === "http" ? createHttpSessionClient() : createInMemorySessionClient(),
+		subscription: config.subscription === "http" ? createHttpSubscriptionClient() : createInMemorySubscriptionClient(),
 	};
 }

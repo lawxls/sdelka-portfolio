@@ -14,6 +14,7 @@ import { createInMemoryNotificationsClient } from "@/data/clients/notifications-
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
+import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
@@ -129,6 +130,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				profile: createInMemoryProfileClient(),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 				session: createInMemorySessionClient({ refreshAvailable: true }),
+				subscription: createInMemorySubscriptionClient(),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>

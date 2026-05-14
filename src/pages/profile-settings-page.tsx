@@ -1,19 +1,24 @@
-import { IdCard, KeyRound, Loader2 } from "lucide-react";
+import { ArrowRight, CreditCard, IdCard, KeyRound, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
+import { TopUpRequestsDialog } from "@/components/top-up-requests-dialog";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { extractFormErrors } from "@/data/auth-errors";
 import type { CurrentEmployee } from "@/data/domains/profile";
+import type { Subscription } from "@/data/domains/subscription";
 import { useMe, useUpdateSettings } from "@/data/use-me";
 import { useRequestPasswordChange } from "@/data/use-session";
+import { useSubscription } from "@/data/use-subscription";
 import { getAvatarColor } from "@/lib/avatar-colors";
-import { formatDate, formatFullName, getInitials } from "@/lib/format";
+import { formatDate, formatFullName, formatInteger, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
-const DEFAULT_TARIFF_NAME = "Базовый";
+const formatFraction = (used: number, limit: number) => `${formatInteger(used)} / ${formatInteger(limit)}`;
 
 function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
@@ -96,15 +101,14 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 						</div>
 						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
 							<span>
-								Тариф: <span className="text-foreground">{DEFAULT_TARIFF_NAME}</span>
-							</span>
-							<span>
 								Дата регистрации: <span className="tabular-nums text-foreground">{joinDate}</span>
 							</span>
 						</div>
 					</div>
 				</div>
 			</section>
+
+			<SubscriptionSection />
 
 			<section className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm">
 				<div className="mb-4 flex items-center gap-2">
@@ -194,29 +198,162 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 	);
 }
 
-export function ProfileSettingsPage() {
-	const { data, isError, refetch } = useMe();
+function MetricTile({
+	label,
+	value,
+	action,
+	testId,
+}: {
+	label: string;
+	value: string;
+	action?: React.ReactNode;
+	testId?: string;
+}) {
+	return (
+		<div data-testid={testId} className="rounded-xl border border-border bg-muted/30 p-4">
+			<p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+			<p className="mt-1.5 font-heading text-lg font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
+			{action && <div className="mt-2">{action}</div>}
+		</div>
+	);
+}
+
+function SubscriptionView({ data }: { data: Subscription }) {
+	const [topUpOpen, setTopUpOpen] = useState(false);
+
+	return (
+		<section
+			data-testid="subscription-section"
+			className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
+		>
+			<div className="mb-4 flex items-center gap-2">
+				<CreditCard aria-hidden="true" className="size-5 shrink-0 text-primary" />
+				<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Подписка</h3>
+			</div>
+
+			<div className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+				<div className="min-w-0">
+					<p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Текущий тариф</p>
+					<p
+						data-testid="current-tariff"
+						className="mt-0.5 font-heading text-xl font-semibold tracking-tight text-foreground"
+					>
+						{data.tariff_name}
+					</p>
+				</div>
+				<Button asChild variant="outline" size="sm" className="sm:shrink-0">
+					<Link to="/settings/tariffs">
+						Сменить тариф
+						<ArrowRight
+							aria-hidden="true"
+							className="size-3.5 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
+						/>
+					</Link>
+				</Button>
+			</div>
+
+			<div className="mt-4 grid gap-3 sm:grid-cols-3">
+				<MetricTile
+					testId="metric-requests"
+					label="Лимит запросов"
+					value={formatFraction(data.requests_used, data.requests_limit)}
+					action={
+						<Button
+							type="button"
+							variant="link"
+							size="sm"
+							className="-ml-2.5 h-auto p-0 px-2.5"
+							onClick={() => setTopUpOpen(true)}
+						>
+							Докупить запросы
+							<ArrowRight
+								aria-hidden="true"
+								className="size-3.5 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
+							/>
+						</Button>
+					}
+				/>
+				<MetricTile
+					testId="metric-employees"
+					label="Сотрудники"
+					value={formatFraction(data.employees_used, data.employees_limit)}
+				/>
+				<MetricTile testId="metric-emails" label="Писем отправлено" value={formatInteger(data.emails_sent)} />
+			</div>
+
+			<TopUpRequestsDialog
+				open={topUpOpen}
+				onOpenChange={setTopUpOpen}
+				tariffId={data.tariff_id}
+				tariffName={data.tariff_name}
+			/>
+		</section>
+	);
+}
+
+function SubscriptionSection() {
+	const { data, isError } = useSubscription();
 
 	if (isError) {
 		return (
-			<div className="px-xl py-lg">
-				<p className="mb-3 text-sm text-muted-foreground">Не удалось загрузить профиль</p>
-				<Button variant="outline" onClick={() => refetch()}>
-					Повторить
-				</Button>
-			</div>
+			<section
+				data-testid="subscription-section"
+				className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
+			>
+				<p className="text-sm text-muted-foreground">Не удалось загрузить подписку</p>
+			</section>
 		);
 	}
 
 	if (!data) {
 		return (
-			<div data-testid="profile-skeleton" className="px-xl py-lg">
+			<section
+				data-testid="subscription-skeleton"
+				className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
+			>
+				<div className="space-y-3">
+					<Skeleton className="h-4 w-24" />
+					<Skeleton className="h-14 w-full rounded-xl" />
+					<div className="grid grid-cols-3 gap-3">
+						<Skeleton className="h-20 rounded-xl" />
+						<Skeleton className="h-20 rounded-xl" />
+						<Skeleton className="h-20 rounded-xl" />
+					</div>
+				</div>
+			</section>
+		);
+	}
+
+	return <SubscriptionView data={data} />;
+}
+
+export function ProfileSettingsPage() {
+	const { data, isError, refetch } = useMe();
+	useSubscription();
+
+	if (isError) {
+		return (
+			<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
+				<p className="mb-3 text-sm text-muted-foreground">Не удалось загрузить профиль</p>
+				<Button variant="outline" onClick={() => refetch()} className="self-start">
+					Повторить
+				</Button>
+			</main>
+		);
+	}
+
+	if (!data) {
+		return (
+			<main
+				data-testid="profile-skeleton"
+				className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg"
+			>
 				<div className="animate-pulse space-y-4">
 					<div className="size-16 rounded-full bg-muted" />
 					<div className="h-4 w-40 rounded bg-muted" />
 					<div className="h-10 w-full max-w-[28rem] rounded bg-muted" />
 				</div>
-			</div>
+			</main>
 		);
 	}
 

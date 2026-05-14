@@ -8,6 +8,8 @@ import { setTokens } from "@/data/auth";
 import type { ProfileClient } from "@/data/clients/profile-client";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import type { SessionClient } from "@/data/clients/session-client";
+import type { SubscriptionClient } from "@/data/clients/subscription-client";
+import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in-memory";
 import { fakeSessionClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { makeMe, mockHostname } from "@/test-utils";
 import { ProfileSettingsPage } from "./profile-settings-page";
@@ -21,11 +23,14 @@ const MOCK_ME = makeMe({ patronymic: "Иванович" });
 let queryClient: QueryClient;
 let profileClient: ProfileClient;
 
-function renderPage(opts: { profile?: ProfileClient; session?: SessionClient } = {}) {
+function renderPage(
+	opts: { profile?: ProfileClient; session?: SessionClient; subscription?: SubscriptionClient } = {},
+) {
 	profileClient = opts.profile ?? createInMemoryProfileClient({ me: MOCK_ME });
 	const session = opts.session ?? fakeSessionClient({ requestPasswordChange: vi.fn().mockResolvedValue(undefined) });
+	const subscription = opts.subscription ?? createInMemorySubscriptionClient();
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient, session }}>
+		<TestClientsProvider queryClient={queryClient} clients={{ profile: profileClient, session, subscription }}>
 			<MemoryRouter initialEntries={["/settings/profile"]}>
 				<Routes>
 					<Route path="*" element={<ProfileSettingsPage />} />
@@ -200,6 +205,43 @@ describe("ProfileSettingsPage", () => {
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
 		await user.click(screen.getByRole("checkbox", { name: /уведомления/i }));
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+	});
+
+	test("avatar card no longer shows inline «Тариф»", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByTestId("profile-avatar")).toBeInTheDocument();
+		});
+		expect(screen.queryByText(/^Тариф:/)).not.toBeInTheDocument();
+	});
+
+	test("Подписка section renders current tariff and three metrics", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByTestId("subscription-section")).toBeInTheDocument();
+		});
+		expect(screen.getByTestId("current-tariff")).toHaveTextContent("Бизнес");
+		expect(screen.getByTestId("metric-requests")).toHaveTextContent("12 / 15");
+		expect(screen.getByTestId("metric-employees")).toHaveTextContent("3 / 5");
+		expect(screen.getByTestId("metric-emails")).toHaveTextContent("184");
+	});
+
+	test("Сменить тариф links to /settings/tariffs", async () => {
+		renderPage();
+		await waitFor(() => {
+			expect(screen.getByRole("link", { name: /сменить тариф/i })).toBeInTheDocument();
+		});
+		expect(screen.getByRole("link", { name: /сменить тариф/i })).toHaveAttribute("href", "/settings/tariffs");
+	});
+
+	test("Докупить запросы opens the top-up dialog", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: /докупить запросы/i })).toBeInTheDocument();
+		});
+		await user.click(screen.getByRole("button", { name: /докупить запросы/i }));
+		expect(await screen.findByTestId("top-up-dialog")).toBeInTheDocument();
 	});
 
 	test("save includes mailing_allowed in the persisted store", async () => {
