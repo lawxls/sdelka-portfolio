@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { AuthLayout } from "@/components/auth-layout";
@@ -23,6 +24,7 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		forgotPassword: vi.fn(),
 		resetPassword: vi.fn(),
 		requestPasswordChange: vi.fn(),
+		impersonate: vi.fn(),
 		...overrides,
 	};
 }
@@ -112,6 +114,32 @@ describe("ConfirmEmailPage", () => {
 			expect(resendLink).toBeInTheDocument();
 			expect(resendLink).toHaveAttribute("href", "/resend-confirmation");
 		});
+	});
+
+	test("fires confirmEmail exactly once under StrictMode double-mount (token self-invalidates after activate)", async () => {
+		const confirmEmail = vi
+			.fn()
+			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "x@y.z" } });
+		const session = buildSession({ confirmEmail });
+		render(
+			<StrictMode>
+				<TestClientsProvider queryClient={queryClient} clients={{ session }}>
+					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
+						<Routes>
+							<Route element={<AuthLayout />}>
+								<Route path="/confirm-email" element={<ConfirmEmailPage />} />
+							</Route>
+							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
+						</Routes>
+					</MemoryRouter>
+				</TestClientsProvider>
+			</StrictMode>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("Inquiries Page")).toBeInTheDocument();
+		});
+		expect(confirmEmail).toHaveBeenCalledTimes(1);
 	});
 
 	test("renders pending state while confirmEmail is in flight", () => {

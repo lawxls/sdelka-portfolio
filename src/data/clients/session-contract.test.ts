@@ -171,6 +171,24 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
+			path: /^\/auth\/impersonate\/$/,
+			respond: ({ init }) => {
+				const data = JSON.parse(init?.body as string) as { handoff: string };
+				if (data.handoff === "good-handoff") {
+					return {
+						status: 200,
+						body: {
+							access: "access-impersonate",
+							refresh: "refresh-impersonate",
+							user: { id: 7, email: "valid@example.com" },
+						},
+					};
+				}
+				return { status: 400, body: { code: "invalid_or_expired_link" } };
+			},
+		},
+		{
+			method: "POST",
 			path: /^\/auth\/reset-password\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as {
@@ -220,7 +238,7 @@ function httpAdapter(): Adapter {
 
 const adapters: Array<() => Adapter> = [() => memoryAdapter(), () => httpAdapter()];
 
-describe.each(adapters.map((make) => [make().name, make]))("SessionClient contract — %s adapter", (_label, make) => {
+describe.each(adapters.map((make) => [make().name, make]))("SessionClient contract — %s adapter", (label, make) => {
 	let client: SessionClient;
 
 	beforeEach(() => {
@@ -367,6 +385,28 @@ describe.each(adapters.map((make) => [make().name, make]))("SessionClient contra
 
 	it("requestPasswordChange resolves with no body on the happy path", async () => {
 		await expect(client.requestPasswordChange()).resolves.toBeUndefined();
+	});
+
+	it("impersonate with a valid handoff returns access, refresh, and the target user", async () => {
+		// In-memory adapter mints handoffs as "user:<id>"; HTTP adapter expects
+		// "good-handoff" per the route stub. Pick the right one per adapter.
+		const validHandoff = label === "memory" ? "user:7" : "good-handoff";
+		const result = await client.impersonate({ handoff: validHandoff });
+		expect(result.user.email).toBe("valid@example.com");
+		expect(typeof result.access).toBe("string");
+		expect(result.access.length).toBeGreaterThan(0);
+		expect(typeof result.refresh).toBe("string");
+	});
+
+	it("impersonate with an invalid handoff throws ValidationError", async () => {
+		try {
+			await client.impersonate({ handoff: "garbage" });
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(ValidationError);
+			const body = (err as ValidationError).body as { code?: string };
+			expect(body.code).toBe("invalid_or_expired_link");
+		}
 	});
 
 	it("resetPassword with invalid uid/token throws ValidationError carrying invalid_or_expired_link", async () => {

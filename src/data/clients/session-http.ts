@@ -4,6 +4,8 @@ import type {
 	ConfirmEmailInput,
 	ConfirmEmailResult,
 	ForgotPasswordInput,
+	ImpersonateInput,
+	ImpersonateResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -47,5 +49,10 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 		// Authed call: rides the standard 401-refresh path (no skipRefresh) — if
 		// the access token has just expired, the interceptor refreshes silently.
 		requestPasswordChange: () => http.post<void>(`/auth/request-password-change/`, { body: {} }),
+
+		// Handoff is the only credential; skip the 401-refresh interceptor so a
+		// failure surfaces directly instead of looping through `/auth/refresh/`.
+		impersonate: (input: ImpersonateInput) =>
+			http.post<ImpersonateResult>(`/auth/impersonate/`, { body: input, skipRefresh: true }),
 	};
 }

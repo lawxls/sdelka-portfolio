@@ -66,3 +66,10 @@ export interface ResetPasswordInput {
 	new_password: string;
 	new_password_confirm: string;
 }
+
+export interface ImpersonateInput {
+	handoff: string;
+}
+
+/** Admin-issued impersonation hand-off mints a fresh session: same shape as `LoginResult`. */
+export type ImpersonateResult = LoginResult;

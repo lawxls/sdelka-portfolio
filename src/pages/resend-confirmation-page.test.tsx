@@ -22,6 +22,7 @@ function buildSession(overrides: Partial<SessionClient> = {}): SessionClient {
 		forgotPassword: vi.fn(),
 		resetPassword: vi.fn(),
 		requestPasswordChange: vi.fn(),
+		impersonate: vi.fn(),
 		...overrides,
 	};
 }

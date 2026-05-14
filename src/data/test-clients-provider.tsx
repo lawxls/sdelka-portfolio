@@ -250,6 +250,7 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 		forgotPassword: notImplemented("forgotPassword"),
 		resetPassword: notImplemented("resetPassword"),
 		requestPasswordChange: notImplemented("requestPasswordChange"),
+		impersonate: notImplemented("impersonate"),
 		...overrides,
 	};
 }

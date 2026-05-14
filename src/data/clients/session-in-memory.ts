@@ -3,6 +3,8 @@ import type {
 	ConfirmEmailInput,
 	ConfirmEmailResult,
 	ForgotPasswordInput,
+	ImpersonateInput,
+	ImpersonateResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -166,6 +168,18 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			}
 			match.password = input.new_password;
 			match.passwordResetToken = undefined;
+		},
+
+		async impersonate(input: ImpersonateInput): Promise<ImpersonateResult> {
+			await delay();
+			// In-memory convention: the handoff blob is "user:<id>" for the user to
+			// land in. Anything else is rejected as an invalid link.
+			const match = /^user:(\d+)$/.exec(input.handoff);
+			if (!match) throw new ValidationError({}, { code: "invalid_or_expired_link" });
+			const seed = users.find((u) => String(u.user.id) === match[1]);
+			if (!seed) throw new ValidationError({}, { code: "invalid_or_expired_link" });
+			refreshAvailable = true;
+			return { access: nextId("access"), refresh: nextId("refresh"), user: { ...seed.user } };
 		},
 
 		async requestPasswordChange(): Promise<void> {

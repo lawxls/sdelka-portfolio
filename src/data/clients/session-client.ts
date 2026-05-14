@@ -3,6 +3,8 @@ import type {
 	ConfirmEmailInput,
 	ConfirmEmailResult,
 	ForgotPasswordInput,
+	ImpersonateInput,
+	ImpersonateResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -35,4 +37,8 @@ export interface SessionClient {
 	/** Authed-only: backend pulls the email from the session and emails a
 	 * reset link that lands on /reset-password. */
 	requestPasswordChange(): Promise<void>;
+	/** Redeem an admin-issued handoff token for a fresh JWT pair scoped to the
+	 * target user. The handoff is the only authorization — no Bearer token is
+	 * sent. */
+	impersonate(input: ImpersonateInput): Promise<ImpersonateResult>;
 }

@@ -83,6 +83,7 @@ describe("ProtectedRoute", () => {
 			forgotPassword: () => Promise.reject(new Error("not used")),
 			resetPassword: () => Promise.reject(new Error("not used")),
 			requestPasswordChange: () => Promise.reject(new Error("not used")),
+			impersonate: () => Promise.reject(new Error("not used")),
 		};
 		renderWithRouter(["/app"], session);
 

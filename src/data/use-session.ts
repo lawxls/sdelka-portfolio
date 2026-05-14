@@ -8,6 +8,8 @@ import type {
 	ConfirmEmailInput,
 	ConfirmEmailResult,
 	ForgotPasswordInput,
+	ImpersonateInput,
+	ImpersonateResult,
 	LoginInput,
 	LoginResult,
 	RegisterInput,
@@ -111,6 +113,25 @@ export function useRequestPasswordChange() {
 
 	return useMutation({
 		mutationFn: async (): Promise<void> => client.requestPasswordChange(),
+	});
+}
+
+/**
+ * Redeem an admin-issued handoff token for a JWT pair scoped to the target
+ * user. Clears any prior session before storing the new tokens so React-Query
+ * caches keyed off the previous user can't bleed across the swap.
+ */
+export function useImpersonate() {
+	const client = useSessionClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (input: ImpersonateInput): Promise<ImpersonateResult> => {
+			const result = await client.impersonate(input);
+			queryClient.clear();
+			setTokens(result.access, result.refresh);
+			return result;
+		},
 	});
 }
 
