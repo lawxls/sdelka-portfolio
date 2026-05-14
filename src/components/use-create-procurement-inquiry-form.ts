@@ -21,6 +21,7 @@ export interface CurrentSupplierDraft {
 	pricePerUnit: string;
 	paymentType: PaymentType;
 	deferralDays: string;
+	prepaymentPercent: string;
 	deliveryIncluded: boolean;
 	deliveryCost: string;
 	leadTimeDays: string;
@@ -39,6 +40,7 @@ export function buildCurrentSupplierDraft(cs: CurrentSupplier): CurrentSupplierD
 		pricePerUnit: cs.pricePerUnit != null ? String(cs.pricePerUnit) : "",
 		paymentType: cs.paymentType ?? "prepayment",
 		deferralDays: cs.deferralDays > 0 ? String(cs.deferralDays) : "",
+		prepaymentPercent: cs.prepaymentPercent != null ? String(cs.prepaymentPercent) : "",
 		deliveryIncluded: cs.deliveryCost == null,
 		deliveryCost: cs.deliveryCost != null ? String(cs.deliveryCost) : "",
 		leadTimeDays: cs.leadTimeDays != null ? String(cs.leadTimeDays) : "",
@@ -64,6 +66,9 @@ export function buildCurrentSupplierFromDraft(draft: CurrentSupplierDraft): Curr
 	if (email) supplier.email = email;
 	if (draft.paymentType === "deferred") {
 		supplier.deferralDays = toNumberOrUndefined(draft.deferralDays) ?? 0;
+	} else {
+		const percent = toNumberOrUndefined(draft.prepaymentPercent);
+		if (percent !== undefined) supplier.prepaymentPercent = percent;
 	}
 	supplier.deliveryCost = draft.deliveryIncluded ? null : (toNumberOrUndefined(draft.deliveryCost) ?? null);
 	const leadTime = toNumberOrUndefined(draft.leadTimeDays);

@@ -24,6 +24,7 @@ function makeSupplier(overrides: Partial<CurrentSupplierDraft> = {}): CurrentSup
 		pricePerUnit: "",
 		paymentType: "prepayment",
 		deferralDays: "",
+		prepaymentPercent: "",
 		deliveryIncluded: true,
 		deliveryCost: "",
 		leadTimeDays: "",

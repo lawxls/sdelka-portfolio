@@ -324,7 +324,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 
 		const innInput = await screen.findByLabelText("ИНН");
 		await user.type(innInput, "1234567890");
-		await user.type(screen.getByLabelText("Текущая цена без НДС"), "1250");
+		await user.type(screen.getByLabelText("Текущая цена/ед. без НДС"), "1250");
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await advance(user);
