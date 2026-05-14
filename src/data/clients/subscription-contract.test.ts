@@ -21,6 +21,7 @@ const SEED: Subscription = {
 	employees_used: 3,
 	employees_limit: 5,
 	emails_sent: 184,
+	emails_limit: 500,
 };
 
 interface Adapter {

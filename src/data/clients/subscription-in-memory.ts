@@ -10,6 +10,7 @@ const DEFAULT_SUBSCRIPTION: Subscription = {
 	employees_used: 3,
 	employees_limit: 5,
 	emails_sent: 184,
+	emails_limit: 500,
 };
 
 export interface InMemorySubscriptionOptions {

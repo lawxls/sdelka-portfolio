@@ -17,6 +17,7 @@ export interface Subscription {
 	employees_used: number;
 	employees_limit: number;
 	emails_sent: number;
+	emails_limit: number;
 }
 
 export interface TopUpPayload {

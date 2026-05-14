@@ -1,4 +1,4 @@
-import { ArrowRight, CreditCard, IdCard, KeyRound, Loader2 } from "lucide-react";
+import { ArrowRight, Gauge, IdCard, KeyRound, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -18,7 +18,31 @@ import { formatDate, formatFullName, formatInteger, getInitials } from "@/lib/fo
 import { cn } from "@/lib/utils";
 
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
-const formatFraction = (used: number, limit: number) => `${formatInteger(used)} / ${formatInteger(limit)}`;
+
+const CARD_BASE = "rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-6";
+
+function SectionCard({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) {
+	return (
+		<section className={cn(CARD_BASE, className)} {...props}>
+			{children}
+		</section>
+	);
+}
+
+function SectionHeader({
+	icon: Icon,
+	title,
+}: {
+	icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+	title: string;
+}) {
+	return (
+		<div className="mb-5 flex items-center gap-2">
+			<Icon aria-hidden className="size-5 shrink-0 text-primary" />
+			<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+		</div>
+	);
+}
 
 function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
@@ -83,39 +107,19 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 
 	return (
 		<>
-			<section className="rounded-2xl border border-border bg-background p-6 shadow-sm">
-				<div className="flex flex-wrap items-start gap-5">
-					<div
-						data-testid="profile-avatar"
-						className={cn(
-							"flex size-16 shrink-0 items-center justify-center rounded-full text-xl font-semibold text-white shadow-sm",
-							avatarColor,
-						)}
-					>
-						{initials}
-					</div>
-					<div className="min-w-0 flex-1 space-y-2">
-						<div>
-							<h2 className="font-heading text-xl font-semibold tracking-tight">{fullName}</h2>
-							<p className="truncate text-sm text-muted-foreground">{data.email}</p>
-						</div>
-						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-							<span>
-								Дата регистрации: <span className="tabular-nums text-foreground">{joinDate}</span>
-							</span>
-						</div>
-					</div>
-				</div>
-			</section>
+			<IdentityCard
+				initials={initials}
+				avatarColor={avatarColor}
+				fullName={fullName}
+				email={data.email}
+				joinDate={joinDate}
+			/>
 
-			<SubscriptionSection />
+			<LimitsSection />
 
-			<section className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm">
-				<div className="mb-4 flex items-center gap-2">
-					<IdCard aria-hidden="true" className="size-5 shrink-0 text-primary" />
-					<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Личные данные</h3>
-				</div>
-				<form onSubmit={handleSubmit} className="space-y-4">
+			<SectionCard className="mt-5">
+				<SectionHeader icon={IdCard} title="Личные данные" />
+				<form onSubmit={handleSubmit} className="space-y-5">
 					<div className="grid gap-4 sm:grid-cols-3">
 						<FloatingInput
 							label="Имя"
@@ -153,34 +157,31 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 						/>
 						<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
 					</div>
-					<div className="pt-1">
-						<CheckboxBadge
-							id="mailing-allowed"
-							checked={mailingAllowed}
-							onChange={setMailingAllowed}
-							ariaLabel="Получать уведомления на почту"
-						>
-							Получать уведомления на почту
-						</CheckboxBadge>
-					</div>
-					<div className="flex justify-end border-t border-border pt-4">
+					<CheckboxBadge
+						id="mailing-allowed"
+						checked={mailingAllowed}
+						onChange={setMailingAllowed}
+						ariaLabel="Получать уведомления на почту"
+					>
+						Получать уведомления на почту
+					</CheckboxBadge>
+					<div className="flex justify-end border-t border-border pt-5">
 						<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
 							{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
 							Сохранить
 						</Button>
 					</div>
 				</form>
-			</section>
+			</SectionCard>
 
-			<section className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm">
-				<div className="mb-4 flex items-center gap-2">
-					<KeyRound aria-hidden="true" className="size-5 shrink-0 text-primary" />
-					<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Безопасность</h3>
-				</div>
+			<SectionCard className="mt-5">
+				<SectionHeader icon={KeyRound} title="Безопасность" />
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-					<div className="min-w-0">
-						<h2 className="text-base font-semibold">Изменить пароль</h2>
-						<p className="mt-0.5 text-sm text-muted-foreground">Мы отправим ссылку для смены пароля на вашу почту</p>
+					<div className="min-w-0 space-y-1">
+						<h2 className="text-base font-semibold leading-none">Изменить пароль</h2>
+						<p className="text-sm text-muted-foreground text-pretty">
+							Мы отправим ссылку для смены пароля на вашу почту
+						</p>
 					</div>
 					<Button
 						type="button"
@@ -190,95 +191,161 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 						className="sm:shrink-0"
 					>
 						{requestPasswordChange.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-						Отправить ссылку для смены пароля на почту
+						Отправить письмо
 					</Button>
 				</div>
-			</section>
+			</SectionCard>
 		</>
 	);
 }
 
-function MetricTile({
-	label,
-	value,
-	action,
-	testId,
+function IdentityCard({
+	initials,
+	avatarColor,
+	fullName,
+	email,
+	joinDate,
 }: {
-	label: string;
-	value: string;
-	action?: React.ReactNode;
-	testId?: string;
+	initials: string;
+	avatarColor: string;
+	fullName: string;
+	email: string;
+	joinDate: string;
 }) {
+	const { data: subscription } = useSubscription();
+
 	return (
-		<div data-testid={testId} className="rounded-xl border border-border bg-muted/30 p-4">
-			<p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-			<p className="mt-1.5 font-heading text-lg font-semibold tracking-tight text-foreground tabular-nums">{value}</p>
-			{action && <div className="mt-2">{action}</div>}
+		<SectionCard>
+			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+				<div
+					data-testid="profile-avatar"
+					className={cn(
+						"flex size-12 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white shadow-sm ring-1 ring-black/5",
+						avatarColor,
+					)}
+				>
+					{initials}
+				</div>
+				<div className="min-w-0 flex-1 space-y-1.5">
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+						<h2 className="font-heading text-lg font-semibold tracking-tight leading-none text-balance">{fullName}</h2>
+						{subscription ? (
+							<Link
+								to="/settings/tariffs"
+								aria-label="Сменить тариф"
+								title={`Текущий тариф: ${subscription.tariff_name}`}
+								className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							>
+								<span aria-hidden="true">Тариф</span>
+								<span
+									aria-hidden="true"
+									data-testid="current-tariff"
+									className="font-semibold tracking-tight text-foreground"
+								>
+									{subscription.tariff_name}
+								</span>
+							</Link>
+						) : (
+							<Skeleton className="h-7 w-28 rounded-full" />
+						)}
+					</div>
+					<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
+						<span className="truncate">{email}</span>
+						<span aria-hidden="true" className="text-muted-foreground/50">
+							·
+						</span>
+						<span className="whitespace-nowrap">
+							Зарегистрирован с <span className="tabular-nums text-foreground">{joinDate}</span>
+						</span>
+					</div>
+				</div>
+			</div>
+		</SectionCard>
+	);
+}
+
+function LimitMetric({
+	testId,
+	label,
+	used,
+	limit,
+	action,
+}: {
+	testId: string;
+	label: string;
+	used: number;
+	limit: number;
+	action?: React.ReactNode;
+}) {
+	const ratio = limit > 0 ? Math.min(1, used / limit) : 0;
+	const pct = Math.round(ratio * 100);
+
+	return (
+		<div data-testid={testId} className="flex min-w-0 flex-col gap-2.5">
+			<span className="text-[11px] font-medium uppercase tracking-wider leading-none text-muted-foreground">
+				{label}
+			</span>
+			<div className="flex items-baseline justify-between gap-3">
+				<p className="font-heading text-lg font-semibold tracking-tight tabular-nums leading-none">
+					{formatInteger(used)}{" "}
+					<span className="text-sm font-normal text-muted-foreground">/ {formatInteger(limit)}</span>
+				</p>
+				{action}
+			</div>
+			<div
+				role="progressbar"
+				aria-label={`${label}: использовано ${pct}%`}
+				aria-valuemin={0}
+				aria-valuemax={100}
+				aria-valuenow={pct}
+				className="h-1 w-full overflow-hidden rounded-full bg-muted"
+			>
+				<div
+					className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+					style={{ width: `${pct}%` }}
+				/>
+			</div>
 		</div>
 	);
 }
 
-function SubscriptionView({ data }: { data: Subscription }) {
+function LimitsView({ data }: { data: Subscription }) {
 	const [topUpOpen, setTopUpOpen] = useState(false);
 
 	return (
-		<section
-			data-testid="subscription-section"
-			className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
-		>
-			<div className="mb-4 flex items-center gap-2">
-				<CreditCard aria-hidden="true" className="size-5 shrink-0 text-primary" />
-				<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Подписка</h3>
-			</div>
+		<SectionCard data-testid="limits-section" className="mt-5">
+			<SectionHeader icon={Gauge} title="Лимиты" />
 
-			<div className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-				<div className="min-w-0">
-					<p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Текущий тариф</p>
-					<p
-						data-testid="current-tariff"
-						className="mt-0.5 font-heading text-xl font-semibold tracking-tight text-foreground"
-					>
-						{data.tariff_name}
-					</p>
-				</div>
-				<Button asChild variant="outline" size="sm" className="sm:shrink-0">
-					<Link to="/settings/tariffs">
-						Сменить тариф
-						<ArrowRight
-							aria-hidden="true"
-							className="size-3.5 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
-						/>
-					</Link>
-				</Button>
-			</div>
-
-			<div className="mt-4 grid gap-3 sm:grid-cols-3">
-				<MetricTile
+			<div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-3">
+				<LimitMetric
 					testId="metric-requests"
-					label="Лимит запросов"
-					value={formatFraction(data.requests_used, data.requests_limit)}
+					label="Запросы"
+					used={data.requests_used}
+					limit={data.requests_limit}
 					action={
 						<Button
 							type="button"
 							variant="link"
 							size="sm"
-							className="-ml-2.5 h-auto p-0 px-2.5"
+							aria-label="Докупить запросы"
+							className="h-auto shrink-0 p-0 text-xs"
 							onClick={() => setTopUpOpen(true)}
 						>
-							Докупить запросы
+							Докупить
 							<ArrowRight
 								aria-hidden="true"
-								className="size-3.5 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
+								className="size-3 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
 							/>
 						</Button>
 					}
 				/>
-				<MetricTile
+				<LimitMetric
 					testId="metric-employees"
 					label="Сотрудники"
-					value={formatFraction(data.employees_used, data.employees_limit)}
+					used={data.employees_used}
+					limit={data.employees_limit}
 				/>
-				<MetricTile testId="metric-emails" label="Писем отправлено" value={formatInteger(data.emails_sent)} />
+				<LimitMetric testId="metric-emails" label="Письма" used={data.emails_sent} limit={data.emails_limit} />
 			</div>
 
 			<TopUpRequestsDialog
@@ -287,49 +354,41 @@ function SubscriptionView({ data }: { data: Subscription }) {
 				tariffId={data.tariff_id}
 				tariffName={data.tariff_name}
 			/>
-		</section>
+		</SectionCard>
 	);
 }
 
-function SubscriptionSection() {
+function LimitsSection() {
 	const { data, isError } = useSubscription();
 
 	if (isError) {
 		return (
-			<section
-				data-testid="subscription-section"
-				className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
-			>
-				<p className="text-sm text-muted-foreground">Не удалось загрузить подписку</p>
-			</section>
+			<SectionCard data-testid="limits-section" className="mt-5">
+				<p className="text-sm text-muted-foreground">Не удалось загрузить лимиты</p>
+			</SectionCard>
 		);
 	}
 
 	if (!data) {
 		return (
-			<section
-				data-testid="subscription-skeleton"
-				className="mt-6 rounded-2xl border border-border bg-background p-6 shadow-sm"
-			>
-				<div className="space-y-3">
-					<Skeleton className="h-4 w-24" />
-					<Skeleton className="h-14 w-full rounded-xl" />
-					<div className="grid grid-cols-3 gap-3">
-						<Skeleton className="h-20 rounded-xl" />
-						<Skeleton className="h-20 rounded-xl" />
-						<Skeleton className="h-20 rounded-xl" />
+			<SectionCard data-testid="limits-skeleton" className="mt-5">
+				<div className="space-y-5">
+					<Skeleton className="h-4 w-20" />
+					<div className="grid grid-cols-3 gap-x-8 gap-y-6">
+						<Skeleton className="h-14 rounded" />
+						<Skeleton className="h-14 rounded" />
+						<Skeleton className="h-14 rounded" />
 					</div>
 				</div>
-			</section>
+			</SectionCard>
 		);
 	}
 
-	return <SubscriptionView data={data} />;
+	return <LimitsView data={data} />;
 }
 
 export function ProfileSettingsPage() {
 	const { data, isError, refetch } = useMe();
-	useSubscription();
 
 	if (isError) {
 		return (

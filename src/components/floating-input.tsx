@@ -67,7 +67,7 @@ export function FloatingInput({
 					spellCheck={false}
 					aria-invalid={error ? true : undefined}
 					className={cn(
-						"h-10 w-full rounded-lg border bg-transparent text-sm outline-none transition-colors",
+						"block h-10 w-full rounded-lg border bg-transparent text-sm outline-none transition-colors",
 						"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
 						"aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
 						"dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",

@@ -26,6 +26,7 @@ const SNAPSHOT: Subscription = {
 	employees_used: 1,
 	employees_limit: 2,
 	emails_sent: 42,
+	emails_limit: 200,
 };
 
 beforeEach(() => {

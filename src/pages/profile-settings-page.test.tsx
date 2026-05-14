@@ -115,7 +115,7 @@ describe("ProfileSettingsPage", () => {
 			expect(screen.getByRole("heading", { name: "Изменить пароль" })).toBeInTheDocument();
 		});
 		expect(screen.getByText("Мы отправим ссылку для смены пароля на вашу почту")).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Отправить письмо" })).toBeInTheDocument();
 	});
 
 	test("CTA fires requestPasswordChange and surfaces success toast", async () => {
@@ -124,10 +124,10 @@ describe("ProfileSettingsPage", () => {
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить письмо" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" }));
+		await user.click(screen.getByRole("button", { name: "Отправить письмо" }));
 
 		await waitFor(() => {
 			expect(requestPasswordChange).toHaveBeenCalledOnce();
@@ -142,10 +142,10 @@ describe("ProfileSettingsPage", () => {
 		const user = userEvent.setup();
 
 		await waitFor(() => {
-			expect(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" })).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить письмо" })).toBeInTheDocument();
 		});
 
-		await user.click(screen.getByRole("button", { name: "Отправить ссылку для смены пароля на почту" }));
+		await user.click(screen.getByRole("button", { name: "Отправить письмо" }));
 
 		await waitFor(() => {
 			expect(toast.error).toHaveBeenCalledWith("Не удалось отправить письмо");
@@ -207,23 +207,26 @@ describe("ProfileSettingsPage", () => {
 		expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 	});
 
-	test("avatar card no longer shows inline «Тариф»", async () => {
+	test("identity card renders inline tariff badge linking to tariffs", async () => {
 		renderPage();
 		await waitFor(() => {
 			expect(screen.getByTestId("profile-avatar")).toBeInTheDocument();
 		});
-		expect(screen.queryByText(/^Тариф:/)).not.toBeInTheDocument();
+		const badge = await screen.findByTestId("current-tariff");
+		expect(badge).toHaveTextContent("Бизнес");
+		const link = badge.closest("a");
+		expect(link).not.toBeNull();
+		expect(link).toHaveAttribute("href", "/settings/tariffs");
 	});
 
-	test("Подписка section renders current tariff and three metrics", async () => {
+	test("Лимиты section renders three metrics", async () => {
 		renderPage();
 		await waitFor(() => {
-			expect(screen.getByTestId("subscription-section")).toBeInTheDocument();
+			expect(screen.getByTestId("limits-section")).toBeInTheDocument();
 		});
-		expect(screen.getByTestId("current-tariff")).toHaveTextContent("Бизнес");
 		expect(screen.getByTestId("metric-requests")).toHaveTextContent("12 / 15");
 		expect(screen.getByTestId("metric-employees")).toHaveTextContent("3 / 5");
-		expect(screen.getByTestId("metric-emails")).toHaveTextContent("184");
+		expect(screen.getByTestId("metric-emails")).toHaveTextContent("184 / 500");
 	});
 
 	test("Сменить тариф links to /settings/tariffs", async () => {
