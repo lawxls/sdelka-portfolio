@@ -1,5 +1,6 @@
 import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSuppliersClient } from "./clients-context";
+import type { CreateSupplierInput } from "./domains/suppliers";
 import type { Supplier, SupplierChatMessage, SupplierFilterParams } from "./supplier-types";
 import { filesToAttachments } from "./supplier-types";
 
@@ -84,6 +85,17 @@ export function useSupplierIdentity(inn: string, options?: { enabled?: boolean }
 		queryFn: () => client.identityByInn(inn),
 		enabled,
 		staleTime: 60_000,
+	});
+}
+
+export function useCreateSupplier() {
+	const client = useSuppliersClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: CreateSupplierInput) => client.create(input),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
+		},
 	});
 }
 

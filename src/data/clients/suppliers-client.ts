@@ -1,4 +1,5 @@
 import type {
+	CreateSupplierInput,
 	Supplier,
 	SupplierChatMessage,
 	SupplierFilterParams,
@@ -32,8 +33,15 @@ export interface SuppliersClient {
 	 * «Добавить текущего поставщика» modal so the user can prefill from an existing supplier. */
 	identityByInn(inn: string): Promise<SupplierIdentity | null>;
 
+	/** Creates an inquiry-scoped candidate supplier (status="new", no itemId).
+	 * Backs the «Добавить поставщика» modal in the consolidated suppliers tab. */
+	create(input: CreateSupplierInput): Promise<Supplier>;
+
 	archive(itemId: string, supplierIds: string[]): Promise<void>;
 	unarchive(itemId: string, supplierIds: string[]): Promise<void>;
+	/** Archive inquiry-scoped suppliers (no itemId). */
+	archiveInquiry(procurementInquiryId: string, supplierIds: string[]): Promise<void>;
+	unarchiveInquiry(procurementInquiryId: string, supplierIds: string[]): Promise<void>;
 	delete(itemId: string, supplierIds: string[]): Promise<void>;
 
 	/** Transition matching status="new" rows to "quote_requested". Returns the ids actually flipped. */

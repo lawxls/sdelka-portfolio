@@ -1,4 +1,5 @@
 import type {
+	CreateSupplierInput,
 	Supplier,
 	SupplierChatMessage,
 	SupplierIdentity,
@@ -43,11 +44,26 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 
 		identityByInn: (inn) => http.get<SupplierIdentity | null>(`/suppliers/identity${buildQuery({ inn })}`),
 
+		create: (input: CreateSupplierInput) =>
+			http.post<Supplier>(`/procurement-inquiries/${enc(input.procurementInquiryId)}/suppliers`, {
+				body: { inn: input.inn, companyName: input.companyName, website: input.website, email: input.email },
+			}),
+
 		archive: (itemId, supplierIds) =>
 			http.post<void>(`/items/${enc(itemId)}/suppliers/archive`, { body: { supplierIds } }),
 
 		unarchive: (itemId, supplierIds) =>
 			http.post<void>(`/items/${enc(itemId)}/suppliers/unarchive`, { body: { supplierIds } }),
+
+		archiveInquiry: (procurementInquiryId, supplierIds) =>
+			http.post<void>(`/procurement-inquiries/${enc(procurementInquiryId)}/suppliers/archive`, {
+				body: { supplierIds },
+			}),
+
+		unarchiveInquiry: (procurementInquiryId, supplierIds) =>
+			http.post<void>(`/procurement-inquiries/${enc(procurementInquiryId)}/suppliers/unarchive`, {
+				body: { supplierIds },
+			}),
 
 		delete: (itemId, supplierIds) =>
 			http.post<void>(`/items/${enc(itemId)}/suppliers/delete`, { body: { supplierIds } }),

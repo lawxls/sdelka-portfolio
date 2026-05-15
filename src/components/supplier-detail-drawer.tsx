@@ -417,7 +417,7 @@ function OffersPanel({
 	isExpanded: (itemId: string) => boolean;
 	onToggleExpanded: (itemId: string) => void;
 }) {
-	const { data, isLoading } = useSupplierQuotes(supplier.inn, supplier.itemId);
+	const { data, isLoading } = useSupplierQuotes(supplier.inn, supplier.itemId ?? "");
 
 	if (isLoading) {
 		return (
@@ -596,7 +596,7 @@ function ChatPanel({
 	supplier: Supplier;
 	scrollToLatest: React.RefCallback<HTMLElement>;
 }) {
-	const sendMutation = useSendSupplierMessage(supplier.itemId, supplier.id);
+	const sendMutation = useSendSupplierMessage(supplier.itemId ?? "", supplier.id);
 	const sendRequestMutation = useSendSupplierRequest();
 	const isCandidate = supplier.status === "new";
 	const isError = supplier.status === "error";
@@ -608,6 +608,7 @@ function ChatPanel({
 		: (sendMutation.error?.message ?? null);
 
 	function handleSendRequest() {
+		if (!supplier.itemId) return;
 		sendRequestMutation.mutate({ itemId: supplier.itemId, supplierIds: [supplier.id] });
 	}
 

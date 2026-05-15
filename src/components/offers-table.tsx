@@ -100,6 +100,7 @@ function buildPinnedSupplier(currentSupplier: CurrentSupplier, rowId: string): S
 	return {
 		id: rowId,
 		itemId: "",
+		procurementInquiryId: "",
 		companyName: currentSupplier.companyName,
 		status: "quote_received",
 		archived: false,

@@ -58,6 +58,9 @@ interface SuppliersTableProps {
 	onSendRequest: (id: string) => void;
 	onSendRequestBatch: () => void;
 	onSendRequestAll: () => void;
+	/** When provided, the toolbar CTA renders «Добавить поставщика» and invokes this
+	 * callback instead of «Отправить запросы». Used by the consolidated inquiry view. */
+	onAddSupplier?: () => void;
 	showArchived: boolean;
 	onToggleArchived: () => void;
 	hasNextPage?: boolean;
@@ -127,6 +130,7 @@ export function SuppliersTable({
 	onSendRequest,
 	onSendRequestBatch,
 	onSendRequestAll,
+	onAddSupplier,
 	showArchived,
 	onToggleArchived,
 	hasNextPage,
@@ -293,18 +297,26 @@ export function SuppliersTable({
 							</TooltipTrigger>
 							<TooltipContent>Архив</TooltipContent>
 						</Tooltip>
-						{kpRequestEnabled && (
-							<Button
-								type="button"
-								size="sm"
-								onClick={onSendRequestAll}
-								aria-label="Отправить запросы"
-								className="btn-cta ml-2 rounded-full border-0"
-							>
-								<span className="hidden sm:inline">Отправить запросы</span>
-								<span className="sm:hidden">Отправить</span>
-							</Button>
-						)}
+						{(() => {
+							const cta = onAddSupplier
+								? { onClick: onAddSupplier, label: "Добавить поставщика", short: "Добавить" }
+								: kpRequestEnabled
+									? { onClick: onSendRequestAll, label: "Отправить запросы", short: "Отправить" }
+									: null;
+							if (!cta) return null;
+							return (
+								<Button
+									type="button"
+									size="sm"
+									onClick={cta.onClick}
+									aria-label={cta.label}
+									className="btn-cta ml-2 rounded-full border-0"
+								>
+									<span className="hidden sm:inline">{cta.label}</span>
+									<span className="sm:hidden">{cta.short}</span>
+								</Button>
+							);
+						})()}
 					</>
 				)}
 			</div>

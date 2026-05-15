@@ -42,6 +42,9 @@ export const ALL_ITEM_IDS: readonly string[] = Object.keys(SUPPLIERS_BY_ITEM);
 // --- Mutable store (lazily populated per item) ---
 
 let store: Map<string, Supplier[]> = new Map();
+/** Suppliers attached to an inquiry without a specific item — added through
+ * «Добавить поставщика» from the consolidated suppliers tab. */
+let inquiryStore: Map<string, Supplier[]> = new Map();
 let sendShouldFail = false;
 
 function cloneSupplier(s: Supplier): Supplier {
@@ -77,6 +80,26 @@ export function writeSuppliersForItem(itemId: string, suppliers: Supplier[]): vo
 	store.set(itemId, suppliers);
 }
 
+/** Read inquiry-scoped suppliers (added via «Добавить поставщика» without an item). */
+export function getSuppliersForInquiry(procurementInquiryId: string): Supplier[] {
+	return inquiryStore.get(procurementInquiryId) ?? [];
+}
+
+export function writeSuppliersForInquiry(procurementInquiryId: string, suppliers: Supplier[]): void {
+	inquiryStore.set(procurementInquiryId, suppliers);
+}
+
+export function listKnownInquiryIds(): string[] {
+	return [...inquiryStore.keys()];
+}
+
+/** Append a new inquiry-scoped supplier. Returns the freshly-created row. */
+export function appendInquirySupplier(procurementInquiryId: string, supplier: Supplier): Supplier {
+	const existing = getSuppliersForInquiry(procurementInquiryId);
+	writeSuppliersForInquiry(procurementInquiryId, [...existing, supplier]);
+	return supplier;
+}
+
 /** Returns the union of seeded item IDs and any items the store has lazily
  * populated (used by `fetchAllSuppliersMock` to enumerate every known item). */
 export function listKnownItemIds(): string[] {
@@ -106,6 +129,7 @@ function makeYourSupplier(itemId: string): Supplier | null {
 	return {
 		id: yourSupplierId(itemId),
 		itemId,
+		procurementInquiryId: item.procurementInquiryId ?? "",
 		companyName: cs.companyName,
 		status: "quote_received",
 		archived: false,
@@ -156,6 +180,7 @@ export function _addYourSupplier(itemId: string): void {
 
 export function _resetSupplierStore() {
 	store = new Map();
+	inquiryStore = new Map();
 	sendShouldFail = false;
 }
 

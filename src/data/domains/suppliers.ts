@@ -30,3 +30,13 @@ export interface SupplierIdentity {
 	address: string;
 	email: string;
 }
+
+/** Payload for `SuppliersClient.create` — inquiry-scoped candidate creation. */
+export interface CreateSupplierInput {
+	procurementInquiryId: string;
+	/** INN — empty string when the user adds the supplier manually. */
+	inn: string;
+	companyName: string;
+	website: string;
+	email: string;
+}

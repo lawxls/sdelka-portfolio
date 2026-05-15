@@ -2,6 +2,7 @@ import { Archive, Ban, Check, ChevronRight, Mail, Pencil, Plus, X } from "lucide
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { AddSupplierDialog, type AddSupplierDraft } from "@/components/add-supplier-dialog";
 import { AddSupplierPlaceholderCell, CurrentSupplierDialog, PlusTile } from "@/components/current-supplier-dialog";
 import {
 	DataTable,
@@ -54,6 +55,7 @@ import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-p
 import {
 	useAllSuppliers,
 	useArchiveSuppliers,
+	useCreateSupplier,
 	useSendSupplierRequest,
 	useSupplierById,
 	useUnarchiveSuppliers,
@@ -201,15 +203,22 @@ const SUPPLIER_PIPELINE_RANK: Record<SupplierStatus, number> = {
 	new: 1,
 };
 
+/** True when the supplier is attached to one of the inquiry's items, or directly
+ * to the inquiry (added via «Добавить поставщика» without an item). */
+function belongsToInquiry(s: Supplier, inquiryId: string, itemIds: ReadonlySet<string>): boolean {
+	return (s.itemId != null && itemIds.has(s.itemId)) || s.procurementInquiryId === inquiryId;
+}
+
 /** The consolidated tabs render a flat list of suppliers but mutations dispatch
  * per-item (Supplier.itemId carries the source). Group selected ids by their
- * source item before firing one mutation per item. */
+ * source item before firing one mutation per item. Inquiry-scoped suppliers
+ * (no itemId) are silently skipped — item-keyed mutations don't apply to them. */
 function groupSupplierIdsByItem(rows: readonly Supplier[], ids: readonly string[]): Map<string, string[]> {
 	const byId = new Map(rows.map((s) => [s.id, s]));
 	const byItem = new Map<string, string[]>();
 	for (const id of ids) {
 		const sup = byId.get(id);
-		if (!sup) continue;
+		if (!sup || !sup.itemId) continue;
 		const arr = byItem.get(sup.itemId) ?? [];
 		arr.push(id);
 		byItem.set(sup.itemId, arr);
@@ -450,7 +459,7 @@ function ProcurementInquiryDrawerBody({
 		const refusals = new Set<string>();
 		for (const s of allSuppliers) {
 			if (s.archived) continue;
-			if (!itemIds.has(s.itemId)) continue;
+			if (!belongsToInquiry(s, procurementInquiry.id, itemIds)) continue;
 			const identity = supplierIdentity(s);
 			total.add(identity);
 			if (s.status !== "new") contacted.add(identity);
@@ -463,7 +472,7 @@ function ProcurementInquiryDrawerBody({
 			quotesReceived: quotesReceived.size,
 			refusals: refusals.size,
 		};
-	}, [allSuppliers, itemIds]);
+	}, [allSuppliers, itemIds, procurementInquiry.id]);
 	const taskColumnsForCounts = useTaskColumns({ procurementInquiry: procurementInquiry.id });
 	const tabCounts: Partial<Record<ProcurementInquiryDetailTab, number>> = {
 		suppliers: metrics.total,
@@ -593,6 +602,7 @@ function ProcurementInquiryDrawerBody({
 			>
 				{activeTab === "suppliers" && (
 					<ProcurementInquirySuppliersTab
+						procurementInquiryId={procurementInquiry.id}
 						items={items}
 						onSupplierClick={(id) => onSupplierOpen(id, "info")}
 						onAddSupplier={handleAddSupplier}
@@ -734,10 +744,12 @@ function compareTasks(a: Task, b: Task, field: TaskSortField, dir: "asc" | "desc
 }
 
 function ProcurementInquirySuppliersTab({
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 	onAddSupplier,
 }: {
+	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
 	onAddSupplier: () => void;
@@ -745,6 +757,7 @@ function ProcurementInquirySuppliersTab({
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
 	return (
 		<ProcurementInquiryConsolidatedSuppliersPanel
+			procurementInquiryId={procurementInquiryId}
 			items={items}
 			onSupplierClick={onSupplierClick}
 			onAddSupplier={onAddSupplier}
@@ -753,10 +766,12 @@ function ProcurementInquirySuppliersTab({
 }
 
 function ProcurementInquiryConsolidatedSuppliersPanel({
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 	onAddSupplier,
 }: {
+	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
 	onAddSupplier: () => void;
@@ -766,6 +781,8 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	const archiveMutation = useArchiveSuppliers();
 	const unarchiveMutation = useUnarchiveSuppliers();
 	const sendRequestMutation = useSendSupplierRequest();
+	const createSupplierMutation = useCreateSupplier();
+	const [addDialogOpen, setAddDialogOpen] = useState(false);
 
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
@@ -775,8 +792,8 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	const [showArchived, setShowArchived] = useState(false);
 
 	const procurementInquirySuppliers = useMemo(
-		() => allSuppliers.filter((s) => itemIds.has(s.itemId) && s.archived === showArchived),
-		[allSuppliers, itemIds, showArchived],
+		() => allSuppliers.filter((s) => belongsToInquiry(s, procurementInquiryId, itemIds) && s.archived === showArchived),
+		[allSuppliers, itemIds, procurementInquiryId, showArchived],
 	);
 
 	const dedupedSuppliers = useMemo(() => {
@@ -933,6 +950,18 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 		);
 	}
 
+	function handleSaveNewSupplier(draft: AddSupplierDraft) {
+		createSupplierMutation.mutate(
+			{ procurementInquiryId, ...draft },
+			{
+				onSuccess: () => {
+					setAddDialogOpen(false);
+					toast.success("Поставщик добавлен");
+				},
+			},
+		);
+	}
+
 	return (
 		<div data-testid="procurement-inquiry-tab-suppliers" className="h-full">
 			<SuppliersTable
@@ -964,12 +993,14 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 				onSendRequest={handleSendRequest}
 				onSendRequestBatch={handleSendRequestBatch}
 				onSendRequestAll={handleSendRequestAll}
+				onAddSupplier={() => setAddDialogOpen(true)}
 				showArchived={showArchived}
 				onToggleArchived={() => {
 					setShowArchived((v) => !v);
 					setSelectedIds(new Set());
 				}}
 			/>
+			{addDialogOpen && <AddSupplierDialog open onOpenChange={setAddDialogOpen} onSave={handleSaveNewSupplier} />}
 		</div>
 	);
 }
@@ -1020,7 +1051,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 		const map = new Map<string, Map<string, number>>();
 		for (const s of allSuppliers) {
 			if (s.archived) continue;
-			if (!itemIds.has(s.itemId)) continue;
+			if (s.itemId == null || !itemIds.has(s.itemId)) continue;
 			if (s.status !== "quote_received") continue;
 			if (s.tco == null) continue;
 			const identity = supplierIdentity(s);
@@ -1040,7 +1071,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 		const byIdentity = new Map<string, Supplier>();
 		for (const s of allSuppliers) {
 			if (s.archived !== showArchived) continue;
-			if (!itemIds.has(s.itemId)) continue;
+			if (s.itemId == null || !itemIds.has(s.itemId)) continue;
 			if (s.status !== "quote_received") continue;
 			if (activeItemIdsSet.size > 0 && !activeItemIdsSet.has(s.itemId)) continue;
 			const identity = supplierIdentity(s);

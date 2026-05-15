@@ -7,6 +7,7 @@ import type { SuppliersClient } from "./clients/suppliers-client";
 import { NetworkError, NotFoundError } from "./errors";
 import { fakeSuppliersClient, TestClientsProvider } from "./test-clients-provider";
 import {
+	useCreateSupplier,
 	useDeleteSuppliers,
 	useInfiniteSuppliers,
 	useSendSupplierMessage,
@@ -121,6 +122,34 @@ describe("useDeleteSuppliers", () => {
 
 		const state = queryClient.getQueryState(["suppliers", "item-1", {}]);
 		expect(state?.isInvalidated).toBe(true);
+	});
+});
+
+describe("useCreateSupplier", () => {
+	it("creates an inquiry-scoped supplier and invalidates the global list", async () => {
+		const created = makeSupplier("user-1", { procurementInquiryId: "T-001", itemId: undefined, status: "new" });
+		const create = vi.fn().mockResolvedValue(created);
+		const client = fakeSuppliersClient({ create });
+		queryClient.setQueryData(["suppliers-global"], [makeSupplier("s1")]);
+
+		const { result } = renderHook(() => useCreateSupplier(), { wrapper: wrapperFactory(client) });
+		const supplier = await result.current.mutateAsync({
+			procurementInquiryId: "T-001",
+			inn: "7703123456",
+			companyName: "ООО «Тест»",
+			website: "test.ru",
+			email: "info@test.ru",
+		});
+
+		expect(create).toHaveBeenCalledWith({
+			procurementInquiryId: "T-001",
+			inn: "7703123456",
+			companyName: "ООО «Тест»",
+			website: "test.ru",
+			email: "info@test.ru",
+		});
+		expect(supplier.id).toBe("user-1");
+		expect(queryClient.getQueryState(["suppliers-global"])?.isInvalidated).toBe(true);
 	});
 });
 

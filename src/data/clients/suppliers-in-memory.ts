@@ -1,4 +1,5 @@
 import type {
+	CreateSupplierInput,
 	Supplier,
 	SupplierChatMessage,
 	SupplierFilterParams,
@@ -11,7 +12,9 @@ import type {
 import {
 	_resetSupplierStore,
 	_setSuppliersForItem,
+	archiveInquirySuppliers,
 	archiveSuppliers,
+	createInquirySupplier,
 	deleteSuppliers,
 	fetchAllSuppliersMock,
 	getAllSuppliers,
@@ -22,6 +25,7 @@ import {
 	getSuppliers,
 	sendSupplierMessage,
 	sendSupplierRequest,
+	unarchiveInquirySuppliers,
 	unarchiveSuppliers,
 } from "../supplier-mock-data";
 import type { SuppliersClient } from "./suppliers-client";
@@ -81,12 +85,24 @@ export function createInMemorySuppliersClient(options?: InMemorySuppliersOptions
 			return getSupplierIdentityByInn(inn);
 		},
 
+		async create(input: CreateSupplierInput): Promise<Supplier> {
+			return createInquirySupplier(input);
+		},
+
 		async archive(itemId: string, supplierIds: string[]): Promise<void> {
 			return archiveSuppliers(itemId, supplierIds);
 		},
 
 		async unarchive(itemId: string, supplierIds: string[]): Promise<void> {
 			return unarchiveSuppliers(itemId, supplierIds);
+		},
+
+		async archiveInquiry(procurementInquiryId: string, supplierIds: string[]): Promise<void> {
+			return archiveInquirySuppliers(procurementInquiryId, supplierIds);
+		},
+
+		async unarchiveInquiry(procurementInquiryId: string, supplierIds: string[]): Promise<void> {
+			return unarchiveInquirySuppliers(procurementInquiryId, supplierIds);
 		},
 
 		async delete(itemId: string, supplierIds: string[]): Promise<void> {

@@ -9,7 +9,14 @@ import type {
 	SupplierStatus,
 } from "../supplier-types";
 import { synthesizeSupplierIdentity } from "./enrichment";
-import { ALL_ITEM_IDS, getSuppliersForItem, listKnownItemIds, simulateDelay } from "./store";
+import {
+	ALL_ITEM_IDS,
+	getSuppliersForInquiry,
+	getSuppliersForItem,
+	listKnownInquiryIds,
+	listKnownItemIds,
+	simulateDelay,
+} from "./store";
 
 // --- Filtering & sorting ---
 
@@ -119,17 +126,19 @@ export async function getSupplier(itemId: string, supplierId: string): Promise<S
 	return suppliers.find((s) => s.id === supplierId) ?? null;
 }
 
-// Supplier IDs embed their item: `supplier-item-<N>-<X>` for seeds,
-// `candidate-supplier-item-<N>-<X>` for generated candidates. Parsing keeps
-// `getSupplierById` from forcing candidate generation for every other item just
-// to satisfy a deep link.
-const SUPPLIER_ID_RE = /^(?:candidate-)?supplier-(item-\d+)-(?:\d+|current)$/;
+// Supplier IDs embed their owning scope so deep-link lookup hits one bucket:
+// `supplier-item-<N>-<X>` and `candidate-supplier-item-<N>-<X>` → item store,
+// `user-supplier-<inquiryId>-<X>` → inquiry store.
+const ITEM_SUPPLIER_ID_RE = /^(?:candidate-)?supplier-(item-\d+)-(?:\d+|current)$/;
+const INQUIRY_SUPPLIER_ID_RE = /^user-supplier-(.+)-\d+$/;
 
 export async function getSupplierById(supplierId: string): Promise<Supplier | null> {
 	await simulateDelay();
-	const itemId = SUPPLIER_ID_RE.exec(supplierId)?.[1];
-	if (!itemId) return null;
-	return getSuppliersForItem(itemId).find((s) => s.id === supplierId) ?? null;
+	const itemId = ITEM_SUPPLIER_ID_RE.exec(supplierId)?.[1];
+	if (itemId) return getSuppliersForItem(itemId).find((s) => s.id === supplierId) ?? null;
+	const inquiryId = INQUIRY_SUPPLIER_ID_RE.exec(supplierId)?.[1];
+	if (inquiryId) return getSuppliersForInquiry(inquiryId).find((s) => s.id === supplierId) ?? null;
+	return null;
 }
 
 export async function getAllSuppliers(itemId: string): Promise<{ suppliers: Supplier[] }> {
@@ -140,7 +149,11 @@ export async function getAllSuppliers(itemId: string): Promise<{ suppliers: Supp
 
 export async function fetchAllSuppliersMock(): Promise<Supplier[]> {
 	await simulateDelay();
-	return listKnownItemIds().flatMap((itemId) => getSuppliersForItem(itemId).filter((s) => !s.archived));
+	const fromItems = listKnownItemIds().flatMap((itemId) => getSuppliersForItem(itemId).filter((s) => !s.archived));
+	const fromInquiries = listKnownInquiryIds().flatMap((inquiryId) =>
+		getSuppliersForInquiry(inquiryId).filter((s) => !s.archived),
+	);
+	return [...fromItems, ...fromInquiries];
 }
 
 const DEFAULT_PAGE_SIZE = 30;

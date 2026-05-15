@@ -7,10 +7,13 @@
  */
 
 export {
+	archiveInquirySuppliers,
 	archiveSuppliers,
+	createInquirySupplier,
 	deleteSuppliers,
 	sendSupplierMessage,
 	sendSupplierRequest,
+	unarchiveInquirySuppliers,
 	unarchiveSuppliers,
 } from "./suppliers-mock/mutations";
 export {

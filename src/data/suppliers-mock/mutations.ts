@@ -1,7 +1,74 @@
+import { hash } from "@/lib/hash";
+import type { CreateSupplierInput } from "../domains/suppliers";
 import { _getItem, _patchItem } from "../items-mock-data";
-import type { SupplierChatMessage } from "../supplier-types";
+import type { Supplier, SupplierChatMessage } from "../supplier-types";
 import { AGENT_EMAIL, filesToAttachments } from "../supplier-types";
-import { getSendShouldFail, getSuppliersForItem, simulateDelay, writeSuppliersForItem } from "./store";
+import { inferCompanyType, makeIdentityProfile, synthesizeSupplierIdentity } from "./enrichment";
+import {
+	appendInquirySupplier,
+	getSendShouldFail,
+	getSuppliersForInquiry,
+	getSuppliersForItem,
+	simulateDelay,
+	writeSuppliersForInquiry,
+	writeSuppliersForItem,
+} from "./store";
+
+/** Identity profile (region, postal, founding year, etc.) is derived deterministically
+ * from INN when supplied, or from the company name otherwise. */
+export async function createInquirySupplier(input: CreateSupplierInput): Promise<Supplier> {
+	await simulateDelay();
+	const existing = getSuppliersForInquiry(input.procurementInquiryId);
+	const seq = existing.length + 1;
+	const id = `user-supplier-${input.procurementInquiryId}-${seq}`;
+	const identityHash = hash(input.inn || input.companyName || id);
+	const profile = makeIdentityProfile(identityHash);
+	const synthesized = input.inn ? synthesizeSupplierIdentity(input.inn) : null;
+	const companyName = input.companyName || synthesized?.companyName || "Без названия";
+	const supplier: Supplier = {
+		id,
+		procurementInquiryId: input.procurementInquiryId,
+		companyName,
+		status: "new",
+		archived: false,
+		...profile,
+		inn: input.inn,
+		companyType: inferCompanyType(companyName),
+		email: input.email || synthesized?.email || "",
+		website: input.website || synthesized?.website || "",
+		address: synthesized?.address ?? profile.address,
+		pricePerUnit: null,
+		tco: null,
+		deliveryCost: null,
+		paymentType: "prepayment",
+		deferralDays: 0,
+		leadTimeDays: null,
+		agentComment: "",
+		documents: [],
+		chatHistory: [],
+	};
+	return appendInquirySupplier(input.procurementInquiryId, supplier);
+}
+
+export async function archiveInquirySuppliers(procurementInquiryId: string, supplierIds: string[]): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForInquiry(procurementInquiryId);
+	const ids = new Set(supplierIds);
+	writeSuppliersForInquiry(
+		procurementInquiryId,
+		suppliers.map((s) => (ids.has(s.id) ? { ...s, archived: true } : s)),
+	);
+}
+
+export async function unarchiveInquirySuppliers(procurementInquiryId: string, supplierIds: string[]): Promise<void> {
+	await simulateDelay();
+	const suppliers = getSuppliersForInquiry(procurementInquiryId);
+	const ids = new Set(supplierIds);
+	writeSuppliersForInquiry(
+		procurementInquiryId,
+		suppliers.map((s) => (ids.has(s.id) ? { ...s, archived: false } : s)),
+	);
+}
 
 export async function deleteSuppliers(itemId: string, supplierIds: string[]): Promise<void> {
 	await simulateDelay();

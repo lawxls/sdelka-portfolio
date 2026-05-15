@@ -130,6 +130,7 @@ export function enrichSeed(seed: SupplierSeed): Supplier {
 	return {
 		...seed,
 		...profile,
+		procurementInquiryId: _getItem(seed.itemId)?.procurementInquiryId ?? "",
 		companyType: inferCompanyType(seed.companyName),
 		address: seed.address.length > 0 ? seed.address : profile.address,
 		quoteReceivedAt: seed.status === "quote_received" ? makeQuoteReceivedAt(perRowHash) : undefined,
@@ -329,6 +330,7 @@ export function generateCandidates(itemId: string, count: number): Supplier[] {
 	// "Ошибка" means a КП request failed to deliver — it only makes sense once we've started
 	// reaching out, so suppress it while the item is still in the searching phase.
 	const item = _getItem(itemId);
+	const procurementInquiryId = item?.procurementInquiryId ?? "";
 	const skipErrorCandidate = item?.status === "searching";
 	// Walk the pool with a coprime step so each item picks a different rotation; when the item
 	// needs more candidates than the pool holds, we wrap — duplicates become distinct rows
@@ -348,6 +350,7 @@ export function generateCandidates(itemId: string, count: number): Supplier[] {
 		return {
 			id: `candidate-supplier-${itemId}-${i + 1}`,
 			itemId,
+			procurementInquiryId,
 			companyName: pool.name,
 			status,
 			archived: i === 7,

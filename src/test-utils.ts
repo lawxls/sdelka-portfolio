@@ -113,6 +113,7 @@ export function makeSupplier(id: string, overrides: Partial<Supplier> = {}): Sup
 	return {
 		id,
 		itemId: "item-1",
+		procurementInquiryId: "T-001",
 		companyName: `Поставщик ${id}`,
 		status: "quote_requested",
 		archived: false,

@@ -116,7 +116,11 @@ export function supplierIdentity(s: { inn: string; companyName: string }): strin
 
 export interface Supplier {
 	id: string;
-	itemId: string;
+	/** Owning procurement inquiry. Required — suppliers always belong to one inquiry. */
+	procurementInquiryId: string;
+	/** Owning item, when the supplier is attached to a specific position.
+	 * Inquiry-scoped candidates added via «Добавить поставщика» leave this undefined. */
+	itemId?: string;
 	companyName: string;
 	status: SupplierStatus;
 	archived: boolean;
@@ -174,9 +178,18 @@ export interface SupplierQuote {
 }
 
 /** Shape for hand-authored Supplier seeds — identity/offer fields required;
- * profile fields (inn, companyType, region, postalCode, foundedYear, revenue, employeeCount) and
- * `quoteReceivedAt` are enriched deterministically at load time by the mock layer. */
+ * profile fields (inn, companyType, region, postalCode, foundedYear, revenue, employeeCount),
+ * `procurementInquiryId` (derived from `itemId`), and `quoteReceivedAt` are enriched
+ * deterministically at load time by the mock layer. */
 export type SupplierSeed = Omit<
 	Supplier,
-	"inn" | "companyType" | "region" | "postalCode" | "foundedYear" | "revenue" | "employeeCount" | "quoteReceivedAt"
->;
+	| "inn"
+	| "companyType"
+	| "region"
+	| "postalCode"
+	| "foundedYear"
+	| "revenue"
+	| "employeeCount"
+	| "quoteReceivedAt"
+	| "procurementInquiryId"
+> & { itemId: string };

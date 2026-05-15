@@ -76,9 +76,11 @@ function collect<T, R extends SearchResult>(source: T[], match: (row: T) => bool
 
 function supplierHref(s: Supplier): string {
 	// "new" candidates have no standalone detail drawer — fall back to the item's
-	// Поставщики tab so the user still lands on something.
+	// Поставщики tab so the user still lands on something. Inquiry-scoped candidates
+	// (no itemId) route to their inquiry's suppliers tab.
 	if (s.status === "new") {
-		return `/positions?item=${encodeURIComponent(s.itemId)}&tab=suppliers`;
+		if (s.itemId) return `/positions?item=${encodeURIComponent(s.itemId)}&tab=suppliers`;
+		return `/inquiries/${encodeURIComponent(s.procurementInquiryId)}?tab=suppliers`;
 	}
 	// Suppliers are workspace-level entities that may quote on many items.
 	// Open the detail drawer directly — no need to drag the item drawer along.
