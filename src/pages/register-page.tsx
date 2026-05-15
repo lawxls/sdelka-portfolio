@@ -138,6 +138,7 @@ export function RegisterPage() {
 							onChange={(e) => setLastName(e.target.value)}
 							error={fieldErrors.last_name}
 							autoComplete="family-name"
+							required
 						/>
 					</div>
 
