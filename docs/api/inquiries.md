@@ -54,10 +54,11 @@ Shared conventions (auth, workspace scoping, pagination, camelCase, ordering) ar
 | `kpCount` | int | R | Annotated: distinct `inquiry_offers` (KPs received). |
 | `positionsCount` | int | R | Annotated: distinct `items` in the inquiry. |
 | `tasksCount` | int | R | Annotated: distinct `tasks` with status `ASSIGNED` or `IN_PROGRESS` only. Completed/archived tasks are excluded. |
+| `suppliersCount` | int | R | Annotated: distinct non-archived suppliers across `inquiry_offers` (excludes offers with `archived_at` set). |
 | `createdAt` | ISO datetime | R | MSK (Europe/Moscow). |
 | `updatedAt` | ISO datetime | R | MSK. |
 
-All three annotated counts are computed on the list/retrieve queryset and are also refreshed on the `archive`/`unarchive` response.
+All four annotated counts are computed on the list/retrieve queryset and are also refreshed on the `archive`/`unarchive` response.
 
 ## List — `GET /api/v1/procurement/inquiries/`
 
@@ -70,13 +71,14 @@ Cursor-paginated. Default ordering `(-created_at, pk)`. Page size `?pageSize=` (
 | `q` | string | `name__icontains` |
 | `company` | UUID | `company_id` exact |
 | `folder` | UUID | `folder_id` exact |
+| `folder__isnull` | bool | `true` returns only inquiries with no folder; `false` returns only inquiries that have one. Use alongside or instead of `folder=<uuid>`. |
 | `status` | enum | exact `InquiryStatus` |
 | `isArchived` | bool | `is_archived` |
 | `createdAtFrom` | ISO datetime | `created_at >= value` |
 | `createdAtTo` | ISO datetime | `created_at <= value` |
 | `deadlineFrom` | ISO date | `deadline >= value` |
 | `deadlineTo` | ISO date | `deadline <= value` |
-| `ordering` | enum | `kp_count`, `positions_count`, `tasks_count`, `deadline`, `created_at`, `updated_at` (prefix `-` for desc) |
+| `ordering` | enum | `kp_count`, `positions_count`, `tasks_count`, `suppliers_count`, `deadline`, `created_at`, `updated_at` (prefix `-` for desc) |
 | `pageSize` | int | 1–200 |
 
 ### Response
@@ -105,7 +107,7 @@ Minimum body:
 
 `name` is technically optional (blank allowed) but recommended. Defaults: `status="searching"`, `analoguesNotAllowed=false`, `cashAllowed=false`, `sendRequestsAutomatically=false`, `isArchived=false`.
 
-Response: `201` with the created resource, including annotated counts (all zero on creation — `kpCount=0`, `positionsCount=0`, `tasksCount=0`).
+Response: `201` with the created resource, including annotated counts (all zero on creation — `kpCount=0`, `positionsCount=0`, `tasksCount=0`, `suppliersCount=0`).
 
 ### Errors
 
@@ -171,6 +173,7 @@ Content-Type: application/json
   "kpCount": 0,
   "positionsCount": 0,
   "tasksCount": 0,
+  "suppliersCount": 0,
   "createdAt": "2026-05-15T14:22:00+03:00",
   "updatedAt": "2026-05-15T14:22:00+03:00"
 }
