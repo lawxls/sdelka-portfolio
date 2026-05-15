@@ -28,7 +28,7 @@ afterEach(() => {
 
 describe("useMe", () => {
 	test("returns the current employee from client.me()", async () => {
-		const seed = makeMe({ id: 42, role: "user", first_name: "Анна" });
+		const seed = makeMe({ id: 42, role: "user", firstName: "Анна" });
 		const me = vi.fn().mockResolvedValue(seed);
 		const client = fakeProfileClient({ me });
 
@@ -56,7 +56,7 @@ describe("useMe", () => {
 describe("useUpdateSettings", () => {
 	test("calls client.update and writes the result into the me query cache", async () => {
 		const seed = makeMe();
-		const updated = { ...seed, first_name: "Пётр" };
+		const updated = { ...seed, firstName: "Пётр" };
 		const update = vi.fn().mockResolvedValue(updated);
 		const client = fakeProfileClient({ update });
 
@@ -65,12 +65,12 @@ describe("useUpdateSettings", () => {
 		const { result } = renderHook(() => useUpdateSettings(), { wrapper: wrapperFactory(client) });
 
 		await act(async () => {
-			const out = await result.current.mutateAsync({ first_name: "Пётр" });
-			expect(out.first_name).toBe("Пётр");
+			const out = await result.current.mutateAsync({ firstName: "Пётр" });
+			expect(out.firstName).toBe("Пётр");
 		});
 
 		expect(update).toHaveBeenCalledOnce();
-		expect(update.mock.calls[0][0]).toEqual({ first_name: "Пётр" });
+		expect(update.mock.calls[0][0]).toEqual({ firstName: "Пётр" });
 		expect(queryClient.getQueryData(["me"])).toEqual(updated);
 	});
 
@@ -82,7 +82,7 @@ describe("useUpdateSettings", () => {
 		const { result } = renderHook(() => useUpdateSettings(), { wrapper: wrapperFactory(client) });
 
 		await act(async () => {
-			await expect(result.current.mutateAsync({ first_name: "Пётр" })).rejects.toBeInstanceOf(NetworkError);
+			await expect(result.current.mutateAsync({ firstName: "Пётр" })).rejects.toBeInstanceOf(NetworkError);
 		});
 	});
 });

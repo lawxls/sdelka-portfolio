@@ -15,7 +15,7 @@ function formatTriggerName(firstName: string, lastName: string): string {
 export function UserAvatarMenu({ className }: UserAvatarMenuProps) {
 	const { data: me } = useMe();
 
-	const displayName = me ? formatTriggerName(me.first_name, me.last_name) : null;
+	const displayName = me ? formatTriggerName(me.firstName, me.lastName) : null;
 
 	return (
 		<Link

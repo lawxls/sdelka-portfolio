@@ -22,13 +22,13 @@ import { createInMemoryProfileClient } from "./profile-in-memory";
 const SEED_ME: CurrentEmployee = {
 	id: 7,
 	email: "ivan@example.com",
-	first_name: "Иван",
-	last_name: "Иванов",
+	firstName: "Иван",
+	lastName: "Иванов",
 	patronymic: "Иванович",
 	phone: "+79991234567",
-	avatar_icon: "blue",
-	mailing_allowed: true,
-	date_joined: "2024-01-15T10:00:00Z",
+	avatarIcon: "blue",
+	mailingAllowed: true,
+	dateJoined: "2024-01-15T10:00:00Z",
 	role: "admin",
 };
 
@@ -64,8 +64,8 @@ function httpAdapter(): Adapter {
 			path: /^\/users\/me\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as Partial<CurrentEmployee>;
-				if (data.first_name === "__validation__") {
-					return { status: 400, body: { fieldErrors: { first_name: ["invalid"] } } };
+				if (data.firstName === "__validation__") {
+					return { status: 400, body: { fieldErrors: { firstName: ["invalid"] } } };
 				}
 				me = { ...me, ...data };
 				return { status: 200, body: me };
@@ -118,10 +118,10 @@ describe.each(adapters.map((make) => [make().name, make]))("ProfileClient contra
 	});
 
 	it("update merges the patch and returns the updated employee", async () => {
-		const updated = await client.update({ first_name: "Пётр", mailing_allowed: false });
-		expect(updated.first_name).toBe("Пётр");
-		expect(updated.last_name).toBe(SEED_ME.last_name);
-		expect(updated.mailing_allowed).toBe(false);
+		const updated = await client.update({ firstName: "Пётр", mailingAllowed: false });
+		expect(updated.firstName).toBe("Пётр");
+		expect(updated.lastName).toBe(SEED_ME.lastName);
+		expect(updated.mailingAllowed).toBe(false);
 		expect(updated.role).toBe(SEED_ME.role);
 	});
 
@@ -141,11 +141,11 @@ describe("HTTP-only error branches", () => {
 	it("update with sentinel name throws ValidationError with fieldErrors", async () => {
 		const client = httpAdapter().build();
 		try {
-			await client.update({ first_name: "__validation__" });
+			await client.update({ firstName: "__validation__" });
 			throw new Error("expected throw");
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);
-			expect((err as ValidationError).fieldErrors).toEqual({ first_name: ["invalid"] });
+			expect((err as ValidationError).fieldErrors).toEqual({ firstName: ["invalid"] });
 		}
 	});
 

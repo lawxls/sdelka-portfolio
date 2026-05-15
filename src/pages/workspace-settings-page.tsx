@@ -108,7 +108,7 @@ export function WorkspaceSettingsPage() {
 	return (
 		<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
 			<div className="mx-auto w-full max-w-[48rem]">
-				{me ? <WorkspaceForm defaultSignature={buildDefaultSignature(me.first_name, me.last_name)} /> : null}
+				{me ? <WorkspaceForm defaultSignature={buildDefaultSignature(me.firstName, me.lastName)} /> : null}
 			</div>
 		</main>
 	);

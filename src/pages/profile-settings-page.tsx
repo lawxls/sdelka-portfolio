@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { extractFormErrors } from "@/data/auth-errors";
-import type { CurrentEmployee } from "@/data/domains/profile";
+import type { CurrentEmployee, SettingsPatch } from "@/data/domains/profile";
 import type { Subscription } from "@/data/domains/subscription";
 import { useMe, useUpdateSettings } from "@/data/use-me";
 import { useRequestPasswordChange } from "@/data/use-session";
@@ -48,20 +48,20 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
 	const requestPasswordChange = useRequestPasswordChange();
 
-	const [firstName, setFirstName] = useState(data.first_name);
-	const [lastName, setLastName] = useState(data.last_name);
+	const [firstName, setFirstName] = useState(data.firstName);
+	const [lastName, setLastName] = useState(data.lastName);
 	const [patronymic, setPatronymic] = useState(data.patronymic ?? "");
 	const [phone, setPhone] = useState(data.phone);
-	const [mailingAllowed, setMailingAllowed] = useState(data.mailing_allowed);
+	const [mailingAllowed, setMailingAllowed] = useState(data.mailingAllowed);
 	const [phoneError, setPhoneError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
 	const isDirty =
-		firstName !== data.first_name ||
-		lastName !== data.last_name ||
+		firstName !== data.firstName ||
+		lastName !== data.lastName ||
 		patronymic !== (data.patronymic ?? "") ||
 		phone !== data.phone ||
-		mailingAllowed !== data.mailing_allowed;
+		mailingAllowed !== data.mailingAllowed;
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -73,12 +73,12 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 			return;
 		}
 
-		const patch: Record<string, unknown> = {};
-		if (firstName !== data.first_name) patch.first_name = firstName;
-		if (lastName !== data.last_name) patch.last_name = lastName;
+		const patch: SettingsPatch = {};
+		if (firstName !== data.firstName) patch.firstName = firstName;
+		if (lastName !== data.lastName) patch.lastName = lastName;
 		if (patronymic !== (data.patronymic ?? "")) patch.patronymic = patronymic;
 		if (phone !== data.phone) patch.phone = phone;
-		if (mailingAllowed !== data.mailing_allowed) patch.mailing_allowed = mailingAllowed;
+		if (mailingAllowed !== data.mailingAllowed) patch.mailingAllowed = mailingAllowed;
 
 		updateSettings.mutate(patch, {
 			onSuccess: () => toast.success("Изменения сохранены"),
@@ -100,10 +100,10 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 		});
 	}
 
-	const initials = getInitials(data.first_name, data.last_name);
-	const avatarColor = getAvatarColor(data.avatar_icon);
-	const fullName = formatFullName(data.last_name, data.first_name, data.patronymic);
-	const joinDate = formatDate(data.date_joined);
+	const initials = getInitials(data.firstName, data.lastName);
+	const avatarColor = getAvatarColor(data.avatarIcon);
+	const fullName = formatFullName(data.lastName, data.firstName, data.patronymic);
+	const joinDate = formatDate(data.dateJoined);
 
 	return (
 		<>
@@ -123,18 +123,18 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 					<div className="grid gap-4 sm:grid-cols-3">
 						<FloatingInput
 							label="Имя"
-							name="first_name"
+							name="firstName"
 							value={firstName}
 							onChange={(e) => setFirstName(e.target.value)}
-							error={fieldErrors.first_name}
+							error={fieldErrors.firstName}
 							autoComplete="given-name"
 						/>
 						<FloatingInput
 							label="Фамилия"
-							name="last_name"
+							name="lastName"
 							value={lastName}
 							onChange={(e) => setLastName(e.target.value)}
-							error={fieldErrors.last_name}
+							error={fieldErrors.lastName}
 							autoComplete="family-name"
 						/>
 						<FloatingInput

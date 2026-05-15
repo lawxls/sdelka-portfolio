@@ -76,7 +76,7 @@ export function GlobalSearch() {
 	}
 
 	const { data: me } = useMe();
-	const isPrivileged = me ? PRIVILEGED_ROLES.has(me.role) : false;
+	const isPrivileged = !!me?.role && PRIVILEGED_ROLES.has(me.role);
 
 	const itemsQ = useAllItems({ enabled: everFocused });
 	const items = itemsQ.data ?? [];

@@ -88,8 +88,8 @@ describe("ProfileSettingsPage", () => {
 
 		await waitFor(async () => {
 			const current = await profileClient.me();
-			expect(current.first_name).toBe("Пётр");
-			expect(current.last_name).toBe(MOCK_ME.last_name);
+			expect(current.firstName).toBe("Пётр");
+			expect(current.lastName).toBe(MOCK_ME.lastName);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});
@@ -182,10 +182,10 @@ describe("ProfileSettingsPage", () => {
 		});
 	});
 
-	test("email notifications checkbox reflects mailing_allowed from API", async () => {
+	test("email notifications checkbox reflects mailingAllowed from API", async () => {
 		renderPage({
 			profile: createInMemoryProfileClient({
-				me: makeMe({ patronymic: "Иванович", mailing_allowed: false }),
+				me: makeMe({ patronymic: "Иванович", mailingAllowed: false }),
 			}),
 		});
 		await waitFor(() => {
@@ -247,7 +247,7 @@ describe("ProfileSettingsPage", () => {
 		expect(await screen.findByTestId("top-up-dialog")).toBeInTheDocument();
 	});
 
-	test("save includes mailing_allowed in the persisted store", async () => {
+	test("save includes mailingAllowed in the persisted store", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
@@ -260,7 +260,7 @@ describe("ProfileSettingsPage", () => {
 
 		await waitFor(async () => {
 			const current = await profileClient.me();
-			expect(current.mailing_allowed).toBe(false);
+			expect(current.mailingAllowed).toBe(false);
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});

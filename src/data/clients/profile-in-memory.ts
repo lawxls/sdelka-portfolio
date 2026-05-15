@@ -5,13 +5,13 @@ import type { ProfileClient } from "./profile-client";
 const DEFAULT_ME: CurrentEmployee = {
 	id: 1,
 	email: "ivan.zhuravlyov.58@mostholding.ru",
-	first_name: "Иван",
-	last_name: "Журавлёв",
+	firstName: "Иван",
+	lastName: "Журавлёв",
 	patronymic: "Сергеевич",
 	phone: "+79161000001",
-	avatar_icon: "blue",
-	mailing_allowed: true,
-	date_joined: "2024-01-15T10:00:00Z",
+	avatarIcon: "blue",
+	mailingAllowed: true,
+	dateJoined: "2024-01-15T10:00:00Z",
 	role: "admin",
 };
 

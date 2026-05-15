@@ -8,7 +8,7 @@ import { fakeProfileClient, TestClientsProvider } from "@/data/test-clients-prov
 import { createTestQueryClient, makeMe } from "@/test-utils";
 import { UserAvatarMenu } from "./user-avatar-menu";
 
-const MOCK_ME = makeMe({ first_name: "Станислав", last_name: "Чмелев" });
+const MOCK_ME = makeMe({ firstName: "Станислав", lastName: "Чмелев" });
 
 beforeEach(() => {
 	localStorage.clear();
@@ -59,7 +59,7 @@ describe("UserAvatarMenu trigger", () => {
 	test("name renders as '<First> <Last>' when last name is present", async () => {
 		renderMenu({
 			profile: createInMemoryProfileClient({
-				me: makeMe({ first_name: "Станислав", last_name: "Чмелев" }),
+				me: makeMe({ firstName: "Станислав", lastName: "Чмелев" }),
 			}),
 		});
 
@@ -71,7 +71,7 @@ describe("UserAvatarMenu trigger", () => {
 	test("name renders as '<First>' when last name is missing", async () => {
 		renderMenu({
 			profile: createInMemoryProfileClient({
-				me: makeMe({ first_name: "Станислав", last_name: "" }),
+				me: makeMe({ firstName: "Станислав", lastName: "" }),
 			}),
 		});
 

@@ -97,13 +97,13 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmployee {
 	return {
 		id: 1,
-		first_name: "Иван",
-		last_name: "Иванов",
+		firstName: "Иван",
+		lastName: "Иванов",
 		email: "ivan@example.com",
 		phone: "+79991234567",
-		avatar_icon: "blue",
-		date_joined: "2024-01-15T10:00:00Z",
-		mailing_allowed: true,
+		avatarIcon: "blue",
+		dateJoined: "2024-01-15T10:00:00Z",
+		mailingAllowed: true,
 		role: "admin",
 		...overrides,
 	};
