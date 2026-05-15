@@ -118,8 +118,8 @@ export function useRequestPasswordChange() {
 
 /**
  * Redeem an admin-issued handoff token for a JWT pair scoped to the target
- * user. Clears any prior session before storing the new tokens so React-Query
- * caches keyed off the previous user can't bleed across the swap.
+ * user. Tokens land first so background queries that fire mid-swap see the
+ * authed identity; then the cache is cleared so prior-user data can't bleed.
  */
 export function useImpersonate() {
 	const client = useSessionClient();
@@ -128,8 +128,8 @@ export function useImpersonate() {
 	return useMutation({
 		mutationFn: async (input: ImpersonateInput): Promise<ImpersonateResult> => {
 			const result = await client.impersonate(input);
-			queryClient.clear();
 			setTokens(result.access, result.refresh);
+			queryClient.clear();
 			return result;
 		},
 	});
