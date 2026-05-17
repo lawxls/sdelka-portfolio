@@ -1,7 +1,16 @@
 import { _archivedCount, _statsByFolder } from "./items-mock-data";
 import { delay, nextId } from "./mock-utils";
-import { readProcurementInquiries, writeProcurementInquiryAt } from "./procurement-inquiries-mock/store";
 import type { Folder } from "./types";
+
+/** Cascade hook: folders-in-memory invokes this when a folder is deleted so
+ * tests that share an in-memory inquiries adapter can null-out matching
+ * `folderId`s. Production inquiries hit HTTP and the backend handles the
+ * cascade via `on_delete=SET_NULL`. */
+type DeleteCascade = (folderId: string) => void;
+let cascadeOnDelete: DeleteCascade | null = null;
+export function _setFolderDeleteCascade(cb: DeleteCascade | null): void {
+	cascadeOnDelete = cb;
+}
 
 // --- Seed data ---
 
@@ -79,12 +88,5 @@ export async function deleteFolderMock(id: string): Promise<void> {
 	const existed = foldersStore.some((f) => f.id === id);
 	foldersStore = foldersStore.filter((f) => f.id !== id);
 	if (!existed) return;
-	// Cascade: inquiries that referenced this folder become uncategorized.
-	// Items inherit categorization from their parent inquiry, so no item-level
-	// cleanup is needed.
-	const procurementInquiries = readProcurementInquiries();
-	for (let i = 0; i < procurementInquiries.length; i++) {
-		if (procurementInquiries[i].folderId === id)
-			writeProcurementInquiryAt(i, { ...procurementInquiries[i], folderId: null });
-	}
+	cascadeOnDelete?.(id);
 }

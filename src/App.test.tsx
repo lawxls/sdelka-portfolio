@@ -18,6 +18,7 @@ import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
@@ -41,7 +42,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry folder-1",
 		companyId: "company-1",
 		folderId: "folder-1" as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -50,7 +50,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry folder-2",
 		companyId: "company-1",
 		folderId: "folder-2" as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -59,7 +58,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry no folder",
 		companyId: "company-1",
 		folderId: null as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -159,10 +157,17 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	// Wire the test inquiry roster into the items-in-memory cross-entity cascade
+	// so /positions can filter by folder/company derived from each item's parent.
+	_setInquiryStateResolver((id) => {
+		const t = TEST_PROCUREMENT_INQUIRIES.find((i) => i.id === id);
+		return t ? { folderId: t.folderId, companyId: t.companyId, isArchived: false } : null;
+	});
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	_setInquiryStateResolver(null);
 });
 
 // ---- Route tests (TDD) ----

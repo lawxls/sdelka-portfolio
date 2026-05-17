@@ -11,7 +11,6 @@ import { createInMemoryItemsClient } from "./clients/items-in-memory";
 import { createHttpNotificationsClient } from "./clients/notifications-http";
 import { createInMemoryNotificationsClient } from "./clients/notifications-in-memory";
 import { createHttpProcurementInquiriesClient } from "./clients/procurement-inquiries-http";
-import { createInMemoryProcurementInquiriesClient } from "./clients/procurement-inquiries-in-memory";
 import { createHttpProfileClient } from "./clients/profile-http";
 import { createInMemoryProfileClient } from "./clients/profile-in-memory";
 import { createHttpSessionClient } from "./clients/session-http";
@@ -33,7 +32,6 @@ interface AdapterConfig {
 	items: AdapterMode;
 	suppliers: AdapterMode;
 	tasks: AdapterMode;
-	procurementInquiries: AdapterMode;
 	folders: AdapterMode;
 	notifications: AdapterMode;
 	emails: AdapterMode;
@@ -59,7 +57,6 @@ function resolveConfig(): AdapterConfig {
 		items: read("VITE_DATA_ITEMS"),
 		suppliers: read("VITE_DATA_SUPPLIERS"),
 		tasks: read("VITE_DATA_TASKS"),
-		procurementInquiries: read("VITE_DATA_PROCUREMENT_INQUIRIES"),
 		folders: read("VITE_DATA_FOLDERS"),
 		notifications: read("VITE_DATA_NOTIFICATIONS"),
 		emails: read("VITE_DATA_EMAILS"),
@@ -88,10 +85,7 @@ export function buildDataClients(): DataClients {
 		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
 		tasks: config.tasks === "http" ? createHttpTasksClient() : createInMemoryTasksClient(),
-		procurementInquiries:
-			config.procurementInquiries === "http"
-				? createHttpProcurementInquiriesClient()
-				: createInMemoryProcurementInquiriesClient(),
+		procurementInquiries: createHttpProcurementInquiriesClient(),
 		folders: config.folders === "http" ? createHttpFoldersClient() : createInMemoryFoldersClient(),
 		notifications:
 			config.notifications === "http" ? createHttpNotificationsClient() : createInMemoryNotificationsClient(),

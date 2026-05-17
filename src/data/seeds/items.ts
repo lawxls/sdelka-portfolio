@@ -10,8 +10,67 @@ import { ITEM as ITEM_10 } from "../items/item-10";
 import { ITEM as ITEM_11 } from "../items/item-11";
 import { ITEM as ITEM_12 } from "../items/item-12";
 import { ITEM as ITEM_13 } from "../items/item-13";
-import type { ProcurementItem } from "../types";
-import { SEED_INQUIRY_CURRENT_SUPPLIER, SEED_ITEM_PROCUREMENT_INQUIRY } from "./procurement-inquiries";
+import type { CurrentSupplier, ProcurementItem } from "../types";
+
+/** Map item id → parent inquiry slug. Re-homed here from the deleted inquiry
+ * seeds so item fixtures keep their parent linkage in dev/test even though
+ * inquiries themselves now live behind the HTTP adapter. */
+const SEED_ITEM_PROCUREMENT_INQUIRY: Readonly<Record<string, string>> = {
+	"item-1": "T-001",
+	"item-8": "T-001",
+	"item-2": "T-002",
+	"item-6": "T-002",
+	"item-3": "T-003",
+	"item-4": "T-004",
+	"item-9": "T-004",
+	"item-10": "T-004",
+	"item-11": "T-004",
+	"item-12": "T-004",
+	"item-13": "T-002",
+	"item-5": "T-005",
+	"item-7": "T-006",
+	"item-14": "T-006",
+	"item-15": "T-006",
+	"item-16": "T-006",
+};
+
+const SEED_INQUIRY_CURRENT_SUPPLIER: Readonly<Record<string, CurrentSupplier>> = {
+	"T-001": {
+		companyName: "ПолимерПром",
+		inn: "6164012345",
+		paymentType: "prepayment",
+		deferralDays: 0,
+		pricePerUnit: 1776,
+	},
+	"T-002": {
+		companyName: "Изолон",
+		inn: "7710123456",
+		paymentType: "deferred",
+		deferralDays: 30,
+		pricePerUnit: 167_675,
+	},
+	"T-003": {
+		companyName: "Ивановский текстиль",
+		inn: "7712345678",
+		paymentType: "deferred",
+		deferralDays: 30,
+		pricePerUnit: 473,
+	},
+	"T-004": {
+		companyName: "Kronospan",
+		inn: "5012345678",
+		paymentType: "deferred",
+		deferralDays: 45,
+		pricePerUnit: 1190,
+	},
+	"T-005": {
+		companyName: "ТД «Боннель»",
+		inn: "7725123456",
+		paymentType: "prepayment",
+		deferralDays: 0,
+		pricePerUnit: 2154,
+	},
+};
 
 const ITEM_1: ProcurementItem = {
 	id: "item-1",

@@ -16,7 +16,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import type { NewItemInput } from "@/data/types";
 import { toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { MAX_FILE_SIZE, MAX_TOTAL_SIZE, PositionCard, SURFACE_TINT } from "./create-procurement-inquiry-drawer";
+import { PositionCard, SURFACE_TINT } from "./create-procurement-inquiry-drawer";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import {
 	type CurrentSupplierDraft,
@@ -105,36 +105,6 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPo
 		setErrors((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
 	}
 
-	function addFilesTo(positionIndex: number, newFiles: FileList | null) {
-		if (!newFiles || newFiles.length === 0) return;
-		setPositions((prev) => {
-			const position = prev[positionIndex];
-			if (!position) return prev;
-			let runningTotal = prev.reduce((sum, p) => sum + p.files.reduce((s, f) => s + f.size, 0), 0);
-			const toAdd: File[] = [];
-			for (const file of newFiles) {
-				if (file.size > MAX_FILE_SIZE) continue;
-				if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
-				toAdd.push(file);
-				runningTotal += file.size;
-			}
-			if (toAdd.length === 0) return prev;
-			const next = prev.slice();
-			next[positionIndex] = { ...position, files: [...position.files, ...toAdd] };
-			return next;
-		});
-	}
-
-	function removeFileFrom(positionIndex: number, fileIndex: number) {
-		setPositions((prev) => {
-			const position = prev[positionIndex];
-			if (!position) return prev;
-			const next = prev.slice();
-			next[positionIndex] = { ...position, files: position.files.filter((_, i) => i !== fileIndex) };
-			return next;
-		});
-	}
-
 	function validate(): { ok: boolean; firstErrorIndex: number } {
 		const nextErrors = positions.map((p) => (p.name.trim() ? {} : { name: "Укажите название позиции" }));
 		setErrors(nextErrors);
@@ -194,8 +164,6 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPo
 										error={errors[index]}
 										onChange={(key, value) => updatePosition(index, key, value)}
 										onRemove={showRemove ? () => removePosition(index) : undefined}
-										onFilesAdd={(files) => addFilesTo(index, files)}
-										onFileRemove={(fileIndex) => removeFileFrom(index, fileIndex)}
 										nameInputRef={(el) => {
 											nameInputRefs.current[index] = el;
 										}}

@@ -8,10 +8,19 @@ import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
 import { SEED_ITEMS } from "@/data/seeds/items";
-import { SEED_PROCUREMENT_INQUIRIES } from "@/data/seeds/procurement-inquiries";
 import { TestClientsProvider } from "@/data/test-clients-provider";
+import { makeProcurementInquiry } from "@/test-utils";
 
 import { DetailsTabPanel } from "./details-tab-panel";
+
+const TEST_INQUIRIES = [
+	makeProcurementInquiry("T-001", { name: "Упаковочные материалы Q2", folderId: "folder-packaging" }),
+	makeProcurementInquiry("T-002", { name: "Наполнители", folderId: "folder-fillings" }),
+	makeProcurementInquiry("T-003", { name: "Жаккард", folderId: "folder-fabrics" }),
+	makeProcurementInquiry("T-004", { name: "ЛДСП", folderId: "folder-panels" }),
+	makeProcurementInquiry("T-005", { name: "Пружинные блоки", folderId: "folder-springs" }),
+	makeProcurementInquiry("T-006", { name: "Клей ПУ", folderId: "folder-chemistry" }),
+];
 
 let queryClient: QueryClient;
 
@@ -23,7 +32,7 @@ function renderPanel(itemId = "item-1") {
 				companies: createInMemoryCompaniesClient(),
 				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
 				folders: createInMemoryFoldersClient(),
-				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: SEED_PROCUREMENT_INQUIRIES }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
 			}}
 		>
 			<DetailsTabPanel itemId={itemId} />

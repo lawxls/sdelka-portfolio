@@ -11,29 +11,29 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
+import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import type { Folder } from "@/data/types";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency, formatDayMonthShort } from "@/lib/format";
+import { formatDayMonthShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { InlineRenameInput } from "./inline-rename-input";
 import { TruncatedName } from "./truncated-name";
 
 interface InquiryCardProps {
-	procurementInquiry: ProcurementInquirySummary;
+	procurementInquiry: ProcurementInquiry;
 	folders: Folder[];
 	folder?: Folder;
 	index: number;
 	isEditing: boolean;
 	isArchiveView: boolean;
-	onClick: (procurementInquiry: ProcurementInquirySummary) => void;
+	onClick: (procurementInquiry: ProcurementInquiry) => void;
 	onArchive: (id: string, isArchived: boolean) => void;
 	onRename: (id: string) => void;
 	onSaveRename: (id: string, name: string) => void;
 	onCancelRename: () => void;
 	onMoveToFolder: (id: string, folderId: string | null) => void;
-	onDelete: (procurementInquiry: ProcurementInquirySummary) => void;
+	onDelete: (procurementInquiry: ProcurementInquiry) => void;
 }
 
 export function InquiryCard({
@@ -233,12 +233,10 @@ export function InquiryCard({
 			</div>
 			<dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 				<div>
-					<dt className="text-xs text-muted-foreground">Бюджет</dt>
-					<dd className="tabular-nums">{formatCurrency(procurementInquiry.budget)}</dd>
-				</div>
-				<div>
 					<dt className="text-xs text-muted-foreground">Дедлайн</dt>
-					<dd className="tabular-nums">{formatDayMonthShort(procurementInquiry.deadline)}</dd>
+					<dd className="tabular-nums">
+						{procurementInquiry.deadline ? formatDayMonthShort(procurementInquiry.deadline) : "—"}
+					</dd>
 				</div>
 				<div>
 					<dt className="text-xs text-muted-foreground">Поставщики</dt>
@@ -247,6 +245,10 @@ export function InquiryCard({
 				<div>
 					<dt className="text-xs text-muted-foreground">Получено&nbsp;КП</dt>
 					<dd className="tabular-nums">{procurementInquiry.kpCount}</dd>
+				</div>
+				<div>
+					<dt className="text-xs text-muted-foreground">Вопросы</dt>
+					<dd className="tabular-nums">{procurementInquiry.tasksCount > 0 ? procurementInquiry.tasksCount : "—"}</dd>
 				</div>
 			</dl>
 		</article>

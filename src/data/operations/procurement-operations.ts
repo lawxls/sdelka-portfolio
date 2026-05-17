@@ -92,10 +92,16 @@ export interface CreateProcurementInquiryWithItemsResult {
 }
 
 /**
- * Atomic inquiry + items create. ProcurementInquiry is created first so items can inherit
- * its id via `procurementInquiryId`. If items.create fails, procurementInquiries.delete rolls back —
- * best-effort: if rollback itself fails, the original items error surfaces and
- * the orphan inquiry remains until the real transactional backend ships.
+ * Atomic inquiry + items create. ProcurementInquiry is created first (HTTP)
+ * so items can inherit its id via `procurementInquiryId`. If items.create
+ * fails, procurementInquiries.delete rolls back — best-effort: if rollback
+ * itself fails, the original items error surfaces and the orphan inquiry
+ * remains until the real transactional backend ships.
+ *
+ * In-the-meantime cross-domain limitation: inquiry persists to the backend
+ * but items still go through the in-memory items adapter until items HTTP
+ * lands. On reload, the inquiry survives but its items don't — accepted per
+ * the migration plan.
  */
 export async function createProcurementInquiryWithItems(
 	input: CreateProcurementInquiryWithItemsInput,
@@ -116,19 +122,14 @@ export async function createProcurementInquiryWithItems(
 }
 
 /**
- * ProcurementInquiry-level archive that cascades into items. Flips the inquiry's
- * `isArchived` flag; the in-memory items adapter then hides the inquiry's
- * items from /positions non-archive views by joining through
- * `_isProcurementInquiryArchived`. Restoring (`isArchived=false`) reverses both — items
- * reappear on /positions, the inquiry shows up in non-archive views again.
- *
- * No per-item write happens here; the cascade is read-time, so state can
- * never drift between the inquiry flag and the items' visibility.
+ * ProcurementInquiry-level archive routed to the right backend endpoint:
+ * `POST /procurement/inquiries/{id}/archive/` or `/unarchive/`. The cascade
+ * hook keeps its `{id, isArchived}` argument shape so call sites don't change.
  */
 export async function archiveProcurementInquiryCascade(
 	id: string,
 	isArchived: boolean,
 	{ procurementInquiries }: Pick<ProcurementOperationsContext, "procurementInquiries">,
 ): Promise<ProcurementInquiry> {
-	return procurementInquiries.archive(id, isArchived);
+	return isArchived ? procurementInquiries.archive(id) : procurementInquiries.unarchive(id);
 }

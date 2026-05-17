@@ -139,6 +139,7 @@ export function fakeProcurementInquiriesClient(
 		create: notImplemented("create"),
 		update: notImplemented("update"),
 		archive: notImplemented("archive"),
+		unarchive: notImplemented("unarchive"),
 		delete: notImplemented("delete"),
 		...overrides,
 	};

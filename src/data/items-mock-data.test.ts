@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { _resetItemDetailStore, getItemDetail, updateItemDetail } from "./item-detail-mock-data";
 import {
 	_archivedCount,
 	_getAllItems,
 	_isArchived,
 	_resetItemsStore,
+	_setInquiryStateResolver,
 	_setItems,
 	_statsByFolder,
 	createItemsBatchMock,
@@ -14,8 +15,14 @@ import {
 	fetchTotalsMock,
 	updateItemMock,
 } from "./items-mock-data";
-import { _resetProcurementInquiriesStore, _setProcurementInquiries } from "./procurement-inquiries-mock/store";
-import type { ProcurementInquiry, ProcurementItem } from "./types";
+import type { ProcurementItem } from "./types";
+
+interface InquirySeed {
+	id: string;
+	folderId: string | null;
+	companyId?: string;
+	isArchived?: boolean;
+}
 
 function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {
 	return {
@@ -30,23 +37,27 @@ function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): Procure
 	};
 }
 
-function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
-	return {
-		id,
-		name: `ProcurementInquiry ${id}`,
-		companyId: "c1",
-		folderId: null,
-		budget: 0,
-		createdAt: "2026-04-01",
-		deadline: "2026-05-01",
-		...overrides,
-	};
+let inquiries: InquirySeed[] = [];
+
+function setInquiries(next: InquirySeed[]): void {
+	inquiries = next.map((t) => ({ ...t }));
+}
+
+function inquiryResolver(id: string) {
+	const t = inquiries.find((i) => i.id === id);
+	if (!t) return null;
+	return { folderId: t.folderId, companyId: t.companyId ?? "c1", isArchived: t.isArchived ?? false };
 }
 
 beforeEach(() => {
 	_resetItemsStore();
 	_resetItemDetailStore();
-	_resetProcurementInquiriesStore();
+	inquiries = [];
+	_setInquiryStateResolver(inquiryResolver);
+});
+
+afterEach(() => {
+	_setInquiryStateResolver(null);
 });
 
 describe("fetchItemsMock", () => {
@@ -57,10 +68,10 @@ describe("fetchItemsMock", () => {
 	});
 
 	it("filters by folder id (joined via parent inquiry)", async () => {
-		_setProcurementInquiries([
-			makeProcurementInquiry("T-A", { folderId: "f1" }),
-			makeProcurementInquiry("T-B", { folderId: "f2" }),
-			makeProcurementInquiry("T-C"),
+		setInquiries([
+			{ id: "T-A", folderId: "f1" },
+			{ id: "T-B", folderId: "f2" },
+			{ id: "T-C", folderId: null },
 		]);
 		_setItems([
 			makeItem("a", { procurementInquiryId: "T-A" }),
@@ -72,7 +83,10 @@ describe("fetchItemsMock", () => {
 	});
 
 	it("filter folder=none returns items whose inquiry has no folder", async () => {
-		_setProcurementInquiries([makeProcurementInquiry("T-A"), makeProcurementInquiry("T-B", { folderId: "f1" })]);
+		setInquiries([
+			{ id: "T-A", folderId: null },
+			{ id: "T-B", folderId: "f1" },
+		]);
 		_setItems([makeItem("a", { procurementInquiryId: "T-A" }), makeItem("b", { procurementInquiryId: "T-B" })]);
 		const result = await fetchItemsMock({ folder: "none" });
 		expect(result.items.map((i) => i.id)).toEqual(["a"]);
@@ -123,9 +137,9 @@ describe("fetchItemsMock", () => {
 	});
 
 	it("filters by company (joined via parent inquiry)", async () => {
-		_setProcurementInquiries([
-			makeProcurementInquiry("T-A", { companyId: "c1" }),
-			makeProcurementInquiry("T-B", { companyId: "c2" }),
+		setInquiries([
+			{ id: "T-A", folderId: null, companyId: "c1" },
+			{ id: "T-B", folderId: null, companyId: "c2" },
 		]);
 		_setItems([makeItem("a", { procurementInquiryId: "T-A" }), makeItem("b", { procurementInquiryId: "T-B" })]);
 		const result = await fetchItemsMock({ company: "c2" });
@@ -244,9 +258,9 @@ describe("exportItemsMock", () => {
 	});
 
 	it("scopes the export to the provided filters (joined via inquiry's company)", async () => {
-		_setProcurementInquiries([
-			makeProcurementInquiry("T-A", { companyId: "c1" }),
-			makeProcurementInquiry("T-B", { companyId: "c2" }),
+		setInquiries([
+			{ id: "T-A", folderId: null, companyId: "c1" },
+			{ id: "T-B", folderId: null, companyId: "c2" },
 		]);
 		_setItems([
 			makeItem("x", { name: "Keep", procurementInquiryId: "T-A" }),
@@ -261,10 +275,10 @@ describe("exportItemsMock", () => {
 
 describe("_statsByFolder and _archivedCount", () => {
 	it("aggregates folder counts (joined via parent inquiry) excluding archived", async () => {
-		_setProcurementInquiries([
-			makeProcurementInquiry("T-1", { folderId: "f1" }),
-			makeProcurementInquiry("T-2"),
-			makeProcurementInquiry("T-3", { folderId: "f1" }),
+		setInquiries([
+			{ id: "T-1", folderId: "f1" },
+			{ id: "T-2", folderId: null },
+			{ id: "T-3", folderId: "f1" },
 		]);
 		_setItems(
 			[
@@ -282,10 +296,10 @@ describe("_statsByFolder and _archivedCount", () => {
 	});
 
 	it("scopes counts by company when provided (joined via parent inquiry)", async () => {
-		_setProcurementInquiries([
-			makeProcurementInquiry("T-1", { folderId: "f1", companyId: "c1" }),
-			makeProcurementInquiry("T-2", { folderId: "f1", companyId: "c2" }),
-			makeProcurementInquiry("T-3", { folderId: "f2", companyId: "c2" }),
+		setInquiries([
+			{ id: "T-1", folderId: "f1", companyId: "c1" },
+			{ id: "T-2", folderId: "f1", companyId: "c2" },
+			{ id: "T-3", folderId: "f2", companyId: "c2" },
 		]);
 		_setItems(
 			[

@@ -12,27 +12,23 @@ import type {
 	UpdateItemData,
 } from "../domains/items";
 import { NotFoundError } from "../errors";
-import { _getAllItems, _getItem, _isArchived, _patchItem, _setItems } from "../items-mock-data";
+import { _getAllItems, _getItem, _inquiryState, _isArchived, _patchItem, _setItems } from "../items-mock-data";
 import { delay, nextId, paginate } from "../mock-utils";
-import { _getProcurementInquiry, _isProcurementInquiryArchived } from "../procurement-inquiries-mock/store";
 import { _addYourSupplier } from "../supplier-mock-data";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, type ProcurementStatus } from "../types";
 import type { ItemsClient } from "./items-client";
 
 function procurementInquiryFolderId(item: ProcurementItem): string | null {
-	if (!item.procurementInquiryId) return null;
-	return _getProcurementInquiry(item.procurementInquiryId)?.folderId ?? null;
+	return _inquiryState(item.procurementInquiryId)?.folderId ?? null;
 }
 
 function procurementInquiryCompanyId(item: ProcurementItem): string | null {
-	if (!item.procurementInquiryId) return null;
-	return _getProcurementInquiry(item.procurementInquiryId)?.companyId ?? null;
+	return _inquiryState(item.procurementInquiryId)?.companyId ?? null;
 }
 
 function isEffectivelyArchived(item: ProcurementItem, itemArchived: boolean): boolean {
 	if (itemArchived) return true;
-	if (item.procurementInquiryId && _isProcurementInquiryArchived(item.procurementInquiryId)) return true;
-	return false;
+	return _inquiryState(item.procurementInquiryId)?.isArchived ?? false;
 }
 
 function matchesFolder(item: ProcurementItem, folder: string | undefined, archived: boolean): boolean {

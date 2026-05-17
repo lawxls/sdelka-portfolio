@@ -18,22 +18,13 @@ import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
-import { makeItem, makeTask } from "@/test-utils";
+import { makeItem, makeProcurementInquiry as makeProcurementInquiryFixture, makeTask } from "@/test-utils";
 import { ProcurementInquiryDetailPage } from "./procurement-inquiry-detail-page";
 
 const FOLDERS: Folder[] = [{ id: "folder-packaging", name: "Упаковка", color: "blue" }];
 
 function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
-	return {
-		id,
-		name: `Запрос ${id}`,
-		companyId: "company-1",
-		folderId: "folder-packaging",
-		budget: 1_000_000,
-		createdAt: "2026-04-01",
-		deadline: "2026-05-15",
-		...overrides,
-	};
+	return makeProcurementInquiryFixture(id, { name: `Запрос ${id}`, folderId: "folder-packaging", ...overrides });
 }
 
 interface RenderOpts {
@@ -102,7 +93,7 @@ describe("ProcurementInquiryDetailPage", () => {
 
 	test("default tab is Поставщики; switching to Информация renders inquiry meta + items", async () => {
 		renderPage({
-			procurementInquiries: [makeProcurementInquiry("T-001", { budget: 350_000_000 })],
+			procurementInquiries: [makeProcurementInquiry("T-001")],
 			items: [
 				makeItem("item-1", { procurementInquiryId: "T-001", name: "Позиция 1", currentPrice: 100, annualQuantity: 50 }),
 				makeItem("item-2", { procurementInquiryId: "T-001", name: "Позиция 2", currentPrice: 200, annualQuantity: 30 }),

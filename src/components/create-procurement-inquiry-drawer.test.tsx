@@ -338,7 +338,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 });
 
 describe("CreateProcurementInquiryDrawer — submit payload shape", () => {
-	test("emits { procurementInquiry, items } with inquiry meta fields and zero budget", async () => {
+	test("emits { procurementInquiry, items } with inquiry meta fields", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -356,7 +356,6 @@ describe("CreateProcurementInquiryDrawer — submit payload shape", () => {
 			// Auto-derived from the first position when no user-provided name exists.
 			name: "Арматура",
 			deadline: "2026-06-15",
-			budget: 0,
 			companyId: "company-1",
 		});
 		expect(payload.items).toHaveLength(1);
@@ -445,7 +444,7 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		});
 	});
 
-	test("submit payload carries sendMode='manual' by default with email body", async () => {
+	test("submit payload carries sendRequestsAutomatically=false by default with email body", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -454,11 +453,11 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.sendMode).toBe("manual");
-		expect(payload.procurementInquiry.email?.body).toContain("Арматура");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(false);
+		expect(payload.procurementInquiry.emailBody).toContain("Арматура");
 	});
 
-	test("checking Автоотправка flips sendMode to 'auto' on submit", async () => {
+	test("checking Автоотправка flips sendRequestsAutomatically to true on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -468,6 +467,6 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.sendMode).toBe("auto");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(true);
 	});
 });

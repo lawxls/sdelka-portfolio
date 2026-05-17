@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CurrentEmployee } from "@/data/domains/profile";
 import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
-import type { Company, CompanySummary, ProcurementItem } from "@/data/types";
+import type { Company, CompanySummary, ProcurementInquiry, ProcurementItem } from "@/data/types";
 
 export function mockHostname(hostname: string) {
 	vi.spyOn(window, "location", "get").mockReturnValue({
@@ -22,6 +22,34 @@ export function createTestQueryClient() {
 
 export function TooltipWrapper({ children }: { children: ReactNode }) {
 	return TooltipProvider({ children });
+}
+
+export function makeProcurementInquiry(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
+	return {
+		id,
+		name: `Inquiry ${id}`,
+		companyId: "company-1",
+		folderId: null,
+		copySuppliersFromInquiryId: null,
+		status: "searching",
+		deadline: "2026-05-15",
+		additionalInfo: "",
+		deliveryAddressId: null,
+		unloading: "",
+		analoguesNotAllowed: false,
+		cashAllowed: false,
+		emailSubject: "",
+		emailBody: "",
+		sendRequestsAutomatically: false,
+		isArchived: false,
+		kpCount: 0,
+		positionsCount: 0,
+		tasksCount: 0,
+		suppliersCount: 0,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
+		...overrides,
+	};
 }
 
 export function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {

@@ -1,5 +1,4 @@
 import { delay, nextId, paginate } from "./mock-utils";
-import { _getProcurementInquiry, _isProcurementInquiryArchived } from "./procurement-inquiries-mock/store";
 import { SEED_ARCHIVED, SEED_ITEMS } from "./seeds/items";
 import { _addYourSupplier } from "./supplier-mock-data";
 import type { NewItemInput, ProcurementItem, ProcurementStatus, SortDirection, SortField, Totals } from "./types";
@@ -63,20 +62,53 @@ export interface FilterParams {
 	limit?: number;
 }
 
+/** Inquiry-side state lookup. The legacy mock store is gone; tests that need
+ * cross-entity behavior register a resolver via `_setInquiryStateResolver`.
+ * Production never hits this path — items still run via the in-memory adapter
+ * in dev/test until the items HTTP integration lands.
+ *
+ * A static default mapping (`DEFAULT_INQUIRY_STATES`) preserves the legacy
+ * SEED_ITEMS ↔ folder/company linkage so /positions in dev (and the suite of
+ * page/folder tests that rely on it) keep working without an HTTP backend. */
+interface InquiryState {
+	folderId: string | null;
+	companyId: string;
+	isArchived: boolean;
+}
+type InquiryStateResolver = (inquiryId: string) => InquiryState | null;
+
+const DEFAULT_INQUIRY_STATES: Readonly<Record<string, InquiryState>> = {
+	"T-001": { folderId: "folder-packaging", companyId: "company-1", isArchived: false },
+	"T-002": { folderId: "folder-fillings", companyId: "company-1", isArchived: false },
+	"T-003": { folderId: "folder-fabrics", companyId: "company-1", isArchived: false },
+	"T-004": { folderId: "folder-panels", companyId: "company-1", isArchived: false },
+	"T-005": { folderId: "folder-springs", companyId: "company-1", isArchived: false },
+	"T-006": { folderId: "folder-chemistry", companyId: "company-1", isArchived: false },
+};
+
+let inquiryStateResolver: InquiryStateResolver | null = null;
+
+export function _setInquiryStateResolver(resolver: InquiryStateResolver | null): void {
+	inquiryStateResolver = resolver;
+}
+
+export function _inquiryState(inquiryId: string | undefined | null): InquiryState | null {
+	if (!inquiryId) return null;
+	if (inquiryStateResolver) return inquiryStateResolver(inquiryId);
+	return DEFAULT_INQUIRY_STATES[inquiryId] ?? null;
+}
+
 function procurementInquiryFolderId(item: ProcurementItem): string | null {
-	if (!item.procurementInquiryId) return null;
-	return _getProcurementInquiry(item.procurementInquiryId)?.folderId ?? null;
+	return _inquiryState(item.procurementInquiryId)?.folderId ?? null;
 }
 
 function procurementInquiryCompanyId(item: ProcurementItem): string | null {
-	if (!item.procurementInquiryId) return null;
-	return _getProcurementInquiry(item.procurementInquiryId)?.companyId ?? null;
+	return _inquiryState(item.procurementInquiryId)?.companyId ?? null;
 }
 
 function isEffectivelyArchived(item: ProcurementItem): boolean {
 	if (archivedIds.has(item.id)) return true;
-	if (item.procurementInquiryId && _isProcurementInquiryArchived(item.procurementInquiryId)) return true;
-	return false;
+	return _inquiryState(item.procurementInquiryId)?.isArchived ?? false;
 }
 
 function matchesFolder(item: ProcurementItem, folder: string | undefined, archived: boolean): boolean {
@@ -269,9 +301,9 @@ export function _statsByFolder(company?: string): Map<string | null, number> {
 	const counts = new Map<string | null, number>();
 	for (const item of itemsStore) {
 		if (isEffectivelyArchived(item)) continue;
-		const procurementInquiry = item.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
-		if (company && procurementInquiry?.companyId !== company) continue;
-		const folderId = procurementInquiry?.folderId ?? null;
+		const state = _inquiryState(item.procurementInquiryId);
+		if (company && state?.companyId !== company) continue;
+		const folderId = state?.folderId ?? null;
 		counts.set(folderId, (counts.get(folderId) ?? 0) + 1);
 	}
 	return counts;
@@ -282,8 +314,8 @@ export function _archivedCount(company?: string): number {
 	for (const item of itemsStore) {
 		if (!isEffectivelyArchived(item)) continue;
 		if (company) {
-			const procurementInquiry = item.procurementInquiryId ? _getProcurementInquiry(item.procurementInquiryId) : null;
-			if (procurementInquiry?.companyId !== company) continue;
+			const state = _inquiryState(item.procurementInquiryId);
+			if (state?.companyId !== company) continue;
 		}
 		count += 1;
 	}

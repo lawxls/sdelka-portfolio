@@ -6,9 +6,9 @@ export type ProcurementStatus = "searching" | "negotiating" | "completed" | "rea
  * it's the display state for `status: "searching"` items whose `searchCompleted` flag is set. */
 export type DisplayStatus = ProcurementStatus | "searching_completed";
 
-/** ProcurementInquiry display status — pure rollup of item DisplayStatus across one inquiry.
- * Same vocabulary as items, no separate transition UI. */
-export type ProcurementInquiryStatus = DisplayStatus;
+/** ProcurementInquiry status — stored on the backend (`InquiryStatus` choices),
+ * independent of the per-item `DisplayStatus`. */
+export type ProcurementInquiryStatus = "searching" | "searching_completed" | "negotiating" | "completed";
 
 export const STATUS_LABELS: Record<DisplayStatus, string> = {
 	searching: "Ищем поставщиков",
@@ -63,8 +63,6 @@ export function formatQuotePaymentType(
 	return formatPaymentType("prepayment", { prepaymentPercent });
 }
 
-export type PaymentMethod = "bank_transfer" | "cash";
-
 export type DeliveryCostType = "free" | "paid" | "pickup";
 
 export const DELIVERY_COST_TYPE_LABELS: Record<DeliveryCostType, string> = {
@@ -103,11 +101,6 @@ export interface GeneratedAnswer {
 	freeText?: string;
 }
 
-export interface AttachedFile {
-	name: string;
-	size: number;
-}
-
 export interface ProcurementItem {
 	id: string;
 	name: string;
@@ -133,41 +126,32 @@ export interface ProcurementItem {
 }
 
 /** Запрос — primary procurement container that bundles a 1:N collection of
- * `ProcurementItem`s sharing one budget, deadline, company, and category.
- * Slug `id` (e.g. `T-001`) doubles as URL param. */
-export interface ProcurementInquiryEmailDraft {
-	subject: string;
-	body: string;
-}
-
-export type ProcurementInquirySendMode = "auto" | "manual";
-
+ * `ProcurementItem`s sharing one deadline, company, and category. Mirrors the
+ * Django `ProcurementInquirySerializer` 1:1 (camelCase wire format). */
 export interface ProcurementInquiry {
 	id: string;
 	name: string;
 	companyId: string;
 	folderId: string | null;
-	/** Budget cap in ₽ (free-form integer; not a derived sum of item prices). */
-	budget: number;
-	/** Required deadline ISO date (YYYY-MM-DD or full ISO). */
-	deadline: string;
+	copySuppliersFromInquiryId: string | null;
+	status: ProcurementInquiryStatus;
+	/** Bid-collection deadline (ISO date YYYY-MM-DD). Nullable on the backend. */
+	deadline: string | null;
+	additionalInfo: string;
+	deliveryAddressId: string | null;
+	unloading: UnloadingType | "";
+	analoguesNotAllowed: boolean;
+	cashAllowed: boolean;
+	emailSubject: string;
+	emailBody: string;
+	sendRequestsAutomatically: boolean;
+	isArchived: boolean;
+	kpCount: number;
+	positionsCount: number;
+	tasksCount: number;
+	suppliersCount: number;
 	createdAt: string;
-	/** Archive flag — archiving cascades to items: archived inquiry's items
-	 * disappear from /positions non-archive views (see archiveProcurementInquiryCascade
-	 * operation). */
-	isArchived?: boolean;
-	addressIds?: string[];
-	unloading?: UnloadingType;
-	paymentMethod?: PaymentMethod;
-	deferralRequired?: boolean;
-	sampleRequired?: boolean;
-	analoguesAllowed?: boolean;
-	additionalInfo?: string;
-	attachedFiles?: AttachedFile[];
-	/** RFQ email draft sent to suppliers when an RFQ is dispatched. */
-	email?: ProcurementInquiryEmailDraft;
-	/** Whether RFQ emails are dispatched automatically once suppliers are found. */
-	sendMode?: ProcurementInquirySendMode;
+	updatedAt: string;
 }
 
 export interface Folder {

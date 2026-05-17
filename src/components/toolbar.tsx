@@ -6,7 +6,7 @@ import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
+import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import type { CompanySummary, FilterState, Folder, SortField, SortState } from "@/data/types";
 import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -35,7 +35,7 @@ interface ToolbarProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
-	procurementInquiries?: ProcurementInquirySummary[];
+	procurementInquiries?: ProcurementInquiry[];
 	selectedProcurementInquiry?: string | undefined;
 	onProcurementInquirySelect?: (procurementInquiryId: string | undefined) => void;
 }

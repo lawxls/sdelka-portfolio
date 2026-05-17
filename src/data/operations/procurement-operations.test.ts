@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeItem, makeSupplier } from "@/test-utils";
+import { makeItem, makeProcurementInquiry as makeProcurementInquiryFixture, makeSupplier } from "@/test-utils";
 import { createInMemoryItemsClient } from "../clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "../clients/procurement-inquiries-in-memory";
 import { NotFoundError } from "../errors";
+import { _setInquiryStateResolver } from "../items-mock-data";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import { fakeItemsClient, fakeProcurementInquiriesClient, fakeSuppliersClient } from "../test-clients-provider";
 import type { ProcurementInquiry } from "../types";
@@ -166,16 +167,7 @@ describe("setCurrentSupplierFromQuote", () => {
 
 describe("archiveProcurementInquiryCascade", () => {
 	function makeProcurementInquiryRecord(id: string, overrides: Partial<ProcurementInquiry> = {}): ProcurementInquiry {
-		return {
-			id,
-			name: `ProcurementInquiry ${id}`,
-			companyId: "company-1",
-			folderId: null,
-			budget: 0,
-			createdAt: "2026-04-01",
-			deadline: "2026-05-01",
-			...overrides,
-		};
+		return makeProcurementInquiryFixture(id, { companyId: "company-1", ...overrides });
 	}
 
 	beforeEach(() => {
@@ -188,17 +180,45 @@ describe("archiveProcurementInquiryCascade", () => {
 
 	it("flips the inquiry's isArchived flag via inquiries.archive", async () => {
 		const archive = vi.fn().mockResolvedValue(makeProcurementInquiryRecord("T-001", { isArchived: true }));
+		const unarchive = vi.fn();
 		const result = await archiveProcurementInquiryCascade("T-001", true, {
-			procurementInquiries: fakeProcurementInquiriesClient({ archive }),
+			procurementInquiries: fakeProcurementInquiriesClient({ archive, unarchive }),
 		});
-		expect(archive).toHaveBeenCalledWith("T-001", true);
+		expect(archive).toHaveBeenCalledWith("T-001");
+		expect(unarchive).not.toHaveBeenCalled();
 		expect(result.isArchived).toBe(true);
+	});
+
+	it("routes isArchived=false to inquiries.unarchive", async () => {
+		const archive = vi.fn();
+		const unarchive = vi.fn().mockResolvedValue(makeProcurementInquiryRecord("T-001", { isArchived: false }));
+		const result = await archiveProcurementInquiryCascade("T-001", false, {
+			procurementInquiries: fakeProcurementInquiriesClient({ archive, unarchive }),
+		});
+		expect(unarchive).toHaveBeenCalledWith("T-001");
+		expect(archive).not.toHaveBeenCalled();
+		expect(result.isArchived).toBe(false);
 	});
 
 	it("cascade hides items belonging to the archived inquiry from non-archive item lists", async () => {
 		const procurementInquiries = createInMemoryProcurementInquiriesClient({
 			seed: [makeProcurementInquiryRecord("T-100"), makeProcurementInquiryRecord("T-200")],
 		});
+		// Cross-entity cascade: the in-memory items adapter now reads inquiry
+		// state via a registered resolver. We wire it through the procurementInquiries
+		// client so flipping isArchived via the cascade shows up in items.list({}).
+		_setInquiryStateResolver((id) => {
+			const t = inquiryCache.get(id);
+			return t ? { folderId: t.folderId, companyId: t.companyId, isArchived: t.isArchived } : null;
+		});
+		const inquiryCache = new Map<string, { folderId: string | null; companyId: string; isArchived: boolean }>();
+		async function refreshInquiryCache(id: string) {
+			const t = await procurementInquiries.get(id);
+			inquiryCache.set(id, { folderId: t.folderId, companyId: t.companyId, isArchived: t.isArchived });
+		}
+		await refreshInquiryCache("T-100");
+		await refreshInquiryCache("T-200");
+
 		const items = createInMemoryItemsClient({
 			seed: [
 				makeItem("i-100-a", { procurementInquiryId: "T-100" }),
@@ -211,6 +231,7 @@ describe("archiveProcurementInquiryCascade", () => {
 		expect(before.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b", "i-200-a"]);
 
 		await archiveProcurementInquiryCascade("T-100", true, { procurementInquiries });
+		await refreshInquiryCache("T-100");
 
 		const after = await items.list({});
 		expect(after.items.map((i) => i.id)).toEqual(["i-200-a"]);
@@ -219,9 +240,12 @@ describe("archiveProcurementInquiryCascade", () => {
 		expect(archiveView.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b"]);
 
 		await archiveProcurementInquiryCascade("T-100", false, { procurementInquiries });
+		await refreshInquiryCache("T-100");
 
 		const restored = await items.list({});
 		expect(restored.items.map((i) => i.id).sort()).toEqual(["i-100-a", "i-100-b", "i-200-a"]);
+
+		_setInquiryStateResolver(null);
 	});
 });
 
@@ -236,15 +260,12 @@ describe("createProcurementInquiryWithItems", () => {
 
 	it("creates the inquiry then the items, stamping the new inquiry id onto each item", async () => {
 		const calls: string[] = [];
-		const createdProcurementInquiry: ProcurementInquiry = {
-			id: "T-001",
+		const createdProcurementInquiry: ProcurementInquiry = makeProcurementInquiryFixture("T-001", {
 			name: "T",
 			companyId: "company-1",
-			folderId: null,
-			budget: 0,
 			createdAt: "2026-04-01",
 			deadline: "2026-05-01",
-		};
+		});
 		const procurementInquiriesCreate = vi.fn().mockImplementation(async () => {
 			calls.push("procurementInquiries.create");
 			return createdProcurementInquiry;
@@ -256,7 +277,7 @@ describe("createProcurementInquiryWithItems", () => {
 
 		const result = await createProcurementInquiryWithItems(
 			{
-				procurementInquiry: { name: "T", companyId: "company-1", folderId: null, budget: 0, deadline: "2026-05-01" },
+				procurementInquiry: { name: "T", companyId: "company-1", folderId: null, deadline: "2026-05-01" },
 				items: [
 					{ name: "Pos A", paymentType: "prepayment" },
 					{ name: "Pos B", paymentType: "prepayment" },
@@ -289,7 +310,7 @@ describe("createProcurementInquiryWithItems", () => {
 						name: "Will roll back",
 						companyId: "company-1",
 						folderId: null,
-						budget: 0,
+
 						deadline: "2026-05-01",
 					},
 					items: [{ name: "Pos A", paymentType: "prepayment" }],
@@ -312,7 +333,7 @@ describe("createProcurementInquiryWithItems", () => {
 					name: "Закупка металлопроката",
 					companyId: "company-1",
 					folderId: "folder-1",
-					budget: 1500000,
+
 					deadline: "2026-06-15",
 				},
 				items: [
