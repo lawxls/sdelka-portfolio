@@ -258,22 +258,9 @@ describe("createProcurementInquiryWithItems", () => {
 		_resetMockDelay();
 	});
 
-	it("creates the inquiry then the items, stamping the new inquiry id onto each item", async () => {
-		const calls: string[] = [];
-		const createdProcurementInquiry: ProcurementInquiry = makeProcurementInquiryFixture("T-001", {
-			name: "T",
-			companyId: "company-1",
-			createdAt: "2026-04-01",
-			deadline: "2026-05-01",
-		});
-		const procurementInquiriesCreate = vi.fn().mockImplementation(async () => {
-			calls.push("procurementInquiries.create");
-			return createdProcurementInquiry;
-		});
-		const itemsCreate = vi.fn().mockImplementation(async (inputs: { procurementInquiryId?: string }[]) => {
-			calls.push("items.create");
-			return { items: inputs.map((_, i) => makeItem(`i-${i}`, { procurementInquiryId: "T-001" })), isAsync: false };
-		});
+	it("sends items in the inquiry.create payload — single atomic backend call", async () => {
+		const created = makeProcurementInquiryFixture("T-001", { name: "T", companyId: "company-1" });
+		const procurementInquiriesCreate = vi.fn().mockResolvedValue(created);
 
 		const result = await createProcurementInquiryWithItems(
 			{
@@ -283,49 +270,39 @@ describe("createProcurementInquiryWithItems", () => {
 					{ name: "Pos B", paymentType: "prepayment" },
 				],
 			},
-			{
-				items: fakeItemsClient({ create: itemsCreate }),
-				procurementInquiries: fakeProcurementInquiriesClient({ create: procurementInquiriesCreate, delete: vi.fn() }),
-			},
+			{ procurementInquiries: fakeProcurementInquiriesClient({ create: procurementInquiriesCreate }) },
 		);
 
-		expect(calls).toEqual(["procurementInquiries.create", "items.create"]);
-		expect(itemsCreate).toHaveBeenCalledWith([
-			{ name: "Pos A", paymentType: "prepayment", procurementInquiryId: "T-001" },
-			{ name: "Pos B", paymentType: "prepayment", procurementInquiryId: "T-001" },
-		]);
+		expect(procurementInquiriesCreate).toHaveBeenCalledTimes(1);
+		const [payload] = procurementInquiriesCreate.mock.calls[0];
+		expect(payload).toMatchObject({
+			name: "T",
+			companyId: "company-1",
+			items: [{ name: "Pos A" }, { name: "Pos B" }],
+		});
+		// Item entries are stripped of FE-only fields (`paymentType` etc.) — the
+		// backend nested serializer accepts only the model's writable fields.
+		expect(payload.items[0]).not.toHaveProperty("paymentType");
 		expect(result.procurementInquiry.id).toBe("T-001");
-		expect(result.items).toHaveLength(2);
 	});
 
-	it("rolls back the inquiry via inquiries.delete if items.create fails — neither half persists", async () => {
-		const procurementInquiries = createInMemoryProcurementInquiriesClient({ seed: [] });
-		const itemsCreate = vi.fn().mockRejectedValue(new Error("items create failed"));
-		const items = fakeItemsClient({ create: itemsCreate });
+	it("rejects empty items with ValidationError — the BE refuses but the FE fails fast", async () => {
+		const procurementInquiriesCreate = vi.fn();
 
 		await expect(
 			createProcurementInquiryWithItems(
 				{
-					procurementInquiry: {
-						name: "Will roll back",
-						companyId: "company-1",
-						folderId: null,
-
-						deadline: "2026-05-01",
-					},
-					items: [{ name: "Pos A", paymentType: "prepayment" }],
+					procurementInquiry: { name: "Empty", companyId: "company-1", folderId: null, deadline: "2026-05-01" },
+					items: [],
 				},
-				{ items, procurementInquiries },
+				{ procurementInquiries: fakeProcurementInquiriesClient({ create: procurementInquiriesCreate }) },
 			),
-		).rejects.toThrow("items create failed");
-
-		const after = await procurementInquiries.list({});
-		expect(after.items.find((t) => t.name === "Will roll back")).toBeUndefined();
+		).rejects.toThrow();
+		expect(procurementInquiriesCreate).not.toHaveBeenCalled();
 	});
 
-	it("end-to-end: procurementInquiry + items both land in their stores against in-memory adapters", async () => {
+	it("end-to-end: inquiry lands in the in-memory store, items payload is forwarded", async () => {
 		const procurementInquiries = createInMemoryProcurementInquiriesClient({ seed: [] });
-		const items = createInMemoryItemsClient({ seed: [] });
 
 		const result = await createProcurementInquiryWithItems(
 			{
@@ -333,7 +310,6 @@ describe("createProcurementInquiryWithItems", () => {
 					name: "Закупка металлопроката",
 					companyId: "company-1",
 					folderId: "folder-1",
-
 					deadline: "2026-06-15",
 				},
 				items: [
@@ -341,14 +317,10 @@ describe("createProcurementInquiryWithItems", () => {
 					{ name: "Цемент", paymentType: "prepayment" },
 				],
 			},
-			{ items, procurementInquiries },
+			{ procurementInquiries },
 		);
 
 		const stored = await procurementInquiries.list({});
 		expect(stored.items.find((t) => t.id === result.procurementInquiry.id)).toBeDefined();
-		const list = await items.list({});
-		const created = list.items.filter((i) => i.procurementInquiryId === result.procurementInquiry.id);
-		expect(created).toHaveLength(2);
-		expect(created.map((i) => i.name).sort()).toEqual(["Арматура", "Цемент"]);
 	});
 });

@@ -257,6 +257,7 @@ describe.each(
 			name: "Дельта",
 			companyId: "company-1",
 			deadline: "2026-06-01",
+			items: [{ name: "Pos A" }],
 		});
 		expect(created.name).toBe("Дельта");
 		expect(created.id).toMatch(/^/);
@@ -378,7 +379,7 @@ describe("HTTP-only error branches", () => {
 	it("create with empty name throws ValidationError with fieldErrors", async () => {
 		const client = httpAdapter(SEED).build();
 		try {
-			await client.create({ name: "", companyId: "c1", deadline: "2026-06-01" });
+			await client.create({ name: "", companyId: "c1", deadline: "2026-06-01", items: [{ name: "P1" }] });
 			throw new Error("expected throw");
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);
@@ -389,7 +390,7 @@ describe("HTTP-only error branches", () => {
 	it("create with conflicting name throws ConflictError", async () => {
 		const client = httpAdapter(SEED).build();
 		await expect(
-			client.create({ name: "__conflict__", companyId: "c1", deadline: "2026-06-01" }),
+			client.create({ name: "__conflict__", companyId: "c1", deadline: "2026-06-01", items: [{ name: "P1" }] }),
 		).rejects.toBeInstanceOf(ConflictError);
 	});
 

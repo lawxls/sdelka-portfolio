@@ -233,8 +233,10 @@ function generateProcurementInquiryName(step1: Step1State): string {
 	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
 }
 
-function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): CreateProcurementInquiryInput {
-	const procurementInquiry: CreateProcurementInquiryInput = {
+type InquiryWithoutItems = Omit<CreateProcurementInquiryInput, "items">;
+
+function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): InquiryWithoutItems {
+	const procurementInquiry: InquiryWithoutItems = {
 		name: generateProcurementInquiryName(step1),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
@@ -259,7 +261,7 @@ function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): Cre
 }
 
 export interface CreateProcurementInquiryPayload {
-	procurementInquiry: CreateProcurementInquiryInput;
+	procurementInquiry: InquiryWithoutItems;
 	items: NewItemInput[];
 }
 

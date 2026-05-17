@@ -113,14 +113,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 	it("invalidates procurementInquiries + items + totals + folder stats after the operation runs", async () => {
 		const createdProcurementInquiry = makeProcurementInquiry("T-001");
 		const procurementInquiriesCreate = vi.fn().mockResolvedValue(createdProcurementInquiry);
-		const itemsCreate = vi
-			.fn()
-			.mockResolvedValue({ items: [makeItem("i-1", { procurementInquiryId: "T-001" })], isAsync: false });
-		const procurementInquiries = fakeProcurementInquiriesClient({
-			create: procurementInquiriesCreate,
-			delete: vi.fn(),
-		});
-		const items = fakeItemsClient({ create: itemsCreate });
+		const procurementInquiries = fakeProcurementInquiriesClient({ create: procurementInquiriesCreate });
 
 		queryClient.setQueryData(["procurementInquiries", { foo: "bar" }], { items: [], nextCursor: null });
 		queryClient.setQueryData(["items"], []);
@@ -129,7 +122,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 
 		const { result } = renderHook(() => useCreateProcurementInquiryWithItems(), {
 			wrapper: ({ children }) => (
-				<TestClientsProvider queryClient={queryClient} clients={{ items, procurementInquiries }}>
+				<TestClientsProvider queryClient={queryClient} clients={{ procurementInquiries }}>
 					{children}
 				</TestClientsProvider>
 			),
@@ -140,10 +133,9 @@ describe("useCreateProcurementInquiryWithItems", () => {
 			items: [{ name: "Pos", paymentType: "prepayment" }],
 		});
 
-		expect(procurementInquiriesCreate).toHaveBeenCalled();
-		expect(itemsCreate).toHaveBeenCalledWith([
-			{ name: "Pos", paymentType: "prepayment", procurementInquiryId: "T-001" },
-		]);
+		expect(procurementInquiriesCreate).toHaveBeenCalledTimes(1);
+		const [payload] = procurementInquiriesCreate.mock.calls[0];
+		expect(payload.items).toEqual([{ name: "Pos" }]);
 		expect(queryClient.getQueryState(["procurementInquiries", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);

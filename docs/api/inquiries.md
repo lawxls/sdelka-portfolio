@@ -102,22 +102,43 @@ Returns the full resource shape. `404` if the inquiry is outside the caller's wo
 Minimum body:
 
 ```json
-{ "companyId": "<uuid>", "name": "Q3 cleaning supplies" }
+{
+  "companyId": "<uuid>",
+  "name": "Q3 cleaning supplies",
+  "items": [{ "name": "Paper towels" }]
+}
 ```
 
-`name` is technically optional (blank allowed) but recommended. Defaults: `status="searching"`, `analoguesNotAllowed=false`, `cashAllowed=false`, `sendRequestsAutomatically=false`, `isArchived=false`.
+`name` is technically optional (blank allowed) but recommended. `items` is **required and must be non-empty** — an inquiry without positions makes no domain sense, and rejecting empty submissions at the API surface keeps the FE from ever showing the «В этом запросе пока нет позиций» empty-state on a freshly-created row. Defaults: `status="searching"`, `analoguesNotAllowed=false`, `cashAllowed=false`, `sendRequestsAutomatically=false`, `isArchived=false`.
 
-Response: `201` with the created resource, including annotated counts (all zero on creation — `kpCount=0`, `positionsCount=0`, `tasksCount=0`, `suppliersCount=0`).
+### Nested `items[]` shape (write-only on create)
+
+Each entry mirrors the writable fields of `ProcurementItemSerializer`; `company` is inherited from the parent inquiry, `inquiry` is set during create. `name` is required.
+
+| Field (wire) | Type | Notes |
+|---|---|---|
+| `name` | string (≤255) | Required. |
+| `description` | string | Defaults to `""`. |
+| `status` | enum | `ItemStatus`; defaults to `searching`. |
+| `annualQuantity` | decimal string | Nullable. |
+| `unit` | enum | `Unit`; blank allowed. |
+| `quantityPerDelivery` | decimal string | Nullable. |
+
+The whole create is wrapped in a single `transaction.atomic` — if any item fails validation, the inquiry is not created.
+
+Response: `201` with the created resource and `positionsCount` set to the number of just-inserted items (`kpCount=0`, `tasksCount=0`, `suppliersCount=0`). The `items` payload itself is **not** echoed back — it's write-only.
 
 ### Errors
 
 - `400` — `companyId` missing or referencing a foreign workspace.
 - `400` — `folderId` / `copySuppliersFromInquiryId` / `deliveryAddressId` in a foreign workspace.
+- `400` — `items` missing or empty (`{"items": "Запрос должен содержать хотя бы одну позицию."}`).
+- `400` — any nested item fails validation (e.g. blank `name`).
 - `401` — no JWT.
 
 ## Update — `PUT|PATCH /api/v1/procurement/inquiries/{id}/`
 
-Same field set as create, minus `id`, `createdAt`, `updatedAt`, and the annotated counts. The same cross-workspace FK guard applies on `PATCH` too. Returns the updated resource; note that `perform_update` does **not** re-fetch through the annotated queryset, so on a `PATCH` response the counts reflect the row's state *as last read* — call `GET` if you need fresh counts after a related write.
+Same field set as create, minus `id`, `createdAt`, `updatedAt`, and the annotated counts. The `items` field is silently dropped — items have their own endpoints (`/procurement/items/`) once the items HTTP integration lands. The same cross-workspace FK guard applies on `PATCH` too. Returns the updated resource; note that `perform_update` does **not** re-fetch through the annotated queryset, so on a `PATCH` response the counts reflect the row's state *as last read* — call `GET` if you need fresh counts after a related write.
 
 ## Destroy — `DELETE /api/v1/procurement/inquiries/{id}/`
 

@@ -53,10 +53,25 @@ export interface ListProcurementInquiriesParams {
 	limit?: number;
 }
 
-/** Create payload — mirrors the backend serializer write surface (camelCase). */
+/** Write-only nested item shape accepted by `POST /procurement/inquiries/`.
+ * Mirrors the backend's `NestedProcurementItemCreateSerializer`. The parent
+ * inquiry's `companyId` is inherited; callers don't repeat it per item. */
+export interface CreateProcurementInquiryItemInput {
+	name: string;
+	description?: string;
+	status?: string;
+	annualQuantity?: number;
+	unit?: string;
+	quantityPerDelivery?: number;
+}
+
+/** Create payload — mirrors the backend serializer write surface (camelCase).
+ * `items` is required and must contain at least one entry; backend rejects
+ * empty inquiries (`/procurement/inquiries/` POST is transactional). */
 export interface CreateProcurementInquiryInput {
 	name: string;
 	companyId: string;
+	items: CreateProcurementInquiryItemInput[];
 	folderId?: string | null;
 	copySuppliersFromInquiryId?: string | null;
 	status?: ProcurementInquiryStatus;

@@ -1,8 +1,11 @@
 import type { ItemsClient } from "../clients/items-client";
 import type { ProcurementInquiriesClient } from "../clients/procurement-inquiries-client";
 import type { SuppliersClient } from "../clients/suppliers-client";
-import type { CreateProcurementInquiryInput } from "../domains/procurement-inquiries";
-import { NotFoundError } from "../errors";
+import type {
+	CreateProcurementInquiryInput,
+	CreateProcurementInquiryItemInput,
+} from "../domains/procurement-inquiries";
+import { NotFoundError, ValidationError } from "../errors";
 import type { NewItemInput, ProcurementInquiry, ProcurementItem } from "../types";
 
 /**
@@ -82,7 +85,7 @@ export async function setCurrentSupplierFromQuote(
 }
 
 export interface CreateProcurementInquiryWithItemsInput {
-	procurementInquiry: CreateProcurementInquiryInput;
+	procurementInquiry: Omit<CreateProcurementInquiryInput, "items">;
 	items: NewItemInput[];
 }
 
@@ -91,34 +94,37 @@ export interface CreateProcurementInquiryWithItemsResult {
 	items: ProcurementItem[];
 }
 
+function toInquiryItemInput(item: NewItemInput): CreateProcurementInquiryItemInput {
+	const payload: CreateProcurementInquiryItemInput = { name: item.name };
+	if (item.description !== undefined) payload.description = item.description;
+	if (item.status !== undefined) payload.status = item.status;
+	if (item.annualQuantity !== undefined) payload.annualQuantity = item.annualQuantity;
+	if (item.unit !== undefined) payload.unit = item.unit;
+	if (item.quantityPerDelivery !== undefined) payload.quantityPerDelivery = item.quantityPerDelivery;
+	return payload;
+}
+
 /**
- * Atomic inquiry + items create. ProcurementInquiry is created first (HTTP)
- * so items can inherit its id via `procurementInquiryId`. If items.create
- * fails, procurementInquiries.delete rolls back — best-effort: if rollback
- * itself fails, the original items error surfaces and the orphan inquiry
- * remains until the real transactional backend ships.
+ * Atomic inquiry + items create. The backend `POST /procurement/inquiries/`
+ * accepts items in the same request and creates both in one transaction —
+ * an inquiry can never land in the "empty positions" state. Items inherit
+ * the inquiry's `companyId`, so callers don't repeat it per item.
  *
- * In-the-meantime cross-domain limitation: inquiry persists to the backend
- * but items still go through the in-memory items adapter until items HTTP
- * lands. On reload, the inquiry survives but its items don't — accepted per
- * the migration plan.
+ * The `items` array must be non-empty; an empty submission is a UI bug
+ * (the create drawer requires at least one named position).
  */
 export async function createProcurementInquiryWithItems(
 	input: CreateProcurementInquiryWithItemsInput,
-	{ items, procurementInquiries }: Pick<ProcurementOperationsContext, "items" | "procurementInquiries">,
+	{ procurementInquiries }: Pick<ProcurementOperationsContext, "procurementInquiries">,
 ): Promise<CreateProcurementInquiryWithItemsResult> {
-	const procurementInquiry = await procurementInquiries.create(input.procurementInquiry);
-	try {
-		const result = await items.create(
-			input.items.map((item) => ({ ...item, procurementInquiryId: procurementInquiry.id })),
-		);
-		return { procurementInquiry, items: result.items ?? [] };
-	} catch (err) {
-		try {
-			await procurementInquiries.delete(procurementInquiry.id);
-		} catch {}
-		throw err;
+	if (input.items.length === 0) {
+		throw new ValidationError({ items: ["Запрос должен содержать хотя бы одну позицию."] });
 	}
+	const procurementInquiry = await procurementInquiries.create({
+		...input.procurementInquiry,
+		items: input.items.map(toInquiryItemInput),
+	});
+	return { procurementInquiry, items: [] };
 }
 
 /**
