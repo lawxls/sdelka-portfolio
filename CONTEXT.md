@@ -7,12 +7,22 @@ it when the codebase makes it self-evident.
 ## Domain entities
 
 - **Company** — a customer-side organization (the buyer's own company or one
-  of its subsidiaries). Aggregate root: owns `Address`es and `Employee`s.
-- **Address** — a physical location on a `Company`. Sub-resource of company.
-- **Employee** — a person inside a `Company`. Sub-resource of company. Has
-  `permissions` (per-module access levels).
-- **CompanySummary** — projection of `Company` for list views (no employees,
-  no description, addresses reduced to `AddressSummary`).
+  of its subsidiaries). Owns `Address`es directly (inlined on detail). The
+  per-company `Employee` roster lives behind a separate `EmployeesClient` seam;
+  the company aggregate exposes only the `employeeCount` annotation. Backed by
+  the HTTP `CompaniesClient` at `/api/v1/companies/`.
+- **Address** — a physical location on a `Company`. Flat top-level resource at
+  `/api/v1/companies/addresses/` on the wire, scoped via the `companyId` body
+  field; the company detail inlines the full `addresses` array as a
+  read-through convenience.
+- **Employee** — a person inside a `Company`. Lives behind `EmployeesClient`
+  (currently in-memory only — the backend's `/companies/employees/` endpoint
+  requires an existing `user: UUID` FK on create and has no permissions
+  endpoint, so the UI keeps reading + writing through a closure-isolated
+  in-memory store until the invite/user-resolution flow lands).
+- **CompanySummary** — projection of `Company` for list views. No `addresses`
+  (detail-only on the wire); carries `addressesCount` / `employeeCount` /
+  `procurementItemCount` annotations and `createdAt` / `updatedAt`.
 - **ProcurementItem** — a thing being procured. Lives under a Company,
   optionally inside a Folder, and (after #256) under a `ProcurementInquiry`
   via `tenderId`. Has a current supplier and a list of candidate suppliers.
@@ -58,8 +68,8 @@ it when the codebase makes it self-evident.
   pending invite. Backs `useWorkspaceEmployees`,
   `useWorkspaceEmployeeDetail`, `useInviteEmployees`,
   `useDeleteWorkspaceEmployees`, `useUpdateWorkspaceEmployee`, and
-  `useUpdateWorkspaceEmployeePermissions`. Distinct from
-  `CompaniesClient.{create,update,delete}Employee`, which scope to one
+  `useUpdateWorkspaceEmployeePermissions`. Distinct from the per-company
+  `EmployeesClient` (`useCompanyEmployees` and friends), which scopes to one
   company aggregate.
 - **CompanyInfo** — the active workspace's company-level metadata (name,
   branding, plan). Distinct from `Company` (an arbitrary org record): the

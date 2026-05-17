@@ -1,36 +1,21 @@
 import type {
 	Address,
-	AddressSummary,
 	Company,
 	CompanySortField,
 	CompanySummary,
 	CreateAddressData,
 	CreateCompanyPayload,
-	CreateEmployeeData,
 	CursorPage,
-	EmployeePermissions,
-	EmployeeWithPermissions,
 	ListCompaniesParams,
 	UpdateAddressData,
 	UpdateCompanyData,
-	UpdateEmployeeData,
-	UpdatePermissionsData,
 } from "../domains/companies";
 import { NotFoundError } from "../errors";
 import { delay, nextId, paginate } from "../mock-utils";
-import { SEED_COMPANIES } from "../seeds/companies";
 import type { CompaniesClient } from "./companies-client";
 
 function cloneCompany(c: Company): Company {
-	return {
-		...c,
-		addresses: c.addresses.map((a) => ({ ...a })),
-		employees: c.employees.map((e) => ({ ...e, permissions: { ...e.permissions } })),
-	};
-}
-
-function toAddressSummary(a: Address): AddressSummary {
-	return { id: a.id, name: a.name, address: a.address, isMain: a.isMain };
+	return { ...c, addresses: c.addresses.map((a) => ({ ...a })) };
 }
 
 function toSummary(c: Company): CompanySummary {
@@ -38,9 +23,11 @@ function toSummary(c: Company): CompanySummary {
 		id: c.id,
 		name: c.name,
 		isMain: c.isMain,
-		addresses: c.addresses.map(toAddressSummary),
-		employeeCount: c.employees.length || c.employeeCount,
+		addressesCount: c.addressesCount,
+		employeeCount: c.employeeCount,
 		procurementItemCount: c.procurementItemCount,
+		createdAt: c.createdAt,
+		updatedAt: c.updatedAt,
 	};
 }
 
@@ -48,25 +35,26 @@ function sortCompanies(items: Company[], field: CompanySortField, dir: "asc" | "
 	const mul = dir === "asc" ? 1 : -1;
 	return [...items].sort((a, b) => {
 		if (field === "name") return mul * a.name.localeCompare(b.name, "ru");
-		if (field === "employeeCount")
-			return mul * ((a.employees.length || a.employeeCount) - (b.employees.length || b.employeeCount));
+		if (field === "employeeCount") return mul * (a.employeeCount - b.employeeCount);
+		if (field === "createdAt") return mul * a.createdAt.localeCompare(b.createdAt);
 		return mul * (a.procurementItemCount - b.procurementItemCount);
 	});
 }
 
 /**
- * Build a fresh in-memory companies adapter with isolated state.
- * Production composition root passes the default seed; tests pass their own.
+ * Build a fresh in-memory companies adapter with isolated state. Production
+ * unconditionally wires the HTTP adapter; this factory survives as a
+ * closure-isolated test fake (default seed: empty) so component tests don't
+ * need to stub `fetch`.
  */
-export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES): CompaniesClient {
+export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesClient {
 	let store: Company[] = seed.map(cloneCompany);
-	let employeeIdCounter = 1000;
 
 	function findIndex(id: string): number {
 		return store.findIndex((c) => c.id === id);
 	}
 
-	function require(id: string): Company {
+	function requireCompany(id: string): Company {
 		const idx = findIndex(id);
 		if (idx === -1) throw new NotFoundError({ id });
 		return store[idx];
@@ -95,11 +83,12 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 
 		async get(id: string): Promise<Company> {
 			await delay();
-			return cloneCompany(require(id));
+			return cloneCompany(requireCompany(id));
 		},
 
 		async create(data: CreateCompanyPayload): Promise<Company> {
 			await delay();
+			const now = new Date().toISOString();
 			const company: Company = {
 				id: nextId("company"),
 				name: data.name,
@@ -109,6 +98,9 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 				isMain: false,
 				employeeCount: 0,
 				procurementItemCount: 0,
+				addressesCount: 1,
+				createdAt: now,
+				updatedAt: now,
 				addresses: [
 					{
 						id: nextId("addr"),
@@ -118,7 +110,6 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 						isMain: data.address.isMain ?? true,
 					},
 				],
-				employees: [],
 			};
 			store.push(company);
 			return cloneCompany(company);
@@ -128,7 +119,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 			await delay();
 			const idx = findIndex(id);
 			if (idx === -1) throw new NotFoundError({ id });
-			store[idx] = { ...store[idx], ...data };
+			store[idx] = { ...store[idx], ...data, updatedAt: new Date().toISOString() };
 			return cloneCompany(store[idx]);
 		},
 
@@ -139,7 +130,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 
 		async createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
 			await delay();
-			const company = require(companyId);
+			const company = requireCompany(companyId);
 			const address: Address = {
 				id: nextId("addr"),
 				name: data.name,
@@ -148,12 +139,13 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 				isMain: data.isMain ?? false,
 			};
 			company.addresses.push(address);
+			company.addressesCount = company.addresses.length;
 			return { ...address };
 		},
 
 		async updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address> {
 			await delay();
-			const company = require(companyId);
+			const company = requireCompany(companyId);
 			const idx = company.addresses.findIndex((a) => a.id === addressId);
 			if (idx === -1) throw new NotFoundError({ companyId, addressId });
 			company.addresses[idx] = { ...company.addresses[idx], ...data };
@@ -162,71 +154,9 @@ export function createInMemoryCompaniesClient(seed: Company[] = SEED_COMPANIES):
 
 		async deleteAddress(companyId: string, addressId: string): Promise<void> {
 			await delay();
-			const company = require(companyId);
+			const company = requireCompany(companyId);
 			company.addresses = company.addresses.filter((a) => a.id !== addressId);
-		},
-
-		async createEmployee(companyId: string, data: CreateEmployeeData): Promise<EmployeeWithPermissions> {
-			await delay();
-			const company = require(companyId);
-			employeeIdCounter += 1;
-			const id = String(employeeIdCounter);
-			const employee: EmployeeWithPermissions = {
-				id,
-				firstName: data.firstName,
-				lastName: data.lastName,
-				patronymic: data.patronymic,
-				position: data.position,
-				role: data.role,
-				phone: data.phone,
-				email: data.email,
-				permissions: {
-					id: nextId("perm"),
-					employeeId: id,
-					procurementInquiries: "none",
-					positions: "none",
-					tasks: "none",
-					companies: "none",
-					employees: "none",
-					emails: "none",
-				},
-			};
-			company.employees.push(employee);
-			return { ...employee, permissions: { ...employee.permissions } };
-		},
-
-		async updateEmployee(
-			companyId: string,
-			employeeId: string,
-			data: UpdateEmployeeData,
-		): Promise<EmployeeWithPermissions> {
-			await delay();
-			const company = require(companyId);
-			const idx = company.employees.findIndex((e) => e.id === employeeId);
-			if (idx === -1) throw new NotFoundError({ companyId, employeeId });
-			company.employees[idx] = { ...company.employees[idx], ...data };
-			const e = company.employees[idx];
-			return { ...e, permissions: { ...e.permissions } };
-		},
-
-		async deleteEmployee(companyId: string, employeeId: string): Promise<void> {
-			await delay();
-			const company = require(companyId);
-			company.employees = company.employees.filter((e) => e.id !== employeeId);
-		},
-
-		async updateEmployeePermissions(
-			companyId: string,
-			employeeId: string,
-			data: UpdatePermissionsData,
-		): Promise<EmployeePermissions> {
-			await delay();
-			const company = require(companyId);
-			const idx = company.employees.findIndex((e) => e.id === employeeId);
-			if (idx === -1) throw new NotFoundError({ companyId, employeeId });
-			const updated = { ...company.employees[idx].permissions, ...data };
-			company.employees[idx] = { ...company.employees[idx], permissions: updated };
-			return { ...updated };
+			company.addressesCount = company.addresses.length;
 		},
 	};
 }

@@ -218,7 +218,7 @@ export function CompaniesSettingsPage() {
 										<dl className="mt-3 grid w-full grid-cols-3 gap-x-4 gap-y-2 text-sm">
 											<div>
 												<dt className="text-xs text-muted-foreground">Адреса</dt>
-												<dd className="tabular-nums">{company.addresses.length}</dd>
+												<dd className="tabular-nums">{company.addressesCount}</dd>
 											</div>
 											<div>
 												<dt className="text-xs text-muted-foreground">Сотрудники</dt>
@@ -281,7 +281,7 @@ export function CompaniesSettingsPage() {
 											/>
 										</td>
 										<td className="px-lg py-sm font-medium">{company.name}</td>
-										<td className="px-lg py-sm tabular-nums text-muted-foreground">{company.addresses.length}</td>
+										<td className="px-lg py-sm tabular-nums text-muted-foreground">{company.addressesCount}</td>
 										<td className="px-lg py-sm tabular-nums text-muted-foreground">{company.employeeCount}</td>
 										<td className="px-lg py-sm tabular-nums text-muted-foreground">{company.procurementItemCount}</td>
 									</tr>

@@ -1,4 +1,4 @@
-import type { EmployeePermissions } from "../domains/companies";
+import type { EmployeePermissions } from "../domains/employees";
 import type { WorkspaceEmployee, WorkspaceEmployeeDetail } from "../domains/workspace-employees";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { WorkspaceEmployeesClient } from "./workspace-employees-client";

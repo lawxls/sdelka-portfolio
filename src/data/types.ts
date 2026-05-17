@@ -310,8 +310,10 @@ export interface Company {
 	isMain: boolean;
 	employeeCount: number;
 	procurementItemCount: number;
+	addressesCount: number;
+	createdAt: string;
+	updatedAt: string;
 	addresses: Address[];
-	employees: (Employee & { permissions: EmployeePermissions })[];
 }
 
 export interface AddressSummary {
@@ -325,12 +327,14 @@ export interface CompanySummary {
 	id: string;
 	name: string;
 	isMain: boolean;
-	addresses: AddressSummary[];
+	addressesCount: number;
 	employeeCount: number;
 	procurementItemCount: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
-export type CompanySortField = "name" | "employeeCount" | "procurementItemCount";
+export type CompanySortField = "name" | "employeeCount" | "procurementItemCount" | "createdAt";
 
 export interface CompanySortState {
 	field: CompanySortField;

@@ -1,9 +1,9 @@
 import { createHttpCompaniesClient } from "./clients/companies-http";
-import { createInMemoryCompaniesClient } from "./clients/companies-in-memory";
 import { createHttpCompanyInfoClient } from "./clients/company-info-http";
 import { createInMemoryCompanyInfoClient } from "./clients/company-info-in-memory";
 import { createHttpEmailsClient } from "./clients/emails-http";
 import { createInMemoryEmailsClient } from "./clients/emails-in-memory";
+import { createInMemoryEmployeesClient } from "./clients/employees-in-memory";
 import { createHttpFoldersClient } from "./clients/folders-http";
 import { createInMemoryFoldersClient } from "./clients/folders-in-memory";
 import { createHttpItemsClient } from "./clients/items-http";
@@ -28,7 +28,6 @@ import type { DataClients } from "./clients-context";
 type AdapterMode = "memory" | "http";
 
 interface AdapterConfig {
-	companies: AdapterMode;
 	items: AdapterMode;
 	suppliers: AdapterMode;
 	tasks: AdapterMode;
@@ -46,6 +45,9 @@ interface AdapterConfig {
  * Per-entity adapter mode resolved at boot. Default is "memory" so local dev
  * continues to work while HTTP adapters are under construction. Each entity's
  * mode can be flipped via env vars without touching code in other entities.
+ *
+ * Companies are unconditionally HTTP — production paths can never fall back to
+ * fake data. The closure-isolated in-memory adapter survives as a test fake.
  */
 function resolveConfig(): AdapterConfig {
 	const env = (typeof import.meta !== "undefined" ? import.meta.env : {}) as Record<string, unknown>;
@@ -53,7 +55,6 @@ function resolveConfig(): AdapterConfig {
 		return env[key] === "http" ? "http" : "memory";
 	}
 	return {
-		companies: read("VITE_DATA_COMPANIES"),
 		items: read("VITE_DATA_ITEMS"),
 		suppliers: read("VITE_DATA_SUPPLIERS"),
 		tasks: read("VITE_DATA_TASKS"),
@@ -73,15 +74,16 @@ function resolveConfig(): AdapterConfig {
  * by adapter mode. Tests bypass this and pass their own `DataClients` map to
  * the provider.
  *
- * The companies client is constructed first so the workspace-employees adapter
- * can read company summaries from the same active source on invite, keeping
- * cross-domain state coherent regardless of which adapter mode each entity uses.
+ * Companies + Addresses are HTTP unconditionally — the workspace-employees
+ * adapter's `getCompanySummaries` callback reads from the same HTTP client so
+ * an invitee's company chip stays coherent with the real backend.
  */
 export function buildDataClients(): DataClients {
 	const config = resolveConfig();
-	const companies = config.companies === "http" ? createHttpCompaniesClient() : createInMemoryCompaniesClient();
+	const companies = createHttpCompaniesClient();
 	return {
 		companies,
+		employees: createInMemoryEmployeesClient(),
 		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
 		tasks: config.tasks === "http" ? createHttpTasksClient() : createInMemoryTasksClient(),

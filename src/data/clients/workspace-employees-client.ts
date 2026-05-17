@@ -1,4 +1,4 @@
-import type { EmployeePermissions } from "../domains/companies";
+import type { EmployeePermissions } from "../domains/employees";
 import type {
 	InviteEmployeeData,
 	UpdatePermissionsData,
@@ -11,9 +11,9 @@ import type {
  * Public seam for the workspace-employees domain. The full employee roster
  * across the active workspace, including pending invitations.
  *
- * Distinct from `CompaniesClient.{create,update,delete}Employee`, which scope
- * to one company aggregate. A workspace employee may belong to several
- * companies (modelled via the `companies: CompanySummary[]` field).
+ * Distinct from the per-company `EmployeesClient`, which scopes to one
+ * company aggregate. A workspace employee may belong to several companies
+ * (modelled via the `companies: CompanySummary[]` field).
  */
 export interface WorkspaceEmployeesClient {
 	list(): Promise<WorkspaceEmployee[]>;

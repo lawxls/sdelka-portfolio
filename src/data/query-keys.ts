@@ -26,6 +26,9 @@ export const keys = {
 		procurement: () => ["procurementCompanies"] as const,
 		detail: (id: string | null) => ["company", id] as const,
 	},
+	employees: {
+		byCompany: (companyId: string) => ["employees", "byCompany", companyId] as const,
+	},
 	items: {
 		all: () => ["items"] as const,
 		list: (params: ListItemsParams) => ["items", params] as const,

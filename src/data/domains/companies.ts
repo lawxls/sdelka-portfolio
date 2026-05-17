@@ -1,22 +1,17 @@
 /**
- * Companies domain types — the single import surface for components and clients.
- * Behavior, fixtures, and helpers live elsewhere; this module is types-only.
+ * Companies + addresses domain types — the single import surface for components
+ * and clients. Employees + per-module permissions live in
+ * `./employees.ts`; this seam covers company CRUD + address CRUD only.
  */
 export type {
 	Address,
-	AddressSummary,
 	Company,
 	CompanySortField,
 	CompanySortState,
 	CompanySummary,
-	Employee,
-	EmployeePermissions,
-	EmployeeRole,
-	PermissionLevel,
-	PermissionModuleKey,
 } from "../types";
 
-import type { CompanySortState, Employee, EmployeePermissions, PermissionLevel } from "../types";
+import type { CompanySortState } from "../types";
 
 export type { CursorPage } from "./shared";
 
@@ -56,33 +51,3 @@ export interface UpdateAddressData {
 	phone?: string;
 	isMain?: boolean;
 }
-
-export interface CreateEmployeeData {
-	firstName: string;
-	lastName: string;
-	patronymic: string;
-	position: string;
-	role: Employee["role"];
-	phone: string;
-	email: string;
-}
-
-export interface UpdateEmployeeData {
-	firstName?: string;
-	lastName?: string;
-	patronymic?: string;
-	position?: string;
-	role?: Employee["role"];
-	phone?: string;
-}
-
-export interface UpdatePermissionsData {
-	procurementInquiries?: PermissionLevel;
-	positions?: PermissionLevel;
-	tasks?: PermissionLevel;
-	companies?: PermissionLevel;
-	employees?: PermissionLevel;
-	emails?: PermissionLevel;
-}
-
-export type EmployeeWithPermissions = Employee & { permissions: EmployeePermissions };

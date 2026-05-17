@@ -43,11 +43,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { CreateCompanyPayload } from "@/data/domains/companies";
 import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import { useCreateAddress } from "@/data/use-company-detail";
+import { useCompanyDetail, useCreateAddress, useCreateCompany } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
@@ -55,6 +56,7 @@ import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { formatCurrency, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CompanyCreationSheet } from "./company-creation-sheet";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
@@ -154,7 +156,7 @@ function Field({
 }
 
 export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }: CreateProcurementInquiryDrawerProps) {
-	const { data: companies } = useProcurementCompanies();
+	const { data: companies, isLoading: companiesLoading } = useProcurementCompanies();
 	const { data: folders = [] } = useFolders();
 	const createFolderMutation = useCreateFolder();
 
@@ -198,8 +200,6 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 		if (!lockedCompany) return;
 		if (step1.companyId === lockedCompany.id) return;
 		update1("companyId", lockedCompany.id);
-		const mainAddress = lockedCompany.addresses.find((a) => a.isMain) ?? lockedCompany.addresses[0];
-		update1("deliveryAddressId", mainAddress ? mainAddress.id : null);
 	}, [open, lockedCompany, step1.companyId]);
 
 	function handleCreateFolder(name: string, color: string) {
@@ -321,6 +321,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 								<Step1Body
 									form={form}
 									companies={companies}
+									companiesLoading={companiesLoading}
 									lockedCompany={lockedCompany}
 									selectedCompany={selectedCompany}
 									folders={folders}
@@ -580,6 +581,7 @@ type FolderList = NonNullable<ReturnType<typeof useFolders>["data"]>;
 interface Step1BodyProps {
 	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	companies: CompanyList;
+	companiesLoading: boolean;
 	lockedCompany: CompanyList[number] | undefined;
 	selectedCompany: CompanyList[number] | undefined;
 	folders: FolderList;
@@ -594,6 +596,7 @@ interface Step1BodyProps {
 function Step1Body({
 	form,
 	companies,
+	companiesLoading,
 	lockedCompany,
 	selectedCompany,
 	folders,
@@ -609,8 +612,22 @@ function Step1Body({
 	const showRemove = step1.positions.length > 1;
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [activeSupplierPositionIndex, setActiveSupplierPositionIndex] = useState<number | null>(null);
+	const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
+	const createCompanyMutation = useCreateCompany();
 	const activeSupplierInitial =
 		activeSupplierPositionIndex !== null ? step1.positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
+	const hasNoCompanies = !companiesLoading && companies.length === 0;
+
+	function handleSubmitCreateCompany(data: CreateCompanyPayload) {
+		createCompanyMutation.mutate(data, {
+			onSuccess: (created) => {
+				update1("companyId", created.id);
+				const mainAddress = created.addresses.find((a) => a.isMain) ?? created.addresses[0];
+				if (mainAddress) update1("deliveryAddressId", mainAddress.id);
+				setCreateCompanyOpen(false);
+			},
+		});
+	}
 
 	return (
 		<div className="flex flex-col gap-0 pt-3">
@@ -642,34 +659,45 @@ function Step1Body({
 					</Field>
 
 					<Field label="Компания" required className="flex-1">
-						<Select
-							value={step1.companyId || undefined}
-							onValueChange={(v) => {
-								update1("companyId", v);
-								const company = companies.find((c) => c.id === v);
-								const mainAddress = company?.addresses.find((a) => a.isMain) ?? company?.addresses[0];
-								update1("deliveryAddressId", mainAddress ? mainAddress.id : null);
-							}}
-							disabled={companyDisabled}
-						>
-							<SelectTrigger
-								ref={companyTriggerRef}
-								aria-label="Компания"
-								aria-required="true"
-								aria-invalid={step1Errors.company ? true : undefined}
-								aria-describedby={step1Errors.company ? "company-error" : undefined}
-								className={cn("w-full", step1Errors.company && "border-destructive", companyDisabled && "opacity-70")}
+						{hasNoCompanies ? (
+							<Button
+								type="button"
+								variant="outline"
+								className="w-full justify-center"
+								onClick={() => setCreateCompanyOpen(true)}
+								aria-label="Создать компанию"
+								data-testid="create-company-cta"
 							>
-								<SelectValue placeholder="— выберите —" />
-							</SelectTrigger>
-							<SelectContent position="popper">
-								{companies.map((c) => (
-									<SelectItem key={c.id} value={c.id}>
-										{c.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+								<Plus className="size-4" aria-hidden="true" />
+								Создать компанию
+							</Button>
+						) : (
+							<Select
+								value={step1.companyId || undefined}
+								onValueChange={(v) => {
+									update1("companyId", v);
+								}}
+								disabled={companyDisabled}
+							>
+								<SelectTrigger
+									ref={companyTriggerRef}
+									aria-label="Компания"
+									aria-required="true"
+									aria-invalid={step1Errors.company ? true : undefined}
+									aria-describedby={step1Errors.company ? "company-error" : undefined}
+									className={cn("w-full", step1Errors.company && "border-destructive", companyDisabled && "opacity-70")}
+								>
+									<SelectValue placeholder="— выберите —" />
+								</SelectTrigger>
+								<SelectContent position="popper">
+									{companies.map((c) => (
+										<SelectItem key={c.id} value={c.id}>
+											{c.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
 						{step1Errors.company && (
 							<p id="company-error" className="text-sm text-destructive">
 								{step1Errors.company}
@@ -765,7 +793,7 @@ function Step1Body({
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<Field label="Адрес доставки">
 					<AddressSelect
-						company={selectedCompany}
+						companyId={selectedCompany?.id ?? null}
 						value={step1.deliveryAddressId}
 						onChange={(id) => update1("deliveryAddressId", id)}
 					/>
@@ -816,6 +844,16 @@ function Step1Body({
 					/>
 				</Field>
 			</div>
+
+			<CompanyCreationSheet
+				open={createCompanyOpen}
+				onOpenChange={(open) => {
+					setCreateCompanyOpen(open);
+					if (!open) createCompanyMutation.reset();
+				}}
+				onSubmit={handleSubmitCreateCompany}
+				isPending={createCompanyMutation.isPending}
+			/>
 		</div>
 	);
 }
@@ -1322,19 +1360,32 @@ function PickPositionRow({
 }
 
 interface AddressSelectProps {
-	company: CompanyList[number] | undefined;
+	companyId: string | null;
 	value: string | null;
 	onChange: (id: string | null) => void;
 }
 
-function AddressSelect({ company, value, onChange }: AddressSelectProps) {
+function AddressSelect({ companyId, value, onChange }: AddressSelectProps) {
 	const [open, setOpen] = useState(false);
 	const [creating, setCreating] = useState(false);
-	const createMutation = useCreateAddress(company?.id ?? "");
+	const detailQuery = useCompanyDetail(companyId);
+	const createMutation = useCreateAddress(companyId ?? "");
 
-	const addresses = company?.addresses ?? [];
+	const addresses = detailQuery.data?.addresses ?? [];
 	const selected = value ? addresses.find((a) => a.id === value) : undefined;
-	const disabled = !company;
+	const isLoading = companyId != null && detailQuery.isLoading;
+	const disabled = !companyId || isLoading;
+
+	const onChangeRef = useRef(onChange);
+	onChangeRef.current = onChange;
+
+	useEffect(() => {
+		if (!companyId) return;
+		if (!detailQuery.data) return;
+		if (value && detailQuery.data.addresses.some((a) => a.id === value)) return;
+		const main = detailQuery.data.addresses.find((a) => a.isMain) ?? detailQuery.data.addresses[0];
+		if (main) onChangeRef.current(main.id);
+	}, [companyId, detailQuery.data, value]);
 
 	function handleSelect(id: string | null) {
 		onChange(id);
@@ -1343,7 +1394,7 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 	}
 
 	function handleCreate(text: string) {
-		if (!company) return;
+		if (!companyId) return;
 		const trimmed = text.trim();
 		if (!trimmed) {
 			setCreating(false);
@@ -1359,6 +1410,12 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 		);
 		setCreating(false);
 		setOpen(false);
+	}
+
+	function placeholderLabel() {
+		if (!companyId) return "Сначала выберите компанию";
+		if (isLoading) return "Загружаем адреса…";
+		return "Выберите адрес";
 	}
 
 	return (
@@ -1377,9 +1434,7 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 					disabled={disabled}
 					className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
 				>
-					<span className="min-w-0 flex-1 truncate text-left">
-						{selected?.address ?? (company ? "Выберите адрес" : "Сначала выберите компанию")}
-					</span>
+					<span className="min-w-0 flex-1 truncate text-left">{selected?.address ?? placeholderLabel()}</span>
 					<ChevronDown aria-hidden="true" className="ml-2 size-4 opacity-60" />
 				</Button>
 			</PopoverTrigger>

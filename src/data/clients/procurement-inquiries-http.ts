@@ -8,22 +8,8 @@ import {
 	type ProcurementInquirySortField,
 } from "../domains/procurement-inquiries";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
+import { type DrfCursorPage, toCursorPage } from "./drf";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
-
-interface DrfCursorPage<T> {
-	next: string | null;
-	previous: string | null;
-	results: T[];
-}
-
-function extractCursor(nextUrl: string | null): string | null {
-	if (!nextUrl) return null;
-	try {
-		return new URL(nextUrl, "http://placeholder").searchParams.get("cursor");
-	} catch {
-		return null;
-	}
-}
 
 /** FE sort-field names → backend `ordering_fields` (snake_case). DRF rejects
  * camelCase ordering values, so the translator must rename rather than pass
@@ -138,7 +124,7 @@ export function createHttpProcurementInquiriesClient(http: HttpClient = defaultH
 		list: async (params: ListProcurementInquiriesParams) => {
 			const query = buildQuery(translateListParams(params));
 			const page = await http.get<DrfCursorPage<ProcurementInquiry>>(`/procurement/inquiries/${query}`);
-			return { items: page.results, nextCursor: extractCursor(page.next) };
+			return toCursorPage(page);
 		},
 		get: (id) => http.get<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/`),
 		create: (input: CreateProcurementInquiryInput) =>
