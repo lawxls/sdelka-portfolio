@@ -62,29 +62,19 @@ export interface FilterParams {
 	limit?: number;
 }
 
-/** Inquiry-side state lookup. The legacy mock store is gone; tests that need
- * cross-entity behavior register a resolver via `_setInquiryStateResolver`.
- * Production never hits this path — items still run via the in-memory adapter
- * in dev/test until the items HTTP integration lands.
- *
- * A static default mapping (`DEFAULT_INQUIRY_STATES`) preserves the legacy
- * SEED_ITEMS ↔ folder/company linkage so /positions in dev (and the suite of
- * page/folder tests that rely on it) keep working without an HTTP backend. */
+/** Inquiry-side state lookup used by the in-memory items adapter to derive
+ * an item's folder/company/archive state from its parent inquiry. Tests that
+ * need cross-entity behavior register a resolver via `_setInquiryStateResolver`
+ * in their `beforeEach` (and tear it down in `afterEach`); when no resolver is
+ * registered, items appear with `folderId: null` / `companyId: null` /
+ * `isArchived: false` — accurate for items whose parent inquiry hasn't been
+ * loaded yet (in-the-meantime cross-domain limitation, see CONTEXT.md). */
 interface InquiryState {
 	folderId: string | null;
 	companyId: string;
 	isArchived: boolean;
 }
 type InquiryStateResolver = (inquiryId: string) => InquiryState | null;
-
-const DEFAULT_INQUIRY_STATES: Readonly<Record<string, InquiryState>> = {
-	"T-001": { folderId: "folder-packaging", companyId: "company-1", isArchived: false },
-	"T-002": { folderId: "folder-fillings", companyId: "company-1", isArchived: false },
-	"T-003": { folderId: "folder-fabrics", companyId: "company-1", isArchived: false },
-	"T-004": { folderId: "folder-panels", companyId: "company-1", isArchived: false },
-	"T-005": { folderId: "folder-springs", companyId: "company-1", isArchived: false },
-	"T-006": { folderId: "folder-chemistry", companyId: "company-1", isArchived: false },
-};
 
 let inquiryStateResolver: InquiryStateResolver | null = null;
 
@@ -93,9 +83,8 @@ export function _setInquiryStateResolver(resolver: InquiryStateResolver | null):
 }
 
 export function _inquiryState(inquiryId: string | undefined | null): InquiryState | null {
-	if (!inquiryId) return null;
-	if (inquiryStateResolver) return inquiryStateResolver(inquiryId);
-	return DEFAULT_INQUIRY_STATES[inquiryId] ?? null;
+	if (!inquiryId || !inquiryStateResolver) return null;
+	return inquiryStateResolver(inquiryId);
 }
 
 function procurementInquiryFolderId(item: ProcurementItem): string | null {

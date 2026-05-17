@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Folder } from "../domains/folders";
 import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
-import { _resetItemsStore } from "../items-mock-data";
+import { _setItems } from "../items-mock-data";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import type { FoldersClient } from "./folders-client";
 import { createHttpFoldersClient } from "./folders-http";
@@ -127,9 +127,11 @@ describe.each(adapters.map((make) => [make().name, make]))("FoldersClient contra
 
 	beforeEach(() => {
 		_setMockDelay(0, 0);
-		// In-memory adapter pulls stats from the items mock — keep it empty so
-		// stats is `{ stats: [], archiveCount: 0 }` for parity with the HTTP stub.
-		_resetItemsStore();
+		// In-memory adapter pulls stats from the items mock — empty the items
+		// store so stats is `{ stats: [], archiveCount: 0 }` for parity with
+		// the HTTP stub. (`_resetItemsStore()` would re-seed SEED_ITEMS, which
+		// without an inquiry-state resolver all fall into the `null` bucket.)
+		_setItems([]);
 		client = make().build();
 	});
 

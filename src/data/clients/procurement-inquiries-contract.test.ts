@@ -260,7 +260,7 @@ describe.each(
 			items: [{ name: "Pos A" }],
 		});
 		expect(created.name).toBe("Дельта");
-		expect(created.id).toMatch(/^/);
+		expect(created.id).toBeTruthy();
 		const fetched = await client.get(created.id);
 		expect(fetched.name).toBe("Дельта");
 	});
@@ -339,12 +339,14 @@ describe("HTTP adapter — wire translations", () => {
 		expect(adapter.lastRequest()).toMatchObject({ method: "DELETE", path: "/procurement/inquiries/T-001/" });
 	});
 
-	it("translates {sort,dir} → ordering=<sign><field>", async () => {
+	it("translates {sort,dir} → ordering=<snake_case_field> (camelCase FE names → DRF snake_case)", async () => {
 		const adapter = httpAdapter(SEED);
 		await adapter.build().list({ sort: "createdAt", dir: "desc" });
-		expect(adapter.lastRequest()?.path).toContain("ordering=-createdAt");
+		expect(adapter.lastRequest()?.path).toContain("ordering=-created_at");
 		await adapter.build().list({ sort: "suppliersCount", dir: "asc" });
-		expect(adapter.lastRequest()?.path).toContain("ordering=suppliersCount");
+		expect(adapter.lastRequest()?.path).toContain("ordering=suppliers_count");
+		await adapter.build().list({ sort: "kpCount", dir: "desc" });
+		expect(adapter.lastRequest()?.path).toContain("ordering=-kp_count");
 	});
 
 	it("translates folder='archive' → isArchived=true (no folder param)", async () => {
@@ -362,12 +364,46 @@ describe("HTTP adapter — wire translations", () => {
 		expect(path).toContain("isArchived=false");
 	});
 
+	it("drops folder='all' — it's the FE no-filter sentinel, not a real folder id", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().list({ folder: "all" });
+		const path = adapter.lastRequest()?.path ?? "";
+		expect(path).not.toContain("folder=all");
+		expect(path).not.toContain("folder__isnull");
+		expect(path).toContain("isArchived=false");
+	});
+
 	it("passes a folder UUID through unchanged + isArchived=false", async () => {
 		const adapter = httpAdapter(SEED);
 		await adapter.build().list({ folder: "folder-1" });
 		const path = adapter.lastRequest()?.path ?? "";
 		expect(path).toContain("folder=folder-1");
 		expect(path).toContain("isArchived=false");
+	});
+
+	it("translates deadline='overdue' preset → deadlineTo bound (no deadline= param)", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().list({ deadline: "overdue" });
+		const path = adapter.lastRequest()?.path ?? "";
+		expect(path).toContain("deadlineTo=");
+		expect(path).not.toContain("deadline=overdue");
+	});
+
+	it("translates deadline='soon' preset → deadlineFrom + deadlineTo bounds", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().list({ deadline: "soon" });
+		const path = adapter.lastRequest()?.path ?? "";
+		expect(path).toContain("deadlineFrom=");
+		expect(path).toContain("deadlineTo=");
+		expect(path).not.toContain("deadline=soon");
+	});
+
+	it("explicit deadlineFrom/deadlineTo override the preset", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().list({ deadline: "soon", deadlineFrom: "2026-08-01", deadlineTo: "2026-08-31" });
+		const path = adapter.lastRequest()?.path ?? "";
+		expect(path).toContain("deadlineFrom=2026-08-01");
+		expect(path).toContain("deadlineTo=2026-08-31");
 	});
 });
 
