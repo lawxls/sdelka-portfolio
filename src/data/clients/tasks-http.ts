@@ -79,13 +79,13 @@ export function createHttpTasksClient(http: HttpClient = defaultHttpClient): Tas
 			return taskFromApi(await http.post<TaskWire>(`/tasks/${enc(id)}/change_status/`, { body }));
 		},
 
-		// Attachment endpoints are multipart-only and not yet on the API.
-		// The composition root swaps in the in-memory implementation.
-		uploadAttachments: async (_id: string, _files: File[]): Promise<Attachment[]> => {
-			throw new Error("HTTP uploadAttachments not implemented yet");
+		uploadAttachments: async (id: string, files: File[]): Promise<Attachment[]> => {
+			const form = new FormData();
+			for (const file of files) form.append("files", file, file.name);
+			return http.postMultipart<Attachment[]>(`/tasks/${enc(id)}/attachments/`, { body: form });
 		},
-		deleteAttachment: async (_id: string, _attachmentId: string): Promise<void> => {
-			throw new Error("HTTP deleteAttachment not implemented yet");
+		deleteAttachment: async (id: string, attachmentId: string): Promise<void> => {
+			await http.delete<void>(`/tasks/${enc(id)}/attachments/${enc(attachmentId)}/`);
 		},
 	};
 }
