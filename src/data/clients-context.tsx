@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 import type { CompaniesClient } from "./clients/companies-client";
 import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
+import type { EmployeesClient } from "./clients/employees-client";
 import type { FoldersClient } from "./clients/folders-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
@@ -20,6 +21,7 @@ import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-cli
  */
 export interface DataClients {
 	companies?: CompaniesClient;
+	employees?: EmployeesClient;
 	items?: ItemsClient;
 	suppliers?: SuppliersClient;
 	tasks?: TasksClient;
@@ -56,6 +58,12 @@ export function useCompaniesClient(): CompaniesClient {
 	const { companies } = useClients();
 	if (!companies) throw new Error("companies client not provided");
 	return companies;
+}
+
+export function useEmployeesClient(): EmployeesClient {
+	const { employees } = useClients();
+	if (!employees) throw new Error("employees client not provided");
+	return employees;
 }
 
 export function useItemsClient(): ItemsClient {

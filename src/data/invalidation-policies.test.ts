@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createTestQueryClient } from "@/test-utils";
 import {
 	invalidateAfterCompanyChange,
-	invalidateAfterEmployeePermissionsChange,
+	invalidateAfterEmployeeChange,
 	invalidateAfterItemDetailChange,
 	invalidateAfterItemListChange,
 } from "./invalidation-policies";
@@ -81,21 +81,19 @@ describe("invalidateAfterCompanyChange", () => {
 	});
 });
 
-describe("invalidateAfterEmployeePermissionsChange", () => {
-	it("invalidates only the parent company's detail", () => {
+describe("invalidateAfterEmployeeChange", () => {
+	it("invalidates only the parent company's employees namespace", () => {
+		seedQuery(keys.employees.byCompany("c1"));
+		seedQuery(keys.employees.byCompany("c2"));
 		seedQuery(keys.companies.detail("c1"));
-		seedQuery(keys.companies.detail("c2"));
 		seedQuery(keys.companies.list({}));
-		seedQuery(keys.companies.listAll());
-		seedQuery(keys.companies.procurement());
 
-		invalidateAfterEmployeePermissionsChange(queryClient, { companyId: "c1" });
+		invalidateAfterEmployeeChange(queryClient, { companyId: "c1" });
 
-		expect(isInvalidated(keys.companies.detail("c1"))).toBe(true);
-		expect(isInvalidated(keys.companies.detail("c2"))).toBe(false);
+		expect(isInvalidated(keys.employees.byCompany("c1"))).toBe(true);
+		expect(isInvalidated(keys.employees.byCompany("c2"))).toBe(false);
+		expect(isInvalidated(keys.companies.detail("c1"))).toBe(false);
 		expect(isInvalidated(keys.companies.list({}))).toBe(false);
-		expect(isInvalidated(keys.companies.listAll())).toBe(false);
-		expect(isInvalidated(keys.companies.procurement())).toBe(false);
 	});
 });
 

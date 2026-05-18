@@ -3,13 +3,10 @@ import { useCompaniesClient } from "./clients-context";
 import type {
 	CreateAddressData,
 	CreateCompanyPayload,
-	CreateEmployeeData,
 	UpdateAddressData,
 	UpdateCompanyData,
-	UpdateEmployeeData,
-	UpdatePermissionsData,
 } from "./domains/companies";
-import { invalidateAfterCompanyChange, invalidateAfterEmployeePermissionsChange } from "./invalidation-policies";
+import { invalidateAfterCompanyChange } from "./invalidation-policies";
 import { applyOptimistic, rollbackOptimistic } from "./optimistic";
 import { keys } from "./query-keys";
 import { detail } from "./shape-adapters";
@@ -90,47 +87,5 @@ export function useDeleteAddress(companyId: string) {
 	return useMutation({
 		mutationFn: (addressId: string) => client.deleteAddress(companyId, addressId),
 		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
-	});
-}
-
-export function useCreateEmployee(companyId: string) {
-	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: (data: CreateEmployeeData) => client.createEmployee(companyId, data),
-		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
-	});
-}
-
-export function useUpdateEmployee(companyId: string) {
-	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ employeeId, data }: { employeeId: string; data: UpdateEmployeeData }) =>
-			client.updateEmployee(companyId, employeeId, data),
-		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
-	});
-}
-
-export function useDeleteEmployee(companyId: string) {
-	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: (employeeId: string) => client.deleteEmployee(companyId, employeeId),
-		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
-	});
-}
-
-export function useUpdateEmployeePermissions(companyId: string) {
-	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: ({ employeeId, data }: { employeeId: string; data: UpdatePermissionsData }) =>
-			client.updateEmployeePermissions(companyId, employeeId, data),
-		onSettled: () => invalidateAfterEmployeePermissionsChange(queryClient, { companyId }),
 	});
 }

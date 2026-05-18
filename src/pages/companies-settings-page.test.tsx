@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
@@ -23,8 +24,10 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		isMain: false,
 		employeeCount: 0,
 		procurementItemCount: 0,
+		addressesCount: 1,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses: [{ id: `addr-${id}`, name: "Офис", address: "г. Москва", phone: "", isMain: true }],
-		employees: [],
 		...overrides,
 	};
 }
@@ -32,55 +35,19 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 const MOCK_COMPANIES: Company[] = [
 	makeStored("company-1", {
 		name: "Сделка",
+		addressesCount: 2,
 		addresses: [
 			{ id: "addr-1", name: "Офис", address: "г. Москва", phone: "", isMain: true },
 			{ id: "addr-2", name: "Склад", address: "г. Подольск", phone: "", isMain: false },
 		],
-		employees: Array.from({ length: 12 }, (_, i) => ({
-			id: String(i + 1),
-			firstName: "x",
-			lastName: "y",
-			patronymic: "",
-			position: "",
-			role: "user" as const,
-			phone: "",
-			email: "",
-			permissions: {
-				id: `p${i}`,
-				employeeId: String(i + 1),
-				procurementInquiries: "none" as const,
-				positions: "none" as const,
-				tasks: "none" as const,
-				companies: "none" as const,
-				employees: "none" as const,
-				emails: "none" as const,
-			},
-		})),
+		employeeCount: 12,
 		procurementItemCount: 25,
 	}),
 	makeStored("company-2", {
 		name: "СтройМастер",
+		addressesCount: 1,
 		addresses: [{ id: "addr-3", name: "Центральный", address: "г. Казань", phone: "", isMain: true }],
-		employees: Array.from({ length: 5 }, (_, i) => ({
-			id: String(100 + i),
-			firstName: "x",
-			lastName: "y",
-			patronymic: "",
-			position: "",
-			role: "user" as const,
-			phone: "",
-			email: "",
-			permissions: {
-				id: `p2-${i}`,
-				employeeId: String(100 + i),
-				procurementInquiries: "none" as const,
-				positions: "none" as const,
-				tasks: "none" as const,
-				companies: "none" as const,
-				employees: "none" as const,
-				emails: "none" as const,
-			},
-		})),
+		employeeCount: 5,
 		procurementItemCount: 10,
 	}),
 ];
@@ -94,6 +61,7 @@ function renderPage(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
+				employees: createInMemoryEmployeesClient(),
 				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}
@@ -122,6 +90,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
+				employees: createInMemoryEmployeesClient(),
 				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}

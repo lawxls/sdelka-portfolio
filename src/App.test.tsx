@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
+import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
@@ -80,29 +81,10 @@ const TEST_COMPANIES: Company[] = [
 		isMain: true,
 		employeeCount: 1,
 		procurementItemCount: 0,
+		addressesCount: 1,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses: [{ id: "addr-1", name: "Офис", address: "г. Москва, ул. Тестовая, д. 1", phone: "", isMain: true }],
-		employees: [
-			{
-				id: "1",
-				firstName: "Иван",
-				lastName: "Иванов",
-				patronymic: "",
-				position: "",
-				role: "admin",
-				phone: "",
-				email: "",
-				permissions: {
-					id: "p1",
-					employeeId: "1",
-					procurementInquiries: "edit",
-					positions: "edit",
-					tasks: "edit",
-					companies: "edit",
-					employees: "edit",
-					emails: "edit",
-				},
-			},
-		],
 	},
 ];
 
@@ -118,6 +100,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 			queryClient={queryClient}
 			clients={{
 				companies: companiesClient,
+				employees: createInMemoryEmployeesClient(),
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),

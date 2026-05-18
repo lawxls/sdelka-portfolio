@@ -21,8 +21,10 @@ function makeCompanyDoc(id: string, name: string): Company {
 		isMain: false,
 		employeeCount: 0,
 		procurementItemCount: 0,
+		addressesCount: 0,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses: [],
-		employees: [],
 	};
 }
 

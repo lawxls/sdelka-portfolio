@@ -28,8 +28,10 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 		isMain: false,
 		employeeCount: 0,
 		procurementItemCount: 0,
+		addressesCount: addresses.length,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses,
-		employees: [],
 	};
 }
 
@@ -39,6 +41,8 @@ const MULTI_COMPANY: Company[] = [
 	makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES),
 	makeCompanyDoc("company-2", "Вторая компания", TEST_ADDRESSES),
 ];
+
+const NO_COMPANIES: Company[] = [];
 
 let companies: Company[];
 
@@ -163,6 +167,39 @@ describe("CreateProcurementInquiryDrawer — wizard chrome", () => {
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура");
+	});
+});
+
+describe("CreateProcurementInquiryDrawer — zero companies", () => {
+	test("«Компания» field renders «Создать компанию» CTA when companies list is empty", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		await screen.findByRole("button", { name: /Создать компанию/i });
+		expect(screen.queryByRole("combobox", { name: "Компания" })).not.toBeInTheDocument();
+	});
+
+	test("clicking «Создать компанию» opens the nested CompanyCreationSheet", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		const user = userEvent.setup();
+		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		await user.click(cta);
+		expect(await screen.findByText("Новая компания")).toBeInTheDocument();
+	});
+
+	test("submitting the nested sheet auto-selects the new company and its main address", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		const user = userEvent.setup();
+		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		await user.click(cta);
+
+		await user.type(screen.getByLabelText("Название компании"), "Новая ООО");
+		await user.type(screen.getByLabelText("Название адреса"), "Офис");
+		await user.type(screen.getByLabelText("Адрес"), "г. Москва");
+		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+
+		await screen.findByRole("combobox", { name: "Компания" });
 	});
 });
 

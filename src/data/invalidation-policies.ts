@@ -13,9 +13,9 @@ import { keys } from "./query-keys";
  */
 
 /**
- * After a change to a company record (update) or to one of its sub-resources
- * (address / employee CRUD). Also covers create + delete, which don't have a
- * specific companyId to detail-invalidate.
+ * After a change to a company record (update) or to one of its addresses
+ * (address CRUD). Also covers create + delete, which don't have a specific
+ * companyId to detail-invalidate.
  *
  * Invalidates: company detail (when companyId given), companies list namespace,
  * companies-global, and the procurement-page company picker.
@@ -30,11 +30,12 @@ export function invalidateAfterCompanyChange(qc: QueryClient, opts: { companyId?
 }
 
 /**
- * After updating one employee's permissions on a company. Detail-only — the
- * list views don't surface permissions, so no list-level invalidation.
+ * After an employee CRUD or permissions mutation on a company. Scoped to the
+ * employees seam — the company list/detail don't surface employees today, so
+ * no company-level invalidation.
  */
-export function invalidateAfterEmployeePermissionsChange(qc: QueryClient, opts: { companyId: string }): void {
-	qc.invalidateQueries({ queryKey: keys.companies.detail(opts.companyId) });
+export function invalidateAfterEmployeeChange(qc: QueryClient, opts: { companyId: string }): void {
+	qc.invalidateQueries({ queryKey: keys.employees.byCompany(opts.companyId) });
 }
 
 /**
