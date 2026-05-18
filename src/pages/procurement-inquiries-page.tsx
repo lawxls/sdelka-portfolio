@@ -463,11 +463,9 @@ export function ProcurementInquiriesPage() {
 
 	let folderChipLabel: string | undefined;
 	let folderChipColor: string | undefined;
-	if (folder === "archive") {
-		folderChipLabel = "Архив";
-	} else if (folder === "none") {
+	if (folder === "none") {
 		folderChipLabel = "Без категории";
-	} else if (folder) {
+	} else if (folder && folder !== "archive") {
 		const f = folders.find((ff) => ff.id === folder);
 		if (f) {
 			folderChipLabel = f.name;
