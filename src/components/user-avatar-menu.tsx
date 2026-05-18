@@ -22,7 +22,7 @@ export function UserAvatarMenu({ className }: UserAvatarMenuProps) {
 			to="/settings/profile"
 			aria-label="Меню пользователя"
 			className={cn(
-				"inline-flex shrink-0 items-center gap-2.5 rounded-md bg-muted px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-muted/80 hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+				"inline-flex shrink-0 items-center gap-2.5 rounded-md bg-foreground/[0.08] px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-foreground/[0.12] hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-muted dark:hover:bg-muted/80",
 				className,
 			)}
 		>
