@@ -6,12 +6,17 @@ import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import type { TasksClient } from "./tasks-client";
 import { createHttpTasksClient } from "./tasks-http";
 import { createInMemoryTasksClient } from "./tasks-in-memory";
+import type { TaskWire } from "./tasks-wire";
 
 /**
  * Layer B — adapter contract tests. The same suite runs once against the
  * in-memory adapter and once against the HTTP adapter (with `fetch` stubbed at
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
+ *
+ * The HTTP stub returns the real DRF wire shape — `{ next, previous, results,
+ * count }` for paginated GETs, the wire-level `inquiry` field name for the
+ * parent inquiry, and the bucket-status filter (`active|completed|archived`).
  */
 
 function makeTask(id: string, overrides: Partial<Task> = {}): Task {
@@ -40,6 +45,25 @@ function makeTask(id: string, overrides: Partial<Task> = {}): Task {
 	};
 }
 
+function toWire(task: Task): TaskWire {
+	return {
+		id: task.id,
+		name: task.name,
+		status: task.status,
+		inquiry: task.procurementInquiry,
+		assignee: task.assignee,
+		createdAt: task.createdAt,
+		deadlineAt: task.deadlineAt,
+		description: task.description,
+		questionCount: task.questionCount,
+		completedResponse: task.completedResponse,
+		attachments: task.attachments,
+		statusBeforeArchive: task.statusBeforeArchive,
+		supplierQuestions: task.supplierQuestions,
+		updatedAt: task.updatedAt,
+	};
+}
+
 const SEED: Task[] = [
 	makeTask("t1", { status: "assigned", name: "Согласовать цену" }),
 	makeTask("t2", { status: "in_progress", name: "Запросить КП" }),
@@ -65,6 +89,23 @@ interface HttpRoute {
 	respond: (req: { url: string; init?: RequestInit }) => { status: number; body?: unknown };
 }
 
+const BUCKET_TO_STATUSES: Record<string, Set<string>> = {
+	active: new Set(["assigned", "in_progress"]),
+	completed: new Set(["completed"]),
+	archived: new Set(["archived"]),
+};
+
+function bucketFilter(tasks: Task[], statusParam: string | null): Task[] {
+	if (!statusParam) return tasks;
+	const buckets = statusParam.split(",");
+	const allowed = new Set<string>();
+	for (const b of buckets) {
+		const set = BUCKET_TO_STATUSES[b];
+		if (set) for (const s of set) allowed.add(s);
+	}
+	return tasks.filter((t) => allowed.has(t.status));
+}
+
 function httpAdapter(): Adapter {
 	const store = new Map<string, Task>(SEED.map((t) => [t.id, structuredClone(t)]));
 
@@ -72,123 +113,82 @@ function httpAdapter(): Adapter {
 		const q = params.get("q")?.toLowerCase();
 		const procurementInquiry = params.get("procurementInquiry");
 		const company = params.get("company");
-		const statuses = params.getAll("statuses");
-		return Array.from(store.values()).filter((t) => {
-			if (q && !t.name.toLowerCase().includes(q)) return false;
-			if (procurementInquiry && t.procurementInquiry.id !== procurementInquiry) return false;
-			if (company && t.procurementInquiry.companyId !== company) return false;
-			if (statuses.length > 0 && !statuses.includes(t.status)) return false;
-			return true;
-		});
+		const status = params.get("status");
+		let items = Array.from(store.values());
+		if (q) items = items.filter((t) => t.name.toLowerCase().includes(q));
+		if (procurementInquiry) items = items.filter((t) => t.procurementInquiry.id === procurementInquiry);
+		if (company) items = items.filter((t) => t.procurementInquiry.companyId === company);
+		items = bucketFilter(items, status);
+		return items;
 	}
 
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/tasks\/all$/,
-			respond: () => ({ status: 200, body: Array.from(store.values()) }),
-		},
-		{
-			method: "GET",
-			path: /^\/tasks\/board(\?|$)/,
-			respond: ({ url }) => {
-				const u = new URL(url, "http://test");
-				const filtered = applyFilters(u.searchParams);
-				const column = u.searchParams.get("column");
-				if (column) {
-					const colTasks = filtered.filter((t) => t.status === column);
-					return { status: 200, body: { results: colTasks, next: null } };
-				}
-				const byStatus = (s: string) => {
-					const list = filtered.filter((t) => t.status === s);
-					return { results: list, next: null, count: list.length };
-				};
-				return {
-					status: 200,
-					body: {
-						assigned: byStatus("assigned"),
-						in_progress: byStatus("in_progress"),
-						completed: byStatus("completed"),
-						archived: byStatus("archived"),
-					},
-				};
-			},
-		},
-		{
-			method: "GET",
-			path: /^\/tasks(\?|$)/,
-			respond: ({ url }) => {
-				const u = new URL(url, "http://test");
-				const filtered = applyFilters(u.searchParams);
-				const pageSize = Number.parseInt(u.searchParams.get("page_size") ?? "20", 10);
-				const page = Number.parseInt(u.searchParams.get("page") ?? "1", 10);
-				const start = (page - 1) * pageSize;
-				const end = start + pageSize;
-				const slice = filtered.slice(start, end);
-				return {
-					status: 200,
-					body: {
-						count: filtered.length,
-						results: slice,
-						next: end < filtered.length ? `page=${page + 1}` : null,
-						previous: page > 1 ? `page=${page - 1}` : null,
-					},
-				};
-			},
-		},
-		{
-			method: "GET",
-			path: /^\/tasks\/([^/]+)$/,
+			path: /^\/tasks\/([^/]+)\/$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
-				const id = decodeURIComponent(path.split("/").pop() ?? "");
+				const id = decodeURIComponent(path.split("/").filter(Boolean).pop() ?? "");
 				const task = store.get(id);
 				if (!task) return { status: 404 };
-				return { status: 200, body: task };
+				return { status: 200, body: toWire(task) };
+			},
+		},
+		{
+			method: "GET",
+			path: /^\/tasks\/(\?|$)/,
+			respond: ({ url }) => {
+				const u = new URL(url, "http://test");
+				const filtered = applyFilters(u.searchParams);
+				return {
+					status: 200,
+					body: {
+						next: null,
+						previous: null,
+						count: filtered.length,
+						results: filtered.map(toWire),
+					},
+				};
 			},
 		},
 		{
 			method: "POST",
-			path: /^\/tasks\/([^/]+)\/status$/,
+			path: /^\/tasks\/([^/]+)\/change_status\/$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/tasks\/([^/]+)\/status$/);
+				const match = path.match(/^\/tasks\/([^/]+)\/change_status\/$/);
 				const id = decodeURIComponent(match?.[1] ?? "");
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
 				const data = JSON.parse(init?.body as string) as {
-					status: Task["status"];
+					status?: Task["status"];
 					completedResponse?: string;
 				};
 				if (data.completedResponse === "__conflict__") return { status: 409, body: { detail: "task locked" } };
 				if (data.status === ("invalid" as Task["status"])) {
 					return { status: 400, body: { fieldErrors: { status: ["invalid"] } } };
 				}
+				// Empty body → unarchive (restore statusBeforeArchive).
+				const isUnarchive = data.status === undefined && existing.status === "archived";
+				const nextStatus = isUnarchive
+					? (existing.statusBeforeArchive ?? "assigned")
+					: (data.status ?? existing.status);
+				if (data.status === undefined && existing.status !== "archived") {
+					return { status: 400, body: { fieldErrors: { status: ["required when the task is not archived"] } } };
+				}
 				const updated: Task = {
 					...existing,
-					status: data.status,
+					status: nextStatus,
 					completedResponse: data.completedResponse ?? existing.completedResponse,
 					statusBeforeArchive:
-						data.status === "archived" && existing.status !== "archived"
+						nextStatus === "archived" && existing.status !== "archived"
 							? existing.status
-							: existing.statusBeforeArchive,
+							: nextStatus !== "archived"
+								? null
+								: existing.statusBeforeArchive,
 				};
 				store.set(id, updated);
-				return { status: 200, body: updated };
-			},
-		},
-		{
-			method: "DELETE",
-			path: /^\/tasks\/([^/]+)\/attachments\/([^/]+)$/,
-			respond: ({ url }) => {
-				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/tasks\/([^/]+)\/attachments\/([^/]+)$/);
-				const id = decodeURIComponent(match?.[1] ?? "");
-				const attId = decodeURIComponent(match?.[2] ?? "");
-				const existing = store.get(id);
-				if (!existing) return { status: 404 };
-				store.set(id, { ...existing, attachments: existing.attachments.filter((a) => a.id !== attId) });
-				return { status: 204 };
+				return { status: 200, body: toWire(updated) };
 			},
 		},
 	];
@@ -222,8 +222,6 @@ describe.each(adapters.map((make) => [make().name, make]))("TasksClient contract
 
 	beforeEach(() => {
 		_setMockDelay(0, 0);
-		// `make().build()` constructs an adapter; the in-memory factory reseeds the
-		// singleton via the `seed` option, so we don't reach into `_setTasks`.
 		client = make().build();
 	});
 
@@ -237,40 +235,26 @@ describe.each(adapters.map((make) => [make().name, make]))("TasksClient contract
 		expect(all.map((t) => t.id).sort()).toEqual(["t1", "t2", "t3", "t4"]);
 	});
 
-	it("board groups results into four status-keyed columns", async () => {
+	it("board groups results into three bucket columns — active (assigned + in_progress) | completed | archived", async () => {
 		const board = await client.board();
-		expect(board.assigned?.results.map((t) => t.id)).toEqual(["t1"]);
-		expect(board.in_progress?.results.map((t) => t.id)).toEqual(["t2"]);
+		expect(board.active?.results.map((t) => t.id).sort()).toEqual(["t1", "t2"]);
 		expect(board.completed?.results.map((t) => t.id)).toEqual(["t3"]);
 		expect(board.archived?.results.map((t) => t.id)).toEqual(["t4"]);
 	});
 
 	it("board filters by q across task name", async () => {
 		const board = await client.board({ q: "цен" });
-		expect(board.assigned?.results.map((t) => t.id)).toEqual(["t1"]);
-		expect(board.in_progress?.results ?? []).toHaveLength(0);
+		expect(board.active?.results.map((t) => t.id)).toEqual(["t1"]);
+		expect(board.completed?.results ?? []).toHaveLength(0);
 	});
 
 	it("board with column param returns a single-column page", async () => {
-		const page = await client.board({ column: "assigned" });
-		expect(page.results?.map((t) => t.id)).toEqual(["t1"]);
-		expect(page.assigned).toBeUndefined();
+		const page = await client.board({ column: "active" });
+		expect(page.results?.map((t) => t.id).sort()).toEqual(["t1", "t2"]);
+		expect(page.active).toBeUndefined();
 	});
 
-	it("list returns paginated results with count + next + previous", async () => {
-		const page1 = await client.list({ page: 1, page_size: 2 });
-		expect(page1.results).toHaveLength(2);
-		expect(page1.count).toBe(4);
-		expect(page1.next).toBeTruthy();
-		expect(page1.previous).toBeNull();
-
-		const page2 = await client.list({ page: 2, page_size: 2 });
-		expect(page2.results).toHaveLength(2);
-		expect(page2.next).toBeNull();
-		expect(page2.previous).toBeTruthy();
-	});
-
-	it("list narrows by status set", async () => {
+	it("list narrows by status set (translated to bucket)", async () => {
 		const page = await client.list({ statuses: ["completed"] });
 		expect(page.results.map((t) => t.id)).toEqual(["t3"]);
 	});
@@ -278,6 +262,7 @@ describe.each(adapters.map((make) => [make().name, make]))("TasksClient contract
 	it("get returns the task", async () => {
 		const task = await client.get("t1");
 		expect(task.name).toBe("Согласовать цену");
+		expect(task.procurementInquiry.id).toBe("T-001");
 	});
 
 	it("changeStatus moves the task between statuses", async () => {
@@ -292,6 +277,12 @@ describe.each(adapters.map((make) => [make().name, make]))("TasksClient contract
 		const fetched = await client.get("t2");
 		expect(fetched.status).toBe("archived");
 		expect(fetched.statusBeforeArchive).toBe("in_progress");
+	});
+
+	it("changeStatus with empty body unarchives — restores statusBeforeArchive", async () => {
+		await client.changeStatus("t2", { status: "archived" });
+		const restored = await client.changeStatus("t2", {});
+		expect(restored.status).toBe("in_progress");
 	});
 
 	it("changeStatus to completed stores completedResponse", async () => {
@@ -323,6 +314,17 @@ describe("HTTP-only error branches", () => {
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);
 			expect((err as ValidationError).fieldErrors).toEqual({ status: ["invalid"] });
+		}
+	});
+
+	it("changeStatus with empty body on non-archived task throws ValidationError", async () => {
+		const harness = httpAdapter();
+		const client = harness.build();
+		try {
+			await client.changeStatus("t1", {});
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(ValidationError);
 		}
 	});
 

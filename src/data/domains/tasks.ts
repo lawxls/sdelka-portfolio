@@ -9,9 +9,9 @@ export type { Attachment, Task, TaskSortField, TaskStatus } from "../task-types"
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "../task-types";
 
 /**
- * Per-status column in a board response. The board view is a status-keyed
- * object (not a flat cursor page), so it gets its own typed shape rather than
- * `CursorPage<T>`.
+ * Per-bucket column in a board response. The board view is keyed by the API's
+ * bucket-status (active | completed | archived), so it gets its own typed
+ * shape rather than `CursorPage<T>`.
  */
 export interface BoardColumn {
 	results: Task[];
@@ -20,12 +20,18 @@ export interface BoardColumn {
 }
 
 /**
- * Board response. Either four columns (default board fetch) or a single column
- * payload when `column` is passed (board column pagination).
+ * Bucket-status keys used in the board response. The SPA collapses raw
+ * statuses (assigned + in_progress) into the `active` bucket so the column
+ * layout aligns with the API's `status` filter.
+ */
+export type TaskBoardBucket = "active" | "completed" | "archived";
+
+/**
+ * Board response. Either three buckets (default board fetch) or a single
+ * column payload when `column` is passed (board column pagination).
  */
 export interface TaskBoardResponse {
-	assigned?: BoardColumn;
-	in_progress?: BoardColumn;
+	active?: BoardColumn;
 	completed?: BoardColumn;
 	archived?: BoardColumn;
 	results?: Task[];
@@ -38,7 +44,7 @@ export interface FetchTaskBoardParams {
 	company?: string;
 	sort?: TaskSortField;
 	dir?: "asc" | "desc";
-	column?: TaskStatus;
+	column?: TaskBoardBucket;
 	cursor?: string;
 }
 
@@ -46,6 +52,7 @@ export interface FetchTasksParams extends TaskFilterParams {
 	page?: number;
 	page_size?: number;
 	statuses?: TaskStatus[];
+	cursor?: string;
 }
 
 export interface TaskListResponse {
@@ -56,6 +63,6 @@ export interface TaskListResponse {
 }
 
 export interface ChangeStatusData {
-	status: TaskStatus;
+	status?: TaskStatus;
 	completedResponse?: string;
 }

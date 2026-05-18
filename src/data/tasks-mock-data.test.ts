@@ -43,26 +43,23 @@ beforeEach(() => {
 });
 
 describe("fetchTaskBoardMock", () => {
-	it("returns all four columns with seed data grouped by status", async () => {
+	it("returns three bucket columns (active | completed | archived) grouped from the seed", async () => {
 		const result = await fetchTaskBoardMock();
-		expect(result.assigned?.results.length).toBeGreaterThan(0);
+		expect(result.active?.results.length).toBeGreaterThan(0);
 		expect(result.completed?.results.length).toBeGreaterThan(0);
-		// in_progress + archived are empty in the current seed
-		expect(result.in_progress).toBeDefined();
 		expect(result.archived).toBeDefined();
-		for (const t of result.assigned?.results ?? []) expect(t.status).toBe("assigned");
+		for (const t of result.active?.results ?? []) expect(["assigned", "in_progress"]).toContain(t.status);
 		for (const t of result.completed?.results ?? []) expect(t.status).toBe("completed");
 	});
 
-	it("each column reports its own total count", async () => {
+	it("active bucket collapses assigned + in_progress; per-bucket count reflects total", async () => {
 		_setTasks([
 			makeStoredTask("a1", { status: "assigned" }),
 			makeStoredTask("a2", { status: "assigned" }),
 			makeStoredTask("ip1", { status: "in_progress" }),
 		]);
 		const result = await fetchTaskBoardMock();
-		expect(result.assigned?.count).toBe(2);
-		expect(result.in_progress?.count).toBe(1);
+		expect(result.active?.count).toBe(3);
 		expect(result.completed?.count).toBe(0);
 	});
 
@@ -72,8 +69,8 @@ describe("fetchTaskBoardMock", () => {
 			makeStoredTask("t2", { status: "assigned", name: "Цемент М500" }),
 		]);
 		const result = await fetchTaskBoardMock({ q: "армат" });
-		expect(result.assigned?.results).toHaveLength(1);
-		expect(result.assigned?.results[0].id).toBe("t1");
+		expect(result.active?.results).toHaveLength(1);
+		expect(result.active?.results[0].id).toBe("t1");
 	});
 
 	it("filters by inquiry id", async () => {
@@ -82,8 +79,8 @@ describe("fetchTaskBoardMock", () => {
 			makeStoredTask("t2", { status: "assigned", procurementInquiry: { id: "T-B", name: "B", companyId: "c1" } }),
 		]);
 		const result = await fetchTaskBoardMock({ procurementInquiry: "T-A" });
-		expect(result.assigned?.results).toHaveLength(1);
-		expect(result.assigned?.results[0].id).toBe("t1");
+		expect(result.active?.results).toHaveLength(1);
+		expect(result.active?.results[0].id).toBe("t1");
 	});
 
 	it("filters by company id", async () => {
@@ -92,18 +89,18 @@ describe("fetchTaskBoardMock", () => {
 			makeStoredTask("t2", { status: "assigned", procurementInquiry: { id: "T-2", name: "B", companyId: "c2" } }),
 		]);
 		const result = await fetchTaskBoardMock({ company: "c2" });
-		expect(result.assigned?.results).toHaveLength(1);
-		expect(result.assigned?.results[0].id).toBe("t2");
+		expect(result.active?.results).toHaveLength(1);
+		expect(result.active?.results[0].id).toBe("t2");
 	});
 
-	it("sorts assigned column by deadline_at asc", async () => {
+	it("sorts active column by deadline_at asc", async () => {
 		_setTasks([
 			makeStoredTask("t1", { status: "assigned", deadlineAt: "2026-05-01T00:00:00.000Z" }),
 			makeStoredTask("t2", { status: "assigned", deadlineAt: "2026-04-01T00:00:00.000Z" }),
 			makeStoredTask("t3", { status: "assigned", deadlineAt: "2026-06-01T00:00:00.000Z" }),
 		]);
 		const result = await fetchTaskBoardMock({ sort: "deadline_at", dir: "asc" });
-		expect(result.assigned?.results.map((t) => t.id)).toEqual(["t2", "t1", "t3"]);
+		expect(result.active?.results.map((t) => t.id)).toEqual(["t2", "t1", "t3"]);
 	});
 
 	it("supports per-column pagination with column + cursor", async () => {
@@ -114,12 +111,12 @@ describe("fetchTaskBoardMock", () => {
 			}),
 		);
 		_setTasks(many);
-		const first = await fetchTaskBoardMock({ column: "assigned", sort: "deadline_at", dir: "asc" });
+		const first = await fetchTaskBoardMock({ column: "active", sort: "deadline_at", dir: "asc" });
 		expect(first.results).toHaveLength(20);
 		expect(first.next).toBe("t21");
 
 		const second = await fetchTaskBoardMock({
-			column: "assigned",
+			column: "active",
 			cursor: first.next ?? undefined,
 			sort: "deadline_at",
 			dir: "asc",
@@ -289,11 +286,10 @@ describe("seed coherence", () => {
 		expect(procurementInquiryIds.has("T-004")).toBe(true);
 	});
 
-	it("distributes seed tasks across all four statuses", async () => {
+	it("distributes seed tasks across the three buckets (active = assigned+in_progress)", async () => {
 		_resetTasksStore();
 		const result = await fetchTaskBoardMock();
-		expect(result.assigned?.count).toBe(18);
-		expect(result.in_progress?.count).toBe(13);
+		expect(result.active?.count).toBe(18 + 13);
 		expect(result.completed?.count).toBe(25);
 		expect(result.archived?.count).toBe(10);
 	});

@@ -19,6 +19,7 @@ import { createHttpSubscriptionClient } from "./clients/subscription-http";
 import { createInMemorySubscriptionClient } from "./clients/subscription-in-memory";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
 import { createInMemorySuppliersClient } from "./clients/suppliers-in-memory";
+import type { TasksClient } from "./clients/tasks-client";
 import { createHttpTasksClient } from "./clients/tasks-http";
 import { createInMemoryTasksClient } from "./clients/tasks-in-memory";
 import { createHttpWorkspaceEmployeesClient } from "./clients/workspace-employees-http";
@@ -78,6 +79,20 @@ function resolveConfig(): AdapterConfig {
  * adapter's `getCompanySummaries` callback reads from the same HTTP client so
  * an invitee's company chip stays coherent with the real backend.
  */
+/** Compose the tasks client. In HTTP mode, attachment upload + delete fall
+ * back to the in-memory adapter because the backend hasn't exposed those
+ * endpoints yet. Everything else routes to HTTP. */
+function buildTasksClient(mode: AdapterMode): TasksClient {
+	if (mode !== "http") return createInMemoryTasksClient();
+	const http = createHttpTasksClient();
+	const memory = createInMemoryTasksClient();
+	return {
+		...http,
+		uploadAttachments: memory.uploadAttachments.bind(memory),
+		deleteAttachment: memory.deleteAttachment.bind(memory),
+	};
+}
+
 export function buildDataClients(): DataClients {
 	const config = resolveConfig();
 	const companies = createHttpCompaniesClient();
@@ -86,7 +101,7 @@ export function buildDataClients(): DataClients {
 		employees: createInMemoryEmployeesClient(),
 		items: config.items === "http" ? createHttpItemsClient() : createInMemoryItemsClient(),
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
-		tasks: config.tasks === "http" ? createHttpTasksClient() : createInMemoryTasksClient(),
+		tasks: buildTasksClient(config.tasks),
 		procurementInquiries: createHttpProcurementInquiriesClient(),
 		folders: config.folders === "http" ? createHttpFoldersClient() : createInMemoryFoldersClient(),
 		notifications:

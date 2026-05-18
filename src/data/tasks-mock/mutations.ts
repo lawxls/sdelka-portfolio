@@ -4,19 +4,26 @@ import { cloneTask, getTaskAt, requireTaskIdx, writeTaskAt } from "./store";
 
 export async function changeTaskStatusMock(
 	id: string,
-	data: { status: TaskStatus; completedResponse?: string },
+	data: { status?: TaskStatus; completedResponse?: string },
 ): Promise<Task> {
 	await delay();
 	const idx = requireTaskIdx(id);
 	const current = getTaskAt(idx);
+	// Empty body (data.status omitted): unarchive — restore the captured
+	// statusBeforeArchive. Mirrors the backend's contract for `change_status/`.
+	const nextStatus: TaskStatus =
+		data.status ?? (current.status === "archived" ? (current.statusBeforeArchive ?? "assigned") : current.status);
 	const updated: Task = {
 		...current,
-		status: data.status,
+		status: nextStatus,
 		completedResponse: data.completedResponse ?? current.completedResponse,
 		updatedAt: new Date().toISOString(),
 	};
-	if (data.status === "archived" && current.status !== "archived") {
+	if (nextStatus === "archived" && current.status !== "archived") {
 		updated.statusBeforeArchive = current.status;
+	}
+	if (nextStatus !== "archived") {
+		updated.statusBeforeArchive = null;
 	}
 	writeTaskAt(idx, updated);
 	return cloneTask(updated);

@@ -2,12 +2,19 @@ import type {
 	BoardColumn,
 	FetchTaskBoardParams,
 	FetchTasksParams,
+	TaskBoardBucket,
 	TaskBoardResponse,
 	TaskListResponse,
 } from "../domains/tasks";
 import { delay, paginate } from "../mock-utils";
 import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "../task-types";
 import { cloneTask, findTaskIndex, readTasks } from "./store";
+
+const BUCKETS_TO_STATUSES: Record<TaskBoardBucket, readonly TaskStatus[]> = {
+	active: ["assigned", "in_progress"],
+	completed: ["completed"],
+	archived: ["archived"],
+};
 
 const COLUMN_PAGE_SIZE = 20;
 const LIST_PAGE_SIZE = 20;
@@ -38,7 +45,7 @@ function applySortIfAny(tasks: Task[], params: TaskFilterParams): Task[] {
 	return sortTasks(tasks, params.sort, params.dir ?? "asc");
 }
 
-function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: string): BoardColumn {
+function buildBucketColumn(bucket: TaskBoardBucket, params: FetchTaskBoardParams, cursor?: string): BoardColumn {
 	const filterParams: TaskFilterParams = {
 		q: params.q,
 		procurementInquiry: params.procurementInquiry,
@@ -46,7 +53,8 @@ function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: 
 		sort: params.sort,
 		dir: params.dir,
 	};
-	const filtered = applyFilters(readTasks(), filterParams).filter((t) => t.status === status);
+	const bucketStatuses = new Set(BUCKETS_TO_STATUSES[bucket]);
+	const filtered = applyFilters(readTasks(), filterParams).filter((t) => bucketStatuses.has(t.status));
 	const sorted = applySortIfAny(filtered, filterParams);
 	const page = paginate({
 		items: sorted,
@@ -64,14 +72,13 @@ function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: 
 export async function fetchTaskBoardMock(params: FetchTaskBoardParams = {}): Promise<TaskBoardResponse> {
 	await delay();
 	if (params.column) {
-		const col = buildColumn(params.column, params, params.cursor);
+		const col = buildBucketColumn(params.column, params, params.cursor);
 		return { results: col.results, next: col.next };
 	}
 	return {
-		assigned: buildColumn("assigned", params),
-		in_progress: buildColumn("in_progress", params),
-		completed: buildColumn("completed", params),
-		archived: buildColumn("archived", params),
+		active: buildBucketColumn("active", params),
+		completed: buildBucketColumn("completed", params),
+		archived: buildBucketColumn("archived", params),
 	};
 }
 

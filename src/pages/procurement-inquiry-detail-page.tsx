@@ -483,7 +483,7 @@ function ProcurementInquiryDrawerBody({
 	const tabCounts: Partial<Record<ProcurementInquiryDetailTab, number>> = {
 		suppliers: metrics.total,
 		offers: metrics.quotesReceived,
-		tasks: taskColumnsForCounts.assigned.count + taskColumnsForCounts.in_progress.count,
+		tasks: taskColumnsForCounts.active.count,
 	};
 
 	return (
@@ -1290,18 +1290,16 @@ function ProcurementInquiryTasksTab({
 	const activeFilterTasks = activeFilter ? taskColumns[activeFilter].tasks : null;
 
 	const tasks = useMemo(() => {
-		const base = activeFilterTasks ?? [...taskColumns.assigned.tasks, ...taskColumns.in_progress.tasks];
+		const base = activeFilterTasks ?? taskColumns.active.tasks;
 		if (!sort) {
 			return [...base].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 		}
 		return [...base].sort((a, b) => compareTasks(a, b, sort.field as TaskSortField, sort.direction));
-	}, [activeFilterTasks, taskColumns.assigned.tasks, taskColumns.in_progress.tasks, sort]);
+	}, [activeFilterTasks, taskColumns.active.tasks, sort]);
 
-	const isLoading = taskColumns.assigned.isLoading;
+	const isLoading = taskColumns.active.isLoading;
 
-	const tasksTotalCount = activeFilter
-		? taskColumns[activeFilter].count
-		: taskColumns.assigned.count + taskColumns.in_progress.count;
+	const tasksTotalCount = activeFilter ? taskColumns[activeFilter].count : taskColumns.active.count;
 
 	function handleSelectionChange(idOrAll: string) {
 		if (idOrAll === "all") {
