@@ -94,16 +94,17 @@ describe("ProfileSettingsPage", () => {
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});
 
-	test("inline validation error for invalid phone", async () => {
+	test("phone input masks +7 formatting and validates a partial number", async () => {
 		renderPage();
 		const user = userEvent.setup();
 
-		await waitFor(() => {
-			expect(screen.getByLabelText("Номер телефона")).toBeInTheDocument();
-		});
+		const phoneInput = await screen.findByLabelText("Номер телефона");
+		expect(phoneInput).toHaveValue("+7 (999) 123-45-67");
 
-		await user.clear(screen.getByLabelText("Номер телефона"));
-		await user.type(screen.getByLabelText("Номер телефона"), "abc");
+		await user.clear(phoneInput);
+		await user.type(phoneInput, "123");
+		expect(phoneInput).toHaveValue("+7 (123)");
+
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		expect(screen.getByText(/неверный формат/i)).toBeInTheDocument();

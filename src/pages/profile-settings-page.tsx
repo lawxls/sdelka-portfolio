@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
+import { FloatingPhoneInput } from "@/components/floating-phone-input";
 import { TopUpRequestsDialog } from "@/components/top-up-requests-dialog";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
@@ -161,14 +162,12 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 							/>
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">
-							<FloatingInput
+							<FloatingPhoneInput
 								label="Номер телефона"
 								name="phone"
 								value={phone}
-								onChange={(e) => setPhone(e.target.value)}
+								onChange={setPhone}
 								error={phoneError ?? fieldErrors.phone}
-								inputMode="tel"
-								autoComplete="tel"
 							/>
 							<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
 						</div>
