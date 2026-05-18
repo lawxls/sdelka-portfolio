@@ -1,8 +1,11 @@
-import { Cog } from "lucide-react";
+import { Cog, Loader2 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import type { WorkspaceSettings } from "@/data/domains/workspace-settings";
+import { useUpdateWorkspaceSettings, useWorkspaceSettings } from "@/data/use-workspace-settings";
 import { cn } from "@/lib/utils";
 
 const CARD_BASE = "rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-6";
@@ -30,18 +33,22 @@ function SectionHeader({
 	);
 }
 
-function WorkspaceForm() {
-	const [instructions, setInstructions] = useState("");
-	const [savedInstructions, setSavedInstructions] = useState("");
-
+function WorkspaceForm({ data }: { data: WorkspaceSettings }) {
+	const [instructions, setInstructions] = useState(data.agentInstructions);
+	const updateMutation = useUpdateWorkspaceSettings();
 	const instructionsId = useId();
 
-	const isDirty = instructions !== savedInstructions;
+	const isDirty = instructions !== data.agentInstructions;
 
 	function handleSave(e: React.FormEvent) {
 		e.preventDefault();
-		setSavedInstructions(instructions);
-		toast.success("Изменения сохранены");
+		updateMutation.mutate(
+			{ agentInstructions: instructions },
+			{
+				onSuccess: () => toast.success("Изменения сохранены"),
+				onError: () => toast.error("Не удалось сохранить настройки"),
+			},
+		);
 	}
 
 	return (
@@ -65,7 +72,8 @@ function WorkspaceForm() {
 			</SectionCard>
 
 			<div className="flex justify-end">
-				<Button type="submit" disabled={!isDirty}>
+				<Button type="submit" disabled={!isDirty || updateMutation.isPending}>
+					{updateMutation.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
 					Сохранить
 				</Button>
 			</div>
@@ -74,10 +82,43 @@ function WorkspaceForm() {
 }
 
 export function WorkspaceSettingsPage() {
+	const { data, isError, refetch } = useWorkspaceSettings();
+
+	if (isError) {
+		return (
+			<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
+				<div className="mx-auto w-full max-w-[48rem]">
+					<p className="mb-3 text-sm text-muted-foreground">Не удалось загрузить настройки</p>
+					<Button variant="outline" onClick={() => refetch()} className="self-start">
+						Повторить
+					</Button>
+				</div>
+			</main>
+		);
+	}
+
+	if (!data) {
+		return (
+			<main
+				data-testid="workspace-settings-skeleton"
+				className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg"
+			>
+				<div className="mx-auto w-full max-w-[48rem] space-y-5">
+					<SectionCard>
+						<Skeleton className="mb-5 h-4 w-32" />
+						<Skeleton className="h-4 w-40" />
+						<Skeleton className="mt-1.5 h-3 w-64" />
+						<Skeleton className="mt-1.5 h-24 w-full" />
+					</SectionCard>
+				</div>
+			</main>
+		);
+	}
+
 	return (
 		<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
 			<div className="mx-auto w-full max-w-[48rem]">
-				<WorkspaceForm />
+				<WorkspaceForm key={data.agentInstructions} data={data} />
 			</div>
 		</main>
 	);

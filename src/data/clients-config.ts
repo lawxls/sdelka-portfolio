@@ -24,6 +24,7 @@ import { createHttpTasksClient } from "./clients/tasks-http";
 import { createInMemoryTasksClient } from "./clients/tasks-in-memory";
 import { createHttpWorkspaceEmployeesClient } from "./clients/workspace-employees-http";
 import { createInMemoryWorkspaceEmployeesClient } from "./clients/workspace-employees-in-memory";
+import { createHttpWorkspaceSettingsClient } from "./clients/workspace-settings-http";
 import type { DataClients } from "./clients-context";
 
 type AdapterMode = "memory" | "http";
@@ -118,6 +119,7 @@ export function buildDataClients(): DataClients {
 							return all.filter((c) => set.has(c.id));
 						},
 					}),
+		workspaceSettings: createHttpWorkspaceSettingsClient(),
 		companyInfo: config.companyInfo === "http" ? createHttpCompanyInfoClient() : createInMemoryCompanyInfoClient(),
 		session: config.session === "http" ? createHttpSessionClient() : createInMemorySessionClient(),
 		subscription: config.subscription === "http" ? createHttpSubscriptionClient() : createInMemorySubscriptionClient(),

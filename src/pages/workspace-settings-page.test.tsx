@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
+import type { WorkspaceSettingsClient } from "@/data/clients/workspace-settings-client";
+import { createInMemoryWorkspaceSettingsClient } from "@/data/clients/workspace-settings-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { mockHostname } from "@/test-utils";
 import { WorkspaceSettingsPage } from "./workspace-settings-page";
@@ -13,10 +15,12 @@ vi.mock("sonner", () => ({
 }));
 
 let queryClient: QueryClient;
+let workspaceSettings: WorkspaceSettingsClient;
 
-function renderPage() {
+function renderPage(opts: { workspaceSettings?: WorkspaceSettingsClient } = {}) {
+	workspaceSettings = opts.workspaceSettings ?? createInMemoryWorkspaceSettingsClient();
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{}}>
+		<TestClientsProvider queryClient={queryClient} clients={{ workspaceSettings }}>
 			<WorkspaceSettingsPage />
 		</TestClientsProvider>,
 	);
@@ -38,6 +42,16 @@ describe("WorkspaceSettingsPage", () => {
 		test("renders with placeholder", async () => {
 			renderPage();
 			expect(await screen.findByPlaceholderText(/всегда уточняй/i)).toBeInTheDocument();
+		});
+
+		test("hydrates from the workspace settings endpoint", async () => {
+			renderPage({
+				workspaceSettings: createInMemoryWorkspaceSettingsClient({
+					settings: { agentInstructions: "Сохранённые инструкции" },
+				}),
+			});
+			const textarea = await screen.findByPlaceholderText(/всегда уточняй/i);
+			expect(textarea).toHaveValue("Сохранённые инструкции");
 		});
 
 		test("does not render the email signature section", async () => {
@@ -62,13 +76,26 @@ describe("WorkspaceSettingsPage", () => {
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 		});
 
-		test("save triggers toast and resets dirty state", async () => {
+		test("save persists instructions to the workspace settings endpoint", async () => {
 			renderPage();
 			const user = userEvent.setup();
 			await user.type(await screen.findByPlaceholderText(/всегда уточняй/i), "Новые инструкции");
 			await user.click(screen.getByRole("button", { name: "Сохранить" }));
 			await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Изменения сохранены"));
+			const current = await workspaceSettings.get();
+			expect(current.agentInstructions).toBe("Новые инструкции");
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+		});
+
+		test("surfaces an error toast and keeps the form dirty when the request fails", async () => {
+			const failing = createInMemoryWorkspaceSettingsClient();
+			failing.update = vi.fn().mockRejectedValue(new Error("boom"));
+			renderPage({ workspaceSettings: failing });
+			const user = userEvent.setup();
+			await user.type(await screen.findByPlaceholderText(/всегда уточняй/i), "Что-то");
+			await user.click(screen.getByRole("button", { name: "Сохранить" }));
+			await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Не удалось сохранить настройки"));
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
 		});
 	});
 });

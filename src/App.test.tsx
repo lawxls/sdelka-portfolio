@@ -18,6 +18,7 @@ import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import { createInMemoryWorkspaceSettingsClient } from "@/data/clients/workspace-settings-in-memory";
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import {
@@ -119,6 +120,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient(),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
+				workspaceSettings: createInMemoryWorkspaceSettingsClient(),
 				session: createInMemorySessionClient({ refreshAvailable: true }),
 				subscription: createInMemorySubscriptionClient(),
 			}}

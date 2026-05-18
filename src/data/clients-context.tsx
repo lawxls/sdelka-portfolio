@@ -14,6 +14,7 @@ import type { SubscriptionClient } from "./clients/subscription-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
+import type { WorkspaceSettingsClient } from "./clients/workspace-settings-client";
 
 /**
  * Map of all data clients available to the app. As more domains migrate to the
@@ -33,6 +34,7 @@ export interface DataClients {
 	emails?: EmailsClient;
 	profile?: ProfileClient;
 	workspaceEmployees?: WorkspaceEmployeesClient;
+	workspaceSettings?: WorkspaceSettingsClient;
 	companyInfo?: CompanyInfoClient;
 	session?: SessionClient;
 	subscription?: SubscriptionClient;
@@ -126,6 +128,12 @@ export function useWorkspaceEmployeesClient(): WorkspaceEmployeesClient {
 	const { workspaceEmployees } = useClients();
 	if (!workspaceEmployees) throw new Error("workspace-employees client not provided");
 	return workspaceEmployees;
+}
+
+export function useWorkspaceSettingsClient(): WorkspaceSettingsClient {
+	const { workspaceSettings } = useClients();
+	if (!workspaceSettings) throw new Error("workspace-settings client not provided");
+	return workspaceSettings;
 }
 
 export function useCompanyInfoClient(): CompanyInfoClient {
