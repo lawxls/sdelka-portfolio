@@ -10,7 +10,6 @@ vi.mock("sonner", () => ({
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
@@ -19,7 +18,7 @@ import { _setMockDelay } from "@/data/mock-utils";
 import { ORMATEK_SUPPLIERS } from "@/data/seeds/suppliers-ormatek";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 
 import type { ProcurementItem } from "@/data/types";
 import { makeProcurementInquiry, mockHostname } from "@/test-utils";
@@ -80,7 +79,7 @@ function renderDrawer(initialEntries: string[] = ["/positions?item=item-1"]) {
 				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
-				folders: createInMemoryFoldersClient(),
+				folders: testFoldersClient(),
 			}}
 		>
 			<TooltipProvider>

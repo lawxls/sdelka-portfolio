@@ -183,7 +183,6 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				paymentType: input.paymentType,
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
-				generatedAnswers: input.generatedAnswers,
 				procurementInquiryId: input.procurementInquiryId,
 			}));
 			const current = _getAllItems();

@@ -170,13 +170,17 @@ describe("useCreateProcurementInquiryForm", () => {
 		act(() => {
 			result.current.advance();
 		});
-		act(() => result.current.update2("q1", { selectedOption: "A" }));
+		act(() =>
+			result.current.setGeneratedQuestions([
+				{ questionText: "Срочность?", suggests: ["Срочно", "Нет"], answer: "Срочно" },
+			]),
+		);
 		act(() => result.current.goBack());
 
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions[0].name).toBe("Арматура");
 		expect(result.current.step1.positions[0].description).toBe("М500");
-		expect(result.current.step2.answers.q1?.selectedOption).toBe("A");
+		expect(result.current.step2.generatedQuestions[0]?.answer).toBe("Срочно");
 	});
 
 	test("reset clears all fields and returns to step 1", () => {
@@ -186,14 +190,16 @@ describe("useCreateProcurementInquiryForm", () => {
 		act(() => {
 			result.current.advance();
 		});
-		act(() => result.current.update2("q1", { selectedOption: "Yes" }));
+		act(() =>
+			result.current.setGeneratedQuestions([{ questionText: "Срочность?", suggests: ["Срочно"], answer: "Срочно" }]),
+		);
 		act(() => result.current.reset());
 
 		expect(result.current.step).toBe(1);
 		expect(result.current.step1.positions).toHaveLength(1);
 		expect(result.current.step1.positions[0].name).toBe("");
 		expect(result.current.step1.companyId).toBe("");
-		expect(result.current.step2.answers).toEqual({});
+		expect(result.current.step2.generatedQuestions).toEqual([]);
 		expect(result.current.isDirty).toBe(false);
 	});
 
@@ -270,13 +276,49 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(payload.items[0]).not.toHaveProperty("procurementInquiryId");
 	});
 
-	test("toPayload emits generatedAnswers on first item only when answered", () => {
+	test("toPayload emits generatedQuestions at the inquiry level (no per-item answers)", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.update2("q1", { selectedOption: "A" }));
+		act(() =>
+			result.current.setGeneratedQuestions([
+				{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+				{ questionText: "Срочность?", suggests: ["Срочно"], answer: "" },
+			]),
+		);
 
 		const payload = result.current.toPayload();
-		expect(payload.items[0].generatedAnswers).toEqual([{ questionId: "q1", selectedOption: "A" }]);
+		expect(payload.procurementInquiry.generatedQuestions).toEqual([
+			{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+			{ questionText: "Срочность?", suggests: ["Срочно"], answer: "" },
+		]);
+		expect(payload.items[0]).not.toHaveProperty("generatedAnswers");
+	});
+
+	test("setGeneratedQuestions seeds Step 2 state with the preview response", () => {
+		const { result } = setup();
+		act(() => result.current.setGeneratedQuestions([{ questionText: "Q1", suggests: ["A", "B"], answer: "" }]));
+		expect(result.current.step2.generatedQuestions).toEqual([{ questionText: "Q1", suggests: ["A", "B"], answer: "" }]);
+	});
+
+	test("updateGeneratedAnswer writes a single answer string by index", () => {
+		const { result } = setup();
+		act(() =>
+			result.current.setGeneratedQuestions([
+				{ questionText: "Q1", suggests: ["A"], answer: "" },
+				{ questionText: "Q2", suggests: ["B"], answer: "" },
+			]),
+		);
+		act(() => result.current.updateGeneratedAnswer(1, "B"));
+		expect(result.current.step2.generatedQuestions[0].answer).toBe("");
+		expect(result.current.step2.generatedQuestions[1].answer).toBe("B");
+	});
+
+	test("toPayload omits inquiry-level generatedQuestions when none are seeded (Step 2 skipped)", () => {
+		const { result } = setup();
+		fillStep1Required(result);
+
+		const payload = result.current.toPayload();
+		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
 	});
 
 	test("toPayload analoguesNotAllowed passes through the checkbox state", () => {

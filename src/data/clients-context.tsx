@@ -4,6 +4,7 @@ import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { EmployeesClient } from "./clients/employees-client";
 import type { FoldersClient } from "./clients/folders-client";
+import type { GeneratedQuestionsClient } from "./clients/generated-questions-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProcurementInquiriesClient } from "./clients/procurement-inquiries-client";
@@ -27,6 +28,7 @@ export interface DataClients {
 	tasks?: TasksClient;
 	procurementInquiries?: ProcurementInquiriesClient;
 	folders?: FoldersClient;
+	generatedQuestions?: GeneratedQuestionsClient;
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
 	profile?: ProfileClient;
@@ -94,6 +96,12 @@ export function useFoldersClient(): FoldersClient {
 	const { folders } = useClients();
 	if (!folders) throw new Error("folders client not provided");
 	return folders;
+}
+
+export function useGeneratedQuestionsClient(): GeneratedQuestionsClient {
+	const { generatedQuestions } = useClients();
+	if (!generatedQuestions) throw new Error("generatedQuestions client not provided");
+	return generatedQuestions;
 }
 
 export function useNotificationsClient(): NotificationsClient {

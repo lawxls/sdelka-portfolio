@@ -8,7 +8,6 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
 import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
@@ -21,7 +20,12 @@ import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
-import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
+import {
+	fakeGeneratedQuestionsClient,
+	fakeItemsClient,
+	TestClientsProvider,
+	testFoldersClient,
+} from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
 import { makeItem } from "@/test-utils";
 import App from "./App";
@@ -107,7 +111,10 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
-				folders: createInMemoryFoldersClient({ seed: TEST_FOLDERS }),
+				folders: testFoldersClient(TEST_FOLDERS),
+				generatedQuestions: fakeGeneratedQuestionsClient({
+					preview: async () => ({ questions: [{ questionText: "Срочность?", suggests: ["Срочно"] }] }),
+				}),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),
 				profile: createInMemoryProfileClient(),

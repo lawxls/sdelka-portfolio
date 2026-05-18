@@ -1,6 +1,9 @@
 import { useState } from "react";
-import type { CreateProcurementInquiryInput } from "@/data/domains/procurement-inquiries";
-import type { CurrentSupplier, GeneratedAnswer, NewItemInput, PaymentType, Unit, UnloadingType } from "@/data/types";
+import type {
+	CreateProcurementInquiryGeneratedQuestionInput,
+	CreateProcurementInquiryInput,
+} from "@/data/domains/procurement-inquiries";
+import type { CurrentSupplier, NewItemInput, PaymentType, Unit, UnloadingType } from "@/data/types";
 import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
 import { buildEmailVariant } from "./procurement-inquiry-email-templates";
 
@@ -98,13 +101,16 @@ interface Step1State {
 	copySuppliersFromInquiryId: string | null;
 }
 
-interface Step2Answer {
-	selectedOption?: string;
-	freeText?: string;
+/** `answer === ""` means the buyer skipped; the row is still sent so the
+ * inquiry record reflects what was asked. */
+interface Step2GeneratedQuestion {
+	questionText: string;
+	suggests: string[];
+	answer: string;
 }
 
 interface Step2State {
-	answers: Record<string, Step2Answer>;
+	generatedQuestions: Step2GeneratedQuestion[];
 }
 
 interface Step3State {
@@ -162,7 +168,7 @@ function defaultStep1(initialDeadline: string): Step1State {
 }
 
 function defaultStep2(): Step2State {
-	return { answers: {} };
+	return { generatedQuestions: [] };
 }
 
 function defaultStep3(): Step3State {
@@ -179,21 +185,7 @@ function defaultStep1Errors(): Step1Errors {
 	return { positions: [{}] };
 }
 
-function buildGeneratedAnswers(step2: Step2State): GeneratedAnswer[] | undefined {
-	const entries: GeneratedAnswer[] = [];
-	for (const [questionId, answer] of Object.entries(step2.answers)) {
-		const option = answer.selectedOption?.trim();
-		const free = answer.freeText?.trim();
-		if (!option && !free) continue;
-		const entry: GeneratedAnswer = { questionId };
-		if (option) entry.selectedOption = option;
-		if (free) entry.freeText = free;
-		entries.push(entry);
-	}
-	return entries.length > 0 ? entries : undefined;
-}
-
-function buildNewItemInput(position: PositionDraft, step1: Step1State, step2: Step2State): NewItemInput {
+function buildNewItemInput(position: PositionDraft, step1: Step1State): NewItemInput {
 	const payload: NewItemInput = {
 		name: position.name.trim(),
 		companyId: step1.companyId,
@@ -217,9 +209,6 @@ function buildNewItemInput(position: PositionDraft, step1: Step1State, step2: St
 	if (position.currentSupplier) {
 		payload.currentSupplier = buildCurrentSupplierFromDraft(position.currentSupplier);
 	}
-
-	const answers = buildGeneratedAnswers(step2);
-	if (answers) payload.generatedAnswers = answers;
 
 	return payload;
 }
@@ -324,10 +313,17 @@ export function useCreateProcurementInquiryForm() {
 		setStep1Errors((prev) => ({ ...prev, positions: next.map(() => ({})) }));
 	}
 
-	function update2(questionId: string, patch: Step2Answer) {
+	function setGeneratedQuestions(qs: Step2GeneratedQuestion[]) {
+		setStep2({ generatedQuestions: qs });
+	}
+
+	function updateGeneratedAnswer(index: number, answer: string) {
 		setStep2((prev) => {
-			const current = prev.answers[questionId] ?? {};
-			return { answers: { ...prev.answers, [questionId]: { ...current, ...patch } } };
+			const current = prev.generatedQuestions[index];
+			if (!current || current.answer === answer) return prev;
+			const next = prev.generatedQuestions.slice();
+			next[index] = { ...current, answer };
+			return { generatedQuestions: next };
 		});
 	}
 
@@ -431,7 +427,7 @@ export function useCreateProcurementInquiryForm() {
 		step1.analoguesNotAllowed ||
 		step1.additionalInfo !== "" ||
 		step1.copySuppliersFromInquiryId !== null ||
-		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText) ||
+		step2.generatedQuestions.some((q) => q.answer !== "") ||
 		step3.autoSend ||
 		step3.generated;
 
@@ -442,7 +438,13 @@ export function useCreateProcurementInquiryForm() {
 
 	function toPayload(): CreateProcurementInquiryPayload {
 		const procurementInquiry = buildProcurementInquiryInput(step1, step3);
-		const items = step1.positions.map((p) => buildNewItemInput(p, step1, step2));
+		const generatedQuestions: CreateProcurementInquiryGeneratedQuestionInput[] = step2.generatedQuestions.map((q) => ({
+			questionText: q.questionText,
+			suggests: q.suggests,
+			answer: q.answer,
+		}));
+		if (generatedQuestions.length > 0) procurementInquiry.generatedQuestions = generatedQuestions;
+		const items = step1.positions.map((p) => buildNewItemInput(p, step1));
 		return { procurementInquiry, items };
 	}
 
@@ -457,7 +459,8 @@ export function useCreateProcurementInquiryForm() {
 		addPosition,
 		removePosition,
 		setPositions,
-		update2,
+		setGeneratedQuestions,
+		updateGeneratedAnswer,
 		update3,
 		seedEmail,
 		regenerateEmail,

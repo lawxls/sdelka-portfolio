@@ -6,24 +6,26 @@ import {
 	type ListProcurementInquiriesParams,
 	type ProcurementInquiry,
 	type ProcurementInquirySortField,
+	type UpdateProcurementInquiryInput,
 } from "../domains/procurement-inquiries";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import { type DrfCursorPage, toCursorPage } from "./drf";
 import { itemFromApi, type ProcurementItemWire } from "./items-wire";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
 
-/** Detail responses include nested positions (write-only on create, read-only
- * on retrieve). Other endpoints return the wire shape unchanged. */
-type ProcurementInquiryWire = Omit<ProcurementInquiry, "items"> & {
+/** Detail responses include nested positions + clarifying questions; list
+ * endpoints omit both. `generatedQuestions` defaults to `[]` on list-derived
+ * rows so the domain field stays non-optional. */
+type ProcurementInquiryWire = Omit<ProcurementInquiry, "items" | "generatedQuestions"> & {
 	items?: ProcurementItemWire[];
+	generatedQuestions?: ProcurementInquiry["generatedQuestions"];
 };
 
 function inquiryFromApi(wire: ProcurementInquiryWire): ProcurementInquiry {
-	if (!wire.items) {
-		const { items: _, ...rest } = wire;
-		return rest;
-	}
-	return { ...wire, items: wire.items.map(itemFromApi) };
+	const { items, generatedQuestions, ...rest } = wire;
+	const out: ProcurementInquiry = { ...rest, generatedQuestions: generatedQuestions ?? [] };
+	if (items) out.items = items.map(itemFromApi);
+	return out;
 }
 
 /** FE sort-field names → backend `ordering_fields` (snake_case). DRF rejects
@@ -138,15 +140,18 @@ export function createHttpProcurementInquiriesClient(http: HttpClient = defaultH
 	return {
 		list: async (params: ListProcurementInquiriesParams) => {
 			const query = buildQuery(translateListParams(params));
-			const page = await http.get<DrfCursorPage<ProcurementInquiry>>(`/procurement/inquiries/${query}`);
-			return toCursorPage(page);
+			const page = await http.get<DrfCursorPage<ProcurementInquiryWire>>(`/procurement/inquiries/${query}`);
+			return toCursorPage({ ...page, results: page.results.map(inquiryFromApi) });
 		},
 		get: async (id) => inquiryFromApi(await http.get<ProcurementInquiryWire>(`/procurement/inquiries/${enc(id)}/`)),
-		create: (input: CreateProcurementInquiryInput) =>
-			http.post<ProcurementInquiry>(`/procurement/inquiries/`, { body: input }),
-		update: (id, patch) => http.patch<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/`, { body: patch }),
-		archive: (id) => http.post<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/archive/`),
-		unarchive: (id) => http.post<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/unarchive/`),
+		create: async (input: CreateProcurementInquiryInput) =>
+			inquiryFromApi(await http.post<ProcurementInquiryWire>(`/procurement/inquiries/`, { body: input })),
+		update: async (id, patch: UpdateProcurementInquiryInput) =>
+			inquiryFromApi(await http.patch<ProcurementInquiryWire>(`/procurement/inquiries/${enc(id)}/`, { body: patch })),
+		archive: async (id) =>
+			inquiryFromApi(await http.post<ProcurementInquiryWire>(`/procurement/inquiries/${enc(id)}/archive/`)),
+		unarchive: async (id) =>
+			inquiryFromApi(await http.post<ProcurementInquiryWire>(`/procurement/inquiries/${enc(id)}/unarchive/`)),
 		delete: (id) => http.delete<void>(`/procurement/inquiries/${enc(id)}/`),
 	};
 }

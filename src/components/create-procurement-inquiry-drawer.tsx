@@ -9,6 +9,7 @@ import {
 	RefreshCw,
 	Search,
 	Trash2,
+	TriangleAlert,
 	X,
 } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
@@ -46,11 +47,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CreateCompanyPayload } from "@/data/domains/companies";
 import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
-import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCompanyDetail, useCreateAddress, useCreateCompany } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useGeneratePreview } from "@/data/use-generated-questions";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
@@ -169,7 +170,6 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	const { step, step1 } = form;
 
 	const [showConfirm, setShowConfirm] = useState(false);
-	const [step2Ready, setStep2Ready] = useState(false);
 	const [step3Ready, setStep3Ready] = useState(false);
 	const [emailRegenerating, setEmailRegenerating] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -247,7 +247,6 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	function resetForm() {
 		clearRegenerateTimer();
 		form.reset();
-		setStep2Ready(false);
 		setStep3Ready(false);
 		setEmailRegenerating(false);
 		nameInputRefs.current = [];
@@ -338,7 +337,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 								/>
 							</TooltipProvider>
 						)}
-						{step === 2 && <Step2Body form={form} ready={step2Ready} onReady={() => setStep2Ready(true)} />}
+						{step === 2 && <Step2Body form={form} onSkip={() => form.advance()} />}
 						{step === 3 && (
 							<Step3Body
 								form={form}
@@ -389,24 +388,85 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	);
 }
 
-function Step2Body({
-	form,
-	ready,
-	onReady,
-}: {
-	form: ReturnType<typeof useCreateProcurementInquiryForm>;
-	ready: boolean;
-	onReady: () => void;
-}) {
-	const { step2, update2 } = form;
+/** Floor on loader visibility so a fast success doesn't flash. */
+const PREVIEW_LOADER_MIN_MS = 400;
 
+function buildPreviewInput(step1: Step1ForPreview) {
+	return {
+		positions: step1.positions
+			.filter((p) => p.name.trim() !== "")
+			.map((p) => {
+				const desc = p.description.trim();
+				return desc ? { name: p.name.trim(), description: desc } : { name: p.name.trim() };
+			}),
+		folderId: step1.folderId,
+		additionalInfo: step1.additionalInfo.trim() || undefined,
+	};
+}
+
+interface Step1ForPreview {
+	positions: { name: string; description: string }[];
+	folderId: string | null;
+	additionalInfo: string;
+}
+
+function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurementInquiryForm>; onSkip: () => void }) {
+	const { step1, step2, setGeneratedQuestions, updateGeneratedAnswer } = form;
+	const preview = useGeneratePreview();
+	const [minLoaderElapsed, setMinLoaderElapsed] = useState(false);
+	const minLoaderTimerRef = useRef<number | null>(null);
+	// Late preview responses can land after the user has left Step 2 (Back, or
+	// advance-while-loading). Ignore them so a stale success can't repopulate
+	// `generatedQuestions` or call `onSkip` against a wizard that has moved on.
+	const aliveRef = useRef(true);
+
+	const step1Ref = useRef(step1);
+	step1Ref.current = step1;
+	const setQsRef = useRef(setGeneratedQuestions);
+	setQsRef.current = setGeneratedQuestions;
+	const onSkipRef = useRef(onSkip);
+	onSkipRef.current = onSkip;
+	const previewRef = useRef(preview);
+	previewRef.current = preview;
+
+	function runPreview() {
+		setMinLoaderElapsed(false);
+		if (minLoaderTimerRef.current !== null) window.clearTimeout(minLoaderTimerRef.current);
+		minLoaderTimerRef.current = window.setTimeout(() => setMinLoaderElapsed(true), PREVIEW_LOADER_MIN_MS);
+		previewRef.current.reset();
+		previewRef.current.mutate(buildPreviewInput(step1Ref.current), {
+			onSuccess: (data) => {
+				if (!aliveRef.current) return;
+				if (data.questions.length === 0) {
+					// Mock never returns 0; a future LLM might. Persist nothing and
+					// auto-advance so the wizard doesn't get stuck on an empty Step 2.
+					setQsRef.current([]);
+					onSkipRef.current();
+					return;
+				}
+				setQsRef.current(
+					data.questions.map((q) => ({ questionText: q.questionText, suggests: q.suggests, answer: "" })),
+				);
+			},
+		});
+	}
+
+	// Each Step 1→2 transition remounts this body, so the preview fires once
+	// per entry. Mock backend returns a different random subset per call; the
+	// real LLM will eventually base output on the latest positions.
 	useMountEffect(() => {
-		if (ready) return undefined;
-		const id = setTimeout(onReady, 5000);
-		return () => clearTimeout(id);
+		aliveRef.current = true;
+		runPreview();
+		return () => {
+			aliveRef.current = false;
+			if (minLoaderTimerRef.current !== null) {
+				window.clearTimeout(minLoaderTimerRef.current);
+				minLoaderTimerRef.current = null;
+			}
+		};
 	});
 
-	if (!ready) {
+	if (preview.isPending || !minLoaderElapsed) {
 		return (
 			<div
 				role="status"
@@ -419,38 +479,68 @@ function Step2Body({
 		);
 	}
 
+	if (preview.isError) {
+		return (
+			<div
+				role="alert"
+				className="flex flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground"
+			>
+				<TriangleAlert aria-hidden="true" className="size-6 text-destructive" />
+				<p className="text-sm text-foreground">Не удалось загрузить вопросы</p>
+				<div className="flex gap-2">
+					<Button type="button" variant="outline" size="sm" onClick={runPreview}>
+						Повторить
+					</Button>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							// Clear any questions from a previous successful visit so
+							// they don't leak into the submit payload — mirrors the
+							// auto-skip path in `runPreview`.
+							setGeneratedQuestions([]);
+							onSkip();
+						}}
+					>
+						Пропустить
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex flex-col gap-3 pt-4 pb-2">
-			{CREATION_QUESTIONS.map((question, index) => {
-				const answer = step2.answers[question.id] ?? {};
-				const freeTextId = `q-${question.id}-free`;
+			{step2.generatedQuestions.map((question, index) => {
+				const labelId = `q-${index}-label`;
+				const freeTextId = `q-${index}-free`;
+				const selectedChip = question.suggests.find((s) => s === question.answer);
+				const freeText = selectedChip === undefined ? question.answer : "";
 				return (
 					<section
-						key={question.id}
-						aria-labelledby={`q-${question.id}-label`}
+						// biome-ignore lint/suspicious/noArrayIndexKey: questions identified positionally — no stable id available
+						key={index}
+						aria-labelledby={labelId}
 						className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/40 p-4"
 					>
 						<div className="flex items-baseline gap-2.5">
 							<span aria-hidden="true" className="text-sm font-medium tabular-nums text-muted-foreground">
 								{index + 1}.
 							</span>
-							<h4 id={`q-${question.id}-label`} className="text-[15px] font-medium leading-snug text-foreground">
-								{question.label}
+							<h4 id={labelId} className="text-[15px] font-medium leading-snug text-foreground">
+								{question.questionText}
 							</h4>
 						</div>
 						<div className="flex flex-wrap gap-1.5">
-							{question.options.map((option) => {
-								const selected = answer.selectedOption === option;
+							{question.suggests.map((suggest) => {
+								const selected = selectedChip === suggest;
 								return (
 									<button
-										key={option}
+										key={suggest}
 										type="button"
 										aria-pressed={selected}
-										onClick={() =>
-											update2(question.id, {
-												selectedOption: selected ? undefined : option,
-											})
-										}
+										onClick={() => updateGeneratedAnswer(index, selected ? "" : suggest)}
 										className={cn(
 											"rounded-full border px-3 py-1 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none",
 											selected
@@ -458,7 +548,7 @@ function Step2Body({
 												: "border-border bg-background text-foreground hover:bg-muted",
 										)}
 									>
-										{option}
+										{suggest}
 									</button>
 								);
 							})}
@@ -466,9 +556,9 @@ function Step2Body({
 						<Input
 							id={freeTextId}
 							placeholder="Введите свой вариант"
-							value={answer.freeText ?? ""}
-							onChange={(e) => update2(question.id, { freeText: e.target.value })}
-							aria-label={`Свой вариант: ${question.label}`}
+							value={freeText}
+							onChange={(e) => updateGeneratedAnswer(index, e.target.value)}
+							aria-label={`Свой вариант: ${question.questionText}`}
 							className="h-8 bg-background/60 text-sm"
 						/>
 					</section>

@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -9,14 +10,13 @@ vi.mock("sonner", () => ({
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeItem, makeProcurementInquiry as makeProcurementInquiryFixture, makeTask } from "@/test-utils";
 import { ProcurementInquiryDetailPage } from "./procurement-inquiry-detail-page";
@@ -53,7 +53,7 @@ function renderPage({ procurementInquiries = [], items = [], slug }: RenderOpts)
 				suppliers: createInMemorySuppliersClient({ seedByItemId: {} }),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: inquiriesWithItems }),
-				folders: createInMemoryFoldersClient({ seed: FOLDERS }),
+				folders: testFoldersClient(FOLDERS),
 			}}
 		>
 			<TooltipProvider>
@@ -139,7 +139,7 @@ describe("ProcurementInquiryDetailPage", () => {
 					suppliers: createInMemorySuppliersClient({ seedByItemId: {} }),
 					tasks: createInMemoryTasksClient({ seed: [taskForT1, taskForOther] }),
 					procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: [makeProcurementInquiry("T-001")] }),
-					folders: createInMemoryFoldersClient({ seed: FOLDERS }),
+					folders: testFoldersClient(FOLDERS),
 				}}
 			>
 				<TooltipProvider>
@@ -189,6 +189,74 @@ describe("ProcurementInquiryDetailPage", () => {
 
 		await waitFor(() => expect(screen.getByTestId("procurement-inquiry-not-found")).toBeInTheDocument());
 		expect(screen.getByText("Запрос не найден")).toBeInTheDocument();
+	});
+
+	test("«Дополнительные вопросы» section renders persisted questions on the «Информация» tab", async () => {
+		renderPage({
+			procurementInquiries: [
+				makeProcurementInquiry("T-001", {
+					generatedQuestions: [
+						{ id: "gq-1", questionText: "Срочность поставки?", suggests: ["Срочно"], answer: "Срочно" },
+						{ id: "gq-2", questionText: "Marka materiala?", suggests: ["Standart"], answer: "" },
+					],
+				}),
+			],
+			slug: "T-001",
+		});
+
+		await screen.findByRole("heading", { name: "Запрос T-001" });
+		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
+
+		await waitFor(() => expect(screen.getByTestId("procurement-inquiry-tab-details")).toBeInTheDocument());
+		expect(screen.getByText("Дополнительные вопросы")).toBeInTheDocument();
+		expect(screen.getByText("Срочность поставки?")).toBeInTheDocument();
+		expect(screen.getByText("Срочно")).toBeInTheDocument();
+		expect(screen.getByText("Marka materiala?")).toBeInTheDocument();
+		// Skipped row renders the «—» placeholder.
+		expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+	});
+
+	test("«Дополнительные вопросы» section is hidden when no questions exist", async () => {
+		renderPage({
+			procurementInquiries: [makeProcurementInquiry("T-001")],
+			slug: "T-001",
+		});
+
+		await screen.findByRole("heading", { name: "Запрос T-001" });
+		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
+		await waitFor(() => expect(screen.getByTestId("procurement-inquiry-tab-details")).toBeInTheDocument());
+
+		expect(screen.queryByText("Дополнительные вопросы")).not.toBeInTheDocument();
+	});
+
+	test("editing «Дополнительные вопросы» saves the full array via PATCH", async () => {
+		const user = userEvent.setup();
+		renderPage({
+			procurementInquiries: [
+				makeProcurementInquiry("T-001", {
+					generatedQuestions: [
+						{ id: "gq-1", questionText: "Срочность?", suggests: ["Срочно"], answer: "Срочно" },
+						{ id: "gq-2", questionText: "Marka?", suggests: ["Standart"], answer: "" },
+					],
+				}),
+			],
+			slug: "T-001",
+		});
+
+		await screen.findByRole("heading", { name: "Запрос T-001" });
+		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
+		await waitFor(() => expect(screen.getByText("Дополнительные вопросы")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("button", { name: "Редактировать дополнительные вопросы" }));
+		const markaInput = await screen.findByLabelText("Ответ: Marka?");
+		await user.type(markaInput, "Premium");
+		await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("Premium")).toBeInTheDocument();
+		});
+		// Edit mode collapses after save.
+		expect(screen.queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
 	});
 
 	test("archived inquiry still shows its positions in detail (cascade does not hide them here)", async () => {

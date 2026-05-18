@@ -48,6 +48,7 @@ export function makeProcurementInquiry(id: string, overrides: Partial<Procuremen
 		suppliersCount: 0,
 		createdAt: "2026-04-01T00:00:00+03:00",
 		updatedAt: "2026-04-01T00:00:00+03:00",
+		generatedQuestions: [],
 		...overrides,
 	};
 }

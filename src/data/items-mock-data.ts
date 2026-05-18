@@ -251,7 +251,6 @@ export async function createItemsBatchMock(inputs: NewItemInput[]): Promise<{
 			deliveryCostType: input.deliveryCostType,
 			deliveryCost: input.deliveryCost,
 			currentSupplier: input.currentSupplier,
-			generatedAnswers: input.generatedAnswers,
 		};
 		return item;
 	});
@@ -279,34 +278,4 @@ export async function exportItemsMock(
 		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 	});
 	return { blob, filename: "items.xlsx" };
-}
-
-// --- Filter helpers for folder stats (used by folders-mock-data) ---
-
-/** Group active items by their parent inquiry's folder. Items whose parent
- * inquiry is archived (or item itself archived) are excluded. Items with no
- * inquiry — or whose inquiry has no folder — fall into the `null` bucket. */
-export function _statsByFolder(company?: string): Map<string | null, number> {
-	const counts = new Map<string | null, number>();
-	for (const item of itemsStore) {
-		if (isEffectivelyArchived(item)) continue;
-		const state = _inquiryState(item.procurementInquiryId);
-		if (company && state?.companyId !== company) continue;
-		const folderId = state?.folderId ?? null;
-		counts.set(folderId, (counts.get(folderId) ?? 0) + 1);
-	}
-	return counts;
-}
-
-export function _archivedCount(company?: string): number {
-	let count = 0;
-	for (const item of itemsStore) {
-		if (!isEffectivelyArchived(item)) continue;
-		if (company) {
-			const state = _inquiryState(item.procurementInquiryId);
-			if (state?.companyId !== company) continue;
-		}
-		count += 1;
-	}
-	return count;
 }

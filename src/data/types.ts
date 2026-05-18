@@ -95,10 +95,15 @@ export interface CurrentSupplier {
 	leadTimeDays?: number | null;
 }
 
-export interface GeneratedAnswer {
-	questionId: string;
-	selectedOption?: string;
-	freeText?: string;
+/** A clarifying question + chosen answer persisted on a procurement inquiry.
+ * Created via the wizard's Step 2 preview flow and re-rendered on the
+ * inquiry detail page. `answer === ""` means the buyer skipped the question
+ * — preserve that signal rather than dropping the row. */
+export interface ProcurementInquiryGeneratedQuestion {
+	id: string;
+	questionText: string;
+	suggests: string[];
+	answer: string;
 }
 
 export interface ProcurementItem {
@@ -121,7 +126,6 @@ export interface ProcurementItem {
 	/** Optional «Текущий поставщик» captured for this position. Drives the «Ваш поставщик»
 	 * pinned row in supplier tables and seeds `currentPrice` when set. */
 	currentSupplier?: CurrentSupplier;
-	generatedAnswers?: GeneratedAnswer[];
 	searchCompleted?: boolean;
 }
 
@@ -156,6 +160,10 @@ export interface ProcurementInquiry {
 	 * keep payloads lean. Use `useProcurementInquiry(id).data?.items` for the
 	 * detail page; positions on the list view come from `positionsCount`. */
 	items?: ProcurementItem[];
+	/** Step 2 clarifying questions captured during inquiry creation. Present on
+	 * retrieve responses (the list endpoint omits them); defaults to `[]` on
+	 * domain rows derived from a list fetch. */
+	generatedQuestions: ProcurementInquiryGeneratedQuestion[];
 }
 
 export interface Folder {
@@ -215,7 +223,6 @@ export interface NewItemInput {
 	deliveryCostType?: DeliveryCostType;
 	deliveryCost?: number;
 	currentSupplier?: CurrentSupplier;
-	generatedAnswers?: GeneratedAnswer[];
 	/** Initial status. Defaults to "searching" when omitted. The manual-add flow on
 	 * /positions sets this to "ready_for_analytics" so the position is immediately
 	 * pickable in a future inquiry without going through supplier sourcing. */

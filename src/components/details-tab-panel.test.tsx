@@ -3,12 +3,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
 import { SEED_ITEMS } from "@/data/seeds/items";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import { makeProcurementInquiry } from "@/test-utils";
 
 import { DetailsTabPanel } from "./details-tab-panel";
@@ -31,7 +30,7 @@ function renderPanel(itemId = "item-1") {
 			clients={{
 				companies: createInMemoryCompaniesClient(),
 				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
-				folders: createInMemoryFoldersClient(),
+				folders: testFoldersClient(),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
 			}}
 		>
@@ -48,7 +47,7 @@ beforeEach(() => {
 });
 
 describe("DetailsTabPanel", () => {
-	test("renders the four always-visible sections in order (plus Ответы на уточнения when present)", async () => {
+	test("renders the four item-drawer sections in order (no per-item Ответы — those moved to the inquiry detail)", async () => {
 		renderPanel();
 
 		// Wait for the parent inquiry to load — Дополнительно gates on inquiry data.
@@ -57,7 +56,8 @@ describe("DetailsTabPanel", () => {
 		});
 
 		const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-		expect(headings).toEqual(["Основное", "Логистика", "Дополнительно", "Ваш поставщик", "Ответы на уточнения"]);
+		expect(headings).toEqual(["Основное", "Логистика", "Дополнительно", "Ваш поставщик"]);
+		expect(screen.queryByText("Ответы на уточнения")).not.toBeInTheDocument();
 	});
 
 	test("reads inquiry-level fields from the parent inquiry (current supplier name in Ваш поставщик)", async () => {
@@ -71,17 +71,16 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
-	test("shows section-level edit button only for item-level sections (Основное + Ответы)", async () => {
+	test("shows section-level edit button only for the item-level Основное section", async () => {
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		// ProcurementInquiry-level sections are read-only after the schema migration; item-level
-		// sections still allow edits in the item drawer.
+		// Inquiry-level sections are read-only here; clarifications moved off the item.
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Редактировать ответы на уточнения" })).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Редактировать ответы на уточнения" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Редактировать логистику и финансы" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Редактировать дополнительно" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Редактировать текущего поставщика" })).not.toBeInTheDocument();

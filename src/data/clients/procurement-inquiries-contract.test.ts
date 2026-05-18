@@ -403,6 +403,51 @@ describe("HTTP adapter — wire translations", () => {
 		expect(path).not.toContain("deadline=soon");
 	});
 
+	it("create forwards inquiry-level generatedQuestions in the POST body", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().create({
+			name: "Новый",
+			companyId: "c1",
+			items: [{ name: "P1" }],
+			generatedQuestions: [
+				{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+				{ questionText: "Срочность?", suggests: ["Срочно"], answer: "" },
+			],
+		});
+		const last = adapter.lastRequest();
+		expect(last?.method).toBe("POST");
+		expect((last?.body as { generatedQuestions: unknown }).generatedQuestions).toEqual([
+			{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+			{ questionText: "Срочность?", suggests: ["Срочно"], answer: "" },
+		]);
+	});
+
+	it("update forwards inquiry-level generatedQuestions in the PATCH body (full-replace)", async () => {
+		const adapter = httpAdapter(SEED);
+		await adapter.build().update("T-001", {
+			generatedQuestions: [{ questionText: "Marka?", suggests: ["A", "B"], answer: "B" }],
+		});
+		const last = adapter.lastRequest();
+		expect(last?.method).toBe("PATCH");
+		expect((last?.body as { generatedQuestions: unknown }).generatedQuestions).toEqual([
+			{ questionText: "Marka?", suggests: ["A", "B"], answer: "B" },
+		]);
+	});
+
+	it("get parses nested generatedQuestions on the detail response", async () => {
+		const adapter = httpAdapterWithGeneratedQuestions();
+		const inquiry = await adapter.build().get("T-WITH-QS");
+		expect(inquiry.generatedQuestions).toEqual([
+			{ id: "gq-1", questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+		]);
+	});
+
+	it("get defaults generatedQuestions to [] when absent", async () => {
+		const adapter = httpAdapter(SEED);
+		const inquiry = await adapter.build().get("T-001");
+		expect(inquiry.generatedQuestions).toEqual([]);
+	});
+
 	it("explicit deadlineFrom/deadlineTo override the preset", async () => {
 		const adapter = httpAdapter(SEED);
 		await adapter.build().list({ deadline: "soon", deadlineFrom: "2026-08-01", deadlineTo: "2026-08-31" });
@@ -411,6 +456,48 @@ describe("HTTP adapter — wire translations", () => {
 		expect(path).toContain("deadlineTo=2026-08-31");
 	});
 });
+
+/** Stub a detail endpoint that returns nested `generatedQuestions`. */
+function httpAdapterWithGeneratedQuestions() {
+	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
+		const url = input;
+		const method = init?.method ?? "GET";
+		if (method === "GET" && url.endsWith("/procurement/inquiries/T-WITH-QS/")) {
+			const body = {
+				id: "T-WITH-QS",
+				name: "With questions",
+				companyId: "c1",
+				folderId: null,
+				copySuppliersFromInquiryId: null,
+				status: "searching",
+				deadline: null,
+				additionalInfo: "",
+				deliveryAddressId: null,
+				unloading: "",
+				analoguesNotAllowed: false,
+				cashAllowed: false,
+				emailSubject: "",
+				emailBody: "",
+				sendRequestsAutomatically: false,
+				isArchived: false,
+				kpCount: 0,
+				positionsCount: 0,
+				tasksCount: 0,
+				suppliersCount: 0,
+				createdAt: "2026-04-01T00:00:00+03:00",
+				updatedAt: "2026-04-01T00:00:00+03:00",
+				generatedQuestions: [{ id: "gq-1", questionText: "Marka?", suggests: ["A", "B"], answer: "A" }],
+			};
+			return new Response(JSON.stringify(body), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		}
+		throw new Error(`Unmatched ${method} ${url}`);
+	});
+	const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => "test-token" });
+	return { build: () => createHttpProcurementInquiriesClient(http) };
+}
 
 /**
  * HTTP-only error branches: validation, conflict, network. Same coverage as

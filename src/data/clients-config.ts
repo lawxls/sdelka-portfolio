@@ -5,7 +5,7 @@ import { createHttpEmailsClient } from "./clients/emails-http";
 import { createInMemoryEmailsClient } from "./clients/emails-in-memory";
 import { createInMemoryEmployeesClient } from "./clients/employees-in-memory";
 import { createHttpFoldersClient } from "./clients/folders-http";
-import { createInMemoryFoldersClient } from "./clients/folders-in-memory";
+import { createHttpGeneratedQuestionsClient } from "./clients/generated-questions-http";
 import { createHttpItemsClient } from "./clients/items-http";
 import { createInMemoryItemsClient } from "./clients/items-in-memory";
 import { createHttpNotificationsClient } from "./clients/notifications-http";
@@ -32,7 +32,6 @@ interface AdapterConfig {
 	items: AdapterMode;
 	suppliers: AdapterMode;
 	tasks: AdapterMode;
-	folders: AdapterMode;
 	notifications: AdapterMode;
 	emails: AdapterMode;
 	profile: AdapterMode;
@@ -59,7 +58,6 @@ function resolveConfig(): AdapterConfig {
 		items: read("VITE_DATA_ITEMS"),
 		suppliers: read("VITE_DATA_SUPPLIERS"),
 		tasks: read("VITE_DATA_TASKS"),
-		folders: read("VITE_DATA_FOLDERS"),
 		notifications: read("VITE_DATA_NOTIFICATIONS"),
 		emails: read("VITE_DATA_EMAILS"),
 		profile: read("VITE_DATA_PROFILE"),
@@ -103,7 +101,8 @@ export function buildDataClients(): DataClients {
 		suppliers: config.suppliers === "http" ? createHttpSuppliersClient() : createInMemorySuppliersClient(),
 		tasks: buildTasksClient(config.tasks),
 		procurementInquiries: createHttpProcurementInquiriesClient(),
-		folders: config.folders === "http" ? createHttpFoldersClient() : createInMemoryFoldersClient(),
+		folders: createHttpFoldersClient(),
+		generatedQuestions: createHttpGeneratedQuestionsClient(),
 		notifications:
 			config.notifications === "http" ? createHttpNotificationsClient() : createInMemoryNotificationsClient(),
 		emails: config.emails === "http" ? createHttpEmailsClient() : createInMemoryEmailsClient(),

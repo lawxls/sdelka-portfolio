@@ -85,10 +85,6 @@ const ITEM_1: ProcurementItem = {
 	quantityPerDelivery: 15_000,
 	paymentType: "prepayment",
 	deliveryCostType: "paid",
-	generatedAnswers: [
-		{ questionId: "material-grade", selectedOption: "Первичка без вторсырья" },
-		{ questionId: "certificates", selectedOption: "Паспорт качества", freeText: "На каждую партию" },
-	],
 };
 
 // Companions to ITEM_7 inside inquiry T-006. Kept inline (no supplier seeds) so the

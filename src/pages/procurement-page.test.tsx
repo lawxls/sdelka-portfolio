@@ -12,13 +12,12 @@ vi.mock("sonner", () => ({
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { fakeGeneratedQuestionsClient, TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem, makeProcurementInquiry as makeProcurementInquiryFixture } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
@@ -78,7 +77,10 @@ function renderPage(initialEntries?: string[]) {
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
-				folders: createInMemoryFoldersClient({ seed: MOCK_FOLDERS }),
+				folders: testFoldersClient(MOCK_FOLDERS),
+				generatedQuestions: fakeGeneratedQuestionsClient({
+					preview: async () => ({ questions: [] }),
+				}),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>

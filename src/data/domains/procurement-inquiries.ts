@@ -3,7 +3,7 @@
  * Mirrors the Django `ProcurementInquirySerializer` 1:1 (camelCase wire format).
  */
 
-import type { ProcurementInquiryStatus, UnloadingType } from "../types";
+import type { ProcurementInquiry, ProcurementInquiryStatus, UnloadingType } from "../types";
 
 export type { ProcurementInquiry, ProcurementInquiryStatus } from "../types";
 export type { CursorPage } from "./shared";
@@ -65,6 +65,24 @@ export interface CreateProcurementInquiryItemInput {
 	quantityPerDelivery?: number;
 }
 
+/** Write-only nested clarifying-question shape accepted by `POST` and `PATCH
+ * /procurement/inquiries/`. Backend persists rows atomically with the inquiry
+ * and uses full-replace semantics on PATCH. `answer` defaults to `""` server-
+ * side; sending all questions returned by `/generated-questions/preview/`
+ * (even with empty answers) preserves the "asked but skipped" signal. */
+export interface CreateProcurementInquiryGeneratedQuestionInput {
+	questionText: string;
+	suggests: string[];
+	answer: string;
+}
+
+/** PATCH payload. Mirrors `Partial<ProcurementInquiry>` for the editable
+ * fields, but lets `generatedQuestions` use the write shape (no `id`) so
+ * full-replace edits don't need to round-trip the read-side row id. */
+export type UpdateProcurementInquiryInput = Partial<Omit<ProcurementInquiry, "generatedQuestions" | "items">> & {
+	generatedQuestions?: CreateProcurementInquiryGeneratedQuestionInput[];
+};
+
 /** Create payload — mirrors the backend serializer write surface (camelCase).
  * `items` is required and must contain at least one entry; backend rejects
  * empty inquiries (`/procurement/inquiries/` POST is transactional). */
@@ -84,4 +102,5 @@ export interface CreateProcurementInquiryInput {
 	emailSubject?: string;
 	emailBody?: string;
 	sendRequestsAutomatically?: boolean;
+	generatedQuestions?: CreateProcurementInquiryGeneratedQuestionInput[];
 }

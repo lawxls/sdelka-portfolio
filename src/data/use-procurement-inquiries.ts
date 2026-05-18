@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useProcurementInquiriesClient } from "./clients-context";
-import type { ListProcurementInquiriesParams, ProcurementInquiry } from "./domains/procurement-inquiries";
+import type { ListProcurementInquiriesParams, UpdateProcurementInquiryInput } from "./domains/procurement-inquiries";
 import { keys } from "./query-keys";
 
 export function useProcurementInquiries(
@@ -41,7 +41,7 @@ export function useProcurementInquiry(slug: string | null) {
 
 interface UpdateProcurementInquiryVars {
 	id: string;
-	patch: Partial<ProcurementInquiry>;
+	patch: UpdateProcurementInquiryInput;
 }
 
 export function useUpdateProcurementInquiry() {

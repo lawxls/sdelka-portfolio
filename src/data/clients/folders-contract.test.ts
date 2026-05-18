@@ -2,21 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Folder } from "../domains/folders";
 import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
-import { _setItems } from "../items-mock-data";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import type { FoldersClient } from "./folders-client";
 import { createHttpFoldersClient } from "./folders-http";
-import { createInMemoryFoldersClient } from "./folders-in-memory";
 
 /**
- * Layer B — adapter contract tests. The same suite runs once against the
- * in-memory adapter and once against the HTTP adapter (with `fetch` stubbed at
- * the network layer). Both runs assert identical observable behavior so the
- * adapters are interchangeable from a hook's point of view.
- *
- * Folders' list shape is `Folder[]` and stats is `FolderStatsResponse` —
- * neither uses `CursorPage<T>`, which is fine: the seam doesn't force a
- * single envelope onto domains where the underlying paging model differs.
+ * Adapter contract test for the folders HTTP client. Stubs `fetch` and asserts
+ * the wire surface matches the backend (PR #80): cursor-paginated list, stats
+ * endpoint shape, CRUD round-trip, and standard error mapping.
  */
 
 const SEED: Folder[] = [
@@ -24,42 +17,41 @@ const SEED: Folder[] = [
 	{ id: "f2", name: "Стройматериалы", color: "green" },
 ];
 
-interface Adapter {
-	name: string;
-	build: () => FoldersClient;
-}
-
-function memoryAdapter(): Adapter {
-	return {
-		name: "memory",
-		build: () => createInMemoryFoldersClient({ seed: SEED.map((f) => ({ ...f })) }),
-	};
-}
-
 interface HttpRoute {
 	method: string;
 	path: RegExp;
 	respond: (req: { url: string; init?: RequestInit }) => { status: number; body?: unknown };
 }
 
-function httpAdapter(): Adapter {
+interface HttpAdapterTrack {
+	requests: Array<{ method: string; path: string; body?: unknown }>;
+}
+
+function httpAdapter(): { build: () => FoldersClient; track: HttpAdapterTrack } {
 	const store = new Map<string, Folder>(SEED.map((f) => [f.id, { ...f }]));
+	const track: HttpAdapterTrack = { requests: [] };
 	let counter = 0;
 
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/folders$/,
-			respond: () => ({ status: 200, body: Array.from(store.values()) }),
+			path: /^\/folders\/(\?|$)/,
+			respond: () => ({
+				// Real DRF cursor envelope: `next`/`previous` are opaque URLs, `results`
+				// is the page of folders. `pageSize=200` is large enough that the FE
+				// only ever sees one page in practice.
+				status: 200,
+				body: { next: null, previous: null, results: Array.from(store.values()) },
+			}),
 		},
 		{
 			method: "GET",
-			path: /^\/folders\/stats(\?|$)/,
+			path: /^\/folders\/stats\/(\?|$)/,
 			respond: () => ({ status: 200, body: { stats: [], archiveCount: 0 } }),
 		},
 		{
 			method: "POST",
-			path: /^\/folders$/,
+			path: /^\/folders\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { name: string; color: string };
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
@@ -72,10 +64,10 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "PATCH",
-			path: /^\/folders\/([^/]+)$/,
+			path: /^\/folders\/([^/]+)\/$/,
 			respond: ({ url, init }) => {
 				const path = new URL(url, "http://test").pathname;
-				const id = decodeURIComponent(path.split("/").pop() ?? "");
+				const id = decodeURIComponent(path.split("/").filter(Boolean).pop() ?? "");
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
 				const data = JSON.parse(init?.body as string) as { name?: string; color?: string };
@@ -87,10 +79,10 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "DELETE",
-			path: /^\/folders\/([^/]+)$/,
+			path: /^\/folders\/([^/]+)\/$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
-				const id = decodeURIComponent(path.split("/").pop() ?? "");
+				const id = decodeURIComponent(path.split("/").filter(Boolean).pop() ?? "");
 				if (!store.has(id)) return { status: 404 };
 				store.delete(id);
 				return { status: 204 };
@@ -101,8 +93,13 @@ function httpAdapter(): Adapter {
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = input;
 		const method = init?.method ?? "GET";
-		const path = new URL(url, "http://test").pathname + new URL(url, "http://test").search;
-		const route = routes.find((r) => r.method === method && r.path.test(path));
+		const fullPath = new URL(url, "http://test").pathname + new URL(url, "http://test").search;
+		track.requests.push({
+			method,
+			path: fullPath,
+			body: init?.body ? JSON.parse(init.body as string) : undefined,
+		});
+		const route = routes.find((r) => r.method === method && r.path.test(fullPath));
 		if (!route) throw new Error(`Unmatched ${method} ${url}`);
 		const result = await route.respond({ url, init });
 		const hasBody = result.body !== undefined && result.status !== 204;
@@ -113,26 +110,17 @@ function httpAdapter(): Adapter {
 	});
 
 	const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => "test-token" });
-
-	return {
-		name: "http",
-		build: () => createHttpFoldersClient(http),
-	};
+	return { build: () => createHttpFoldersClient(http), track };
 }
 
-const adapters: Array<() => Adapter> = [() => memoryAdapter(), () => httpAdapter()];
-
-describe.each(adapters.map((make) => [make().name, make]))("FoldersClient contract — %s adapter", (_label, make) => {
+describe("FoldersClient HTTP contract", () => {
+	let adapter: ReturnType<typeof httpAdapter>;
 	let client: FoldersClient;
 
 	beforeEach(() => {
 		_setMockDelay(0, 0);
-		// In-memory adapter pulls stats from the items mock — empty the items
-		// store so stats is `{ stats: [], archiveCount: 0 }` for parity with
-		// the HTTP stub. (`_resetItemsStore()` would re-seed SEED_ITEMS, which
-		// without an inquiry-state resolver all fall into the `null` bucket.)
-		_setItems([]);
-		client = make().build();
+		adapter = httpAdapter();
+		client = adapter.build();
 	});
 
 	afterEach(() => {
@@ -140,17 +128,30 @@ describe.each(adapters.map((make) => [make().name, make]))("FoldersClient contra
 		_resetMockDelay();
 	});
 
-	it("list returns the seeded folders", async () => {
+	it("list flattens the DRF cursor envelope into Folder[]", async () => {
 		const folders = await client.list();
 		expect(folders.map((f) => f.id).sort()).toEqual(["f1", "f2"]);
 	});
 
-	it("stats returns FolderStatsResponse shape", async () => {
-		const stats = await client.stats();
-		expect(stats).toEqual({ stats: [], archiveCount: 0 });
+	it("list requests pageSize=200 (single-page fetch)", async () => {
+		await client.list();
+		const last = adapter.track.requests[adapter.track.requests.length - 1];
+		expect(last.method).toBe("GET");
+		expect(last.path).toContain("pageSize=200");
 	});
 
-	it("create + list roundtrip", async () => {
+	it("stats hits /folders/stats/ and returns FolderStatsResponse shape", async () => {
+		const stats = await client.stats();
+		expect(stats).toEqual({ stats: [], archiveCount: 0 });
+		expect(adapter.track.requests[0].path).toMatch(/^\/folders\/stats\//);
+	});
+
+	it("stats threads `company` filter through the query string", async () => {
+		await client.stats({ company: "c1" });
+		expect(adapter.track.requests[0].path).toContain("company=c1");
+	});
+
+	it("create round-trips and appears in list", async () => {
 		const created = await client.create({ name: "Новый", color: "red" });
 		expect(created.name).toBe("Новый");
 		expect(created.color).toBe("red");
@@ -159,7 +160,7 @@ describe.each(adapters.map((make) => [make().name, make]))("FoldersClient contra
 		expect(folders.find((f) => f.id === created.id)?.name).toBe("Новый");
 	});
 
-	it("update patches name", async () => {
+	it("update patches name (PATCH /folders/{id}/)", async () => {
 		const updated = await client.update("f1", { name: "Renamed" });
 		expect(updated.name).toBe("Renamed");
 		const folders = await client.list();
@@ -176,20 +177,13 @@ describe.each(adapters.map((make) => [make().name, make]))("FoldersClient contra
 		await expect(client.update("missing", { name: "x" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 
-	it("delete removes the folder", async () => {
+	it("delete removes the folder (DELETE /folders/{id}/)", async () => {
 		await client.delete("f1");
 		const folders = await client.list();
 		expect(folders.map((f) => f.id)).toEqual(["f2"]);
 	});
-});
 
-/**
- * HTTP-only error branches. The in-memory adapter doesn't surface validation /
- * conflict errors so they're tested only against the HTTP adapter.
- */
-describe("HTTP-only error branches", () => {
 	it("create with empty name throws ValidationError with fieldErrors", async () => {
-		const client = httpAdapter().build();
 		try {
 			await client.create({ name: "", color: "red" });
 			throw new Error("expected throw");
@@ -200,14 +194,13 @@ describe("HTTP-only error branches", () => {
 	});
 
 	it("create with conflicting name throws ConflictError", async () => {
-		const client = httpAdapter().build();
 		await expect(client.create({ name: "__conflict__", color: "red" })).rejects.toBeInstanceOf(ConflictError);
 	});
 
 	it("network failures bubble up as NetworkError", async () => {
 		const fetchStub = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });
-		const client = createHttpFoldersClient(http);
-		await expect(client.list()).rejects.toMatchObject({ name: "NetworkError" });
+		const offline = createHttpFoldersClient(http);
+		await expect(offline.list()).rejects.toMatchObject({ name: "NetworkError" });
 	});
 });
