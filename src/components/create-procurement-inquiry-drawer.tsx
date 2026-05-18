@@ -5,7 +5,6 @@ import {
 	Info,
 	LoaderCircle,
 	Package,
-	Paperclip,
 	Plus,
 	RefreshCw,
 	Search,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -44,18 +44,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
+import type { CreateCompanyPayload } from "@/data/domains/companies";
+import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
 import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import { useCreateAddress } from "@/data/use-company-detail";
+import { useCompanyDetail, useCreateAddress, useCreateCompany } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { formatCurrency, formatFileSize, pluralizeRu } from "@/lib/format";
+import { formatCurrency, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CompanyCreationSheet } from "./company-creation-sheet";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
@@ -71,9 +73,6 @@ interface CreateProcurementInquiryDrawerProps {
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (payload: CreateProcurementInquiryPayload) => void;
 }
-
-export const MAX_FILE_SIZE = 10 * 1024 * 1024;
-export const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
 
 const STEP_TITLES: Record<WizardStep, string> = {
 	1: "Заполните данные по запросу",
@@ -158,7 +157,7 @@ function Field({
 }
 
 export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }: CreateProcurementInquiryDrawerProps) {
-	const { data: companies } = useProcurementCompanies();
+	const { data: companies, isLoading: companiesLoading } = useProcurementCompanies();
 	const { data: folders = [] } = useFolders();
 	const createFolderMutation = useCreateFolder();
 
@@ -202,8 +201,6 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 		if (!lockedCompany) return;
 		if (step1.companyId === lockedCompany.id) return;
 		update1("companyId", lockedCompany.id);
-		const mainAddress = lockedCompany.addresses.find((a) => a.isMain) ?? lockedCompany.addresses[0];
-		update1("addressIds", mainAddress ? [mainAddress.id] : []);
 	}, [open, lockedCompany, step1.companyId]);
 
 	function handleCreateFolder(name: string, color: string) {
@@ -325,6 +322,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 								<Step1Body
 									form={form}
 									companies={companies}
+									companiesLoading={companiesLoading}
 									lockedCompany={lockedCompany}
 									selectedCompany={selectedCompany}
 									folders={folders}
@@ -584,6 +582,7 @@ type FolderList = NonNullable<ReturnType<typeof useFolders>["data"]>;
 interface Step1BodyProps {
 	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	companies: CompanyList;
+	companiesLoading: boolean;
 	lockedCompany: CompanyList[number] | undefined;
 	selectedCompany: CompanyList[number] | undefined;
 	folders: FolderList;
@@ -598,6 +597,7 @@ interface Step1BodyProps {
 function Step1Body({
 	form,
 	companies,
+	companiesLoading,
 	lockedCompany,
 	selectedCompany,
 	folders,
@@ -613,32 +613,29 @@ function Step1Body({
 	const showRemove = step1.positions.length > 1;
 	const [pickerOpen, setPickerOpen] = useState(false);
 	const [activeSupplierPositionIndex, setActiveSupplierPositionIndex] = useState<number | null>(null);
+	const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
+	const createCompanyMutation = useCreateCompany();
 	const activeSupplierInitial =
 		activeSupplierPositionIndex !== null ? step1.positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
+	const hasNoCompanies = !companiesLoading && companies.length === 0;
 
-	function addFilesTo(positionIndex: number, newFiles: FileList | null) {
-		if (!newFiles || newFiles.length === 0) return;
-		const position = step1.positions[positionIndex];
-		// Budget against ALL positions' files — `attachedFiles` is a single procurement-inquiry-level
-		// list once submitted, so the limit applies to the aggregate.
-		let runningTotal = step1.positions.reduce((sum, p) => sum + p.files.reduce((s, f) => s + f.size, 0), 0);
-		const toAdd: File[] = [];
-		for (const file of newFiles) {
-			if (file.size > MAX_FILE_SIZE) continue;
-			if (runningTotal + file.size > MAX_TOTAL_SIZE) break;
-			toAdd.push(file);
-			runningTotal += file.size;
-		}
-		if (toAdd.length > 0) updatePosition(positionIndex, "files", [...position.files, ...toAdd]);
-	}
-
-	function removeFileFrom(positionIndex: number, fileIndex: number) {
-		const position = step1.positions[positionIndex];
-		updatePosition(
-			positionIndex,
-			"files",
-			position.files.filter((_, i) => i !== fileIndex),
-		);
+	function handleSubmitCreateCompany(data: CreateCompanyPayload) {
+		createCompanyMutation.mutate(data, {
+			onSuccess: (created) => {
+				update1("companyId", created.id);
+				const mainAddress = created.addresses.find((a) => a.isMain) ?? created.addresses[0];
+				if (mainAddress) update1("deliveryAddressId", mainAddress.id);
+				setCreateCompanyOpen(false);
+			},
+			onError: () => {
+				// The HTTP adapter's two-step create POSTs the company before the
+				// address. If the address step fails, the company is already
+				// server-side — close the sheet so a retry inside it can't create
+				// a duplicate. The user retries the address from the company drawer.
+				setCreateCompanyOpen(false);
+				toast.error("Не удалось создать компанию полностью. Откройте её, чтобы добавить адрес.");
+			},
+		});
 	}
 
 	return (
@@ -671,34 +668,46 @@ function Step1Body({
 					</Field>
 
 					<Field label="Компания" required className="flex-1">
-						<Select
-							value={step1.companyId || undefined}
-							onValueChange={(v) => {
-								update1("companyId", v);
-								const company = companies.find((c) => c.id === v);
-								const mainAddress = company?.addresses.find((a) => a.isMain) ?? company?.addresses[0];
-								update1("addressIds", mainAddress ? [mainAddress.id] : []);
-							}}
-							disabled={companyDisabled}
-						>
-							<SelectTrigger
-								ref={companyTriggerRef}
-								aria-label="Компания"
-								aria-required="true"
-								aria-invalid={step1Errors.company ? true : undefined}
-								aria-describedby={step1Errors.company ? "company-error" : undefined}
-								className={cn("w-full", step1Errors.company && "border-destructive", companyDisabled && "opacity-70")}
+						{hasNoCompanies ? (
+							<Button
+								type="button"
+								variant="outline"
+								className="w-full justify-center"
+								onClick={() => setCreateCompanyOpen(true)}
+								aria-label="Создать компанию"
+								data-testid="create-company-cta"
 							>
-								<SelectValue placeholder="— выберите —" />
-							</SelectTrigger>
-							<SelectContent position="popper">
-								{companies.map((c) => (
-									<SelectItem key={c.id} value={c.id}>
-										{c.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+								<Plus className="size-4" aria-hidden="true" />
+								Создать компанию
+							</Button>
+						) : (
+							<Select
+								value={step1.companyId || undefined}
+								onValueChange={(v) => {
+									update1("companyId", v);
+									update1("deliveryAddressId", null);
+								}}
+								disabled={companyDisabled}
+							>
+								<SelectTrigger
+									ref={companyTriggerRef}
+									aria-label="Компания"
+									aria-required="true"
+									aria-invalid={step1Errors.company ? true : undefined}
+									aria-describedby={step1Errors.company ? "company-error" : undefined}
+									className={cn("w-full", step1Errors.company && "border-destructive", companyDisabled && "opacity-70")}
+								>
+									<SelectValue placeholder="— выберите —" />
+								</SelectTrigger>
+								<SelectContent position="popper">
+									{companies.map((c) => (
+										<SelectItem key={c.id} value={c.id}>
+											{c.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						)}
 						{step1Errors.company && (
 							<p id="company-error" className="text-sm text-destructive">
 								{step1Errors.company}
@@ -719,8 +728,8 @@ function Step1Body({
 
 				<Field label="Скопировать поставщиков" hint="Скопируйте поставщиков из уже существующего запроса">
 					<CopySuppliersSelect
-						value={step1.copySuppliersFromProcurementInquiryId}
-						onChange={(id) => update1("copySuppliersFromProcurementInquiryId", id)}
+						value={step1.copySuppliersFromInquiryId}
+						onChange={(id) => update1("copySuppliersFromInquiryId", id)}
 					/>
 				</Field>
 			</div>
@@ -755,8 +764,6 @@ function Step1Body({
 						error={step1Errors.positions[index]}
 						onChange={(key, value) => updatePosition(index, key, value)}
 						onRemove={showRemove ? () => removePosition(index) : undefined}
-						onFilesAdd={(files) => addFilesTo(index, files)}
-						onFileRemove={(fileIndex) => removeFileFrom(index, fileIndex)}
 						nameInputRef={(el) => {
 							nameInputRefs.current[index] = el;
 						}}
@@ -796,9 +803,9 @@ function Step1Body({
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<Field label="Адрес доставки">
 					<AddressSelect
-						company={selectedCompany}
-						value={step1.addressIds[0] ?? null}
-						onChange={(id) => update1("addressIds", id ? [id] : [])}
+						companyId={selectedCompany?.id ?? null}
+						value={step1.deliveryAddressId}
+						onChange={(id) => update1("deliveryAddressId", id)}
 					/>
 				</Field>
 
@@ -817,8 +824,8 @@ function Step1Body({
 				<div className="flex flex-wrap gap-2">
 					<CheckboxBadge
 						id="cash-payment-allowed"
-						checked={step1.cashPaymentAllowed}
-						onChange={(v) => update1("cashPaymentAllowed", v)}
+						checked={step1.cashAllowed}
+						onChange={(v) => update1("cashAllowed", v)}
 						ariaLabel="Допускается оплата наличными"
 					>
 						Допускается оплата наличными
@@ -847,6 +854,16 @@ function Step1Body({
 					/>
 				</Field>
 			</div>
+
+			<CompanyCreationSheet
+				open={createCompanyOpen}
+				onOpenChange={(open) => {
+					setCreateCompanyOpen(open);
+					if (!open) createCompanyMutation.reset();
+				}}
+				onSubmit={handleSubmitCreateCompany}
+				isPending={createCompanyMutation.isPending}
+			/>
 		</div>
 	);
 }
@@ -875,8 +892,6 @@ export interface PositionCardProps {
 	error: { name?: string } | undefined;
 	onChange: <K extends keyof PositionDraft>(key: K, value: PositionDraft[K]) => void;
 	onRemove?: () => void;
-	onFilesAdd: (files: FileList | null) => void;
-	onFileRemove: (fileIndex: number) => void;
 	nameInputRef: (el: HTMLInputElement | null) => void;
 	onOpenSupplier: () => void;
 }
@@ -887,8 +902,6 @@ export function PositionCard({
 	error,
 	onChange,
 	onRemove,
-	onFilesAdd,
-	onFileRemove,
 	nameInputRef,
 	onOpenSupplier,
 }: PositionCardProps) {
@@ -943,14 +956,15 @@ export function PositionCard({
 				)}
 			</Field>
 
-			<DescriptionWithAttachments
-				id={descId}
-				value={position.description}
-				onChange={(v) => onChange("description", v)}
-				files={position.files}
-				onFilesAdd={onFilesAdd}
-				onFileRemove={onFileRemove}
-			/>
+			<Field label="Описание / уточнения" htmlFor={descId}>
+				<Textarea
+					id={descId}
+					placeholder="Опишите дополнительные требования к позиции"
+					value={position.description}
+					onChange={(e) => onChange("description", e.target.value)}
+					rows={3}
+				/>
+			</Field>
 
 			<div className="flex flex-wrap gap-3">
 				<Field label="Ед. изм." className="w-32 shrink-0">
@@ -1056,122 +1070,6 @@ function CurrentSupplierSummary({ supplier, onEdit, onRemove }: CurrentSupplierS
 				</span>
 			</div>
 		</div>
-	);
-}
-
-interface DescriptionWithAttachmentsProps {
-	id: string;
-	value: string;
-	onChange: (value: string) => void;
-	files: File[];
-	onFilesAdd: (files: FileList | null) => void;
-	onFileRemove: (index: number) => void;
-}
-
-const isFileDrag = (dt: DataTransfer) => dt.types.includes("Files");
-
-function DescriptionWithAttachments({
-	id,
-	value,
-	onChange,
-	files,
-	onFilesAdd,
-	onFileRemove,
-}: DescriptionWithAttachmentsProps) {
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	// Track nested dragenter/dragleave pairs — text-node children inside the
-	// textarea fire extra events, so a simple boolean flickers.
-	const dragDepthRef = useRef(0);
-	const [isDragOver, setIsDragOver] = useState(false);
-
-	return (
-		<Field
-			label="Описание и спецификация"
-			hint="Добавьте спецификацию: опишите позицию, укажите требования и прикрепите макеты, чертежи или другие материалы, которые помогут поставщикам подготовить наиболее подходящее предложение"
-			htmlFor={id}
-		>
-			<div className="relative">
-				<Textarea
-					id={id}
-					placeholder="По ГОСТ 34028-2016. Прикрепите чертежи или перетащите файлы сюда"
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					spellCheck={false}
-					autoComplete="off"
-					rows={3}
-					className={cn(
-						"pr-10 transition-[color,background-color,border-color,box-shadow] duration-150 motion-reduce:transition-none",
-						isDragOver && "border-primary ring-3 ring-ring/40",
-					)}
-					onDragEnter={(e) => {
-						if (!isFileDrag(e.dataTransfer)) return;
-						e.preventDefault();
-						dragDepthRef.current += 1;
-						setIsDragOver(true);
-					}}
-					onDragOver={(e) => {
-						if (!isFileDrag(e.dataTransfer)) return;
-						e.preventDefault();
-						e.dataTransfer.dropEffect = "copy";
-					}}
-					onDragLeave={(e) => {
-						if (!isFileDrag(e.dataTransfer)) return;
-						dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-						if (dragDepthRef.current === 0) setIsDragOver(false);
-					}}
-					onDrop={(e) => {
-						if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
-						e.preventDefault();
-						dragDepthRef.current = 0;
-						setIsDragOver(false);
-						onFilesAdd(e.dataTransfer.files);
-					}}
-				/>
-				<Button
-					type="button"
-					variant="ghost"
-					size="icon-sm"
-					onClick={() => fileInputRef.current?.click()}
-					aria-label="Прикрепить файлы"
-					className="absolute right-1.5 top-1.5 text-muted-foreground hover:text-foreground active:scale-[0.96] transition-[color,scale] duration-100 motion-reduce:transition-none motion-reduce:active:scale-100 before:absolute before:-inset-1.5 before:content-['']"
-				>
-					<Paperclip aria-hidden="true" className="size-4" />
-				</Button>
-				<input
-					ref={fileInputRef}
-					type="file"
-					multiple
-					className="hidden"
-					onChange={(e) => {
-						onFilesAdd(e.target.files);
-						e.target.value = "";
-					}}
-				/>
-			</div>
-			{files.length > 0 && (
-				<ul className="mt-1 flex flex-col gap-1">
-					{files.map((file, i) => (
-						<li
-							key={`${file.name}-${file.size}`}
-							className="flex items-center gap-2 rounded-md bg-background/60 px-2 py-1 text-sm"
-						>
-							<Paperclip aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-							<span className="min-w-0 flex-1 truncate">{file.name}</span>
-							<span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatFileSize(file.size)}</span>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-xs"
-								onClick={() => onFileRemove(i)}
-								aria-label={`Удалить ${file.name}`}
-							>
-								<X aria-hidden="true" />
-							</Button>
-						</li>
-					))}
-				</ul>
-			)}
-		</Field>
 	);
 }
 
@@ -1301,7 +1199,7 @@ function CopySuppliersRow({
 	selected,
 	onSelect,
 }: {
-	procurementInquiry: ProcurementInquirySummary;
+	procurementInquiry: ProcurementInquiry;
 	selected: boolean;
 	onSelect: () => void;
 }) {
@@ -1343,7 +1241,6 @@ function itemToPositionDraft(item: ProcurementItem): PositionDraft {
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery !== undefined ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
-		files: [],
 	};
 }
 
@@ -1473,19 +1370,32 @@ function PickPositionRow({
 }
 
 interface AddressSelectProps {
-	company: CompanyList[number] | undefined;
+	companyId: string | null;
 	value: string | null;
 	onChange: (id: string | null) => void;
 }
 
-function AddressSelect({ company, value, onChange }: AddressSelectProps) {
+function AddressSelect({ companyId, value, onChange }: AddressSelectProps) {
 	const [open, setOpen] = useState(false);
 	const [creating, setCreating] = useState(false);
-	const createMutation = useCreateAddress(company?.id ?? "");
+	const detailQuery = useCompanyDetail(companyId);
+	const createMutation = useCreateAddress(companyId ?? "");
 
-	const addresses = company?.addresses ?? [];
+	const addresses = detailQuery.data?.addresses ?? [];
 	const selected = value ? addresses.find((a) => a.id === value) : undefined;
-	const disabled = !company;
+	const isLoading = companyId != null && detailQuery.isLoading;
+	const disabled = !companyId || isLoading;
+
+	const onChangeRef = useRef(onChange);
+	onChangeRef.current = onChange;
+
+	useEffect(() => {
+		if (!companyId) return;
+		if (!detailQuery.data) return;
+		if (value && detailQuery.data.addresses.some((a) => a.id === value)) return;
+		const main = detailQuery.data.addresses.find((a) => a.isMain) ?? detailQuery.data.addresses[0];
+		if (main) onChangeRef.current(main.id);
+	}, [companyId, detailQuery.data, value]);
 
 	function handleSelect(id: string | null) {
 		onChange(id);
@@ -1494,7 +1404,7 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 	}
 
 	function handleCreate(text: string) {
-		if (!company) return;
+		if (!companyId) return;
 		const trimmed = text.trim();
 		if (!trimmed) {
 			setCreating(false);
@@ -1510,6 +1420,12 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 		);
 		setCreating(false);
 		setOpen(false);
+	}
+
+	function placeholderLabel() {
+		if (!companyId) return "Сначала выберите компанию";
+		if (isLoading) return "Загружаем адреса…";
+		return "Выберите адрес";
 	}
 
 	return (
@@ -1528,9 +1444,7 @@ function AddressSelect({ company, value, onChange }: AddressSelectProps) {
 					disabled={disabled}
 					className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
 				>
-					<span className="min-w-0 flex-1 truncate text-left">
-						{selected?.address ?? (company ? "Выберите адрес" : "Сначала выберите компанию")}
-					</span>
+					<span className="min-w-0 flex-1 truncate text-left">{selected?.address ?? placeholderLabel()}</span>
 					<ChevronDown aria-hidden="true" className="ml-2 size-4 opacity-60" />
 				</Button>
 			</PopoverTrigger>

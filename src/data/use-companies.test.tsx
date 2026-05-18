@@ -17,9 +17,11 @@ function makeSummary(id: string, overrides: Partial<CompanySummary> = {}): Compa
 		id,
 		name: `Company ${id}`,
 		isMain: false,
-		addresses: [{ id: `addr-${id}`, name: "Офис", address: "г. Москва", isMain: true }],
+		addressesCount: 1,
 		employeeCount: 0,
 		procurementItemCount: 0,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		...overrides,
 	};
 }

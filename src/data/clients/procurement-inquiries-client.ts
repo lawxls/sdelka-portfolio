@@ -3,24 +3,23 @@ import type {
 	CursorPage,
 	ListProcurementInquiriesParams,
 	ProcurementInquiry,
-	ProcurementInquirySummary,
 } from "../domains/procurement-inquiries";
 
 /**
- * Public seam for the inquiries domain. Implementations are in-memory (mock
- * store) or HTTP. Hooks pull this through context, so swapping adapters is a
+ * Public seam for the inquiries domain. Implementations are in-memory (test
+ * fake) or HTTP. Hooks pull this through context, so swapping adapters is a
  * one-line change in the composition root.
  *
- * `list` returns enriched `ProcurementInquirySummary` rows (status rolled up, position +
- * КП counts joined). `get` returns the full `ProcurementInquiry` record. The
- * later slices add `archive`/`delete` and the cross-entity create-with-items
- * operation lives in `procurement-operations`.
+ * Mirrors the Django `ProcurementInquiryViewSet`: list/retrieve return the same
+ * full `ProcurementInquiry` shape (annotated counts always present); archive
+ * and unarchive are distinct endpoints, not a single toggle.
  */
 export interface ProcurementInquiriesClient {
-	list(params: ListProcurementInquiriesParams): Promise<CursorPage<ProcurementInquirySummary>>;
+	list(params: ListProcurementInquiriesParams): Promise<CursorPage<ProcurementInquiry>>;
 	get(id: string): Promise<ProcurementInquiry>;
 	create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry>;
 	update(id: string, patch: Partial<ProcurementInquiry>): Promise<ProcurementInquiry>;
-	archive(id: string, isArchived: boolean): Promise<ProcurementInquiry>;
+	archive(id: string): Promise<ProcurementInquiry>;
+	unarchive(id: string): Promise<ProcurementInquiry>;
 	delete(id: string): Promise<void>;
 }

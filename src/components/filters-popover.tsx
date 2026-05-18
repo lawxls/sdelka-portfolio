@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ProcurementInquirySummary } from "@/data/domains/procurement-inquiries";
+import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import type { CompanySummary, DeviationFilter, FilterState, StatusFilter } from "@/data/types";
 import { STATUS_LABELS } from "@/data/types";
 import { OVERFLOW_ROW_BTN } from "@/lib/class-presets";
@@ -39,7 +39,7 @@ interface FiltersPopoverProps {
 	selectedCompany?: string | undefined;
 	onCompanySelect?: (company: string | undefined) => void;
 	showCompanies?: boolean;
-	procurementInquiries?: ProcurementInquirySummary[];
+	procurementInquiries?: ProcurementInquiry[];
 	selectedProcurementInquiry?: string | undefined;
 	onProcurementInquirySelect?: (procurementInquiryId: string | undefined) => void;
 	triggerVariant?: "icon" | "row";
@@ -118,7 +118,7 @@ function ProcurementInquirySection({
 	selectedProcurementInquiry,
 	onProcurementInquirySelect,
 }: {
-	procurementInquiries: ProcurementInquirySummary[];
+	procurementInquiries: ProcurementInquiry[];
 	selectedProcurementInquiry: string | undefined;
 	onProcurementInquirySelect: (procurementInquiryId: string | undefined) => void;
 }) {

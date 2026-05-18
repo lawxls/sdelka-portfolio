@@ -11,7 +11,7 @@ import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procure
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry } from "@/data/types";
-import { makeCompanyDetail } from "@/test-utils";
+import { makeCompanyDetail, makeProcurementInquiry } from "@/test-utils";
 import { ProcurementInquiriesPage } from "./procurement-inquiries-page";
 
 const FOLDERS: Folder[] = [
@@ -20,24 +20,18 @@ const FOLDERS: Folder[] = [
 ];
 
 const PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
-	{
-		id: "T-001",
+	makeProcurementInquiry("T-001", {
 		name: "Тестовый запрос 1",
-		companyId: "company-1",
 		folderId: "folder-packaging",
-		budget: 10_000_000,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-15",
-	},
-	{
-		id: "T-002",
+	}),
+	makeProcurementInquiry("T-002", {
 		name: "Тестовый запрос 2",
-		companyId: "company-1",
 		folderId: "folder-fillings",
-		budget: 5_000_000,
 		createdAt: "2026-04-15",
 		deadline: "2026-05-25",
-	},
+	}),
 ];
 
 function renderPage(
@@ -159,16 +153,13 @@ describe("ProcurementInquiriesPage", () => {
 	test("archive view shows only archived procurementInquiries; active view excludes them", async () => {
 		const SEED: ProcurementInquiry[] = [
 			...PROCUREMENT_INQUIRIES,
-			{
-				id: "T-099",
+			makeProcurementInquiry("T-099", {
 				name: "Архивный запрос",
-				companyId: "company-1",
 				folderId: null,
-				budget: 0,
 				createdAt: "2026-04-20",
 				deadline: "2026-05-10",
 				isArchived: true,
-			},
+			}),
 		];
 		renderPage(["/inquiries"], SEED);
 		await screen.findByTestId("procurement-inquiry-row-T-001");

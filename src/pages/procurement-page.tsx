@@ -216,7 +216,6 @@ export function ProcurementPage() {
 						name: group.name,
 						companyId: targetCompanyId,
 						folderId,
-						budget: 0,
 						deadline,
 					},
 					items: group.items,

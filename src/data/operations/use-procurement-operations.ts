@@ -29,12 +29,11 @@ export function useSelectSupplierForItem() {
 }
 
 export function useCreateProcurementInquiryWithItems() {
-	const items = useItemsClient();
 	const procurementInquiries = useProcurementInquiriesClient();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (input: CreateProcurementInquiryWithItemsInput) =>
-			createProcurementInquiryWithItems(input, { items, procurementInquiries }),
+			createProcurementInquiryWithItems(input, { procurementInquiries }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: keys.procurementInquiries.all() });
 			invalidateAfterItemListChange(queryClient);

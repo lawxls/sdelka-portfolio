@@ -9,14 +9,10 @@ import {
 	useCompanyDetail,
 	useCreateAddress,
 	useCreateCompany,
-	useCreateEmployee,
 	useDeleteAddress,
 	useDeleteCompany,
-	useDeleteEmployee,
 	useUpdateAddress,
 	useUpdateCompany,
-	useUpdateEmployee,
-	useUpdateEmployeePermissions,
 } from "./use-company-detail";
 
 let queryClient: QueryClient;
@@ -179,75 +175,5 @@ describe("useDeleteAddress", () => {
 
 		await waitFor(() => expect(result.current.isSuccess).toBe(true));
 		expect(deleteAddress).toHaveBeenCalledWith("c1", "a1");
-	});
-});
-
-describe("useCreateEmployee", () => {
-	it("calls client.createEmployee with companyId and data", async () => {
-		const createEmployee = vi.fn().mockResolvedValue(makeCompanyDetail("c1").employees[0]);
-		const client = fakeCompaniesClient({ createEmployee });
-
-		const { result } = renderHook(() => useCreateEmployee("c1"), { wrapper: wrapperFactory(client) });
-		const data = {
-			firstName: "Анна",
-			lastName: "Сидорова",
-			patronymic: "Викторовна",
-			position: "Менеджер",
-			role: "user" as const,
-			phone: "+79991234567",
-			email: "anna@example.com",
-		};
-		result.current.mutate(data);
-
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(createEmployee).toHaveBeenCalledWith("c1", data);
-	});
-});
-
-describe("useUpdateEmployee", () => {
-	it("calls client.updateEmployee with employeeId and data", async () => {
-		const updateEmployee = vi.fn().mockResolvedValue(makeCompanyDetail("c1").employees[0]);
-		const client = fakeCompaniesClient({ updateEmployee });
-
-		const { result } = renderHook(() => useUpdateEmployee("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate({ employeeId: "1", data: { position: "CEO" } });
-
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(updateEmployee).toHaveBeenCalledWith("c1", "1", { position: "CEO" });
-	});
-});
-
-describe("useDeleteEmployee", () => {
-	it("calls client.deleteEmployee", async () => {
-		const deleteEmployee = vi.fn().mockResolvedValue(undefined);
-		const client = fakeCompaniesClient({ deleteEmployee });
-
-		const { result } = renderHook(() => useDeleteEmployee("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate("1");
-
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(deleteEmployee).toHaveBeenCalledWith("c1", "1");
-	});
-});
-
-describe("useUpdateEmployeePermissions", () => {
-	it("calls client.updateEmployeePermissions with data", async () => {
-		const updateEmployeePermissions = vi.fn().mockResolvedValue({
-			id: "p1",
-			employeeId: "1",
-			procurementInquiries: "edit",
-			positions: "edit",
-			tasks: "edit",
-			companies: "edit",
-			employees: "view",
-			emails: "edit",
-		});
-		const client = fakeCompaniesClient({ updateEmployeePermissions });
-
-		const { result } = renderHook(() => useUpdateEmployeePermissions("c1"), { wrapper: wrapperFactory(client) });
-		result.current.mutate({ employeeId: "1", data: { employees: "view" } });
-
-		await waitFor(() => expect(result.current.isSuccess).toBe(true));
-		expect(updateEmployeePermissions).toHaveBeenCalledWith("c1", "1", { employees: "view" });
 	});
 });

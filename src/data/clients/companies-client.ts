@@ -4,21 +4,21 @@ import type {
 	CompanySummary,
 	CreateAddressData,
 	CreateCompanyPayload,
-	CreateEmployeeData,
 	CursorPage,
-	EmployeePermissions,
-	EmployeeWithPermissions,
 	ListCompaniesParams,
 	UpdateAddressData,
 	UpdateCompanyData,
-	UpdateEmployeeData,
-	UpdatePermissionsData,
 } from "../domains/companies";
 
 /**
- * Public seam for the companies domain. Implementations are in-memory (mock store)
- * or HTTP. Hooks pull this through context, so swapping adapters is a one-line
- * change in the composition root.
+ * Public seam for the companies + addresses domain. Implementations are
+ * in-memory (a test fake) or HTTP (production). Hooks pull this through
+ * context, so swapping adapters is a one-line change in the composition root.
+ *
+ * Employees + per-module permissions live on a separate `EmployeesClient` —
+ * the backend's `/companies/employees/` endpoint requires an existing user FK
+ * on create and has no permissions endpoint, so that domain stays in-memory
+ * until the invite/user-resolution flow lands. See `employees-client.ts`.
  */
 export interface CompaniesClient {
 	list(params: ListCompaniesParams): Promise<CursorPage<CompanySummary>>;
@@ -31,13 +31,4 @@ export interface CompaniesClient {
 	createAddress(companyId: string, data: CreateAddressData): Promise<Address>;
 	updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address>;
 	deleteAddress(companyId: string, addressId: string): Promise<void>;
-
-	createEmployee(companyId: string, data: CreateEmployeeData): Promise<EmployeeWithPermissions>;
-	updateEmployee(companyId: string, employeeId: string, data: UpdateEmployeeData): Promise<EmployeeWithPermissions>;
-	deleteEmployee(companyId: string, employeeId: string): Promise<void>;
-	updateEmployeePermissions(
-		companyId: string,
-		employeeId: string,
-		data: UpdatePermissionsData,
-	): Promise<EmployeePermissions>;
 }

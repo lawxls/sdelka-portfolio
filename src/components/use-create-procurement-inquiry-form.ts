@@ -83,7 +83,6 @@ export interface PositionDraft {
 	quantityPerDelivery: string;
 	annualQuantity: string;
 	currentSupplier?: CurrentSupplierDraft;
-	files: File[];
 }
 
 interface Step1State {
@@ -91,12 +90,12 @@ interface Step1State {
 	companyId: string;
 	folderId: string | null;
 	positions: PositionDraft[];
-	addressIds: string[];
+	deliveryAddressId: string | null;
 	unloading: UnloadingType | null;
-	cashPaymentAllowed: boolean;
+	cashAllowed: boolean;
 	analoguesNotAllowed: boolean;
 	additionalInfo: string;
-	copySuppliersFromProcurementInquiryId: string | null;
+	copySuppliersFromInquiryId: string | null;
 }
 
 interface Step2Answer {
@@ -133,7 +132,6 @@ export function defaultPosition(): PositionDraft {
 		unit: "",
 		quantityPerDelivery: "",
 		annualQuantity: "",
-		files: [],
 	};
 }
 
@@ -144,8 +142,7 @@ export function isPositionDraftDirty(p: PositionDraft): boolean {
 		p.unit !== "" ||
 		p.quantityPerDelivery !== "" ||
 		p.annualQuantity !== "" ||
-		p.currentSupplier !== undefined ||
-		p.files.length > 0
+		p.currentSupplier !== undefined
 	);
 }
 
@@ -155,12 +152,12 @@ function defaultStep1(initialDeadline: string): Step1State {
 		companyId: "",
 		folderId: null,
 		positions: [defaultPosition()],
-		addressIds: [],
+		deliveryAddressId: null,
 		unloading: null,
-		cashPaymentAllowed: false,
+		cashAllowed: false,
 		analoguesNotAllowed: false,
 		additionalInfo: "",
-		copySuppliersFromProcurementInquiryId: null,
+		copySuppliersFromInquiryId: null,
 	};
 }
 
@@ -236,37 +233,35 @@ function generateProcurementInquiryName(step1: Step1State): string {
 	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
 }
 
-function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): CreateProcurementInquiryInput {
-	const procurementInquiry: CreateProcurementInquiryInput = {
+type InquiryWithoutItems = Omit<CreateProcurementInquiryInput, "items">;
+
+function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): InquiryWithoutItems {
+	const procurementInquiry: InquiryWithoutItems = {
 		name: generateProcurementInquiryName(step1),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
-		budget: 0,
-		deadline: step1.deadline,
+		deadline: step1.deadline || null,
+		deliveryAddressId: step1.deliveryAddressId,
+		copySuppliersFromInquiryId: step1.copySuppliersFromInquiryId,
+		cashAllowed: step1.cashAllowed,
+		analoguesNotAllowed: step1.analoguesNotAllowed,
+		sendRequestsAutomatically: step3.autoSend,
 	};
 
-	if (step1.addressIds.length > 0) procurementInquiry.addressIds = step1.addressIds;
 	if (step1.unloading) procurementInquiry.unloading = step1.unloading;
-	if (step1.cashPaymentAllowed) procurementInquiry.paymentMethod = "cash";
-	procurementInquiry.analoguesAllowed = !step1.analoguesNotAllowed;
 	const info = step1.additionalInfo.trim();
 	if (info) procurementInquiry.additionalInfo = info;
-	const aggregatedFiles = step1.positions.flatMap((p) => p.files);
-	if (aggregatedFiles.length > 0) {
-		procurementInquiry.attachedFiles = aggregatedFiles.map((f) => ({ name: f.name, size: f.size }));
-	}
 
 	const subject = step3.subject.trim();
+	if (subject) procurementInquiry.emailSubject = subject;
 	const body = step3.body.trim();
-	if (subject || body) procurementInquiry.email = { subject, body };
-
-	procurementInquiry.sendMode = step3.autoSend ? "auto" : "manual";
+	if (body) procurementInquiry.emailBody = body;
 
 	return procurementInquiry;
 }
 
 export interface CreateProcurementInquiryPayload {
-	procurementInquiry: CreateProcurementInquiryInput;
+	procurementInquiry: InquiryWithoutItems;
 	items: NewItemInput[];
 }
 
@@ -429,12 +424,12 @@ export function useCreateProcurementInquiryForm() {
 		step1.folderId !== null ||
 		step1.positions.length > 1 ||
 		step1.positions.some(isPositionDirty) ||
-		step1.addressIds.length > 0 ||
+		step1.deliveryAddressId !== null ||
 		step1.unloading !== null ||
-		step1.cashPaymentAllowed ||
+		step1.cashAllowed ||
 		step1.analoguesNotAllowed ||
 		step1.additionalInfo !== "" ||
-		step1.copySuppliersFromProcurementInquiryId !== null ||
+		step1.copySuppliersFromInquiryId !== null ||
 		Object.values(step2.answers).some((a) => a.selectedOption || a.freeText) ||
 		step3.autoSend ||
 		step3.generated;

@@ -28,8 +28,10 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 		isMain: false,
 		employeeCount: 0,
 		procurementItemCount: 0,
+		addressesCount: addresses.length,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses,
-		employees: [],
 	};
 }
 
@@ -39,6 +41,8 @@ const MULTI_COMPANY: Company[] = [
 	makeCompanyDoc("company-1", "Тестовая компания", TEST_ADDRESSES),
 	makeCompanyDoc("company-2", "Вторая компания", TEST_ADDRESSES),
 ];
+
+const NO_COMPANIES: Company[] = [];
 
 let companies: Company[];
 
@@ -163,6 +167,39 @@ describe("CreateProcurementInquiryDrawer — wizard chrome", () => {
 		await user.click(screen.getByRole("button", { name: "Назад" }));
 
 		expect(screen.getByLabelText("Название")).toHaveValue("Арматура");
+	});
+});
+
+describe("CreateProcurementInquiryDrawer — zero companies", () => {
+	test("«Компания» field renders «Создать компанию» CTA when companies list is empty", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		await screen.findByRole("button", { name: /Создать компанию/i });
+		expect(screen.queryByRole("combobox", { name: "Компания" })).not.toBeInTheDocument();
+	});
+
+	test("clicking «Создать компанию» opens the nested CompanyCreationSheet", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		const user = userEvent.setup();
+		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		await user.click(cta);
+		expect(await screen.findByText("Новая компания")).toBeInTheDocument();
+	});
+
+	test("submitting the nested sheet auto-selects the new company and its main address", async () => {
+		companies = NO_COMPANIES;
+		renderDrawer();
+		const user = userEvent.setup();
+		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		await user.click(cta);
+
+		await user.type(screen.getByLabelText("Название компании"), "Новая ООО");
+		await user.type(screen.getByLabelText("Название адреса"), "Офис");
+		await user.type(screen.getByLabelText("Адрес"), "г. Москва");
+		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+
+		await screen.findByRole("combobox", { name: "Компания" });
 	});
 });
 
@@ -338,7 +375,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 });
 
 describe("CreateProcurementInquiryDrawer — submit payload shape", () => {
-	test("emits { procurementInquiry, items } with inquiry meta fields and zero budget", async () => {
+	test("emits { procurementInquiry, items } with inquiry meta fields", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -356,7 +393,6 @@ describe("CreateProcurementInquiryDrawer — submit payload shape", () => {
 			// Auto-derived from the first position when no user-provided name exists.
 			name: "Арматура",
 			deadline: "2026-06-15",
-			budget: 0,
 			companyId: "company-1",
 		});
 		expect(payload.items).toHaveLength(1);
@@ -445,7 +481,7 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		});
 	});
 
-	test("submit payload carries sendMode='manual' by default with email body", async () => {
+	test("submit payload carries sendRequestsAutomatically=false by default with email body", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -454,11 +490,11 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.sendMode).toBe("manual");
-		expect(payload.procurementInquiry.email?.body).toContain("Арматура");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(false);
+		expect(payload.procurementInquiry.emailBody).toContain("Арматура");
 	});
 
-	test("checking Автоотправка flips sendMode to 'auto' on submit", async () => {
+	test("checking Автоотправка flips sendRequestsAutomatically to true on submit", async () => {
 		const onSubmit = vi.fn();
 		renderDrawer({ onSubmit });
 		const user = userEvent.setup();
@@ -468,6 +504,6 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.sendMode).toBe("auto");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(true);
 	});
 });

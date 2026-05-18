@@ -1,26 +1,11 @@
 import type { WorkspaceEmployeeDetail } from "../domains/workspace-employees";
-import type { CompanySummary } from "../types";
-
-const MAIN_COMPANY_SUMMARY: CompanySummary = {
-	id: "company-1",
-	name: "ОРМАТЕК",
-	isMain: true,
-	addresses: [
-		{
-			id: "addr-c1-office",
-			name: "Головной офис",
-			address: "г. Москва, Ленинградское шоссе, д. 16А, стр. 1",
-			isMain: true,
-		},
-	],
-	employeeCount: 4,
-	procurementItemCount: 8,
-};
 
 /**
  * Default workspace-employees roster — admin + 6 others, spanning roles and
- * registration states. IDs 1–4 overlap with the main tenant's company-1
- * employees (`SEED_COMPANIES`) so the data stays coherent across the seam.
+ * registration states. Companies are intentionally empty: a fresh workspace
+ * has no companies, and the company-chip on each row is populated by the
+ * composition-root callback that resolves `CompanySummary[]` from the active
+ * companies adapter. Test fixtures that need a company chip seed it directly.
  */
 export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
@@ -33,7 +18,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000001",
 		email: "ivan.zhuravlyov.58@mostholding.ru",
 		registeredAt: "2024-01-15T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-1",
 			employeeId: "1",
@@ -55,7 +40,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000002",
 		email: "o.sokolova@ormatek.com",
 		registeredAt: "2024-02-01T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-2",
 			employeeId: "2",
@@ -77,7 +62,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000003",
 		email: "d.orlov@ormatek.com",
 		registeredAt: "2024-03-12T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-3",
 			employeeId: "3",
@@ -99,7 +84,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000004",
 		email: "e.belova@ormatek.com",
 		registeredAt: "2024-05-20T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-4",
 			employeeId: "4",
@@ -121,7 +106,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000005",
 		email: "n.fedorov@ormatek.com",
 		registeredAt: "2024-08-03T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-5",
 			employeeId: "5",
@@ -143,7 +128,7 @@ export const SEED_WORKSPACE_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 		phone: "+79161000006",
 		email: "a.smirnova@ormatek.com",
 		registeredAt: "2025-01-10T10:00:00Z",
-		companies: [MAIN_COMPANY_SUMMARY],
+		companies: [],
 		permissions: {
 			id: "perm-w-6",
 			employeeId: "6",

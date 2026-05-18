@@ -35,7 +35,6 @@ import {
 	buildCurrentSupplierFromDraft,
 	type CurrentSupplierDraft,
 } from "@/components/use-create-procurement-inquiry-form";
-import { getProcurementInquiryStatus } from "@/data/procurement-inquiries/get-procurement-inquiry-status";
 import {
 	SUPPLIER_STATUSES,
 	type Supplier,
@@ -46,7 +45,14 @@ import {
 	supplierIdentity,
 } from "@/data/supplier-types";
 import { STATUS_ICONS, type Task } from "@/data/task-types";
-import type { Folder, PaymentType, ProcurementInquiry, ProcurementInquiryStatus, ProcurementItem } from "@/data/types";
+import type {
+	Folder,
+	PaymentType,
+	ProcurementInquiry,
+	ProcurementInquiryStatus,
+	ProcurementItem,
+	UnloadingType,
+} from "@/data/types";
 import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
@@ -411,7 +417,7 @@ function ProcurementInquiryDrawerBody({
 	onSupplierOpen,
 }: ProcurementInquiryDrawerBodyProps) {
 	const folder = folders.find((f) => f.id === procurementInquiry.folderId);
-	const status = getProcurementInquiryStatus(items);
+	const status: ProcurementInquiryStatus = procurementInquiry.status;
 	const statusCfg = STATUS_CONFIG[status];
 	const updateProcurementInquiryMutation = useUpdateProcurementInquiry();
 	const updateSupplierMutation = useUpdateItemCurrentSupplier();
@@ -1437,14 +1443,10 @@ function ProcurementInquiryDetailsTab({
 	status: ProcurementInquiryStatus;
 }) {
 	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
-	const addressesText = useMemo(() => {
-		if (!procurementInquiry.addressIds || !company?.addresses) return "";
-		const set = new Set(procurementInquiry.addressIds);
-		return company.addresses
-			.filter((a) => set.has(a.id))
-			.map((a) => a.address)
-			.join("; ");
-	}, [procurementInquiry.addressIds, company?.addresses]);
+	const addressText = useMemo(() => {
+		if (!procurementInquiry.deliveryAddressId || !company?.addresses) return "";
+		return company.addresses.find((a) => a.id === procurementInquiry.deliveryAddressId)?.address ?? "";
+	}, [procurementInquiry.deliveryAddressId, company?.addresses]);
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 	const rfqEditable = RFQ_EDITABLE_STATUSES.has(status);
 
@@ -1476,7 +1478,7 @@ function ProcurementInquiryDetailsTab({
 						<ValueText value={procurementInquiry.name} />
 					</FieldCard>
 					<FieldCard label="Дедлайн">
-						<ValueText value={formatShortDate(procurementInquiry.deadline)} />
+						<ValueText value={procurementInquiry.deadline ? formatShortDate(procurementInquiry.deadline) : ""} />
 					</FieldCard>
 					<FieldCard label="Дата создания">
 						<ValueText value={formatShortDate(procurementInquiry.createdAt)} />
@@ -1505,10 +1507,14 @@ function ProcurementInquiryDetailsTab({
 			<Section title="Логистика">
 				<CardGrid>
 					<FieldCard label="Разгрузка">
-						<ValueText value={procurementInquiry.unloading ? UNLOADING_LABELS[procurementInquiry.unloading] : ""} />
+						<ValueText
+							value={
+								procurementInquiry.unloading ? UNLOADING_LABELS[procurementInquiry.unloading as UnloadingType] : ""
+							}
+						/>
 					</FieldCard>
 					<FieldCard label="Адрес доставки" span="full">
-						<ValueText value={addressesText} />
+						<ValueText value={addressText} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -1521,11 +1527,11 @@ function ProcurementInquiryDetailsTab({
 						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 							<li>
 								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-								{yesNo(procurementInquiry.paymentMethod === "cash")}
+								{yesNo(procurementInquiry.cashAllowed)}
 							</li>
 							<li>
 								<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
-								{yesNo(procurementInquiry.analoguesAllowed)}
+								{yesNo(!procurementInquiry.analoguesNotAllowed)}
 							</li>
 						</ul>
 					</FieldCard>
@@ -1561,8 +1567,8 @@ function ProcurementInquiryRfqSection({
 	const [bodyDraft, setBodyDraft] = useState("");
 	const [autoSendDraft, setAutoSendDraft] = useState(false);
 
-	const currentBody = procurementInquiry.email?.body ?? "";
-	const currentAutoSend = procurementInquiry.sendMode === "auto";
+	const currentBody = procurementInquiry.emailBody ?? "";
+	const currentAutoSend = procurementInquiry.sendRequestsAutomatically;
 
 	function handleEdit() {
 		setBodyDraft(currentBody);
@@ -1577,8 +1583,8 @@ function ProcurementInquiryRfqSection({
 	function handleSave() {
 		const trimmedBody = bodyDraft.trim();
 		const patch: Partial<ProcurementInquiry> = {
-			email: trimmedBody ? { subject: procurementInquiry.email?.subject ?? "", body: trimmedBody } : undefined,
-			sendMode: autoSendDraft ? "auto" : "manual",
+			emailBody: trimmedBody,
+			sendRequestsAutomatically: autoSendDraft,
 		};
 		updateMutation.mutate(
 			{ id: procurementInquiry.id, patch },

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EmployeePermissions } from "../domains/companies";
+import type { EmployeePermissions } from "../domains/employees";
 import type {
 	InviteEmployeeData,
 	UpdatePermissionsData,
@@ -39,9 +39,11 @@ const SEED: WorkspaceEmployeeDetail[] = [
 				id: "c1",
 				name: "Компания А",
 				isMain: true,
-				addresses: [],
+				addressesCount: 0,
 				employeeCount: 3,
 				procurementItemCount: 5,
+				createdAt: "2026-04-01T00:00:00+03:00",
+				updatedAt: "2026-04-01T00:00:00+03:00",
 			},
 		],
 		permissions: {
@@ -379,9 +381,11 @@ describe("in-memory adapter — getCompanySummaries port", () => {
 				id,
 				name: `Company ${id}`,
 				isMain: false,
-				addresses: [],
+				addressesCount: 0,
 				employeeCount: 0,
 				procurementItemCount: 0,
+				createdAt: "2026-04-01T00:00:00+03:00",
+				updatedAt: "2026-04-01T00:00:00+03:00",
 			})),
 		);
 		const client = createInMemoryWorkspaceEmployeesClient({

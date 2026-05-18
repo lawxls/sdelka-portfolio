@@ -42,9 +42,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type {
+	ProcurementInquiry,
 	ProcurementInquirySortDirection,
 	ProcurementInquirySortField,
-	ProcurementInquirySummary,
 } from "@/data/domains/procurement-inquiries";
 import {
 	useArchiveProcurementInquiryCascade,
@@ -175,14 +175,14 @@ function SortableHeaderButton({
 }
 
 interface ProcurementInquiryRowProps {
-	procurementInquiry: ProcurementInquirySummary;
+	procurementInquiry: ProcurementInquiry;
 	rowNumber: number;
 	folders: Folder[];
 	onClick: () => void;
 	onArchive: (id: string, isArchived: boolean) => void;
 	onRename: (id: string) => void;
 	onMoveToFolder: (id: string, folderId: string | null) => void;
-	onDelete: (procurementInquiry: ProcurementInquirySummary) => void;
+	onDelete: (procurementInquiry: ProcurementInquiry) => void;
 	isArchiveView: boolean;
 	isEditing: boolean;
 	onSaveRename: (id: string, name: string) => void;
@@ -244,7 +244,13 @@ function ProcurementInquiryRow({
 					<span className="text-muted-foreground">—</span>
 				)}
 			</TableCell>
-			<TableCell className="text-center tabular-nums">{formatDayMonthShort(procurementInquiry.deadline)}</TableCell>
+			<TableCell className="text-center tabular-nums">
+				{procurementInquiry.deadline ? (
+					formatDayMonthShort(procurementInquiry.deadline)
+				) : (
+					<span className="text-muted-foreground">—</span>
+				)}
+			</TableCell>
 			<TableCell className="text-center tabular-nums">{formatDayMonthShort(procurementInquiry.createdAt)}</TableCell>
 		</TableRow>
 	);
@@ -356,7 +362,7 @@ export function ProcurementInquiriesPage() {
 	const createProcurementInquiryMutation = useCreateProcurementInquiryWithItems();
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const [editingProcurementInquiryId, setEditingProcurementInquiryId] = useState<string | null>(null);
-	const [deletingProcurementInquiry, setDeletingProcurementInquiry] = useState<ProcurementInquirySummary | null>(null);
+	const [deletingProcurementInquiry, setDeletingProcurementInquiry] = useState<ProcurementInquiry | null>(null);
 
 	const companyMap = useMemo(() => {
 		const map: Record<string, string> = {};
@@ -500,7 +506,7 @@ export function ProcurementInquiriesPage() {
 		/>
 	);
 
-	function handleRowClick(procurementInquiry: ProcurementInquirySummary) {
+	function handleRowClick(procurementInquiry: ProcurementInquiry) {
 		navigate({ pathname: inquiryDetailPath(procurementInquiry.id), search: searchParams.toString() });
 	}
 

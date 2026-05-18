@@ -201,7 +201,8 @@ describe("useCreateProcurementInquiryForm", () => {
 		const { result } = setup();
 		expect(result.current.isDirty).toBe(false);
 
-		act(() => result.current.update1("deadline", "2026-06-01"));
+		const userTyped = result.current.step1.deadline === "2030-01-01" ? "2030-01-02" : "2030-01-01";
+		act(() => result.current.update1("deadline", userTyped));
 		expect(result.current.isDirty).toBe(true);
 	});
 
@@ -224,7 +225,6 @@ describe("useCreateProcurementInquiryForm", () => {
 			folderId: "folder-metal",
 			deadline: "2026-06-01",
 		});
-		expect(payload.procurementInquiry.budget).toBe(0);
 		expect(payload.items).toHaveLength(1);
 		expect(payload.items[0]).toMatchObject({ name: "Арматура", currentPrice: 100 });
 	});
@@ -279,25 +279,24 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(payload.items[0].generatedAnswers).toEqual([{ questionId: "q1", selectedOption: "A" }]);
 	});
 
-	test("toPayload analoguesAllowed reflects the inverted UI checkbox", () => {
+	test("toPayload analoguesNotAllowed passes through the checkbox state", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
-		// Default — checkbox unchecked → analogues remain allowed.
-		expect(result.current.toPayload().procurementInquiry.analoguesAllowed).toBe(true);
+		expect(result.current.toPayload().procurementInquiry.analoguesNotAllowed).toBe(false);
 
 		act(() => result.current.update1("analoguesNotAllowed", true));
-		expect(result.current.toPayload().procurementInquiry.analoguesAllowed).toBe(false);
+		expect(result.current.toPayload().procurementInquiry.analoguesNotAllowed).toBe(true);
 	});
 
-	test("toPayload paymentMethod = cash only when cashPaymentAllowed is checked", () => {
+	test("toPayload cashAllowed reflects the cash payment checkbox", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
-		expect(result.current.toPayload().procurementInquiry.paymentMethod).toBeUndefined();
+		expect(result.current.toPayload().procurementInquiry.cashAllowed).toBe(false);
 
-		act(() => result.current.update1("cashPaymentAllowed", true));
-		expect(result.current.toPayload().procurementInquiry.paymentMethod).toBe("cash");
+		act(() => result.current.update1("cashAllowed", true));
+		expect(result.current.toPayload().procurementInquiry.cashAllowed).toBe(true);
 	});
 
 	// --- Step 3 — supplier email ---
@@ -333,31 +332,32 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(result.current.step3.regenerateIndex).toBe(1);
 	});
 
-	test("toPayload defaults sendMode='manual' and includes email when seeded", () => {
+	test("toPayload defaults sendRequestsAutomatically=false and includes email when seeded", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => result.current.seedEmail("Металлопрокат"));
 
 		const payload = result.current.toPayload();
-		expect(payload.procurementInquiry.sendMode).toBe("manual");
-		expect(payload.procurementInquiry.email?.subject).toContain("Металлопрокат");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(false);
+		expect(payload.procurementInquiry.emailSubject).toContain("Металлопрокат");
 	});
 
-	test("toPayload reports sendMode='auto' when autoSend is checked", () => {
+	test("toPayload reports sendRequestsAutomatically=true when autoSend is checked", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 		act(() => result.current.update3("autoSend", true));
 
 		const payload = result.current.toPayload();
-		expect(payload.procurementInquiry.sendMode).toBe("auto");
+		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(true);
 	});
 
-	test("toPayload omits email block when subject and body are empty", () => {
+	test("toPayload omits emailSubject/emailBody when both are empty", () => {
 		const { result } = setup();
 		fillStep1Required(result);
 
 		const payload = result.current.toPayload();
-		expect(payload.procurementInquiry.email).toBeUndefined();
+		expect(payload.procurementInquiry.emailSubject).toBeUndefined();
+		expect(payload.procurementInquiry.emailBody).toBeUndefined();
 	});
 
 	test("isDirty flips true when autoSend toggled on", () => {

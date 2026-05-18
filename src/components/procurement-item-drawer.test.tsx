@@ -16,14 +16,15 @@ import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procure
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
-import { SEED_PROCUREMENT_INQUIRIES } from "@/data/seeds/procurement-inquiries";
 import { ORMATEK_SUPPLIERS } from "@/data/seeds/suppliers-ormatek";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import type { SupplierSeed } from "@/data/supplier-types";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 
 import type { ProcurementItem } from "@/data/types";
-import { mockHostname } from "@/test-utils";
+import { makeProcurementInquiry, mockHostname } from "@/test-utils";
+
+const TEST_INQUIRIES = [makeProcurementInquiry("T-001", { name: "Упаковочные материалы Q2" })];
 
 // Cherry-pick a compact, deterministic seed: 3 quote_received (rename one to ТД СОМ) + 7 others = 10 seeds.
 // Auto-generated pipeline candidates (15, 1 pre-archived) are appended on load per item.
@@ -78,7 +79,7 @@ function renderDrawer(initialEntries: string[] = ["/positions?item=item-1"]) {
 				items: createInMemoryItemsClient({ seed: [TEST_ITEM] }),
 				suppliers: createInMemorySuppliersClient({ seedByItemId: { "item-1": TEST_SUPPLIERS } }),
 				tasks: createInMemoryTasksClient({ seed: [] }),
-				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: SEED_PROCUREMENT_INQUIRIES }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
 				folders: createInMemoryFoldersClient(),
 			}}
 		>

@@ -1,8 +1,11 @@
 import type { ItemsClient } from "../clients/items-client";
 import type { ProcurementInquiriesClient } from "../clients/procurement-inquiries-client";
 import type { SuppliersClient } from "../clients/suppliers-client";
-import type { CreateProcurementInquiryInput } from "../domains/procurement-inquiries";
-import { NotFoundError } from "../errors";
+import type {
+	CreateProcurementInquiryInput,
+	CreateProcurementInquiryItemInput,
+} from "../domains/procurement-inquiries";
+import { NotFoundError, ValidationError } from "../errors";
 import type { NewItemInput, ProcurementInquiry, ProcurementItem } from "../types";
 
 /**
@@ -82,7 +85,7 @@ export async function setCurrentSupplierFromQuote(
 }
 
 export interface CreateProcurementInquiryWithItemsInput {
-	procurementInquiry: CreateProcurementInquiryInput;
+	procurementInquiry: Omit<CreateProcurementInquiryInput, "items">;
 	items: NewItemInput[];
 }
 
@@ -91,44 +94,48 @@ export interface CreateProcurementInquiryWithItemsResult {
 	items: ProcurementItem[];
 }
 
-/**
- * Atomic inquiry + items create. ProcurementInquiry is created first so items can inherit
- * its id via `procurementInquiryId`. If items.create fails, procurementInquiries.delete rolls back —
- * best-effort: if rollback itself fails, the original items error surfaces and
- * the orphan inquiry remains until the real transactional backend ships.
- */
-export async function createProcurementInquiryWithItems(
-	input: CreateProcurementInquiryWithItemsInput,
-	{ items, procurementInquiries }: Pick<ProcurementOperationsContext, "items" | "procurementInquiries">,
-): Promise<CreateProcurementInquiryWithItemsResult> {
-	const procurementInquiry = await procurementInquiries.create(input.procurementInquiry);
-	try {
-		const result = await items.create(
-			input.items.map((item) => ({ ...item, procurementInquiryId: procurementInquiry.id })),
-		);
-		return { procurementInquiry, items: result.items ?? [] };
-	} catch (err) {
-		try {
-			await procurementInquiries.delete(procurementInquiry.id);
-		} catch {}
-		throw err;
-	}
+function toInquiryItemInput(item: NewItemInput): CreateProcurementInquiryItemInput {
+	const payload: CreateProcurementInquiryItemInput = { name: item.name };
+	if (item.description !== undefined) payload.description = item.description;
+	if (item.status !== undefined) payload.status = item.status;
+	if (item.annualQuantity !== undefined) payload.annualQuantity = item.annualQuantity;
+	if (item.unit !== undefined) payload.unit = item.unit;
+	if (item.quantityPerDelivery !== undefined) payload.quantityPerDelivery = item.quantityPerDelivery;
+	return payload;
 }
 
 /**
- * ProcurementInquiry-level archive that cascades into items. Flips the inquiry's
- * `isArchived` flag; the in-memory items adapter then hides the inquiry's
- * items from /positions non-archive views by joining through
- * `_isProcurementInquiryArchived`. Restoring (`isArchived=false`) reverses both — items
- * reappear on /positions, the inquiry shows up in non-archive views again.
+ * Atomic inquiry + items create. The backend `POST /procurement/inquiries/`
+ * accepts items in the same request and creates both in one transaction —
+ * an inquiry can never land in the "empty positions" state. Items inherit
+ * the inquiry's `companyId`, so callers don't repeat it per item.
  *
- * No per-item write happens here; the cascade is read-time, so state can
- * never drift between the inquiry flag and the items' visibility.
+ * The `items` array must be non-empty; an empty submission is a UI bug
+ * (the create drawer requires at least one named position).
+ */
+export async function createProcurementInquiryWithItems(
+	input: CreateProcurementInquiryWithItemsInput,
+	{ procurementInquiries }: Pick<ProcurementOperationsContext, "procurementInquiries">,
+): Promise<CreateProcurementInquiryWithItemsResult> {
+	if (input.items.length === 0) {
+		throw new ValidationError({ items: ["Запрос должен содержать хотя бы одну позицию."] });
+	}
+	const procurementInquiry = await procurementInquiries.create({
+		...input.procurementInquiry,
+		items: input.items.map(toInquiryItemInput),
+	});
+	return { procurementInquiry, items: [] };
+}
+
+/**
+ * ProcurementInquiry-level archive routed to the right backend endpoint:
+ * `POST /procurement/inquiries/{id}/archive/` or `/unarchive/`. The cascade
+ * hook keeps its `{id, isArchived}` argument shape so call sites don't change.
  */
 export async function archiveProcurementInquiryCascade(
 	id: string,
 	isArchived: boolean,
 	{ procurementInquiries }: Pick<ProcurementOperationsContext, "procurementInquiries">,
 ): Promise<ProcurementInquiry> {
-	return procurementInquiries.archive(id, isArchived);
+	return isArchived ? procurementInquiries.archive(id) : procurementInquiries.unarchive(id);
 }

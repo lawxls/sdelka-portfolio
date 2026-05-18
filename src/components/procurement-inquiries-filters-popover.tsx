@@ -96,7 +96,6 @@ const STATUS_PRESETS: { label: string; value: ProcurementInquiryStatus }[] = [
 	{ label: STATUS_LABELS.searching_completed, value: "searching_completed" },
 	{ label: STATUS_LABELS.negotiating, value: "negotiating" },
 	{ label: STATUS_LABELS.completed, value: "completed" },
-	{ label: STATUS_LABELS.ready_for_analytics, value: "ready_for_analytics" },
 ];
 
 const ROW_BTN =

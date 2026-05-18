@@ -2,7 +2,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTestQueryClient, makeItem, makeSupplier } from "@/test-utils";
+import {
+	createTestQueryClient,
+	makeItem,
+	makeProcurementInquiry as makeProcurementInquiryFixture,
+	makeSupplier,
+} from "@/test-utils";
 import type { ItemsClient } from "../clients/items-client";
 import type { ProcurementInquiriesClient } from "../clients/procurement-inquiries-client";
 import type { SuppliersClient } from "../clients/suppliers-client";
@@ -23,15 +28,7 @@ import {
 let queryClient: QueryClient;
 
 function makeProcurementInquiry(id: string): ProcurementInquiry {
-	return {
-		id,
-		name: `ProcurementInquiry ${id}`,
-		companyId: "company-1",
-		folderId: null,
-		budget: 0,
-		createdAt: "2026-04-01",
-		deadline: "2026-05-01",
-	};
+	return makeProcurementInquiryFixture(id, { companyId: "company-1" });
 }
 
 function wrapperFactory(
@@ -103,7 +100,7 @@ describe("useArchiveProcurementInquiryCascade", () => {
 		});
 		await result.current.mutateAsync({ id: "T-001", isArchived: true });
 
-		expect(archive).toHaveBeenCalledWith("T-001", true);
+		expect(archive).toHaveBeenCalledWith("T-001");
 		expect(queryClient.getQueryState(["procurementInquiries", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items-global"])?.isInvalidated).toBe(true);
@@ -116,14 +113,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 	it("invalidates procurementInquiries + items + totals + folder stats after the operation runs", async () => {
 		const createdProcurementInquiry = makeProcurementInquiry("T-001");
 		const procurementInquiriesCreate = vi.fn().mockResolvedValue(createdProcurementInquiry);
-		const itemsCreate = vi
-			.fn()
-			.mockResolvedValue({ items: [makeItem("i-1", { procurementInquiryId: "T-001" })], isAsync: false });
-		const procurementInquiries = fakeProcurementInquiriesClient({
-			create: procurementInquiriesCreate,
-			delete: vi.fn(),
-		});
-		const items = fakeItemsClient({ create: itemsCreate });
+		const procurementInquiries = fakeProcurementInquiriesClient({ create: procurementInquiriesCreate });
 
 		queryClient.setQueryData(["procurementInquiries", { foo: "bar" }], { items: [], nextCursor: null });
 		queryClient.setQueryData(["items"], []);
@@ -132,21 +122,20 @@ describe("useCreateProcurementInquiryWithItems", () => {
 
 		const { result } = renderHook(() => useCreateProcurementInquiryWithItems(), {
 			wrapper: ({ children }) => (
-				<TestClientsProvider queryClient={queryClient} clients={{ items, procurementInquiries }}>
+				<TestClientsProvider queryClient={queryClient} clients={{ procurementInquiries }}>
 					{children}
 				</TestClientsProvider>
 			),
 		});
 
 		await result.current.mutateAsync({
-			procurementInquiry: { name: "T", companyId: "c1", folderId: null, budget: 0, deadline: "2026-05-01" },
+			procurementInquiry: { name: "T", companyId: "c1", folderId: null, deadline: "2026-05-01" },
 			items: [{ name: "Pos", paymentType: "prepayment" }],
 		});
 
-		expect(procurementInquiriesCreate).toHaveBeenCalled();
-		expect(itemsCreate).toHaveBeenCalledWith([
-			{ name: "Pos", paymentType: "prepayment", procurementInquiryId: "T-001" },
-		]);
+		expect(procurementInquiriesCreate).toHaveBeenCalledTimes(1);
+		const [payload] = procurementInquiriesCreate.mock.calls[0];
+		expect(payload.items).toEqual([{ name: "Pos" }]);
 		expect(queryClient.getQueryState(["procurementInquiries", { foo: "bar" }])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);

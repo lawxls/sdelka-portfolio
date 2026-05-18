@@ -12,30 +12,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Address, Company, CreateAddressData, UpdateCompanyData } from "@/data/domains/companies";
 import type {
-	Address,
-	Company,
-	CreateAddressData,
 	Employee,
 	EmployeePermissions,
 	EmployeeRole,
+	EmployeeWithPermissions,
 	PermissionLevel,
 	PermissionModuleKey,
-	UpdateCompanyData,
 	UpdateEmployeeData,
 	UpdatePermissionsData,
-} from "@/data/domains/companies";
+} from "@/data/domains/employees";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import {
 	useCompanyDetail,
 	useCreateAddress,
 	useDeleteAddress,
-	useDeleteEmployee,
 	useUpdateAddress,
 	useUpdateCompany,
+} from "@/data/use-company-detail";
+import {
+	useCompanyEmployees,
+	useDeleteEmployee,
 	useUpdateEmployee,
 	useUpdateEmployeePermissions,
-} from "@/data/use-company-detail";
+} from "@/data/use-company-employees";
 import { useMe } from "@/data/use-me";
 import { formatFullName, formatPhone } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -103,6 +104,7 @@ function CompanyDrawerContent({
 	onTabChange: (tab: CompanyTab) => void;
 }) {
 	const { data: company, isLoading, error } = useCompanyDetail(companyId);
+	const { data: employees } = useCompanyEmployees(companyId);
 
 	if (isLoading) {
 		return (
@@ -123,6 +125,8 @@ function CompanyDrawerContent({
 		);
 	}
 
+	const employeeCount = employees?.length ?? company.employeeCount;
+
 	return (
 		<>
 			<SheetHeader>
@@ -135,7 +139,7 @@ function CompanyDrawerContent({
 			<div className="flex gap-0 overflow-x-auto border-b border-border px-4" role="tablist">
 				{TABS.map((tab) => {
 					const counts: Record<CompanyTab, number | null> = {
-						employees: company.employees.length,
+						employees: employeeCount,
 						addresses: company.addresses.length,
 						general: null,
 					};
@@ -175,9 +179,7 @@ function CompanyDrawerContent({
 			<div className="flex-1 overflow-y-auto px-4 py-4">
 				{activeTab === "general" && <GeneralTab key={companyId} company={company} companyId={companyId} />}
 				{activeTab === "addresses" && <AddressesTab company={company} companyId={companyId} />}
-				{activeTab === "employees" && (
-					<EmployeesTab company={company} companyId={companyId} initialAddEmployee={initialAddEmployee} />
-				)}
+				{activeTab === "employees" && <EmployeesTab companyId={companyId} initialAddEmployee={initialAddEmployee} />}
 			</div>
 		</>
 	);
@@ -601,19 +603,12 @@ const ADMIN_PERMISSIONS: UpdatePermissionsData = {
 	emails: "edit",
 };
 
-function EmployeesTab({
-	company,
-	companyId,
-	initialAddEmployee,
-}: {
-	company: Company;
-	companyId: string;
-	initialAddEmployee?: boolean;
-}) {
+function EmployeesTab({ companyId, initialAddEmployee }: { companyId: string; initialAddEmployee?: boolean }) {
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [inviteOpen, setInviteOpen] = useState(initialAddEmployee ?? false);
 
+	const { data: employees, isLoading, error } = useCompanyEmployees(companyId);
 	const updateMutation = useUpdateEmployee(companyId);
 	const deleteMutation = useDeleteEmployee(companyId);
 	const permsMutation = useUpdateEmployeePermissions(companyId);
@@ -656,16 +651,27 @@ function EmployeesTab({
 	}
 
 	const isUserRole = me?.role === "user";
+	const list: EmployeeWithPermissions[] = employees ?? [];
 
 	return (
 		<div className="flex flex-col gap-3" data-testid="tab-content-employees">
-			{company.employees.map((emp) => (
+			{isLoading && (
+				<div className="flex items-center justify-center py-6" data-testid="employees-loading">
+					<LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-label="Загрузка…" />
+				</div>
+			)}
+			{error && !isLoading && (
+				<p className="px-1 py-2 text-sm text-muted-foreground" data-testid="employees-error">
+					Не удалось загрузить сотрудников
+				</p>
+			)}
+			{list.map((emp) => (
 				<EmployeeCard
 					key={emp.id}
 					employee={emp}
 					isExpanded={expandedId === emp.id}
 					isEditing={editingId === emp.id}
-					canDelete={company.employees.length > 1}
+					canDelete={list.length > 1}
 					canEdit={!isUserRole || (me != null && emp.id === String(me.id))}
 					onToggle={() => handleToggle(emp.id)}
 					onEdit={() => handleEdit(emp.id)}

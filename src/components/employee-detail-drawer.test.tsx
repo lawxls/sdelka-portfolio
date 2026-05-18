@@ -27,9 +27,11 @@ const MOCK_EMPLOYEE: WorkspaceEmployeeDetail = {
 			id: "c1",
 			name: "Компания А",
 			isMain: true,
-			addresses: [],
+			addressesCount: 0,
 			employeeCount: 3,
 			procurementItemCount: 5,
+			createdAt: "2026-04-01T00:00:00+03:00",
+			updatedAt: "2026-04-01T00:00:00+03:00",
 		},
 	],
 	permissions: {

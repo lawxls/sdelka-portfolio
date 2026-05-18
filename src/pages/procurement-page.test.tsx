@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("sonner", () => ({
 	toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() },
@@ -17,9 +17,10 @@ import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
-import { makeCompanyDetail, makeItem } from "@/test-utils";
+import { makeCompanyDetail, makeItem, makeProcurementInquiry as makeProcurementInquiryFixture } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
 
 const MOCK_FOLDERS: Folder[] = [
@@ -45,15 +46,13 @@ const ITEMS_C2: ProcurementItem[] = [makeItem("i3", { name: "Кирпич М150"
 const ALL_ITEMS = [...ITEMS_C1, ...ITEMS_C2];
 
 function makeProcurementInquiry(id: string, companyId: string, folderId: string | null = null): ProcurementInquiry {
-	return {
-		id,
+	return makeProcurementInquiryFixture(id, {
 		name: `ProcurementInquiry ${id}`,
 		companyId,
 		folderId,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
-	};
+	});
 }
 
 const TEST_PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
@@ -110,6 +109,14 @@ beforeEach(() => {
 	vi.mocked(toast.info).mockClear();
 	// Suppress "Not implemented: HTMLFormElement.prototype.requestSubmit" from jsdom
 	vi.spyOn(console, "error").mockImplementation(() => {});
+	_setInquiryStateResolver((id) => {
+		const t = TEST_PROCUREMENT_INQUIRIES.find((i) => i.id === id);
+		return t ? { folderId: t.folderId, companyId: t.companyId, isArchived: false } : null;
+	});
+});
+
+afterEach(() => {
+	_setInquiryStateResolver(null);
 });
 
 describe("ProcurementPage — multi-company mode", () => {

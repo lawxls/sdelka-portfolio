@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
+import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
 import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
@@ -18,6 +19,7 @@ import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
+import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import { fakeItemsClient, TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company, Folder } from "@/data/types";
@@ -41,7 +43,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry folder-1",
 		companyId: "company-1",
 		folderId: "folder-1" as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -50,7 +51,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry folder-2",
 		companyId: "company-1",
 		folderId: "folder-2" as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -59,7 +59,6 @@ const TEST_PROCUREMENT_INQUIRIES = [
 		name: "ProcurementInquiry no folder",
 		companyId: "company-1",
 		folderId: null as string | null,
-		budget: 0,
 		createdAt: "2026-04-01",
 		deadline: "2026-05-01",
 	},
@@ -82,29 +81,10 @@ const TEST_COMPANIES: Company[] = [
 		isMain: true,
 		employeeCount: 1,
 		procurementItemCount: 0,
+		addressesCount: 1,
+		createdAt: "2026-04-01T00:00:00+03:00",
+		updatedAt: "2026-04-01T00:00:00+03:00",
 		addresses: [{ id: "addr-1", name: "Офис", address: "г. Москва, ул. Тестовая, д. 1", phone: "", isMain: true }],
-		employees: [
-			{
-				id: "1",
-				firstName: "Иван",
-				lastName: "Иванов",
-				patronymic: "",
-				position: "",
-				role: "admin",
-				phone: "",
-				email: "",
-				permissions: {
-					id: "p1",
-					employeeId: "1",
-					procurementInquiries: "edit",
-					positions: "edit",
-					tasks: "edit",
-					companies: "edit",
-					employees: "edit",
-					emails: "edit",
-				},
-			},
-		],
 	},
 ];
 
@@ -120,6 +100,7 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 			queryClient={queryClient}
 			clients={{
 				companies: companiesClient,
+				employees: createInMemoryEmployeesClient(),
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
@@ -159,10 +140,17 @@ beforeEach(() => {
 	queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	// Wire the test inquiry roster into the items-in-memory cross-entity cascade
+	// so /positions can filter by folder/company derived from each item's parent.
+	_setInquiryStateResolver((id) => {
+		const t = TEST_PROCUREMENT_INQUIRIES.find((i) => i.id === id);
+		return t ? { folderId: t.folderId, companyId: t.companyId, isArchived: false } : null;
+	});
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
+	_setInquiryStateResolver(null);
 });
 
 // ---- Route tests (TDD) ----

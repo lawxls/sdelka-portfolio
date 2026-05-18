@@ -15,7 +15,7 @@ import type { WorkspaceEmployeesClient } from "./workspace-employees-client";
 function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
 	return {
 		...e,
-		companies: e.companies.map((c) => ({ ...c, addresses: c.addresses.map((a) => ({ ...a })) })),
+		companies: e.companies.map((c) => ({ ...c })),
 		permissions: { ...e.permissions },
 	};
 }
@@ -68,7 +68,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 			await delay();
 			return store.map(({ permissions: _permissions, ...rest }) => ({
 				...rest,
-				companies: rest.companies.map((c) => ({ ...c, addresses: c.addresses.map((a) => ({ ...a })) })),
+				companies: rest.companies.map((c) => ({ ...c })),
 			}));
 		},
 

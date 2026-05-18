@@ -1,4 +1,3 @@
-import { FileText, Paperclip } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { Input } from "@/components/ui/input";
@@ -6,13 +5,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import type { GeneratedAnswer, ProcurementItem, Unit } from "@/data/types";
+import type { GeneratedAnswer, ProcurementItem, Unit, UnloadingType } from "@/data/types";
 import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
 import { useProcurementInquiry } from "@/data/use-procurement-inquiries";
-import { formatCurrency, formatFileSize, toNumberOrUndefined } from "@/lib/format";
+import { formatCurrency, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
 	itemId: string;
@@ -79,14 +78,10 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		[folders, procurementInquiry?.folderId],
 	);
 
-	const addressesText = useMemo(() => {
-		if (!procurementInquiry?.addressIds || !company?.addresses) return "";
-		const set = new Set(procurementInquiry.addressIds);
-		return company.addresses
-			.filter((a) => set.has(a.id))
-			.map((a) => a.address)
-			.join("; ");
-	}, [procurementInquiry?.addressIds, company?.addresses]);
+	const addressText = useMemo(() => {
+		if (!procurementInquiry?.deliveryAddressId || !company?.addresses) return "";
+		return company.addresses.find((a) => a.id === procurementInquiry.deliveryAddressId)?.address ?? "";
+	}, [procurementInquiry?.deliveryAddressId, company?.addresses]);
 
 	if (isLoading) {
 		return (
@@ -299,11 +294,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			<Section title="Логистика" editing={false}>
 				<CardGrid>
 					<FieldCard label="Разгрузка">
-						<ValueText value={procurementInquiry?.unloading ? UNLOADING_LABELS[procurementInquiry.unloading] : ""} />
+						<ValueText
+							value={
+								procurementInquiry?.unloading ? UNLOADING_LABELS[procurementInquiry.unloading as UnloadingType] : ""
+							}
+						/>
 					</FieldCard>
 
 					<FieldCard label="Адрес доставки" span="full">
-						<ValueText value={addressesText} />
+						<ValueText value={addressText} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -316,11 +315,11 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
 								<li>
 									<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-									{yesNo(procurementInquiry.paymentMethod === "cash")}
+									{yesNo(procurementInquiry.cashAllowed)}
 								</li>
 								<li>
 									<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
-									{yesNo(procurementInquiry.analoguesAllowed)}
+									{yesNo(!procurementInquiry.analoguesNotAllowed)}
 								</li>
 							</ul>
 						</FieldCard>
@@ -329,29 +328,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 							<ValueText value={procurementInquiry.additionalInfo ?? ""} />
 						</FieldCard>
 					</CardGrid>
-
-					<div className="mt-3">
-						<div className="mb-1.5 flex items-center gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-							<Paperclip className="size-3" aria-hidden="true" />
-							Прикреплённые файлы
-						</div>
-						{procurementInquiry.attachedFiles && procurementInquiry.attachedFiles.length > 0 ? (
-							<ul className="flex flex-wrap gap-1.5">
-								{procurementInquiry.attachedFiles.map((file) => (
-									<li
-										key={`${file.name}-${file.size}`}
-										className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-sm"
-									>
-										<FileText className="size-3 text-muted-foreground" aria-hidden="true" />
-										<span className="max-w-[18rem] truncate">{file.name}</span>
-										<span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
-									</li>
-								))}
-							</ul>
-						) : (
-							<p className="text-sm text-muted-foreground/50">Нет прикреплённых файлов</p>
-						)}
-					</div>
 				</Section>
 			)}
 
