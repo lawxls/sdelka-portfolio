@@ -25,8 +25,11 @@ import { TaskDrawer } from "@/components/task-drawer";
 import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
+import { DateField } from "@/components/ui/date-field";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -52,12 +55,13 @@ import type {
 	ProcurementInquiry,
 	ProcurementInquiryStatus,
 	ProcurementItem,
+	Unit,
 	UnloadingType,
 } from "@/data/types";
-import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
+import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
-import { useFolders } from "@/data/use-folders";
-import { useUpdateItemCurrentSupplier } from "@/data/use-items";
+import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useUpdateItem, useUpdateItemCurrentSupplier } from "@/data/use-items";
 import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
 import {
 	useAllSuppliers,
@@ -1442,12 +1446,7 @@ function ProcurementInquiryDetailsTab({
 	status: ProcurementInquiryStatus;
 }) {
 	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
-	const addressText = useMemo(() => {
-		if (!procurementInquiry.deliveryAddressId || !company?.addresses) return "";
-		return company.addresses.find((a) => a.id === procurementInquiry.deliveryAddressId)?.address ?? "";
-	}, [procurementInquiry.deliveryAddressId, company?.addresses]);
-	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
-	const rfqEditable = RFQ_EDITABLE_STATUSES.has(status);
+	const inquiryEditable = RFQ_EDITABLE_STATUSES.has(status);
 
 	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const [activeSupplierItemId, setActiveSupplierItemId] = useState<string | null>(null);
@@ -1465,25 +1464,12 @@ function ProcurementInquiryDetailsTab({
 
 	return (
 		<div data-testid="procurement-inquiry-tab-details" className="flex flex-col gap-6">
-			<Section title="Основное">
-				<CardGrid>
-					<FieldCard label="Компания">
-						<ValueText value={company?.name ?? ""} />
-					</FieldCard>
-					<FieldCard label="Категория">
-						<ValueText value={folder?.name ?? ""} />
-					</FieldCard>
-					<FieldCard label="Название" span="full">
-						<ValueText value={procurementInquiry.name} />
-					</FieldCard>
-					<FieldCard label="Дедлайн">
-						<ValueText value={procurementInquiry.deadline ? formatShortDate(procurementInquiry.deadline) : ""} />
-					</FieldCard>
-					<FieldCard label="Дата создания">
-						<ValueText value={formatShortDate(procurementInquiry.createdAt)} />
-					</FieldCard>
-				</CardGrid>
-			</Section>
+			<ProcurementInquiryBasicSection
+				procurementInquiry={procurementInquiry}
+				companyName={company?.name ?? ""}
+				folder={folder}
+				editable={inquiryEditable}
+			/>
 
 			<Section title={`Позиции (${items.length})`}>
 				{items.length === 0 ? (
@@ -1495,6 +1481,7 @@ function ProcurementInquiryDetailsTab({
 								key={item.id}
 								item={item}
 								index={index}
+								editable={inquiryEditable || item.status === "ready_for_analytics"}
 								onEditSupplier={() => setActiveSupplierItemId(item.id)}
 								onRemoveSupplier={() => handleRemoveSupplier(item.id)}
 							/>
@@ -1503,44 +1490,17 @@ function ProcurementInquiryDetailsTab({
 				)}
 			</Section>
 
-			<Section title="Логистика">
-				<CardGrid>
-					<FieldCard label="Разгрузка">
-						<ValueText
-							value={
-								procurementInquiry.unloading ? UNLOADING_LABELS[procurementInquiry.unloading as UnloadingType] : ""
-							}
-						/>
-					</FieldCard>
-					<FieldCard label="Адрес доставки" span="full">
-						<ValueText value={addressText} />
-					</FieldCard>
-				</CardGrid>
-			</Section>
+			<ProcurementInquiryLogisticsSection
+				procurementInquiry={procurementInquiry}
+				addresses={company?.addresses ?? []}
+				editable={inquiryEditable}
+			/>
 
-			<ProcurementInquiryRfqSection procurementInquiry={procurementInquiry} editable={rfqEditable} />
+			<ProcurementInquiryRfqSection procurementInquiry={procurementInquiry} editable={inquiryEditable} />
 
 			<ProcurementInquiryGeneratedQuestionsSection procurementInquiry={procurementInquiry} />
 
-			<Section title="Дополнительно">
-				<CardGrid>
-					<FieldCard label="Условия" span="half">
-						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-							<li>
-								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-								{yesNo(procurementInquiry.cashAllowed)}
-							</li>
-							<li>
-								<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
-								{yesNo(!procurementInquiry.analoguesNotAllowed)}
-							</li>
-						</ul>
-					</FieldCard>
-					<FieldCard label="Комментарий" span="full">
-						<ValueText value={procurementInquiry.additionalInfo ?? ""} />
-					</FieldCard>
-				</CardGrid>
-			</Section>
+			<ProcurementInquiryAdditionalSection procurementInquiry={procurementInquiry} editable={inquiryEditable} />
 
 			{activeSupplierItemId !== null && (
 				<CurrentSupplierDialog
@@ -1553,6 +1513,329 @@ function ProcurementInquiryDetailsTab({
 				/>
 			)}
 		</div>
+	);
+}
+
+function ProcurementInquiryBasicSection({
+	procurementInquiry,
+	companyName,
+	folder,
+	editable,
+}: {
+	procurementInquiry: ProcurementInquiry;
+	companyName: string;
+	folder?: Folder;
+	editable: boolean;
+}) {
+	const updateMutation = useUpdateProcurementInquiry();
+	const { data: folders = [] } = useFolders(procurementInquiry.companyId ?? undefined);
+	const createFolderMutation = useCreateFolder();
+	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
+
+	const [editing, setEditing] = useState(false);
+	const [nameDraft, setNameDraft] = useState("");
+	const [deadlineDraft, setDeadlineDraft] = useState("");
+	const [folderDraft, setFolderDraft] = useState<string | null>(null);
+
+	function handleEdit() {
+		setNameDraft(procurementInquiry.name);
+		setDeadlineDraft(procurementInquiry.deadline ?? "");
+		setFolderDraft(procurementInquiry.folderId ?? null);
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleCreateFolder(name: string, color: string) {
+		createFolderMutation.mutate(
+			{ name, color },
+			{
+				onSuccess: (created) => setFolderDraft(created.id),
+			},
+		);
+	}
+
+	function handleSave() {
+		const trimmedName = nameDraft.trim();
+		if (!trimmedName) return;
+		updateMutation.mutate(
+			{
+				id: procurementInquiry.id,
+				patch: {
+					name: trimmedName,
+					deadline: deadlineDraft || null,
+					folderId: folderDraft,
+				},
+			},
+			{ onSuccess: () => setEditing(false) },
+		);
+	}
+
+	const dirty =
+		nameDraft !== procurementInquiry.name ||
+		deadlineDraft !== (procurementInquiry.deadline ?? "") ||
+		folderDraft !== (procurementInquiry.folderId ?? null);
+
+	return (
+		<Section
+			title="Основное"
+			editLabel={editable ? "Редактировать основное" : undefined}
+			editing={editing}
+			onEdit={editable ? handleEdit : undefined}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			saveDisabled={!dirty || !nameDraft.trim() || updateMutation.isPending}
+			isPending={updateMutation.isPending}
+		>
+			<CardGrid>
+				<FieldCard label="Компания">
+					<ValueText value={companyName} />
+				</FieldCard>
+				<FieldCard label="Категория">
+					{editing ? (
+						<FolderSelect
+							folders={folders}
+							value={folderDraft}
+							onChange={setFolderDraft}
+							onCreateFolder={handleCreateFolder}
+							nextFolderColor={nextFolderColor}
+						/>
+					) : (
+						<ValueText value={folder?.name ?? ""} />
+					)}
+				</FieldCard>
+				<FieldCard label="Название" span="full">
+					{editing ? (
+						<Input
+							aria-label="Название запроса"
+							value={nameDraft}
+							onChange={(e) => setNameDraft(e.target.value)}
+							spellCheck={false}
+							autoComplete="off"
+						/>
+					) : (
+						<ValueText value={procurementInquiry.name} />
+					)}
+				</FieldCard>
+				<FieldCard label="Дедлайн">
+					{editing ? (
+						<DateField ariaLabel="Дедлайн" value={deadlineDraft} onChange={setDeadlineDraft} />
+					) : (
+						<ValueText value={procurementInquiry.deadline ? formatShortDate(procurementInquiry.deadline) : ""} />
+					)}
+				</FieldCard>
+				<FieldCard label="Дата создания">
+					<ValueText value={formatShortDate(procurementInquiry.createdAt)} />
+				</FieldCard>
+			</CardGrid>
+		</Section>
+	);
+}
+
+function ProcurementInquiryLogisticsSection({
+	procurementInquiry,
+	addresses,
+	editable,
+}: {
+	procurementInquiry: ProcurementInquiry;
+	addresses: { id: string; name: string; address: string }[];
+	editable: boolean;
+}) {
+	const updateMutation = useUpdateProcurementInquiry();
+	const [editing, setEditing] = useState(false);
+	const [unloadingDraft, setUnloadingDraft] = useState<UnloadingType | "">("");
+	const [addressDraft, setAddressDraft] = useState<string | null>(null);
+
+	const currentUnloading = procurementInquiry.unloading;
+	const currentAddressId = procurementInquiry.deliveryAddressId;
+	const currentAddressText = useMemo(
+		() => addresses.find((a) => a.id === currentAddressId)?.address ?? "",
+		[addresses, currentAddressId],
+	);
+
+	function handleEdit() {
+		setUnloadingDraft(currentUnloading);
+		setAddressDraft(currentAddressId);
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleSave() {
+		updateMutation.mutate(
+			{
+				id: procurementInquiry.id,
+				patch: { unloading: unloadingDraft, deliveryAddressId: addressDraft },
+			},
+			{ onSuccess: () => setEditing(false) },
+		);
+	}
+
+	const dirty = unloadingDraft !== currentUnloading || addressDraft !== currentAddressId;
+
+	return (
+		<Section
+			title="Логистика"
+			editLabel={editable ? "Редактировать логистику" : undefined}
+			editing={editing}
+			onEdit={editable ? handleEdit : undefined}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			saveDisabled={!dirty || updateMutation.isPending}
+			isPending={updateMutation.isPending}
+		>
+			<CardGrid>
+				<FieldCard label="Разгрузка">
+					{editing ? (
+						<Select value={unloadingDraft || undefined} onValueChange={(v) => setUnloadingDraft(v as UnloadingType)}>
+							<SelectTrigger aria-label="Разгрузка" className="w-full">
+								<SelectValue placeholder="— выберите —" />
+							</SelectTrigger>
+							<SelectContent position="popper">
+								{(Object.keys(UNLOADING_LABELS) as UnloadingType[]).map((u) => (
+									<SelectItem key={u} value={u}>
+										{UNLOADING_LABELS[u]}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					) : (
+						<ValueText value={currentUnloading ? UNLOADING_LABELS[currentUnloading as UnloadingType] : ""} />
+					)}
+				</FieldCard>
+				<FieldCard label="Адрес доставки" span="full">
+					{editing ? (
+						<Select value={addressDraft ?? undefined} onValueChange={(v) => setAddressDraft(v)}>
+							<SelectTrigger aria-label="Адрес доставки" className="w-full">
+								<SelectValue placeholder="— выберите —" />
+							</SelectTrigger>
+							<SelectContent position="popper">
+								{addresses.map((a) => (
+									<SelectItem key={a.id} value={a.id}>
+										{a.name ? `${a.name} — ${a.address}` : a.address}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					) : (
+						<ValueText value={currentAddressText} />
+					)}
+				</FieldCard>
+			</CardGrid>
+		</Section>
+	);
+}
+
+function ProcurementInquiryAdditionalSection({
+	procurementInquiry,
+	editable,
+}: {
+	procurementInquiry: ProcurementInquiry;
+	editable: boolean;
+}) {
+	const updateMutation = useUpdateProcurementInquiry();
+	const [editing, setEditing] = useState(false);
+	const [cashDraft, setCashDraft] = useState(false);
+	const [analoguesDraft, setAnaloguesDraft] = useState(false);
+	const [commentDraft, setCommentDraft] = useState("");
+
+	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
+
+	function handleEdit() {
+		setCashDraft(procurementInquiry.cashAllowed);
+		// `analoguesDraft` mirrors the user-facing «Аналоги допускаются» — invert
+		// `analoguesNotAllowed` so the checkbox label matches.
+		setAnaloguesDraft(!procurementInquiry.analoguesNotAllowed);
+		setCommentDraft(procurementInquiry.additionalInfo ?? "");
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleSave() {
+		updateMutation.mutate(
+			{
+				id: procurementInquiry.id,
+				patch: {
+					cashAllowed: cashDraft,
+					analoguesNotAllowed: !analoguesDraft,
+					additionalInfo: commentDraft.trim(),
+				},
+			},
+			{ onSuccess: () => setEditing(false) },
+		);
+	}
+
+	const dirty =
+		cashDraft !== procurementInquiry.cashAllowed ||
+		analoguesDraft !== !procurementInquiry.analoguesNotAllowed ||
+		commentDraft.trim() !== (procurementInquiry.additionalInfo ?? "").trim();
+
+	return (
+		<Section
+			title="Дополнительно"
+			editLabel={editable ? "Редактировать дополнительно" : undefined}
+			editing={editing}
+			onEdit={editable ? handleEdit : undefined}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			saveDisabled={!dirty || updateMutation.isPending}
+			isPending={updateMutation.isPending}
+		>
+			<CardGrid>
+				<FieldCard label="Условия" span="half">
+					{editing ? (
+						<div className="flex flex-col gap-2">
+							<CheckboxBadge
+								id="procurement-inquiry-cash"
+								checked={cashDraft}
+								onChange={setCashDraft}
+								ariaLabel="Допускается оплата наличными"
+							>
+								Допускается оплата наличными
+							</CheckboxBadge>
+							<CheckboxBadge
+								id="procurement-inquiry-analogues"
+								checked={analoguesDraft}
+								onChange={setAnaloguesDraft}
+								ariaLabel="Аналоги допускаются"
+							>
+								Аналоги допускаются
+							</CheckboxBadge>
+						</div>
+					) : (
+						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+							<li>
+								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
+								{yesNo(procurementInquiry.cashAllowed)}
+							</li>
+							<li>
+								<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
+								{yesNo(!procurementInquiry.analoguesNotAllowed)}
+							</li>
+						</ul>
+					)}
+				</FieldCard>
+				<FieldCard label="Комментарий" span="full">
+					{editing ? (
+						<Textarea
+							aria-label="Комментарий"
+							value={commentDraft}
+							onChange={(e) => setCommentDraft(e.target.value)}
+							rows={4}
+						/>
+					) : (
+						<ValueText value={procurementInquiry.additionalInfo ?? ""} />
+					)}
+				</FieldCard>
+			</CardGrid>
+		</Section>
 	);
 }
 
@@ -1727,31 +2010,153 @@ function ProcurementInquiryGeneratedQuestionsSection({
 function ProcurementInquiryPositionCard({
 	item,
 	index,
+	editable,
 	onEditSupplier,
 	onRemoveSupplier,
 }: {
 	item: ProcurementItem;
 	index: number;
+	editable: boolean;
 	onEditSupplier: () => void;
 	onRemoveSupplier: () => void;
 }) {
 	const supplier = item.currentSupplier;
+	const updateItemMutation = useUpdateItem();
+	const [editing, setEditing] = useState(false);
+	const [nameDraft, setNameDraft] = useState("");
+	const [descDraft, setDescDraft] = useState("");
+	const [unitDraft, setUnitDraft] = useState<Unit | "">("");
+	const [qtyPerDeliveryDraft, setQtyPerDeliveryDraft] = useState("");
+	const [annualQtyDraft, setAnnualQtyDraft] = useState("");
+
+	function handleEdit() {
+		setNameDraft(item.name);
+		setDescDraft(item.description ?? "");
+		setUnitDraft(item.unit ?? "");
+		setQtyPerDeliveryDraft(item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "");
+		setAnnualQtyDraft(String(item.annualQuantity));
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleSave() {
+		const trimmedName = nameDraft.trim();
+		if (!trimmedName) return;
+		const annualQuantity = Number(annualQtyDraft);
+		if (!Number.isFinite(annualQuantity) || annualQuantity < 0) return;
+		const qtyPerDelivery = qtyPerDeliveryDraft.trim() === "" ? undefined : Number(qtyPerDeliveryDraft);
+		if (qtyPerDelivery !== undefined && (!Number.isFinite(qtyPerDelivery) || qtyPerDelivery < 0)) return;
+		updateItemMutation.mutate({
+			id: item.id,
+			name: trimmedName,
+			description: descDraft.trim() || undefined,
+			unit: unitDraft || undefined,
+			quantityPerDelivery: qtyPerDelivery,
+			annualQuantity,
+		});
+		setEditing(false);
+	}
+
+	const dirty =
+		nameDraft !== item.name ||
+		descDraft !== (item.description ?? "") ||
+		unitDraft !== (item.unit ?? "") ||
+		qtyPerDeliveryDraft !== (item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "") ||
+		annualQtyDraft !== String(item.annualQuantity);
+
 	return (
 		<section
 			aria-label={`Позиция ${index + 1}`}
 			data-testid={`procurement-inquiry-item-${item.id}`}
 			className="relative flex flex-col gap-4 rounded-xl border border-border/60 bg-card/40 p-4"
 		>
-			<FieldCardLine label="Название" value={item.name} />
-			<FieldCardLine label="Спецификация" value={item.description ?? ""} />
-			<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-				<FieldCardLine label="Ед. изм." value={item.unit ?? ""} />
-				<FieldCardLine
-					label="Кол-во в поставке"
-					value={item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : ""}
-				/>
-				<FieldCardLine label="Объём в год" value={String(item.annualQuantity)} />
-			</div>
+			{!editing && editable && (
+				<button
+					type="button"
+					onClick={handleEdit}
+					aria-label={`Редактировать позицию ${index + 1}`}
+					className="absolute right-3 top-3 inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-[color,scale] duration-150 ease-out hover:text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 after:absolute after:inset-[-8px] after:content-['']"
+				>
+					<Pencil className="size-3" aria-hidden="true" />
+				</button>
+			)}
+			{editing ? (
+				<>
+					<PositionField label="Название">
+						<Input
+							aria-label="Название"
+							value={nameDraft}
+							onChange={(e) => setNameDraft(e.target.value)}
+							spellCheck={false}
+							autoComplete="off"
+						/>
+					</PositionField>
+					<PositionField label="Спецификация">
+						<Textarea
+							aria-label="Спецификация"
+							value={descDraft}
+							onChange={(e) => setDescDraft(e.target.value)}
+							rows={3}
+						/>
+					</PositionField>
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+						<PositionField label="Ед. изм.">
+							<Select value={unitDraft || undefined} onValueChange={(v) => setUnitDraft(v as Unit)}>
+								<SelectTrigger aria-label="Ед. изм." className="w-full">
+									<SelectValue placeholder="—" />
+								</SelectTrigger>
+								<SelectContent position="popper">
+									{UNITS.map((u) => (
+										<SelectItem key={u} value={u}>
+											{u}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</PositionField>
+						<PositionField label="Кол-во в поставке">
+							<Input
+								aria-label="Кол-во в поставке"
+								type="number"
+								inputMode="numeric"
+								min={0}
+								value={qtyPerDeliveryDraft}
+								onChange={(e) => setQtyPerDeliveryDraft(e.target.value)}
+								autoComplete="off"
+								className="tabular-nums"
+							/>
+						</PositionField>
+						<PositionField label="Объём в год">
+							<Input
+								aria-label="Объём в год"
+								type="number"
+								inputMode="numeric"
+								min={0}
+								value={annualQtyDraft}
+								onChange={(e) => setAnnualQtyDraft(e.target.value)}
+								autoComplete="off"
+								className="tabular-nums"
+							/>
+						</PositionField>
+					</div>
+				</>
+			) : (
+				<>
+					<FieldCardLine label="Название" value={item.name} />
+					<FieldCardLine label="Спецификация" value={item.description ?? ""} />
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+						<FieldCardLine label="Ед. изм." value={item.unit ?? ""} />
+						<FieldCardLine
+							label="Кол-во в поставке"
+							value={item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : ""}
+						/>
+						<FieldCardLine label="Объём в год" value={String(item.annualQuantity)} />
+					</div>
+				</>
+			)}
 			{supplier ? (
 				<CurrentSupplierInlineSummary supplier={supplier} onEdit={onEditSupplier} onRemove={onRemoveSupplier} />
 			) : (
@@ -1766,7 +2171,31 @@ function ProcurementInquiryPositionCard({
 					Добавить текущего поставщика
 				</Button>
 			)}
+			{editing && (
+				<div className="flex justify-end gap-2">
+					<Button type="button" variant="outline" size="sm" onClick={handleCancel}>
+						Отмена
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						disabled={!dirty || !nameDraft.trim() || updateItemMutation.isPending}
+						onClick={handleSave}
+					>
+						Сохранить
+					</Button>
+				</div>
+			)}
 		</section>
+	);
+}
+
+function PositionField({ label, children }: { label: string; children: React.ReactNode }) {
+	return (
+		<div className="flex flex-col gap-1">
+			<span className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+			{children}
+		</div>
 	);
 }
 

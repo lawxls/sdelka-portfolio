@@ -49,8 +49,11 @@ export function useUpdateProcurementInquiry() {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ id, patch }: UpdateProcurementInquiryVars) => client.update(id, patch),
-		onSuccess: () => {
+		onSuccess: (_data, { patch }) => {
 			queryClient.invalidateQueries({ queryKey: keys.procurementInquiries.all() });
+			if ("folderId" in patch) {
+				queryClient.invalidateQueries({ queryKey: keys.folders.stats() });
+			}
 		},
 		onError: () => toast.error("Не удалось обновить запрос"),
 	});

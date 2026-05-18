@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useItemsClient } from "./clients-context";
-import type { ExportItemsParams, ListItemsParams } from "./domains/items";
+import type { ExportItemsParams, ListItemsParams, UpdateItemData } from "./domains/items";
 import { invalidateAfterItemListChange } from "./invalidation-policies";
 import { applyOptimistic, applyToCache, rollbackOptimistic } from "./optimistic";
 import { keys } from "./query-keys";
@@ -100,12 +100,14 @@ export function useCreateItems() {
 	});
 }
 
+type UpdateItemVars = { id: string } & UpdateItemData;
+
 export function useUpdateItem() {
 	const client = useItemsClient();
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: ({ id, ...data }: { id: string; name?: string }) => client.update(id, data),
+		mutationFn: ({ id, ...data }: UpdateItemVars) => client.update(id, data),
 		onMutate: ({ id, ...updates }) =>
 			applyOptimistic(queryClient, [
 				{
@@ -122,6 +124,11 @@ export function useUpdateItem() {
 					update: itemsListPages.patchById(serverItem.id, () => serverItem),
 				},
 			]);
+			if (serverItem.procurementInquiryId) {
+				queryClient.invalidateQueries({
+					queryKey: keys.procurementInquiries.detail(serverItem.procurementInquiryId),
+				});
+			}
 		},
 		onError: (_err, _vars, context) => {
 			rollbackOptimistic(queryClient, context);
@@ -131,8 +138,8 @@ export function useUpdateItem() {
 
 	return {
 		...mutation,
-		/** mutate with synchronous cache update so the old name never flashes. */
-		mutate(vars: { id: string; name?: string; folderId?: string | null }) {
+		/** mutate with synchronous cache update so the old value never flashes. */
+		mutate(vars: UpdateItemVars) {
 			const { id, ...updates } = vars;
 			applyToCache(queryClient, [
 				{
