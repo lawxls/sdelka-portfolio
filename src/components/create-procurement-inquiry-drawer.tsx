@@ -5,6 +5,7 @@ import {
 	Info,
 	LoaderCircle,
 	Package,
+	Paperclip,
 	Plus,
 	RefreshCw,
 	Search,
@@ -1015,6 +1016,21 @@ export function PositionCard({
 	const annualId = `position-${index}-annual`;
 	const nameError = error?.name;
 	const supplier = position.currentSupplier;
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	function handleAddFiles(event: React.ChangeEvent<HTMLInputElement>) {
+		const picked = event.target.files;
+		if (!picked || picked.length === 0) return;
+		onChange("attachments", [...position.attachments, ...Array.from(picked)]);
+		event.target.value = "";
+	}
+
+	function handleRemoveFile(removeIndex: number) {
+		onChange(
+			"attachments",
+			position.attachments.filter((_, i) => i !== removeIndex),
+		);
+	}
 
 	return (
 		<section
@@ -1060,7 +1076,11 @@ export function PositionCard({
 				)}
 			</Field>
 
-			<Field label="Описание / уточнения" htmlFor={descId}>
+			<Field
+				label="Описание и спецификация"
+				htmlFor={descId}
+				hint="Добавьте спецификацию: опишите позицию, укажите требования и прикрепите макеты, чертежи или другие материалы, которые помогут поставщикам подготовить наиболее подходящее предложение"
+			>
 				<Textarea
 					id={descId}
 					placeholder="Опишите дополнительные требования к позиции"
@@ -1068,6 +1088,40 @@ export function PositionCard({
 					onChange={(e) => onChange("description", e.target.value)}
 					rows={3}
 				/>
+				<div className="flex flex-wrap items-center gap-1.5">
+					<input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleAddFiles} tabIndex={-1} />
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								aria-label="Прикрепить файл"
+								onClick={() => fileInputRef.current?.click()}
+								className="text-muted-foreground hover:text-foreground"
+							>
+								<Paperclip aria-hidden="true" className="size-4" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>Прикрепить файл</TooltipContent>
+					</Tooltip>
+					{position.attachments.map((file, i) => (
+						<span
+							key={`${file.name}-${file.size}-${file.lastModified}`}
+							className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs"
+						>
+							<span className="max-w-40 truncate">{file.name}</span>
+							<button
+								type="button"
+								onClick={() => handleRemoveFile(i)}
+								className="rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+								aria-label={`Удалить ${file.name}`}
+							>
+								<X className="size-3" aria-hidden="true" />
+							</button>
+						</span>
+					))}
+				</div>
 			</Field>
 
 			<div className="flex flex-wrap gap-3">
@@ -1345,6 +1399,7 @@ function itemToPositionDraft(item: ProcurementItem): PositionDraft {
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery !== undefined ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
+		attachments: [],
 	};
 }
 

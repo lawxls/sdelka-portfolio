@@ -86,6 +86,7 @@ export interface PositionDraft {
 	quantityPerDelivery: string;
 	annualQuantity: string;
 	currentSupplier?: CurrentSupplierDraft;
+	attachments: File[];
 }
 
 interface Step1State {
@@ -138,6 +139,7 @@ export function defaultPosition(): PositionDraft {
 		unit: "",
 		quantityPerDelivery: "",
 		annualQuantity: "",
+		attachments: [],
 	};
 }
 
@@ -148,7 +150,8 @@ export function isPositionDraftDirty(p: PositionDraft): boolean {
 		p.unit !== "" ||
 		p.quantityPerDelivery !== "" ||
 		p.annualQuantity !== "" ||
-		p.currentSupplier !== undefined
+		p.currentSupplier !== undefined ||
+		p.attachments.length > 0
 	);
 }
 
