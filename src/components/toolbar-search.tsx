@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,16 +128,8 @@ export function ToolbarSearch({
 				spellCheck={false}
 				autoComplete="off"
 				aria-label={ariaLabel}
-				className="h-7 w-48 rounded-[min(var(--radius-md),12px)] pl-8 pr-7 text-[0.8rem] md:w-64"
+				className="h-7 w-48 rounded-[min(var(--radius-md),12px)] pl-8 pr-2.5 text-[0.8rem] md:w-64"
 			/>
-			<button
-				type="button"
-				aria-label="Закрыть поиск"
-				onClick={collapseAndClear}
-				className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-			>
-				<X className="size-3.5" aria-hidden="true" />
-			</button>
 		</div>
 	);
 }
