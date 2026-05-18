@@ -3,11 +3,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { fakeGeneratedQuestionsClient, TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Address, Company, Folder } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
 import { CreateProcurementInquiryDrawer } from "./create-procurement-inquiry-drawer";
@@ -59,13 +58,15 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-function renderDrawer(
-	overrides: Partial<{
-		open: boolean;
-		onOpenChange: (open: boolean) => void;
-		onSubmit: (payload: CreateProcurementInquiryPayload) => void;
-	}> = {},
-) {
+interface RenderOverrides {
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+	onSubmit?: (payload: CreateProcurementInquiryPayload) => void;
+	previewResponse?: { questions: { questionText: string; suggests: string[] }[] };
+	previewError?: unknown;
+}
+
+function renderDrawer(overrides: RenderOverrides = {}) {
 	const props = {
 		open: overrides.open ?? true,
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
@@ -73,10 +74,18 @@ function renderDrawer(
 	};
 	const queryClient = createTestQueryClient();
 	const companiesClient = createInMemoryCompaniesClient(companies);
-	const foldersClient = createInMemoryFoldersClient({ seed: FOLDERS_SEED });
+	const foldersClient = testFoldersClient(FOLDERS_SEED);
 	const procurementInquiriesClient = createInMemoryProcurementInquiriesClient({ seed: [] });
 	const itemsClient = createInMemoryItemsClient({ seed: [] });
 	const suppliersClient = createInMemorySuppliersClient();
+	const previewResponse =
+		overrides.previewResponse ??
+		({ questions: [{ questionText: "Срочность?", suggests: ["Срочно", "Стандарт"] }] } as const);
+	const generatedQuestionsClient = fakeGeneratedQuestionsClient({
+		preview: overrides.previewError
+			? () => Promise.reject(overrides.previewError)
+			: () => Promise.resolve(previewResponse),
+	});
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -86,6 +95,7 @@ function renderDrawer(
 				procurementInquiries: procurementInquiriesClient,
 				items: itemsClient,
 				suppliers: suppliersClient,
+				generatedQuestions: generatedQuestionsClient,
 			}}
 		>
 			{children}
@@ -505,5 +515,112 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
 		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(true);
+	});
+});
+
+describe("CreateProcurementInquiryDrawer — Step 2 clarifying questions", () => {
+	test("renders fetched questions after the loader (success path)", async () => {
+		renderDrawer({
+			previewResponse: {
+				questions: [
+					{ questionText: "Marka materiala?", suggests: ["Standart", "Premium"] },
+					{ questionText: "Срочность поставки?", suggests: ["Срочно", "По графику"] },
+				],
+			},
+		});
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		expect(await screen.findByText("Marka materiala?")).toBeInTheDocument();
+		expect(screen.getByText("Срочность поставки?")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Standart" })).toBeInTheDocument();
+	});
+
+	test("error state surfaces Повторить + Пропустить buttons", async () => {
+		renderDrawer({ previewError: new Error("boom") });
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		expect(await screen.findByText("Не удалось загрузить вопросы")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Пропустить" })).toBeInTheDocument();
+	});
+
+	test("Пропустить advances to Step 3 with no questions persisted", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({ previewError: new Error("boom"), onSubmit });
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		await user.click(await screen.findByRole("button", { name: "Пропустить" }));
+		await screen.findByLabelText("Текст письма");
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
+	});
+
+	test("picking a suggest chip clears any typed freetext (mutually exclusive)", async () => {
+		renderDrawer({
+			previewResponse: { questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] },
+		});
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		const freeText = (await screen.findByLabelText("Свой вариант: Marka?")) as HTMLInputElement;
+		await user.type(freeText, "custom");
+		expect(freeText.value).toBe("custom");
+
+		await user.click(screen.getByRole("button", { name: "A" }));
+		expect((screen.getByLabelText("Свой вариант: Marka?") as HTMLInputElement).value).toBe("");
+		expect(screen.getByRole("button", { name: "A" })).toHaveAttribute("aria-pressed", "true");
+	});
+
+	test("typing freetext clears the selected chip (mutually exclusive)", async () => {
+		renderDrawer({
+			previewResponse: { questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] },
+		});
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		await user.click(await screen.findByRole("button", { name: "A" }));
+		expect(screen.getByRole("button", { name: "A" })).toHaveAttribute("aria-pressed", "true");
+
+		await user.type(screen.getByLabelText("Свой вариант: Marka?"), "custom");
+		expect(screen.getByRole("button", { name: "A" })).toHaveAttribute("aria-pressed", "false");
+		expect((screen.getByLabelText("Свой вариант: Marka?") as HTMLInputElement).value).toBe("custom");
+	});
+
+	test("submit forwards generatedQuestions at the inquiry level (including unanswered rows)", async () => {
+		const onSubmit = vi.fn();
+		renderDrawer({
+			previewResponse: {
+				questions: [
+					{ questionText: "Marka?", suggests: ["A", "B"] },
+					{ questionText: "Срочность?", suggests: ["Срочно"] },
+				],
+			},
+			onSubmit,
+		});
+		const user = userEvent.setup();
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		await user.click(await screen.findByRole("button", { name: "A" }));
+		await advance(user);
+		await screen.findByLabelText("Текст письма");
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.generatedQuestions).toEqual([
+			{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+			{ questionText: "Срочность?", suggests: ["Срочно"], answer: "" },
+		]);
+		expect(payload.items[0]).not.toHaveProperty("generatedAnswers");
 	});
 });

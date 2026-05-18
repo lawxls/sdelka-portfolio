@@ -3,6 +3,7 @@ import type {
 	CursorPage,
 	ListProcurementInquiriesParams,
 	ProcurementInquiry,
+	UpdateProcurementInquiryInput,
 } from "../domains/procurement-inquiries";
 
 /**
@@ -18,7 +19,7 @@ export interface ProcurementInquiriesClient {
 	list(params: ListProcurementInquiriesParams): Promise<CursorPage<ProcurementInquiry>>;
 	get(id: string): Promise<ProcurementInquiry>;
 	create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry>;
-	update(id: string, patch: Partial<ProcurementInquiry>): Promise<ProcurementInquiry>;
+	update(id: string, patch: UpdateProcurementInquiryInput): Promise<ProcurementInquiry>;
 	archive(id: string): Promise<ProcurementInquiry>;
 	unarchive(id: string): Promise<ProcurementInquiry>;
 	delete(id: string): Promise<void>;

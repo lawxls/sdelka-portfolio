@@ -1,13 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { _resetItemDetailStore, getItemDetail, updateItemDetail } from "./item-detail-mock-data";
 import {
-	_archivedCount,
 	_getAllItems,
 	_isArchived,
 	_resetItemsStore,
 	_setInquiryStateResolver,
 	_setItems,
-	_statsByFolder,
 	createItemsBatchMock,
 	deleteItemMock,
 	exportItemsMock,
@@ -273,52 +271,6 @@ describe("exportItemsMock", () => {
 		const text = await result.blob.text();
 		expect(text).toContain("Keep");
 		expect(text).not.toContain("Drop");
-	});
-});
-
-describe("_statsByFolder and _archivedCount", () => {
-	it("aggregates folder counts (joined via parent inquiry) excluding archived", async () => {
-		setInquiries([
-			{ id: "T-1", folderId: "f1" },
-			{ id: "T-2", folderId: null },
-			{ id: "T-3", folderId: "f1" },
-		]);
-		_setItems(
-			[
-				makeItem("a", { procurementInquiryId: "T-1" }),
-				makeItem("b", { procurementInquiryId: "T-1" }),
-				makeItem("c", { procurementInquiryId: "T-2" }),
-				makeItem("d", { procurementInquiryId: "T-3" }),
-			],
-			["d"],
-		);
-		const stats = _statsByFolder();
-		expect(stats.get("f1")).toBe(2);
-		expect(stats.get(null)).toBe(1);
-		expect(_archivedCount()).toBe(1);
-	});
-
-	it("scopes counts by company when provided (joined via parent inquiry)", async () => {
-		setInquiries([
-			{ id: "T-1", folderId: "f1", companyId: "c1" },
-			{ id: "T-2", folderId: "f1", companyId: "c2" },
-			{ id: "T-3", folderId: "f2", companyId: "c2" },
-		]);
-		_setItems(
-			[
-				makeItem("a", { procurementInquiryId: "T-1" }),
-				makeItem("b", { procurementInquiryId: "T-2" }),
-				makeItem("c", { procurementInquiryId: "T-1" }),
-				makeItem("d", { procurementInquiryId: "T-3" }),
-				makeItem("e", { procurementInquiryId: "T-1" }),
-			],
-			["e"],
-		);
-		const c1 = _statsByFolder("c1");
-		expect(c1.get("f1")).toBe(2);
-		expect(c1.get("f2")).toBeUndefined();
-		expect(_archivedCount("c1")).toBe(1);
-		expect(_archivedCount("c2")).toBe(0);
 	});
 });
 

@@ -6,30 +6,30 @@ import type {
 	UpdateFolderData,
 } from "../domains/folders";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
+import { buildQueryString, type DrfCursorPage } from "./drf";
 import type { FoldersClient } from "./folders-client";
-
-function buildQuery(params: object): string {
-	const sp = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value === undefined || value === null || value === "") continue;
-		sp.set(key, String(value));
-	}
-	const qs = sp.toString();
-	return qs ? `?${qs}` : "";
-}
 
 const enc = encodeURIComponent;
 
+/** Single-page fetch of all folders. Backend caps page_size at 200 and the
+ * workspace folder count is bounded well below that, so paginating would be
+ * pure ceremony. Listing remains `Folder[]` on the seam. */
+const FOLDERS_PAGE_SIZE = 200;
+
 export function createHttpFoldersClient(http: HttpClient = defaultHttpClient): FoldersClient {
 	return {
-		list: () => http.get<Folder[]>(`/folders`),
+		list: async () => {
+			const page = await http.get<DrfCursorPage<Folder>>(`/folders/?pageSize=${FOLDERS_PAGE_SIZE}`);
+			return page.results;
+		},
 
-		stats: (params?: FolderStatsParams) => http.get<FolderStatsResponse>(`/folders/stats${buildQuery(params ?? {})}`),
+		stats: (params?: FolderStatsParams) =>
+			http.get<FolderStatsResponse>(`/folders/stats/${buildQueryString((params ?? {}) as Record<string, unknown>)}`),
 
-		create: (data: CreateFolderData) => http.post<Folder>(`/folders`, { body: data }),
+		create: (data: CreateFolderData) => http.post<Folder>(`/folders/`, { body: data }),
 
-		update: (id, data: UpdateFolderData) => http.patch<Folder>(`/folders/${enc(id)}`, { body: data }),
+		update: (id, data: UpdateFolderData) => http.patch<Folder>(`/folders/${enc(id)}/`, { body: data }),
 
-		delete: (id) => http.delete<void>(`/folders/${enc(id)}`),
+		delete: (id) => http.delete<void>(`/folders/${enc(id)}/`),
 	};
 }

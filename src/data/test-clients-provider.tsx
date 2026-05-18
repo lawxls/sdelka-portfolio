@@ -6,6 +6,7 @@ import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { EmployeesClient } from "./clients/employees-client";
 import type { FoldersClient } from "./clients/folders-client";
+import type { GeneratedQuestionsClient } from "./clients/generated-questions-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
 import type { ProcurementInquiriesClient } from "./clients/procurement-inquiries-client";
@@ -16,6 +17,7 @@ import type { SuppliersClient } from "./clients/suppliers-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 import { type DataClients, DataClientsProvider } from "./clients-context";
+import type { Folder } from "./types";
 
 /**
  * Test wrapper that mirrors the production composition root: a QueryClient and
@@ -157,6 +159,20 @@ export function fakeProcurementInquiriesClient(
 	};
 }
 
+/** Build a fake `GeneratedQuestionsClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeGeneratedQuestionsClient(
+	overrides: Partial<GeneratedQuestionsClient> = {},
+): GeneratedQuestionsClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeGeneratedQuestionsClient.${method} not stubbed`);
+	};
+	return {
+		preview: notImplemented("preview"),
+		...overrides,
+	};
+}
+
 /** Build a fake `FoldersClient` for hook tests — methods default to throwing
  * "not implemented" so a test that forgets to stub a call fails loudly. */
 export function fakeFoldersClient(overrides: Partial<FoldersClient> = {}): FoldersClient {
@@ -169,6 +185,40 @@ export function fakeFoldersClient(overrides: Partial<FoldersClient> = {}): Folde
 		create: notImplemented("create"),
 		update: notImplemented("update"),
 		delete: notImplemented("delete"),
+		...overrides,
+	};
+}
+
+/** Build a minimal working `FoldersClient` for component/page tests that need
+ * folder CRUD without standing up the HTTP layer. Backed by an in-closure map
+ * seeded by `seed`; stats default to zero counts (use `overrides.stats` for
+ * tests that need specific values). */
+export function testFoldersClient(seed: Folder[] = [], overrides: Partial<FoldersClient> = {}): FoldersClient {
+	const store = new Map<string, Folder>(seed.map((f) => [f.id, { ...f }]));
+	let counter = 0;
+	return {
+		async list() {
+			return Array.from(store.values()).map((f) => ({ ...f }));
+		},
+		async stats() {
+			return { stats: [], archiveCount: 0 };
+		},
+		async create(data) {
+			counter += 1;
+			const folder: Folder = { id: `test-folder-${counter}`, name: data.name, color: data.color };
+			store.set(folder.id, folder);
+			return { ...folder };
+		},
+		async update(id, data) {
+			const existing = store.get(id);
+			if (!existing) throw new Error(`testFoldersClient: folder ${id} not found`);
+			const next = { ...existing, ...data };
+			store.set(id, next);
+			return { ...next };
+		},
+		async delete(id) {
+			store.delete(id);
+		},
 		...overrides,
 	};
 }

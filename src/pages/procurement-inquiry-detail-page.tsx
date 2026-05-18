@@ -26,6 +26,7 @@ import { ToolbarSearch } from "@/components/toolbar-search";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -1519,6 +1520,8 @@ function ProcurementInquiryDetailsTab({
 
 			<ProcurementInquiryRfqSection procurementInquiry={procurementInquiry} editable={rfqEditable} />
 
+			<ProcurementInquiryGeneratedQuestionsSection procurementInquiry={procurementInquiry} />
+
 			<Section title="Дополнительно">
 				<CardGrid>
 					<FieldCard label="Условия" span="half">
@@ -1580,12 +1583,11 @@ function ProcurementInquiryRfqSection({
 
 	function handleSave() {
 		const trimmedBody = bodyDraft.trim();
-		const patch: Partial<ProcurementInquiry> = {
-			emailBody: trimmedBody,
-			sendRequestsAutomatically: autoSendDraft,
-		};
 		updateMutation.mutate(
-			{ id: procurementInquiry.id, patch },
+			{
+				id: procurementInquiry.id,
+				patch: { emailBody: trimmedBody, sendRequestsAutomatically: autoSendDraft },
+			},
 			{
 				onSuccess: () => setEditing(false),
 			},
@@ -1640,6 +1642,83 @@ function ProcurementInquiryRfqSection({
 						<ValueText value={currentAutoSend ? "Включена" : "Выключена"} />
 					)}
 				</FieldCard>
+			</CardGrid>
+		</Section>
+	);
+}
+
+function ProcurementInquiryGeneratedQuestionsSection({
+	procurementInquiry,
+}: {
+	procurementInquiry: ProcurementInquiry;
+}) {
+	const updateMutation = useUpdateProcurementInquiry();
+	const questions = procurementInquiry.generatedQuestions;
+	const [editing, setEditing] = useState(false);
+	const [drafts, setDrafts] = useState<string[]>([]);
+
+	function handleEdit() {
+		setDrafts(questions.map((q) => q.answer));
+		setEditing(true);
+	}
+
+	function handleCancel() {
+		setEditing(false);
+	}
+
+	function handleSave() {
+		updateMutation.mutate(
+			{
+				id: procurementInquiry.id,
+				patch: {
+					generatedQuestions: questions.map((q, i) => ({
+						questionText: q.questionText,
+						suggests: q.suggests,
+						answer: drafts[i] ?? q.answer,
+					})),
+				},
+			},
+			{ onSuccess: () => setEditing(false) },
+		);
+	}
+
+	if (questions.length === 0) return null;
+
+	const dirty = drafts.some((draft, i) => draft !== (questions[i]?.answer ?? ""));
+
+	return (
+		<Section
+			title="Дополнительные вопросы"
+			editLabel="Редактировать дополнительные вопросы"
+			editing={editing}
+			onEdit={handleEdit}
+			onCancel={handleCancel}
+			onSave={handleSave}
+			saveDisabled={!dirty || updateMutation.isPending}
+			isPending={updateMutation.isPending}
+		>
+			<CardGrid>
+				{questions.map((question, index) => (
+					<FieldCard key={question.id} label={question.questionText} span="full">
+						{editing ? (
+							<Input
+								aria-label={`Ответ: ${question.questionText}`}
+								value={drafts[index] ?? ""}
+								onChange={(e) =>
+									setDrafts((prev) => {
+										const next = prev.slice();
+										next[index] = e.target.value;
+										return next;
+									})
+								}
+								spellCheck={false}
+								autoComplete="off"
+							/>
+						) : (
+							<ValueText value={question.answer} />
+						)}
+					</FieldCard>
+				))}
 			</CardGrid>
 		</Section>
 	);

@@ -1,4 +1,5 @@
 import {
+	type CreateProcurementInquiryGeneratedQuestionInput,
 	type CreateProcurementInquiryInput,
 	type CursorPage,
 	FOLDER_FILTER_ALL,
@@ -7,6 +8,7 @@ import {
 	type ListProcurementInquiriesParams,
 	type ProcurementInquiry,
 	type ProcurementInquirySortField,
+	type UpdateProcurementInquiryInput,
 } from "../domains/procurement-inquiries";
 import { NotFoundError } from "../errors";
 import { delay, nextId, paginate } from "../mock-utils";
@@ -48,6 +50,7 @@ function fillDefaults(partial: Partial<ProcurementInquiry> & { id: string; compa
 		suppliersCount: partial.suppliersCount ?? 0,
 		createdAt: partial.createdAt ?? FALLBACK_DATE,
 		updatedAt: partial.updatedAt ?? partial.createdAt ?? FALLBACK_DATE,
+		generatedQuestions: partial.generatedQuestions ?? [],
 	};
 	if (partial.items !== undefined) base.items = partial.items;
 	return base;
@@ -57,12 +60,25 @@ function clone(t: ProcurementInquiry): ProcurementInquiry {
 	return { ...t };
 }
 
-/** Strip the nested `items` field — mirrors backend behavior where only the
- * retrieve action serializes items, while list/archive/update omit them. */
-function withoutItems(t: ProcurementInquiry): ProcurementInquiry {
-	if (t.items === undefined) return t;
-	const { items: _items, ...rest } = t;
-	return rest;
+/** Drop the nested detail-only fields so a list row matches the wire shape
+ * (the list endpoint omits `items` + `generatedQuestions`). `generatedQuestions`
+ * resets to `[]` so the domain field stays non-optional. */
+function toListShape(t: ProcurementInquiry): ProcurementInquiry {
+	const out = { ...t, generatedQuestions: [] };
+	delete out.items;
+	return out;
+}
+
+function materializeGeneratedQuestions(
+	inquiryId: string,
+	input: CreateProcurementInquiryGeneratedQuestionInput[] | undefined,
+): ProcurementInquiry["generatedQuestions"] | undefined {
+	return input?.map((q, i) => ({
+		id: `${inquiryId}-gq-${i}`,
+		questionText: q.questionText,
+		suggests: q.suggests,
+		answer: q.answer,
+	}));
 }
 
 function matchesFolder(inquiry: ProcurementInquiry, folder: string | undefined): boolean {
@@ -170,7 +186,7 @@ export function createInMemoryProcurementInquiriesClient(
 		if (idx === -1) throw new NotFoundError({ id });
 		const now = new Date().toISOString();
 		store[idx] = { ...store[idx], isArchived: archived, updatedAt: now };
-		return withoutItems(clone(store[idx]));
+		return clone(store[idx]);
 	}
 
 	return {
@@ -178,7 +194,7 @@ export function createInMemoryProcurementInquiriesClient(
 			await delay();
 			const filtered = sortInquiries(applyFilters(store, params, new Date()), params);
 			const page = paginate({ items: filtered, cursor: params.cursor, limit: params.limit, getId: (t) => t.id });
-			return { items: page.items.map((t) => withoutItems(clone(t))), nextCursor: page.nextCursor };
+			return { items: page.items.map((t) => toListShape(clone(t))), nextCursor: page.nextCursor };
 		},
 
 		async get(id: string): Promise<ProcurementInquiry> {
@@ -191,28 +207,33 @@ export function createInMemoryProcurementInquiriesClient(
 		async create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry> {
 			await delay();
 			const now = new Date().toISOString();
-			// `items` on `CreateProcurementInquiryInput` is the write-only nested
-			// create payload (shape: `CreateProcurementInquiryItemInput[]`); the
-			// in-memory adapter doesn't simulate the items table, so it's dropped
-			// from the stored row to match the backend's write-only behavior.
-			const { items: _items, ...rest } = input;
+			const { items: _items, generatedQuestions: gqInput, ...rest } = input;
+			const id = nextId("inquiry");
 			const inquiry = fillDefaults({
 				...rest,
-				id: nextId("inquiry"),
+				id,
 				createdAt: now,
 				updatedAt: now,
+				generatedQuestions: materializeGeneratedQuestions(id, gqInput),
 			});
 			store.unshift(inquiry);
 			return clone(inquiry);
 		},
 
-		async update(id: string, patch: Partial<ProcurementInquiry>): Promise<ProcurementInquiry> {
+		async update(id: string, patch: UpdateProcurementInquiryInput): Promise<ProcurementInquiry> {
 			await delay();
 			const idx = indexOf(id);
 			if (idx === -1) throw new NotFoundError({ id });
 			const now = new Date().toISOString();
-			store[idx] = { ...store[idx], ...patch, id: store[idx].id, updatedAt: now };
-			return withoutItems(clone(store[idx]));
+			const { generatedQuestions: gqPatch, ...rest } = patch;
+			const current = store[idx];
+			const merged: ProcurementInquiry = { ...current, ...rest, id: current.id, updatedAt: now };
+			// Full-replace mirrors the backend's PATCH semantics; synthesize ids
+			// for new rows so the read shape is satisfied.
+			const replaced = materializeGeneratedQuestions(id, gqPatch);
+			if (replaced !== undefined) merged.generatedQuestions = replaced;
+			store[idx] = merged;
+			return clone(store[idx]);
 		},
 
 		archive: (id) => setArchived(id, true),

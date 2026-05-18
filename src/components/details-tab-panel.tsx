@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { CREATION_QUESTIONS } from "@/data/mock-creation-questions";
-import type { GeneratedAnswer, ProcurementItem, Unit, UnloadingType } from "@/data/types";
+import type { ProcurementItem, Unit, UnloadingType } from "@/data/types";
 import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
@@ -17,20 +16,12 @@ interface DetailsTabPanelProps {
 	itemId: string;
 }
 
-type SectionKey = "info" | "answers" | null;
-
-const QUESTION_BY_ID = new Map(CREATION_QUESTIONS.map((q) => [q.id, q]));
-
 interface InfoFormState {
 	name: string;
 	description: string;
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
-}
-
-interface AnswersFormState {
-	texts: Record<string, string>;
 }
 
 function initInfoForm(item: ProcurementItem): InfoFormState {
@@ -41,21 +32,6 @@ function initInfoForm(item: ProcurementItem): InfoFormState {
 		quantityPerDelivery: item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
 	};
-}
-
-function initAnswersForm(item: ProcurementItem): AnswersFormState {
-	const texts: Record<string, string> = {};
-	for (const a of item.generatedAnswers ?? []) {
-		texts[a.questionId] = answerValueText(a);
-	}
-	return { texts };
-}
-
-function answerValueText(answer: GeneratedAnswer): string {
-	const parts: string[] = [];
-	if (answer.selectedOption) parts.push(answer.selectedOption);
-	if (answer.freeText) parts.push(answer.freeText);
-	return parts.join(" — ");
 }
 
 export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
@@ -69,9 +45,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: company } = useCompanyDetail(procurementInquiry?.companyId ?? null);
 	const updateMutation = useUpdateItemDetail();
 
-	const [editingSection, setEditingSection] = useState<SectionKey>(null);
+	const [editingInfo, setEditingInfo] = useState(false);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
-	const [answersForm, setAnswersForm] = useState<AnswersFormState | null>(null);
 
 	const folder = useMemo(
 		() => folders.find((f) => f.id === procurementInquiry?.folderId),
@@ -107,18 +82,12 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const currentItem = item;
 
 	function handleCancel() {
-		setEditingSection(null);
-	}
-
-	function mutate(data: Record<string, unknown>) {
-		updateMutation.mutate({ id: itemId, ...data } as Parameters<typeof updateMutation.mutate>[0], {
-			onSuccess: () => setEditingSection(null),
-		});
+		setEditingInfo(false);
 	}
 
 	function handleEditInfo() {
 		setInfoForm(initInfoForm(currentItem));
-		setEditingSection("info");
+		setEditingInfo(true);
 	}
 
 	function updateInfo<K extends keyof InfoFormState>(key: K, value: InfoFormState[K]) {
@@ -135,7 +104,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (qpd !== currentItem.quantityPerDelivery) data.quantityPerDelivery = qpd;
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		if (aq !== undefined && aq !== currentItem.annualQuantity) data.annualQuantity = aq;
-		mutate(data);
+		updateMutation.mutate({ id: itemId, ...data } as Parameters<typeof updateMutation.mutate>[0], {
+			onSuccess: () => setEditingInfo(false),
+		});
 	}
 
 	function isInfoDirty() {
@@ -150,42 +121,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		);
 	}
 
-	function handleEditAnswers() {
-		setAnswersForm(initAnswersForm(currentItem));
-		setEditingSection("answers");
-	}
-
-	function updateAnswerText(questionId: string, text: string) {
-		setAnswersForm((prev) => (prev ? { texts: { ...prev.texts, [questionId]: text } } : prev));
-	}
-
-	function handleSaveAnswers() {
-		if (!answersForm) return;
-		const prev = currentItem.generatedAnswers ?? [];
-		const next: GeneratedAnswer[] = [];
-		for (const p of prev) {
-			const edited = (answersForm.texts[p.questionId] ?? "").trim();
-			if (!edited) continue;
-			if (edited === answerValueText(p)) {
-				next.push(p);
-			} else {
-				next.push({ questionId: p.questionId, freeText: edited });
-			}
-		}
-		mutate({ generatedAnswers: next.length > 0 ? next : undefined });
-	}
-
-	function isAnswersDirty() {
-		if (!answersForm) return false;
-		const prev = currentItem.generatedAnswers ?? [];
-		return prev.some((p) => (answersForm.texts[p.questionId] ?? "").trim() !== answerValueText(p));
-	}
-
-	const isEditingInfo = editingSection === "info" && infoForm !== null;
-	const isEditingAnswers = editingSection === "answers" && answersForm !== null;
+	const isEditingInfo = editingInfo && infoForm !== null;
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
-	const answers = item.generatedAnswers ?? [];
 	const currentSupplier = item.currentSupplier;
 
 	return (
@@ -374,41 +312,6 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 				</CardGrid>
 			</Section>
-
-			{/* --- Ответы на уточнения --- */}
-			{answers.length > 0 && (
-				<Section
-					title="Ответы на уточнения"
-					editLabel="Редактировать ответы на уточнения"
-					editing={isEditingAnswers}
-					onEdit={handleEditAnswers}
-					onCancel={handleCancel}
-					onSave={handleSaveAnswers}
-					saveDisabled={!isAnswersDirty() || updateMutation.isPending}
-					isPending={updateMutation.isPending}
-				>
-					<CardGrid>
-						{answers.map((answer) => {
-							const question = QUESTION_BY_ID.get(answer.questionId);
-							const label = question?.label ?? answer.questionId;
-							return (
-								<FieldCard key={answer.questionId} label={label} span="full">
-									{isEditingAnswers ? (
-										<Textarea
-											aria-label={`${label}: ответ`}
-											value={answersForm.texts[answer.questionId] ?? ""}
-											onChange={(e) => updateAnswerText(answer.questionId, e.target.value)}
-											autoComplete="off"
-										/>
-									) : (
-										<ValueText value={answerValueText(answer)} />
-									)}
-								</FieldCard>
-							);
-						})}
-					</CardGrid>
-				</Section>
-			)}
 		</div>
 	);
 }

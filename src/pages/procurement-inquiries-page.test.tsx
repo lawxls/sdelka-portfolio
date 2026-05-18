@@ -5,11 +5,10 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryFoldersClient } from "@/data/clients/folders-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry } from "@/data/types";
 import { makeCompanyDetail, makeProcurementInquiry } from "@/test-utils";
 import { ProcurementInquiriesPage } from "./procurement-inquiries-page";
@@ -48,7 +47,7 @@ function renderPage(
 				companies: createInMemoryCompaniesClient([makeCompanyDetail("company-1", { name: "Альфа", isMain: true })]),
 				items: createInMemoryItemsClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
-				folders: createInMemoryFoldersClient({ seed: FOLDERS }),
+				folders: testFoldersClient(FOLDERS),
 			}}
 		>
 			<TooltipProvider>
