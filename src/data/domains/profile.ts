@@ -18,11 +18,12 @@ export interface CurrentEmployee {
 	phone: string;
 	avatarIcon: string;
 	mailingAllowed: boolean;
+	emailSignature: string;
 	dateJoined: string;
 	// TODO(api): role isn't on /users/me/ yet — drop `?` once the backend exposes it.
 	role?: EmployeeRole;
 }
 
 export type SettingsPatch = Partial<
-	Pick<CurrentEmployee, "firstName" | "lastName" | "patronymic" | "phone" | "mailingAllowed">
+	Pick<CurrentEmployee, "firstName" | "lastName" | "patronymic" | "phone" | "mailingAllowed" | "emailSignature">
 >;

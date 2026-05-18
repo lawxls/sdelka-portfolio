@@ -264,4 +264,51 @@ describe("ProfileSettingsPage", () => {
 		});
 		expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
 	});
+
+	describe("email signature", () => {
+		test("prefills with «С уважением, {full name}» when emailSignature is empty", async () => {
+			renderPage();
+			const signature = await screen.findByLabelText("Подпись в письмах");
+			expect(signature).toHaveValue("С уважением,\nИван Иванов");
+		});
+
+		test("uses the persisted emailSignature when present", async () => {
+			renderPage({
+				profile: createInMemoryProfileClient({
+					me: makeMe({ patronymic: "Иванович", emailSignature: "Иван Иванов\nДиректор по закупкам" }),
+				}),
+			});
+			const signature = await screen.findByLabelText("Подпись в письмах");
+			expect(signature).toHaveValue("Иван Иванов\nДиректор по закупкам");
+		});
+
+		test("description mentions ФИО, должность и контакты", async () => {
+			renderPage();
+			expect(await screen.findByText(/Будет добавляться в конце писем поставщикам/i)).toBeInTheDocument();
+		});
+
+		test("editing the signature enables Save", async () => {
+			renderPage();
+			const user = userEvent.setup();
+			const signature = await screen.findByLabelText("Подпись в письмах");
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+			await user.type(signature, "\nДиректор по закупкам");
+			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+		});
+
+		test("save persists emailSignature to the backend", async () => {
+			renderPage();
+			const user = userEvent.setup();
+			const signature = await screen.findByLabelText("Подпись в письмах");
+			await user.clear(signature);
+			await user.type(signature, "Команда Сделки");
+			await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+			await waitFor(async () => {
+				const current = await profileClient.me();
+				expect(current.emailSignature).toBe("Команда Сделки");
+			});
+			expect(toast.success).toHaveBeenCalledWith("Изменения сохранены");
+		});
+	});
 });

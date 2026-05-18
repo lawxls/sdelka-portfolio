@@ -118,6 +118,7 @@ export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmploye
 		avatarIcon: "blue",
 		dateJoined: "2024-01-15T10:00:00Z",
 		mailingAllowed: true,
+		emailSignature: "",
 		role: "admin",
 		...overrides,
 	};

@@ -11,6 +11,7 @@ const DEFAULT_ME: CurrentEmployee = {
 	phone: "+79161000001",
 	avatarIcon: "blue",
 	mailingAllowed: true,
+	emailSignature: "",
 	dateJoined: "2024-01-15T10:00:00Z",
 	role: "admin",
 };

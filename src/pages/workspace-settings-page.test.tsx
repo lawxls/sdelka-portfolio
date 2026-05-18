@@ -4,10 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
-import type { ProfileClient } from "@/data/clients/profile-client";
-import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
-import { makeMe, mockHostname } from "@/test-utils";
+import { mockHostname } from "@/test-utils";
 import { WorkspaceSettingsPage } from "./workspace-settings-page";
 
 vi.mock("sonner", () => ({
@@ -16,10 +14,9 @@ vi.mock("sonner", () => ({
 
 let queryClient: QueryClient;
 
-function renderPage(opts: { profile?: ProfileClient } = {}) {
-	const profile = opts.profile ?? createInMemoryProfileClient({ me: makeMe() });
+function renderPage() {
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ profile }}>
+		<TestClientsProvider queryClient={queryClient} clients={{}}>
 			<WorkspaceSettingsPage />
 		</TestClientsProvider>,
 	);
@@ -42,34 +39,19 @@ describe("WorkspaceSettingsPage", () => {
 			renderPage();
 			expect(await screen.findByPlaceholderText(/всегда уточняй/i)).toBeInTheDocument();
 		});
-	});
 
-	describe("email signature textarea", () => {
-		test("prefills with «С уважением, {full name}» from current user", async () => {
+		test("does not render the email signature section", async () => {
 			renderPage();
-			const signature = await screen.findByLabelText("Подпись");
-			expect(signature).toHaveValue("С уважением,\nИван Иванов");
-		});
-
-		test("description copy mentions ФИО, должность и контакты", async () => {
-			renderPage();
-			expect(await screen.findByText(/Будет добавляться в конце писем поставщикам/i)).toBeInTheDocument();
-		});
-
-		test("editing the signature enables Save", async () => {
-			renderPage();
-			const user = userEvent.setup();
-			const signature = await screen.findByLabelText("Подпись");
-			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
-			await user.type(signature, "\nДиректор по закупкам");
-			expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+			await screen.findByPlaceholderText(/всегда уточняй/i);
+			expect(screen.queryByLabelText("Подпись")).not.toBeInTheDocument();
+			expect(screen.queryByText(/Подпись в письмах/i)).not.toBeInTheDocument();
 		});
 	});
 
 	describe("save flow", () => {
 		test("save button disabled when no changes", async () => {
 			renderPage();
-			await screen.findByLabelText("Подпись");
+			await screen.findByPlaceholderText(/всегда уточняй/i);
 			expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
 		});
 

@@ -28,6 +28,7 @@ const SEED_ME: CurrentEmployee = {
 	phone: "+79991234567",
 	avatarIcon: "blue",
 	mailingAllowed: true,
+	emailSignature: "",
 	dateJoined: "2024-01-15T10:00:00Z",
 	role: "admin",
 };

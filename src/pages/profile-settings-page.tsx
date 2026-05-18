@@ -1,5 +1,5 @@
 import { ArrowRight, Gauge, IdCard, KeyRound, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { FloatingInput } from "@/components/floating-input";
@@ -7,6 +7,7 @@ import { TopUpRequestsDialog } from "@/components/top-up-requests-dialog";
 import { Button } from "@/components/ui/button";
 import { CheckboxBadge } from "@/components/ui/checkbox-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { extractFormErrors } from "@/data/auth-errors";
 import type { CurrentEmployee, SettingsPatch } from "@/data/domains/profile";
 import type { Subscription } from "@/data/domains/subscription";
@@ -18,6 +19,11 @@ import { formatDate, formatFullName, formatInteger, getInitials } from "@/lib/fo
 import { cn } from "@/lib/utils";
 
 const PHONE_RE = /^\+?[0-9]{10,15}$/;
+
+function buildDefaultSignature(firstName: string, lastName: string): string {
+	const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+	return fullName ? `С уважением,\n${fullName}` : "С уважением,";
+}
 
 const CARD_BASE = "rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-6";
 
@@ -48,20 +54,27 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const updateSettings = useUpdateSettings();
 	const requestPasswordChange = useRequestPasswordChange();
 
+	const initialSignature = data.emailSignature || buildDefaultSignature(data.firstName, data.lastName);
+	const savedSignature = data.emailSignature || initialSignature;
+
 	const [firstName, setFirstName] = useState(data.firstName);
 	const [lastName, setLastName] = useState(data.lastName);
 	const [patronymic, setPatronymic] = useState(data.patronymic ?? "");
 	const [phone, setPhone] = useState(data.phone);
 	const [mailingAllowed, setMailingAllowed] = useState(data.mailingAllowed);
+	const [emailSignature, setEmailSignature] = useState(initialSignature);
 	const [phoneError, setPhoneError] = useState<string | null>(null);
 	const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+	const signatureId = useId();
 
 	const isDirty =
 		firstName !== data.firstName ||
 		lastName !== data.lastName ||
 		patronymic !== (data.patronymic ?? "") ||
 		phone !== data.phone ||
-		mailingAllowed !== data.mailingAllowed;
+		mailingAllowed !== data.mailingAllowed ||
+		emailSignature !== savedSignature;
 
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -79,6 +92,7 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 		if (patronymic !== (data.patronymic ?? "")) patch.patronymic = patronymic;
 		if (phone !== data.phone) patch.phone = phone;
 		if (mailingAllowed !== data.mailingAllowed) patch.mailingAllowed = mailingAllowed;
+		if (emailSignature !== savedSignature) patch.emailSignature = emailSignature;
 
 		updateSettings.mutate(patch, {
 			onSuccess: () => toast.success("Изменения сохранены"),
@@ -117,62 +131,79 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 
 			<LimitsSection />
 
-			<SectionCard className="mt-5">
-				<SectionHeader icon={IdCard} title="Личные данные" />
-				<form onSubmit={handleSubmit} className="space-y-5">
-					<div className="grid gap-4 sm:grid-cols-3">
-						<FloatingInput
-							label="Имя"
-							name="firstName"
-							value={firstName}
-							onChange={(e) => setFirstName(e.target.value)}
-							error={fieldErrors.firstName}
-							autoComplete="given-name"
-						/>
-						<FloatingInput
-							label="Фамилия"
-							name="lastName"
-							value={lastName}
-							onChange={(e) => setLastName(e.target.value)}
-							error={fieldErrors.lastName}
-							autoComplete="family-name"
-						/>
-						<FloatingInput
-							label="Отчество"
-							name="patronymic"
-							value={patronymic}
-							onChange={(e) => setPatronymic(e.target.value)}
-							autoComplete="off"
-						/>
+			<form onSubmit={handleSubmit}>
+				<SectionCard className="mt-5">
+					<SectionHeader icon={IdCard} title="Личные данные" />
+					<div className="space-y-5">
+						<div className="grid gap-4 sm:grid-cols-3">
+							<FloatingInput
+								label="Имя"
+								name="firstName"
+								value={firstName}
+								onChange={(e) => setFirstName(e.target.value)}
+								error={fieldErrors.firstName}
+								autoComplete="given-name"
+							/>
+							<FloatingInput
+								label="Фамилия"
+								name="lastName"
+								value={lastName}
+								onChange={(e) => setLastName(e.target.value)}
+								error={fieldErrors.lastName}
+								autoComplete="family-name"
+							/>
+							<FloatingInput
+								label="Отчество"
+								name="patronymic"
+								value={patronymic}
+								onChange={(e) => setPatronymic(e.target.value)}
+								autoComplete="off"
+							/>
+						</div>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<FloatingInput
+								label="Номер телефона"
+								name="phone"
+								value={phone}
+								onChange={(e) => setPhone(e.target.value)}
+								error={phoneError ?? fieldErrors.phone}
+								inputMode="tel"
+								autoComplete="tel"
+							/>
+							<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
+						</div>
+						<CheckboxBadge
+							id="mailing-allowed"
+							checked={mailingAllowed}
+							onChange={setMailingAllowed}
+							ariaLabel="Получать уведомления на почту"
+						>
+							Получать уведомления на почту
+						</CheckboxBadge>
+						<div className="space-y-1.5 border-t border-border pt-5">
+							<label htmlFor={signatureId} className="text-sm font-medium text-foreground">
+								Подпись в письмах
+							</label>
+							<p className="text-xs text-muted-foreground">
+								Будет добавляться в конце писем поставщикам — например, ФИО, должность и контакты.
+							</p>
+							<Textarea
+								id={signatureId}
+								value={emailSignature}
+								onChange={(e) => setEmailSignature(e.target.value)}
+								rows={4}
+								className="mt-1.5 whitespace-pre-wrap"
+							/>
+						</div>
+						<div className="flex justify-end border-t border-border pt-5">
+							<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
+								{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+								Сохранить
+							</Button>
+						</div>
 					</div>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<FloatingInput
-							label="Номер телефона"
-							name="phone"
-							value={phone}
-							onChange={(e) => setPhone(e.target.value)}
-							error={phoneError ?? fieldErrors.phone}
-							inputMode="tel"
-							autoComplete="tel"
-						/>
-						<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
-					</div>
-					<CheckboxBadge
-						id="mailing-allowed"
-						checked={mailingAllowed}
-						onChange={setMailingAllowed}
-						ariaLabel="Получать уведомления на почту"
-					>
-						Получать уведомления на почту
-					</CheckboxBadge>
-					<div className="flex justify-end border-t border-border pt-5">
-						<Button type="submit" disabled={!isDirty || updateSettings.isPending}>
-							{updateSettings.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-							Сохранить
-						</Button>
-					</div>
-				</form>
-			</SectionCard>
+				</SectionCard>
+			</form>
 
 			<SectionCard className="mt-5">
 				<SectionHeader icon={KeyRound} title="Безопасность" />
