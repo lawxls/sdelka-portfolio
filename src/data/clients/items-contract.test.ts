@@ -41,7 +41,7 @@ function toWire(item: ProcurementItem): ProcurementItemWire {
 		currentPrice: item.currentPrice == null ? null : String(item.currentPrice),
 		bestPrice: item.bestPrice == null ? null : String(item.bestPrice),
 		averagePrice: item.averagePrice == null ? null : String(item.averagePrice),
-		procurementInquiryId: item.procurementInquiryId ?? null,
+		inquiryId: item.procurementInquiryId ?? null,
 		description: item.description ?? null,
 		unit: item.unit ?? null,
 		quantityPerDelivery: item.quantityPerDelivery == null ? null : String(item.quantityPerDelivery),

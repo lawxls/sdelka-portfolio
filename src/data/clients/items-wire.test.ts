@@ -47,7 +47,7 @@ describe("itemFromApi", () => {
 	it("passes optional scalar fields through when present", () => {
 		const item = itemFromApi(
 			wire({
-				procurementInquiryId: "T-001",
+				inquiryId: "T-001",
 				description: "Облицовка",
 				unit: "шт",
 				quantityPerDelivery: "10",
