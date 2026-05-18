@@ -1,7 +1,8 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { statusToBucket, TASK_STATUS_BUCKETS } from "./clients/tasks-buckets";
 import { useItemsClient, useTasksClient } from "./clients-context";
-import type { TaskBoardResponse } from "./domains/tasks";
+import type { TaskBoardBucket, TaskBoardResponse } from "./domains/tasks";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
 import { ACTIVE_TASK_STATUSES, TASK_STATUSES } from "./task-types";
 
@@ -54,9 +55,9 @@ export function useTaskColumns(params?: TaskFilterParams) {
 			}),
 	});
 
-	function loadMore(status: TaskStatus) {
+	function loadMore(bucket: TaskBoardBucket) {
 		const current = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", queryParams]);
-		const cursor = current?.[status]?.next;
+		const cursor = current?.[bucket]?.next;
 		if (!cursor) return;
 
 		tasks
@@ -66,16 +67,16 @@ export function useTaskColumns(params?: TaskFilterParams) {
 				company: queryParams.company,
 				sort: queryParams.sort,
 				dir: queryParams.dir,
-				column: status,
+				column: bucket,
 				cursor,
 			})
 			.then((page) => {
 				queryClient.setQueryData<TaskBoardResponse>(["tasks-board", queryParams], (old) => {
-					const col = old?.[status];
+					const col = old?.[bucket];
 					if (!col) return old;
 					return {
 						...old,
-						[status]: { ...col, results: [...col.results, ...(page.results ?? [])], next: page.next ?? null },
+						[bucket]: { ...col, results: [...col.results, ...(page.results ?? [])], next: page.next ?? null },
 					};
 				});
 			})
@@ -84,21 +85,20 @@ export function useTaskColumns(params?: TaskFilterParams) {
 			});
 	}
 
-	function columnState(status: TaskStatus) {
-		const column = boardQuery.data?.[status];
+	function columnState(bucket: TaskBoardBucket) {
+		const column = boardQuery.data?.[bucket];
 		return {
 			tasks: column?.results ?? [],
 			count: column?.count ?? 0,
 			hasNextPage: column?.next != null,
-			loadMore: () => loadMore(status),
+			loadMore: () => loadMore(bucket),
 			isLoading: boardQuery.isLoading,
 			isFetchingNextPage: false,
 		};
 	}
 
 	return {
-		assigned: columnState("assigned"),
-		in_progress: columnState("in_progress"),
+		active: columnState("active"),
 		completed: columnState("completed"),
 		archived: columnState("archived"),
 	};
@@ -115,7 +115,7 @@ export function useTasksList(params?: TasksListParams) {
 		queryKey: ["tasks", "list", queryParams],
 		queryFn: ({ pageParam }) =>
 			tasks.list({
-				page: pageParam,
+				cursor: pageParam ?? undefined,
 				page_size: 25,
 				q: queryParams.q,
 				procurementInquiry: queryParams.procurementInquiry,
@@ -124,8 +124,8 @@ export function useTasksList(params?: TasksListParams) {
 				sort: queryParams.sort,
 				dir: queryParams.dir,
 			}),
-		initialPageParam: 1,
-		getNextPageParam: (lastPage, _allPages, lastPageParam) => (lastPage.next ? lastPageParam + 1 : undefined),
+		initialPageParam: null as string | null,
+		getNextPageParam: (lastPage) => lastPage.next ?? undefined,
 	});
 
 	return {
@@ -189,11 +189,11 @@ function findTaskInCaches(queryClient: ReturnType<typeof useQueryClient>) {
 		const boardEntries = queryClient.getQueriesData<TaskBoardResponse>({ queryKey: ["tasks-board"] });
 		for (const [key, data] of boardEntries) {
 			if (!data) continue;
-			for (const s of TASK_STATUSES) {
-				const col = data[s];
+			for (const bucket of TASK_STATUS_BUCKETS) {
+				const col = data[bucket];
 				if (!col) continue;
 				const found = col.results.find((t) => t.id === id);
-				if (found) return { task: found, oldStatus: s, queryKey: key, isBoardCache: true };
+				if (found) return { task: found, oldStatus: found.status, queryKey: key, isBoardCache: true };
 			}
 		}
 
@@ -246,14 +246,27 @@ export function useUpdateTaskStatus() {
 				const boardData = queryClient.getQueryData<TaskBoardResponse>(sourceKey);
 				if (boardData) {
 					snapshots.push({ key: sourceKey, data: boardData });
+					const oldBucket = statusToBucket(oldStatus);
+					const newBucket = statusToBucket(newStatus);
 					queryClient.setQueryData<TaskBoardResponse>(sourceKey, (old) => {
 						if (!old) return old;
-						const srcCol = old[oldStatus];
-						const tgtCol = old[newStatus];
+						const srcCol = old[oldBucket];
+						const tgtCol = old[newBucket];
+						if (oldBucket === newBucket) {
+							return {
+								...old,
+								[oldBucket]: srcCol
+									? {
+											...srcCol,
+											results: srcCol.results.map((t) => (t.id === id ? { ...task, status: newStatus } : t)),
+										}
+									: srcCol,
+							};
+						}
 						return {
 							...old,
-							[oldStatus]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
-							[newStatus]: tgtCol
+							[oldBucket]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
+							[newBucket]: tgtCol
 								? { ...tgtCol, results: [{ ...task, status: newStatus }, ...tgtCol.results] }
 								: tgtCol,
 						};
@@ -311,13 +324,14 @@ export function useSubmitAnswer() {
 				if (boardData) {
 					snapshots.push({ key: sourceKey, data: boardData });
 					if (oldStatus !== "completed") {
+						const oldBucket = statusToBucket(oldStatus);
 						queryClient.setQueryData<TaskBoardResponse>(sourceKey, (old) => {
 							if (!old) return old;
-							const srcCol = old[oldStatus];
+							const srcCol = old[oldBucket];
 							const completedCol = old.completed;
 							return {
 								...old,
-								[oldStatus]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
+								[oldBucket]: srcCol ? { ...srcCol, results: srcCol.results.filter((t) => t.id !== id) } : srcCol,
 								completed: completedCol
 									? {
 											...completedCol,

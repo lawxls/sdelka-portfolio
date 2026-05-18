@@ -274,10 +274,10 @@ describe("useCreateItems", () => {
 
 		let response: { items?: ProcurementItem[]; isAsync: boolean } | undefined;
 		await act(async () => {
-			response = await result.current.mutateAsync([{ name: "Widget A" }]);
+			response = await result.current.mutateAsync([{ name: "Widget A", companyId: "c-1" }]);
 		});
 
-		expect(create).toHaveBeenCalledWith([{ name: "Widget A" }]);
+		expect(create).toHaveBeenCalledWith([{ name: "Widget A", companyId: "c-1" }]);
 		expect(response?.isAsync).toBe(false);
 		expect(response?.items?.[0].name).toBe("Widget A");
 	});
@@ -291,7 +291,7 @@ describe("useCreateItems", () => {
 
 		await act(async () => {
 			try {
-				await result.current.mutateAsync([{ name: "" }]);
+				await result.current.mutateAsync([{ name: "", companyId: "c-1" }]);
 			} catch {}
 		});
 

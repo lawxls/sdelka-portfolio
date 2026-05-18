@@ -23,3 +23,15 @@ function parseCursor(nextUrl: string | null): string | null {
 		return null;
 	}
 }
+
+/** Build a query string from a params object, skipping `undefined | null | ""`
+ * values. Returns `""` when no params remain, otherwise `"?<encoded>"`. */
+export function buildQueryString(params: Record<string, unknown>): string {
+	const sp = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		if (value === undefined || value === null || value === "") continue;
+		sp.set(key, String(value));
+	}
+	const qs = sp.toString();
+	return qs ? `?${qs}` : "";
+}

@@ -1,12 +1,14 @@
+import { BUCKET_TO_STATUSES, TASK_STATUS_BUCKETS } from "../clients/tasks-buckets";
 import type {
 	BoardColumn,
 	FetchTaskBoardParams,
 	FetchTasksParams,
+	TaskBoardBucket,
 	TaskBoardResponse,
 	TaskListResponse,
 } from "../domains/tasks";
 import { delay, paginate } from "../mock-utils";
-import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "../task-types";
+import type { Task, TaskFilterParams, TaskSortField } from "../task-types";
 import { cloneTask, findTaskIndex, readTasks } from "./store";
 
 const COLUMN_PAGE_SIZE = 20;
@@ -38,7 +40,7 @@ function applySortIfAny(tasks: Task[], params: TaskFilterParams): Task[] {
 	return sortTasks(tasks, params.sort, params.dir ?? "asc");
 }
 
-function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: string): BoardColumn {
+function buildBucketColumn(bucket: TaskBoardBucket, params: FetchTaskBoardParams, cursor?: string): BoardColumn {
 	const filterParams: TaskFilterParams = {
 		q: params.q,
 		procurementInquiry: params.procurementInquiry,
@@ -46,7 +48,8 @@ function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: 
 		sort: params.sort,
 		dir: params.dir,
 	};
-	const filtered = applyFilters(readTasks(), filterParams).filter((t) => t.status === status);
+	const bucketStatuses = new Set(BUCKET_TO_STATUSES[bucket]);
+	const filtered = applyFilters(readTasks(), filterParams).filter((t) => bucketStatuses.has(t.status));
 	const sorted = applySortIfAny(filtered, filterParams);
 	const page = paginate({
 		items: sorted,
@@ -64,15 +67,14 @@ function buildColumn(status: TaskStatus, params: FetchTaskBoardParams, cursor?: 
 export async function fetchTaskBoardMock(params: FetchTaskBoardParams = {}): Promise<TaskBoardResponse> {
 	await delay();
 	if (params.column) {
-		const col = buildColumn(params.column, params, params.cursor);
+		const col = buildBucketColumn(params.column, params, params.cursor);
 		return { results: col.results, next: col.next };
 	}
-	return {
-		assigned: buildColumn("assigned", params),
-		in_progress: buildColumn("in_progress", params),
-		completed: buildColumn("completed", params),
-		archived: buildColumn("archived", params),
-	};
+	const response: TaskBoardResponse = {};
+	for (const bucket of TASK_STATUS_BUCKETS) {
+		response[bucket] = buildBucketColumn(bucket, params);
+	}
+	return response;
 }
 
 export async function fetchAllTasksMock(): Promise<Task[]> {
@@ -96,15 +98,17 @@ export async function fetchTasksMock(params: FetchTasksParams = {}): Promise<Tas
 	}
 	const sorted = applySortIfAny(filtered, filterParams);
 	const pageSize = params.page_size ?? LIST_PAGE_SIZE;
-	const page = params.page ?? 1;
+	// Cursors are opaque page tokens of the form "page-N"; the HTTP adapter's
+	// real cursor token plays the same role. Page 1 is requested with no cursor.
+	const page = params.cursor ? Number.parseInt(params.cursor.replace("page-", ""), 10) || 1 : (params.page ?? 1);
 	const start = (page - 1) * pageSize;
 	const end = start + pageSize;
 	const slice = sorted.slice(start, end);
 	return {
 		count: filtered.length,
 		results: slice.map(cloneTask),
-		next: end < filtered.length ? `page=${page + 1}` : null,
-		previous: page > 1 ? `page=${page - 1}` : null,
+		next: end < filtered.length ? `page-${page + 1}` : null,
+		previous: page > 1 ? `page-${page - 1}` : null,
 	};
 }
 

@@ -33,10 +33,11 @@ interface AddPositionsManualDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (items: NewItemInput[]) => void;
+	companyId: string;
 }
 
-function toItemInput(position: PositionDraft): NewItemInput {
-	const payload: NewItemInput = { name: position.name.trim() };
+function toItemInput(position: PositionDraft, companyId: string): NewItemInput {
+	const payload: NewItemInput = { name: position.name.trim(), companyId };
 
 	const description = position.description.trim();
 	if (description) payload.description = description;
@@ -54,7 +55,7 @@ function toItemInput(position: PositionDraft): NewItemInput {
 	return payload;
 }
 
-export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPositionsManualDrawerProps) {
+export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, companyId }: AddPositionsManualDrawerProps) {
 	const [positions, setPositions] = useState<PositionDraft[]>(() => [defaultPosition()]);
 	const [errors, setErrors] = useState<PositionError[]>(() => [{}]);
 	const [showDiscard, setShowDiscard] = useState(false);
@@ -118,7 +119,7 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit }: AddPo
 			nameInputRefs.current[firstErrorIndex]?.focus();
 			return;
 		}
-		onSubmit(positions.map(toItemInput));
+		onSubmit(positions.map((p) => toItemInput(p, companyId)));
 		reset();
 		onOpenChange(false);
 	}

@@ -130,7 +130,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 
 		await result.current.mutateAsync({
 			procurementInquiry: { name: "T", companyId: "c1", folderId: null, deadline: "2026-05-01" },
-			items: [{ name: "Pos", paymentType: "prepayment" }],
+			items: [{ name: "Pos", companyId: "c1", paymentType: "prepayment" }],
 		});
 
 		expect(procurementInquiriesCreate).toHaveBeenCalledTimes(1);

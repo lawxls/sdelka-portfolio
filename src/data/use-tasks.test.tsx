@@ -7,7 +7,7 @@ import type { ItemsClient } from "./clients/items-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { TaskBoardResponse } from "./domains/tasks";
 import { NetworkError, NotFoundError } from "./errors";
-import type { Task, TaskStatus } from "./task-types";
+import type { Task } from "./task-types";
 import { fakeItemsClient, fakeTasksClient, TestClientsProvider } from "./test-clients-provider";
 import {
 	useAllTasks,
@@ -41,8 +41,7 @@ function wrapperFactory(opts: { tasks?: TasksClient; items?: ItemsClient }) {
 
 function emptyBoard(overrides: Partial<TaskBoardResponse> = {}): TaskBoardResponse {
 	return {
-		assigned: { results: [], next: null, count: 0 },
-		in_progress: { results: [], next: null, count: 0 },
+		active: { results: [], next: null, count: 0 },
 		completed: { results: [], next: null, count: 0 },
 		archived: { results: [], next: null, count: 0 },
 		...overrides,
@@ -78,11 +77,14 @@ describe("useAllTasks", () => {
 });
 
 describe("useTaskColumns", () => {
-	it("groups board response into four columns the hook surfaces", async () => {
+	it("groups board response into three bucket columns the hook surfaces", async () => {
 		const board = vi.fn().mockResolvedValue(
 			emptyBoard({
-				assigned: { results: [makeTask("t1", { status: "assigned" })], next: null, count: 1 },
-				in_progress: { results: [makeTask("t2", { status: "in_progress" })], next: null, count: 1 },
+				active: {
+					results: [makeTask("t1", { status: "assigned" }), makeTask("t2", { status: "in_progress" })],
+					next: null,
+					count: 2,
+				},
 				completed: { results: [makeTask("t3", { status: "completed" })], next: null, count: 1 },
 				archived: { results: [makeTask("t4", { status: "archived" })], next: null, count: 1 },
 			}),
@@ -91,8 +93,8 @@ describe("useTaskColumns", () => {
 
 		const { result } = renderHook(() => useTaskColumns(), { wrapper: wrapperFactory({ tasks }) });
 
-		await waitFor(() => expect(result.current.assigned.tasks).toHaveLength(1));
-		expect(result.current.in_progress.tasks[0].id).toBe("t2");
+		await waitFor(() => expect(result.current.active.tasks).toHaveLength(2));
+		expect(result.current.active.tasks.map((t) => t.id)).toEqual(["t1", "t2"]);
 		expect(result.current.completed.tasks[0].id).toBe("t3");
 		expect(result.current.archived.tasks[0].id).toBe("t4");
 	});
@@ -101,7 +103,7 @@ describe("useTaskColumns", () => {
 		const board = vi.fn().mockImplementation(() => new Promise(() => {}));
 		const tasks = fakeTasksClient({ board });
 		const { result } = renderHook(() => useTaskColumns(), { wrapper: wrapperFactory({ tasks }) });
-		expect(result.current.assigned.isLoading).toBe(true);
+		expect(result.current.active.isLoading).toBe(true);
 	});
 
 	it("threads filter and sort params to client.board", async () => {
@@ -118,7 +120,7 @@ describe("useTaskColumns", () => {
 
 	it("hasNextPage reflects column.next; loadMore fetches the next column page", async () => {
 		const initial = emptyBoard({
-			assigned: { results: [makeTask("t1", { status: "assigned" })], next: "t2", count: 2 },
+			active: { results: [makeTask("t1", { status: "assigned" })], next: "t2", count: 2 },
 		});
 		const more = { results: [makeTask("t2", { status: "assigned" })], next: null };
 
@@ -126,16 +128,16 @@ describe("useTaskColumns", () => {
 		const tasks = fakeTasksClient({ board });
 
 		const { result } = renderHook(() => useTaskColumns(), { wrapper: wrapperFactory({ tasks }) });
-		await waitFor(() => expect(result.current.assigned.tasks).toHaveLength(1));
-		expect(result.current.assigned.hasNextPage).toBe(true);
+		await waitFor(() => expect(result.current.active.tasks).toHaveLength(1));
+		expect(result.current.active.hasNextPage).toBe(true);
 
 		act(() => {
-			result.current.assigned.loadMore();
+			result.current.active.loadMore();
 		});
 
-		await waitFor(() => expect(result.current.assigned.tasks).toHaveLength(2));
-		expect(board).toHaveBeenLastCalledWith(expect.objectContaining({ column: "assigned", cursor: "t2" }));
-		expect(result.current.assigned.hasNextPage).toBe(false);
+		await waitFor(() => expect(result.current.active.tasks).toHaveLength(2));
+		expect(board).toHaveBeenLastCalledWith(expect.objectContaining({ column: "active", cursor: "t2" }));
+		expect(result.current.active.hasNextPage).toBe(false);
 	});
 });
 
@@ -146,14 +148,14 @@ describe("useTasksList", () => {
 			.mockResolvedValueOnce({
 				count: 4,
 				results: [makeTask("t1"), makeTask("t2")],
-				next: "page=2",
+				next: "page-2",
 				previous: null,
 			})
 			.mockResolvedValueOnce({
 				count: 4,
 				results: [makeTask("t3"), makeTask("t4")],
 				next: null,
-				previous: "page=1",
+				previous: "page-1",
 			});
 		const tasks = fakeTasksClient({ list });
 		const { result } = renderHook(() => useTasksList(), { wrapper: wrapperFactory({ tasks }) });
@@ -167,7 +169,7 @@ describe("useTasksList", () => {
 		});
 
 		await waitFor(() => expect(result.current.tasks).toHaveLength(4));
-		expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+		expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "page-2" }));
 		expect(result.current.hasNextPage).toBe(false);
 	});
 });
@@ -192,44 +194,45 @@ describe("useTask", () => {
 });
 
 describe("useUpdateTaskStatus", () => {
-	function seedBoard(columns: Partial<Record<TaskStatus, Task[]>>) {
+	type Bucket = "active" | "completed" | "archived";
+
+	function seedBoard(columns: Partial<Record<Bucket, Task[]>>) {
 		const data: TaskBoardResponse = emptyBoard();
-		for (const [status, list] of Object.entries(columns) as Array<[TaskStatus, Task[]]>) {
-			data[status] = { results: list, next: null, count: list.length };
+		for (const [bucket, list] of Object.entries(columns) as Array<[Bucket, Task[]]>) {
+			data[bucket] = { results: list, next: null, count: list.length };
 		}
 		queryClient.setQueryData(["tasks-board", {}], data);
 	}
 
-	it("optimistically moves a task between columns in the board cache", async () => {
+	it("optimistically moves a task from active → completed in the board cache", async () => {
 		const changeStatus = vi
 			.fn()
 			.mockImplementation(
-				() =>
-					new Promise<Task>((resolve) => setTimeout(() => resolve(makeTask("t1", { status: "in_progress" })), 5000)),
+				() => new Promise<Task>((resolve) => setTimeout(() => resolve(makeTask("t1", { status: "completed" })), 5000)),
 			);
 		const tasks = fakeTasksClient({ changeStatus });
 
 		seedBoard({
-			assigned: [makeTask("t1", { status: "assigned" })],
-			in_progress: [makeTask("t2", { status: "in_progress" })],
+			active: [makeTask("t1", { status: "assigned" })],
+			completed: [],
 		});
 
 		const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper: wrapperFactory({ tasks }) });
 
 		act(() => {
-			result.current.mutate({ id: "t1", status: "in_progress" });
+			result.current.mutate({ id: "t1", status: "completed" });
 		});
 
 		await waitFor(() => {
 			const board = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", {}]);
-			expect(board?.assigned?.results).toHaveLength(0);
+			expect(board?.active?.results).toHaveLength(0);
 		});
 
 		const board = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", {}]);
-		expect(board?.in_progress?.results).toHaveLength(2);
-		expect(board?.in_progress?.results?.[0]?.id).toBe("t1");
-		expect(board?.in_progress?.results?.[0]?.status).toBe("in_progress");
-		expect(changeStatus).toHaveBeenCalledWith("t1", { status: "in_progress" });
+		expect(board?.completed?.results).toHaveLength(1);
+		expect(board?.completed?.results?.[0]?.id).toBe("t1");
+		expect(board?.completed?.results?.[0]?.status).toBe("completed");
+		expect(changeStatus).toHaveBeenCalledWith("t1", { status: "completed" });
 	});
 
 	it("rolls back the board cache on error and surfaces a toast", async () => {
@@ -238,30 +241,32 @@ describe("useUpdateTaskStatus", () => {
 		const tasks = fakeTasksClient({ changeStatus });
 
 		seedBoard({
-			assigned: [makeTask("t1", { status: "assigned" })],
-			in_progress: [],
+			active: [makeTask("t1", { status: "assigned" })],
+			completed: [],
 		});
 
 		const { result } = renderHook(() => useUpdateTaskStatus(), { wrapper: wrapperFactory({ tasks }) });
 
 		await act(async () => {
 			try {
-				await result.current.mutateAsync({ id: "t1", status: "in_progress" });
+				await result.current.mutateAsync({ id: "t1", status: "completed" });
 			} catch {}
 		});
 
 		const board = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", {}]);
-		expect(board?.assigned?.results).toHaveLength(1);
-		expect(board?.in_progress?.results).toHaveLength(0);
+		expect(board?.active?.results).toHaveLength(1);
+		expect(board?.completed?.results).toHaveLength(0);
 		expect(toast.error).toHaveBeenCalledWith("Не удалось обновить статус вопроса");
 	});
 });
 
 describe("useSubmitAnswer", () => {
-	function seedBoard(columns: Partial<Record<TaskStatus, Task[]>>) {
+	type Bucket = "active" | "completed" | "archived";
+
+	function seedBoard(columns: Partial<Record<Bucket, Task[]>>) {
 		const data: TaskBoardResponse = emptyBoard();
-		for (const [status, list] of Object.entries(columns) as Array<[TaskStatus, Task[]]>) {
-			data[status] = { results: list, next: null, count: list.length };
+		for (const [bucket, list] of Object.entries(columns) as Array<[Bucket, Task[]]>) {
+			data[bucket] = { results: list, next: null, count: list.length };
 		}
 		queryClient.setQueryData(["tasks-board", {}], data);
 	}
@@ -278,7 +283,7 @@ describe("useSubmitAnswer", () => {
 		});
 		const tasks = fakeTasksClient({ uploadAttachments, changeStatus });
 
-		seedBoard({ assigned: [makeTask("t1", { status: "assigned" })] });
+		seedBoard({ active: [makeTask("t1", { status: "assigned" })] });
 
 		const { result } = renderHook(() => useSubmitAnswer(), { wrapper: wrapperFactory({ tasks }) });
 
@@ -297,7 +302,7 @@ describe("useSubmitAnswer", () => {
 		const changeStatus = vi.fn().mockResolvedValue(makeTask("t1", { status: "completed", completedResponse: "x" }));
 		const tasks = fakeTasksClient({ uploadAttachments, changeStatus });
 
-		seedBoard({ assigned: [makeTask("t1", { status: "assigned" })] });
+		seedBoard({ active: [makeTask("t1", { status: "assigned" })] });
 
 		const { result } = renderHook(() => useSubmitAnswer(), { wrapper: wrapperFactory({ tasks }) });
 		await act(async () => {
@@ -314,7 +319,7 @@ describe("useSubmitAnswer", () => {
 		const changeStatus = vi.fn();
 		const tasks = fakeTasksClient({ uploadAttachments, changeStatus });
 
-		seedBoard({ assigned: [makeTask("t1", { status: "assigned" })] });
+		seedBoard({ active: [makeTask("t1", { status: "assigned" })] });
 
 		const { result } = renderHook(() => useSubmitAnswer(), { wrapper: wrapperFactory({ tasks }) });
 		const files = [new File(["x"], "big.pdf")];
@@ -336,7 +341,7 @@ describe("useSubmitAnswer", () => {
 		const tasks = fakeTasksClient({ uploadAttachments, changeStatus });
 
 		seedBoard({
-			assigned: [makeTask("t1", { status: "assigned" })],
+			active: [makeTask("t1", { status: "assigned" })],
 			completed: [],
 		});
 
@@ -350,7 +355,7 @@ describe("useSubmitAnswer", () => {
 		});
 
 		const board = queryClient.getQueryData<TaskBoardResponse>(["tasks-board", {}]);
-		expect(board?.assigned?.results).toHaveLength(1);
+		expect(board?.active?.results).toHaveLength(1);
 		expect(board?.completed?.results).toHaveLength(0);
 		expect(toast.error).toHaveBeenCalledWith("Не удалось отправить ответ");
 	});
@@ -394,7 +399,7 @@ describe("error-class branching", () => {
 		const tasks = fakeTasksClient({ board });
 
 		const { result } = renderHook(() => useTaskColumns(), { wrapper: wrapperFactory({ tasks }) });
-		await waitFor(() => expect(result.current.assigned.tasks).toEqual([]));
+		await waitFor(() => expect(result.current.active.tasks).toEqual([]));
 		// boardQuery error surfaces — column state still renders with empty list.
 		// The hook doesn't expose the error object directly, but we verify the
 		// underlying query error via the query cache.

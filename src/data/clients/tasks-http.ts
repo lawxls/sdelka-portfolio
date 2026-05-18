@@ -1,43 +1,91 @@
-import type { Attachment, ChangeStatusData, Task, TaskBoardResponse, TaskListResponse } from "../domains/tasks";
+import type {
+	Attachment,
+	ChangeStatusData,
+	FetchTaskBoardParams,
+	FetchTasksParams,
+	Task,
+	TaskListResponse,
+} from "../domains/tasks";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
+import { buildQueryString, type DrfCursorPage, toCursorPage } from "./drf";
+import { composeTaskBoard, type ListLikeResponse } from "./tasks-board";
+import { statusesToBucketString, TASK_STATUS_BUCKETS } from "./tasks-buckets";
 import type { TasksClient } from "./tasks-client";
-
-function buildQuery(params: object): string {
-	const sp = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value === undefined || value === null || value === "") continue;
-		if (Array.isArray(value)) {
-			for (const v of value) sp.append(key, String(v));
-		} else {
-			sp.set(key, String(value));
-		}
-	}
-	const qs = sp.toString();
-	return qs ? `?${qs}` : "";
-}
+import { type TaskWire, taskFromApi } from "./tasks-wire";
 
 const enc = encodeURIComponent;
 
+const LIST_ALL_PAGE_SIZE = 200;
+const LIST_ALL_HARD_CAP_PAGES = 500;
+
+interface ListParamsInternal extends FetchTasksParams {
+	status?: string;
+}
+
+function listQuery(params: ListParamsInternal): string {
+	return buildQueryString({
+		q: params.q,
+		procurementInquiry: params.procurementInquiry,
+		company: params.company,
+		status: params.status ?? statusesToBucketString(params.statuses),
+		sort: params.sort,
+		dir: params.dir,
+		cursor: params.cursor,
+		pageSize: params.page_size,
+	});
+}
+
 export function createHttpTasksClient(http: HttpClient = defaultHttpClient): TasksClient {
+	const fetchListPage = async (params: ListParamsInternal): Promise<ListLikeResponse> => {
+		const wire = await http.get<DrfCursorPage<TaskWire> & { count?: number }>(`/tasks/${listQuery(params)}`);
+		const { items, nextCursor } = toCursorPage(wire);
+		return {
+			results: items.map(taskFromApi),
+			count: wire.count ?? items.length,
+			next: nextCursor,
+		};
+	};
+
 	return {
-		listAll: () => http.get<Task[]>(`/tasks/all`),
-
-		list: (params) => http.get<TaskListResponse>(`/tasks${buildQuery(params ?? {})}`),
-
-		board: (params) => http.get<TaskBoardResponse>(`/tasks/board${buildQuery(params ?? {})}`),
-
-		get: (id) => http.get<Task>(`/tasks/${enc(id)}`),
-
-		changeStatus: (id, data: ChangeStatusData) => http.post<Task>(`/tasks/${enc(id)}/status`, { body: data }),
-
-		uploadAttachments: async (_id: string, _files: File[]): Promise<Attachment[]> => {
-			// Attachment upload is multipart/form-data; the shared httpClient is JSON-only
-			// today. Production composition root falls back to the in-memory adapter for
-			// uploads until the backend exposes the endpoint and the client gains a
-			// FormData path.
-			throw new Error("HTTP uploadAttachments not implemented yet");
+		listAll: async () => {
+			// Explicit bucket filter so the request is unambiguous (the API may
+			// require `status` to be set). Sequential because each cursor token
+			// depends on the previous response.
+			const status = TASK_STATUS_BUCKETS.join(",");
+			const collected: Task[] = [];
+			let cursor: string | undefined;
+			for (let i = 0; i < LIST_ALL_HARD_CAP_PAGES; i += 1) {
+				const page = await fetchListPage({ cursor, page_size: LIST_ALL_PAGE_SIZE, status });
+				collected.push(...page.results);
+				if (!page.next) return collected;
+				cursor = page.next;
+			}
+			throw new Error(`tasks.listAll: hit ${LIST_ALL_HARD_CAP_PAGES}-page cap`);
 		},
 
-		deleteAttachment: (id, attachmentId) => http.delete<void>(`/tasks/${enc(id)}/attachments/${enc(attachmentId)}`),
+		list: async (params): Promise<TaskListResponse> => {
+			const page = await fetchListPage(params ?? {});
+			return { results: page.results, count: page.count, next: page.next, previous: null };
+		},
+
+		board: (params?: FetchTaskBoardParams) => composeTaskBoard(fetchListPage, params),
+
+		get: async (id) => taskFromApi(await http.get<TaskWire>(`/tasks/${enc(id)}/`)),
+
+		changeStatus: async (id, data: ChangeStatusData) => {
+			const body: Record<string, unknown> = {};
+			if (data.status !== undefined) body.status = data.status;
+			if (data.completedResponse !== undefined) body.completedResponse = data.completedResponse;
+			return taskFromApi(await http.post<TaskWire>(`/tasks/${enc(id)}/change_status/`, { body }));
+		},
+
+		// Attachment endpoints are multipart-only and not yet on the API.
+		// The composition root swaps in the in-memory implementation.
+		uploadAttachments: async (_id: string, _files: File[]): Promise<Attachment[]> => {
+			throw new Error("HTTP uploadAttachments not implemented yet");
+		},
+		deleteAttachment: async (_id: string, _attachmentId: string): Promise<void> => {
+			throw new Error("HTTP deleteAttachment not implemented yet");
+		},
 	};
 }

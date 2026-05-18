@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { NewItemInput } from "../types";
 import { groupItemsIntoProcurementInquiries } from "./group-items-into-procurement-inquiries";
 
-const item = (name: string): NewItemInput => ({ name });
+const item = (name: string): NewItemInput => ({ name, companyId: "c-1" });
 
 describe("groupItemsIntoProcurementInquiries", () => {
 	it("returns an empty array for no items", () => {

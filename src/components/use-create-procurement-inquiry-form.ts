@@ -193,9 +193,10 @@ function buildGeneratedAnswers(step2: Step2State): GeneratedAnswer[] | undefined
 	return entries.length > 0 ? entries : undefined;
 }
 
-function buildNewItemInput(position: PositionDraft, step2: Step2State): NewItemInput {
+function buildNewItemInput(position: PositionDraft, step1: Step1State, step2: Step2State): NewItemInput {
 	const payload: NewItemInput = {
 		name: position.name.trim(),
+		companyId: step1.companyId,
 		paymentType: "prepayment",
 	};
 
@@ -441,7 +442,7 @@ export function useCreateProcurementInquiryForm() {
 
 	function toPayload(): CreateProcurementInquiryPayload {
 		const procurementInquiry = buildProcurementInquiryInput(step1, step3);
-		const items = step1.positions.map((p) => buildNewItemInput(p, step2));
+		const items = step1.positions.map((p) => buildNewItemInput(p, step1, step2));
 		return { procurementInquiry, items };
 	}
 
