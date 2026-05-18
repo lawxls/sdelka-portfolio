@@ -10,9 +10,11 @@ import type {
 	UpdateItemData,
 } from "../domains/items";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
+import { type DrfCursorPage, toCursorPage } from "./drf";
 import type { ItemsClient } from "./items-client";
+import { itemFromApi, itemToApiPatch, newItemToApi, type ProcurementItemWire } from "./items-wire";
 
-function buildListQuery(params: object): string {
+function buildQuery(params: Record<string, unknown>): string {
 	const sp = new URLSearchParams();
 	for (const [key, value] of Object.entries(params)) {
 		if (value === undefined || value === null || value === "") continue;
@@ -22,31 +24,80 @@ function buildListQuery(params: object): string {
 	return qs ? `?${qs}` : "";
 }
 
+function listQuery(params: ListItemsParams): string {
+	return buildQuery({
+		q: params.q,
+		status: params.status,
+		deviation: params.deviation,
+		folder: params.folder,
+		company: params.company,
+		procurementInquiry: params.procurementInquiry,
+		sort: params.sort,
+		dir: params.dir,
+		cursor: params.cursor,
+		pageSize: params.limit,
+	});
+}
+
+function totalsQuery(params: TotalsParams): string {
+	return buildQuery({
+		q: params.q,
+		status: params.status,
+		deviation: params.deviation,
+		folder: params.folder,
+		company: params.company,
+		procurementInquiry: params.procurementInquiry,
+	});
+}
+
 const enc = encodeURIComponent;
+
+interface CreateItemsResponse {
+	items: ProcurementItemWire[];
+}
 
 export function createHttpItemsClient(http: HttpClient = defaultHttpClient): ItemsClient {
 	return {
-		list: (params: ListItemsParams) => http.get<CursorPage<ProcurementItem>>(`/items${buildListQuery(params)}`),
+		list: async (params: ListItemsParams) => {
+			const page = await http.get<DrfCursorPage<ProcurementItemWire>>(`/procurement/items/${listQuery(params)}`);
+			const { items, nextCursor } = toCursorPage(page);
+			return { items: items.map(itemFromApi), nextCursor } satisfies CursorPage<ProcurementItem>;
+		},
 
-		listAll: () => http.get<ProcurementItem[]>(`/items/all`),
+		listAll: async () => {
+			const items = await http.get<ProcurementItemWire[]>(`/procurement/items/all/`);
+			return items.map(itemFromApi);
+		},
 
-		listByProcurementInquiry: (procurementInquiryId: string) =>
-			http.get<ProcurementItem[]>(`/items/by-procurement-inquiry/${enc(procurementInquiryId)}`),
+		listByProcurementInquiry: async (id: string) => {
+			const items = await http.get<ProcurementItemWire[]>(`/procurement/items/by-procurement-inquiry/${enc(id)}/`);
+			return items.map(itemFromApi);
+		},
 
-		totals: (params: TotalsParams) => http.get<Totals>(`/items/totals${buildListQuery(params)}`),
+		totals: (params: TotalsParams) => http.get<Totals>(`/procurement/items/totals/${totalsQuery(params)}`),
 
-		get: (id) => http.get<ProcurementItem>(`/items/${enc(id)}`),
+		get: async (id) => itemFromApi(await http.get<ProcurementItemWire>(`/procurement/items/${enc(id)}/`)),
 
-		create: (inputs: NewItemInput[]) => http.post<CreateItemsResult>(`/items`, { body: { items: inputs } }),
+		create: async (inputs: NewItemInput[]) => {
+			const response = await http.post<CreateItemsResponse>(`/procurement/items/`, {
+				body: { items: inputs.map(newItemToApi) },
+			});
+			return { items: response.items.map(itemFromApi), isAsync: false } satisfies CreateItemsResult;
+		},
 
-		update: (id, data: UpdateItemData) => http.patch<ProcurementItem>(`/items/${enc(id)}`, { body: data }),
+		update: async (id, data: UpdateItemData) =>
+			itemFromApi(
+				await http.patch<ProcurementItemWire>(`/procurement/items/${enc(id)}/`, { body: itemToApiPatch(data) }),
+			),
 
-		delete: (id) => http.delete<void>(`/items/${enc(id)}`),
+		delete: (id) => http.delete<void>(`/procurement/items/${enc(id)}/`),
 
-		archive: (id, isArchived) =>
-			http.post<ProcurementItem>(`/items/${enc(id)}/${isArchived ? "archive" : "unarchive"}`),
+		archive: async (id, isArchived) =>
+			itemFromApi(
+				await http.post<ProcurementItemWire>(`/procurement/items/${enc(id)}/${isArchived ? "archive" : "unarchive"}/`),
+			),
 
 		export: (params: ExportItemsParams) =>
-			http.getBinary(`/items/export${buildListQuery(params)}`, { fallbackFilename: "items.xlsx" }),
+			http.getBinary(`/procurement/items/export/${totalsQuery(params)}`, { fallbackFilename: "items.xlsx" }),
 	};
 }

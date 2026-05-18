@@ -6,12 +6,17 @@ import { _resetIdCounter, _setMockDelay } from "../mock-utils";
 import type { ItemsClient } from "./items-client";
 import { createHttpItemsClient } from "./items-http";
 import { createInMemoryItemsClient } from "./items-in-memory";
+import type { ProcurementItemWire } from "./items-wire";
 
 /**
  * Layer B — adapter contract tests. The same suite runs once against the
  * in-memory adapter and once against the HTTP adapter (with `fetch` stubbed at
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
+ *
+ * The HTTP stub returns the real DRF wire shape — `{ next, previous, results }`
+ * for paginated GETs, decimal-as-string for `annualQuantity` / `currentPrice`
+ * etc. The adapter's wire mapper + cursor translator are exercised end-to-end.
  */
 
 function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): ProcurementItem {
@@ -24,6 +29,22 @@ function makeItem(id: string, overrides: Partial<ProcurementItem> = {}): Procure
 		bestPrice: 40,
 		averagePrice: 45,
 		...overrides,
+	};
+}
+
+function toWire(item: ProcurementItem): ProcurementItemWire {
+	return {
+		id: item.id,
+		name: item.name,
+		status: item.status,
+		annualQuantity: String(item.annualQuantity),
+		currentPrice: item.currentPrice == null ? null : String(item.currentPrice),
+		bestPrice: item.bestPrice == null ? null : String(item.bestPrice),
+		averagePrice: item.averagePrice == null ? null : String(item.averagePrice),
+		procurementInquiryId: item.procurementInquiryId ?? null,
+		description: item.description ?? null,
+		unit: item.unit ?? null,
+		quantityPerDelivery: item.quantityPerDelivery == null ? null : String(item.quantityPerDelivery),
 	};
 }
 
@@ -56,15 +77,17 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/items\/all$/,
+			path: /^\/procurement\/items\/all\/(\?|$)/,
 			respond: () => ({
 				status: 200,
-				body: Array.from(store.values()).filter((i) => !archived.has(i.id)),
+				body: Array.from(store.values())
+					.filter((i) => !archived.has(i.id))
+					.map(toWire),
 			}),
 		},
 		{
 			method: "GET",
-			path: /^\/items\/totals(\?|$)/,
+			path: /^\/procurement\/items\/totals\/(\?|$)/,
 			respond: () => ({
 				status: 200,
 				body: { itemCount: store.size, totalOverpayment: 0, totalSavings: 0, totalDeviation: 0 },
@@ -72,7 +95,20 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/items(\?|$)/,
+			path: /^\/procurement\/items\/by-procurement-inquiry\/([^/]+)\/(\?|$)/,
+			respond: ({ url }) => {
+				const id = idFromPath(url, /^\/procurement\/items\/by-procurement-inquiry\/([^/]+)\//);
+				return {
+					status: 200,
+					body: Array.from(store.values())
+						.filter((i) => i.procurementInquiryId === id)
+						.map(toWire),
+				};
+			},
+		},
+		{
+			method: "GET",
+			path: /^\/procurement\/items\/(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
@@ -81,53 +117,54 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 				if (folder === "archive") items = items.filter((i) => archived.has(i.id));
 				else items = items.filter((i) => !archived.has(i.id));
 				if (q) items = items.filter((i) => i.name.toLowerCase().includes(q));
-				return { status: 200, body: { items, nextCursor: null } };
+				return { status: 200, body: { next: null, previous: null, results: items.map(toWire) } };
 			},
 		},
 		{
 			method: "GET",
-			path: /^\/items\/([^/]+)$/,
+			path: /^\/procurement\/items\/([^/]+)\/$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/procurement\/items\/([^/]+)\/$/);
 				const item = store.get(id);
 				if (!item) return { status: 404 };
-				return { status: 200, body: item };
+				return { status: 200, body: toWire(item) };
 			},
 		},
 		{
 			method: "POST",
-			path: /^\/items$/,
+			path: /^\/procurement\/items\/$/,
 			respond: ({ init }) => {
-				const data = JSON.parse(init?.body as string) as { items: { name: string }[] };
+				const data = JSON.parse(init?.body as string) as { items: { name: string; companyId?: string }[] };
 				const created = data.items.map((input) => {
 					if (!input.name) throw new Error("__invalid__");
 					counter += 1;
 					return makeItem(`new-${counter}`, { name: input.name });
 				});
 				for (const item of created) store.set(item.id, item);
-				return { status: 201, body: { items: created, isAsync: false } };
+				return { status: 201, body: { items: created.map(toWire) } };
 			},
 		},
 		{
 			method: "PATCH",
-			path: /^\/items\/([^/]+)$/,
+			path: /^\/procurement\/items\/([^/]+)\/$/,
 			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/procurement\/items\/([^/]+)\/$/);
 				const existing = store.get(id);
 				if (!existing) return { status: 404 };
 				const data = JSON.parse(init?.body as string);
 				if (data.name === "__conflict__") return { status: 409, body: { detail: "name taken" } };
 				if (data.name === "") return { status: 400, body: { fieldErrors: { name: ["required"] } } };
 				const updated = { ...existing, ...data };
+				if (typeof updated.annualQuantity === "string") updated.annualQuantity = Number(updated.annualQuantity);
 				store.set(id, updated);
-				return { status: 200, body: updated };
+				return { status: 200, body: toWire(updated) };
 			},
 		},
 		{
 			method: "DELETE",
-			path: /^\/items\/([^/]+)$/,
+			path: /^\/procurement\/items\/([^/]+)\/$/,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/items\/([^/]+)$/);
+				const id = idFromPath(url, /^\/procurement\/items\/([^/]+)\/$/);
 				store.delete(id);
 				archived.delete(id);
 				return { status: 204 };
@@ -135,10 +172,10 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/items\/([^/]+)\/(archive|unarchive)$/,
+			path: /^\/procurement\/items\/([^/]+)\/(archive|unarchive)\/$/,
 			respond: ({ url }) => {
 				const path = new URL(url, "http://test").pathname;
-				const match = path.match(/^\/items\/([^/]+)\/(archive|unarchive)$/);
+				const match = path.match(/^\/procurement\/items\/([^/]+)\/(archive|unarchive)\/$/);
 				if (!match) return { status: 400 };
 				const id = decodeURIComponent(match[1]);
 				const action = match[2];
@@ -146,12 +183,12 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 				if (!existing) return { status: 404 };
 				if (action === "archive") archived.add(id);
 				else archived.delete(id);
-				return { status: 200, body: existing };
+				return { status: 200, body: toWire(existing) };
 			},
 		},
 	];
 
-	const exportRoute = /^\/items\/export(\?|$)/;
+	const exportRoute = /^\/procurement\/items\/export\/(\?|$)/;
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = input;
