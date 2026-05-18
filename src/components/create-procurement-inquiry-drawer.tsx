@@ -415,6 +415,7 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 	const preview = useGeneratePreview();
 	const [minLoaderElapsed, setMinLoaderElapsed] = useState(false);
 	const minLoaderTimerRef = useRef<number | null>(null);
+	const startTimerRef = useRef<number | null>(null);
 	// Late preview responses can land after the user has left Step 2 (Back, or
 	// advance-while-loading). Ignore them so a stale success can't repopulate
 	// `generatedQuestions` or call `onSkip` against a wizard that has moved on.
@@ -451,14 +452,21 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 		});
 	}
 
-	// Each Step 1→2 transition remounts this body, so the preview fires once
-	// per entry. Mock backend returns a different random subset per call; the
-	// real LLM will eventually base output on the latest positions.
+	// Defer the call via setTimeout(0) so StrictMode's dev mount→unmount→mount
+	// cancels the first scheduled fire before it reaches the network.
 	useMountEffect(() => {
 		aliveRef.current = true;
-		runPreview();
+		const startTimerId = window.setTimeout(() => {
+			startTimerRef.current = null;
+			runPreview();
+		}, 0);
+		startTimerRef.current = startTimerId;
 		return () => {
 			aliveRef.current = false;
+			if (startTimerRef.current !== null) {
+				window.clearTimeout(startTimerRef.current);
+				startTimerRef.current = null;
+			}
 			if (minLoaderTimerRef.current !== null) {
 				window.clearTimeout(minLoaderTimerRef.current);
 				minLoaderTimerRef.current = null;
