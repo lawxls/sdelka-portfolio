@@ -53,6 +53,8 @@ export function fakeCompaniesClient(overrides: Partial<CompaniesClient> = {}): C
 		createAddress: notImplemented("createAddress"),
 		updateAddress: notImplemented("updateAddress"),
 		deleteAddress: notImplemented("deleteAddress"),
+		uploadCard: notImplemented("uploadCard"),
+		deleteCard: notImplemented("deleteCard"),
 		...overrides,
 	};
 }

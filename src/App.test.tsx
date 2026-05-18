@@ -79,6 +79,8 @@ const TEST_COMPANIES: Company[] = [
 		description: "",
 		additionalComments: "",
 		isMain: true,
+		cardFile: null,
+		cardFileName: "",
 		employeeCount: 1,
 		procurementItemCount: 0,
 		addressesCount: 1,

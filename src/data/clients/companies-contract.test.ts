@@ -29,6 +29,8 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		description: "",
 		additionalComments: "",
 		isMain: false,
+		cardFile: null,
+		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: 1,
@@ -137,6 +139,8 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 					description: data.description ?? "",
 					additionalComments: data.additionalComments ?? "",
 					isMain: false,
+					cardFile: null,
+					cardFileName: "",
 					employeeCount: 0,
 					procurementItemCount: 0,
 					addressesCount: 0,
@@ -237,12 +241,39 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 				return { status: 404 };
 			},
 		},
+		{
+			method: "POST",
+			path: /^\/companies\/([^/]+)\/card\/$/,
+			respond: ({ url, init }) => {
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/card\/$/);
+				const c = store.get(id);
+				if (!c) return { status: 404 };
+				const form = init?.body as FormData;
+				const file = form.get("cardFile") as File | null;
+				if (!file) return { status: 400, body: { fieldErrors: { cardFile: ["required"] } } };
+				c.cardFile = `mock://companies/cards/${encodeURIComponent(file.name)}`;
+				c.cardFileName = file.name;
+				return { status: 200, body: c };
+			},
+		},
+		{
+			method: "DELETE",
+			path: /^\/companies\/([^/]+)\/card\/$/,
+			respond: ({ url }) => {
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/card\/$/);
+				const c = store.get(id);
+				if (!c) return { status: 404 };
+				c.cardFile = null;
+				c.cardFileName = "";
+				return { status: 200, body: c };
+			},
+		},
 	];
 
 	const fetchStub = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = input;
 		const method = init?.method ?? "GET";
-		const body = init?.body ? JSON.parse(init.body as string) : undefined;
+		const body = init?.body instanceof FormData ? init.body : init?.body ? JSON.parse(init.body as string) : undefined;
 		calls.push({ url, method, body });
 		const path = new URL(url, "http://test").pathname + new URL(url, "http://test").search;
 		const route = routes.find(
@@ -366,6 +397,21 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 	it("listAll returns every summary in workspace order", async () => {
 		const all = await client.listAll();
 		expect(all.map((c) => c.name).sort()).toEqual(["Альфа", "Бета"]);
+	});
+
+	it("uploadCard sets cardFile + cardFileName on the company", async () => {
+		const file = new File(["%PDF-1.4 stub"], "card.pdf", { type: "application/pdf" });
+		const updated = await client.uploadCard("c1", file);
+		expect(updated.cardFile).toBeTruthy();
+		expect(updated.cardFileName).toBe("card.pdf");
+	});
+
+	it("deleteCard clears the card fields", async () => {
+		const file = new File(["data"], "card.pdf", { type: "application/pdf" });
+		await client.uploadCard("c1", file);
+		const cleared = await client.deleteCard("c1");
+		expect(cleared.cardFile).toBeNull();
+		expect(cleared.cardFileName).toBe("");
 	});
 });
 

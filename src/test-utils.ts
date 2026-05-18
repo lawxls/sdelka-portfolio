@@ -87,6 +87,8 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 		description: "",
 		additionalComments: "",
 		isMain: false,
+		cardFile: null,
+		cardFileName: "",
 		employeeCount: 5,
 		procurementItemCount: 10,
 		addressesCount: 1,

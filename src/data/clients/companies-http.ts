@@ -136,5 +136,13 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 		},
 
 		deleteAddress: (_companyId, addressId) => http.delete<void>(`/companies/addresses/${enc(addressId)}/`),
+
+		uploadCard(companyId: string, file: File): Promise<Company> {
+			const form = new FormData();
+			form.append("cardFile", file);
+			return http.postMultipart<Company>(`/companies/${enc(companyId)}/card/`, { body: form });
+		},
+
+		deleteCard: (companyId) => http.delete<Company>(`/companies/${enc(companyId)}/card/`),
 	};
 }

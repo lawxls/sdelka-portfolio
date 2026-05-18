@@ -19,6 +19,8 @@ function makeCompanyDoc(id: string, name: string): Company {
 		description: "",
 		additionalComments: "",
 		isMain: false,
+		cardFile: null,
+		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: 0,

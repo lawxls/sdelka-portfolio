@@ -34,11 +34,18 @@ export interface BinaryDownload {
 	filename: string;
 }
 
+interface MultipartOptions extends RequestOptions {
+	body: FormData;
+}
+
 export interface HttpClient {
 	get<T>(path: string, opts?: RequestOptions): Promise<T>;
 	post<T>(path: string, opts?: BodyOptions): Promise<T>;
 	patch<T>(path: string, opts?: BodyOptions): Promise<T>;
 	delete<T>(path: string, opts?: RequestOptions): Promise<T>;
+	/** Multipart POST. Browser sets the boundary header from `FormData`, so we
+	 * skip `Content-Type` here — setting it manually would corrupt the request. */
+	postMultipart<T>(path: string, opts: MultipartOptions): Promise<T>;
 	/** GET a binary payload (e.g. xlsx export). Filename is taken from the
 	 * `Content-Disposition` header when present, otherwise the URL path tail. */
 	getBinary(path: string, opts?: RequestOptions & { fallbackFilename?: string }): Promise<BinaryDownload>;
@@ -100,6 +107,29 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		let res: Response;
 		try {
 			res = await fetchImpl(url, { method, headers, body, signal: opts.signal, credentials: "include" });
+		} catch (cause) {
+			throw new NetworkError(cause);
+		}
+
+		if (res.ok) return parseBody<T>(res);
+		throw await mapStatusToError(res);
+	}
+
+	async function rawMultipart<T>(method: string, path: string, opts: MultipartOptions): Promise<T> {
+		const url = baseUrl ? `${baseUrl}${path}` : path;
+		// hasBody=false so buildHeaders skips the JSON Content-Type — fetch sets
+		// the multipart boundary header automatically when body is FormData.
+		const headers = buildHeaders(method, false);
+
+		let res: Response;
+		try {
+			res = await fetchImpl(url, {
+				method,
+				headers,
+				body: opts.body,
+				signal: opts.signal,
+				credentials: "include",
+			});
 		} catch (cause) {
 			throw new NetworkError(cause);
 		}
@@ -171,6 +201,7 @@ export function createHttpClient(options: CreateOptions = {}): HttpClient {
 		post: (path, opts) => request("POST", path, opts),
 		patch: (path, opts) => request("PATCH", path, opts),
 		delete: (path, opts) => request("DELETE", path, opts),
+		postMultipart: (path, opts) => withRefreshOnAuth(() => rawMultipart("POST", path, opts)),
 		getBinary: (path, opts) => requestBinary(path, opts),
 	};
 }

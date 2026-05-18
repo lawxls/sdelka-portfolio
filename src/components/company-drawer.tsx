@@ -1,7 +1,8 @@
-import { ChevronDown, LoaderCircle, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { ChevronDown, FileText, LoaderCircle, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
+import { FileDropzone } from "@/components/file-dropzone";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { PermissionsMatrix } from "@/components/permissions-matrix";
 import { PhoneInput } from "@/components/phone-input";
@@ -28,8 +29,10 @@ import {
 	useCompanyDetail,
 	useCreateAddress,
 	useDeleteAddress,
+	useDeleteCompanyCard,
 	useUpdateAddress,
 	useUpdateCompany,
+	useUploadCompanyCard,
 } from "@/data/use-company-detail";
 import {
 	useCompanyEmployees,
@@ -326,7 +329,75 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 					</FieldCard>
 				</CardGrid>
 			</Section>
+
+			<Section title="Карточка компании">
+				<CompanyCardField company={company} companyId={companyId} />
+			</Section>
 		</div>
+	);
+}
+
+const CARD_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+
+function CompanyCardField({ company, companyId }: { company: Company; companyId: string }) {
+	const uploadMutation = useUploadCompanyCard(companyId);
+	const deleteMutation = useDeleteCompanyCard(companyId);
+	const busy = uploadMutation.isPending || deleteMutation.isPending;
+
+	function handleFile(file: File) {
+		uploadMutation.mutate(file, {
+			onError: () => toast.error("Не удалось загрузить карточку компании"),
+		});
+	}
+
+	function handleDelete() {
+		deleteMutation.mutate(undefined, {
+			onError: () => toast.error("Не удалось удалить карточку компании"),
+		});
+	}
+
+	if (company.cardFile) {
+		return (
+			<div
+				data-testid="company-card-current"
+				className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-muted/30 p-3"
+			>
+				<FileText className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+				<a
+					href={company.cardFile}
+					target="_blank"
+					rel="noopener noreferrer"
+					download={company.cardFileName || undefined}
+					className="min-w-0 flex-1 truncate text-sm font-medium text-foreground underline-offset-4 hover:underline"
+				>
+					{company.cardFileName || "Карточка компании"}
+				</a>
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					className="shrink-0 text-destructive hover:text-destructive"
+					onClick={handleDelete}
+					disabled={busy}
+					aria-label="Удалить карточку компании"
+				>
+					{deleteMutation.isPending ? (
+						<LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+					) : (
+						<Trash2 className="size-4" aria-hidden="true" />
+					)}
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<FileDropzone
+			onFile={handleFile}
+			accept={CARD_ACCEPT}
+			hint="Перетащите карточку компании сюда или нажмите для выбора (PDF, DOC, DOCX, JPG, PNG)"
+			disabled={busy}
+		/>
 	);
 }
 

@@ -316,6 +316,8 @@ export interface Company {
 	description: string;
 	additionalComments: string;
 	isMain: boolean;
+	cardFile: string | null;
+	cardFileName: string;
 	employeeCount: number;
 	procurementItemCount: number;
 	addressesCount: number;

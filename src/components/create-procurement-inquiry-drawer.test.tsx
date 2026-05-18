@@ -26,6 +26,8 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 		description: "",
 		additionalComments: "",
 		isMain: false,
+		cardFile: null,
+		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: addresses.length,

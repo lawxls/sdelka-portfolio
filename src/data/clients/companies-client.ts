@@ -31,4 +31,10 @@ export interface CompaniesClient {
 	createAddress(companyId: string, data: CreateAddressData): Promise<Address>;
 	updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address>;
 	deleteAddress(companyId: string, addressId: string): Promise<void>;
+
+	/** Multipart upload (POST) to `/companies/{id}/card/`. Replaces any
+	 * existing card file on the company. Returns the refreshed company. */
+	uploadCard(companyId: string, file: File): Promise<Company>;
+	/** Removes the card file. Idempotent: deleting an empty card is a no-op. */
+	deleteCard(companyId: string): Promise<Company>;
 }

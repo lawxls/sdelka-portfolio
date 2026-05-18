@@ -96,6 +96,8 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 				description: data.description ?? "",
 				additionalComments: data.additionalComments ?? "",
 				isMain: false,
+				cardFile: null,
+				cardFileName: "",
 				employeeCount: 0,
 				procurementItemCount: 0,
 				addressesCount: 1,
@@ -157,6 +159,24 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 			const company = requireCompany(companyId);
 			company.addresses = company.addresses.filter((a) => a.id !== addressId);
 			company.addressesCount = company.addresses.length;
+		},
+
+		async uploadCard(companyId: string, file: File): Promise<Company> {
+			await delay();
+			const company = requireCompany(companyId);
+			company.cardFile = `mock://companies/cards/${encodeURIComponent(file.name)}`;
+			company.cardFileName = file.name;
+			company.updatedAt = new Date().toISOString();
+			return cloneCompany(company);
+		},
+
+		async deleteCard(companyId: string): Promise<Company> {
+			await delay();
+			const company = requireCompany(companyId);
+			company.cardFile = null;
+			company.cardFileName = "";
+			company.updatedAt = new Date().toISOString();
+			return cloneCompany(company);
 		},
 	};
 }

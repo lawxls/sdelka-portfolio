@@ -5,9 +5,15 @@ import { cn } from "@/lib/utils";
 
 interface FileDropzoneProps {
 	onFile: (file: File) => void;
+	accept?: string;
+	hint?: string;
+	disabled?: boolean;
 }
 
-export function FileDropzone({ onFile }: FileDropzoneProps) {
+const DEFAULT_ACCEPT = ".xlsx,.csv,.xls";
+const DEFAULT_HINT = "Перетащите файл сюда или нажмите для выбора";
+
+export function FileDropzone({ onFile, accept = DEFAULT_ACCEPT, hint = DEFAULT_HINT, disabled }: FileDropzoneProps) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [dragging, setDragging] = useState(false);
 
@@ -52,22 +58,30 @@ export function FileDropzone({ onFile }: FileDropzoneProps) {
 				onDragLeave={handleDragLeave}
 				onDragOver={handleDragOver}
 				onDrop={handleDrop}
+				disabled={disabled}
 				className={cn(
-					"hidden w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-10 text-center transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex",
+					"hidden w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-10 text-center transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent sm:flex",
 					dragging ? "border-ring bg-muted" : "border-border",
 				)}
 			>
 				<Upload className="size-10 text-muted-foreground" aria-hidden="true" />
-				<p className="text-sm text-muted-foreground">Перетащите файл сюда или нажмите для выбора</p>
+				<p className="text-sm text-muted-foreground">{hint}</p>
 			</button>
-			<Button type="button" variant="outline" size="lg" onClick={handleClick} className="w-full sm:hidden">
+			<Button
+				type="button"
+				variant="outline"
+				size="lg"
+				onClick={handleClick}
+				disabled={disabled}
+				className="w-full sm:hidden"
+			>
 				<Upload aria-hidden="true" />
 				Выбрать файл
 			</Button>
 			<input
 				ref={inputRef}
 				type="file"
-				accept=".xlsx,.csv,.xls"
+				accept={accept}
 				className="hidden"
 				data-testid="dropzone-input"
 				aria-label="Загрузить файл"

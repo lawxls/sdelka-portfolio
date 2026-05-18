@@ -89,3 +89,23 @@ export function useDeleteAddress(companyId: string) {
 		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
+
+export function useUploadCompanyCard(companyId: string) {
+	const client = useCompaniesClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (file: File) => client.uploadCard(companyId, file),
+		onSuccess: (company) => queryClient.setQueryData(keys.companies.detail(companyId), company),
+	});
+}
+
+export function useDeleteCompanyCard(companyId: string) {
+	const client = useCompaniesClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: () => client.deleteCard(companyId),
+		onSuccess: (company) => queryClient.setQueryData(keys.companies.detail(companyId), company),
+	});
+}
