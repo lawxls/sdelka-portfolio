@@ -17,7 +17,7 @@ import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procure
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
-import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
+import { fakeGeneratedQuestionsClient, TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Company, Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeCompanyDetail, makeItem, makeProcurementInquiry as makeProcurementInquiryFixture } from "@/test-utils";
 import { ProcurementPage } from "./procurement-page";
@@ -78,6 +78,9 @@ function renderPage(initialEntries?: string[]) {
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
 				folders: testFoldersClient(MOCK_FOLDERS),
+				generatedQuestions: fakeGeneratedQuestionsClient({
+					preview: async () => ({ questions: [] }),
+				}),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>

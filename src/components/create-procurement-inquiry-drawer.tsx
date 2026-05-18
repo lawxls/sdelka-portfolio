@@ -415,6 +415,10 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 	const preview = useGeneratePreview();
 	const [minLoaderElapsed, setMinLoaderElapsed] = useState(false);
 	const minLoaderTimerRef = useRef<number | null>(null);
+	// Late preview responses can land after the user has left Step 2 (Back, or
+	// advance-while-loading). Ignore them so a stale success can't repopulate
+	// `generatedQuestions` or call `onSkip` against a wizard that has moved on.
+	const aliveRef = useRef(true);
 
 	const step1Ref = useRef(step1);
 	step1Ref.current = step1;
@@ -432,6 +436,7 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 		previewRef.current.reset();
 		previewRef.current.mutate(buildPreviewInput(step1Ref.current), {
 			onSuccess: (data) => {
+				if (!aliveRef.current) return;
 				if (data.questions.length === 0) {
 					// Mock never returns 0; a future LLM might. Persist nothing and
 					// auto-advance so the wizard doesn't get stuck on an empty Step 2.
@@ -450,8 +455,10 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 	// per entry. Mock backend returns a different random subset per call; the
 	// real LLM will eventually base output on the latest positions.
 	useMountEffect(() => {
+		aliveRef.current = true;
 		runPreview();
 		return () => {
+			aliveRef.current = false;
 			if (minLoaderTimerRef.current !== null) {
 				window.clearTimeout(minLoaderTimerRef.current);
 				minLoaderTimerRef.current = null;
