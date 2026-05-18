@@ -9,7 +9,22 @@ import {
 } from "../domains/procurement-inquiries";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import { type DrfCursorPage, toCursorPage } from "./drf";
+import { itemFromApi, type ProcurementItemWire } from "./items-wire";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
+
+/** Detail responses include nested positions (write-only on create, read-only
+ * on retrieve). Other endpoints return the wire shape unchanged. */
+type ProcurementInquiryWire = Omit<ProcurementInquiry, "items"> & {
+	items?: ProcurementItemWire[];
+};
+
+function inquiryFromApi(wire: ProcurementInquiryWire): ProcurementInquiry {
+	if (!wire.items) {
+		const { items: _, ...rest } = wire;
+		return rest;
+	}
+	return { ...wire, items: wire.items.map(itemFromApi) };
+}
 
 /** FE sort-field names → backend `ordering_fields` (snake_case). DRF rejects
  * camelCase ordering values, so the translator must rename rather than pass
@@ -126,7 +141,7 @@ export function createHttpProcurementInquiriesClient(http: HttpClient = defaultH
 			const page = await http.get<DrfCursorPage<ProcurementInquiry>>(`/procurement/inquiries/${query}`);
 			return toCursorPage(page);
 		},
-		get: (id) => http.get<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/`),
+		get: async (id) => inquiryFromApi(await http.get<ProcurementInquiryWire>(`/procurement/inquiries/${enc(id)}/`)),
 		create: (input: CreateProcurementInquiryInput) =>
 			http.post<ProcurementInquiry>(`/procurement/inquiries/`, { body: input }),
 		update: (id, patch) => http.patch<ProcurementInquiry>(`/procurement/inquiries/${enc(id)}/`, { body: patch }),

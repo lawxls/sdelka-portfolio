@@ -18,10 +18,6 @@ import type {
 export interface ItemsClient {
 	list(params: ListItemsParams): Promise<CursorPage<ProcurementItem>>;
 	listAll(): Promise<ProcurementItem[]>;
-	/** All items belonging to a single inquiry, regardless of archive state.
-	 * `listAll()` cascades archive — opening an archived inquiry's detail page
-	 * needs to see its positions so headline TCO and tabs render correctly. */
-	listByProcurementInquiry(procurementInquiryId: string): Promise<ProcurementItem[]>;
 	totals(params: TotalsParams): Promise<Totals>;
 	get(id: string): Promise<ProcurementItem>;
 	create(inputs: NewItemInput[]): Promise<CreateItemsResult>;

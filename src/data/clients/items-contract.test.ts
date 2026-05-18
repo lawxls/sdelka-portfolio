@@ -95,19 +95,6 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/procurement\/items\/by-procurement-inquiry\/([^/]+)\/(\?|$)/,
-			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/procurement\/items\/by-procurement-inquiry\/([^/]+)\//);
-				return {
-					status: 200,
-					body: Array.from(store.values())
-						.filter((i) => i.procurementInquiryId === id)
-						.map(toWire),
-				};
-			},
-		},
-		{
-			method: "GET",
 			path: /^\/procurement\/items\/(\?|$)/,
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");

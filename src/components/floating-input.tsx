@@ -85,18 +85,18 @@ export function FloatingInput({
 						className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
 						tabIndex={-1}
 					>
-						<span className="relative size-4">
+						<span className="relative block size-4">
 							<Eye
 								aria-hidden="true"
 								className={cn(
-									"absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+									"absolute inset-0 size-4 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
 									showPassword ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-0",
 								)}
 							/>
 							<EyeOff
 								aria-hidden="true"
 								className={cn(
-									"absolute inset-0 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
+									"absolute inset-0 size-4 transition-[opacity,scale,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)]",
 									showPassword ? "scale-100 opacity-100 blur-0" : "scale-[0.25] opacity-0 blur-[4px]",
 								)}
 							/>

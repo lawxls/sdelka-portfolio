@@ -152,6 +152,10 @@ export interface ProcurementInquiry {
 	suppliersCount: number;
 	createdAt: string;
 	updatedAt: string;
+	/** Present only on retrieve responses; the list endpoint omits items to
+	 * keep payloads lean. Use `useProcurementInquiry(id).data?.items` for the
+	 * detail page; positions on the list view come from `positionsCount`. */
+	items?: ProcurementItem[];
 }
 
 export interface Folder {

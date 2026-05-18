@@ -70,15 +70,6 @@ export function useAllItems(options?: { enabled?: boolean }) {
 	});
 }
 
-export function useProcurementInquiryItems(procurementInquiryId: string | undefined) {
-	const client = useItemsClient();
-	return useQuery({
-		queryKey: keys.items.byProcurementInquiry(procurementInquiryId ?? ""),
-		queryFn: () => client.listByProcurementInquiry(procurementInquiryId as string),
-		enabled: !!procurementInquiryId,
-	});
-}
-
 export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	const client = useItemsClient();
 	const { sort: _sort, dir: _dir, ...filterParams } = buildFilterParams({ ...params, sort: null });
@@ -179,9 +170,11 @@ export function useUpdateItemCurrentSupplier() {
 			queryClient.invalidateQueries({ queryKey: ["suppliers"] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-all"] });
 			queryClient.invalidateQueries({ queryKey: ["suppliers-global"] });
-			queryClient.invalidateQueries({
-				queryKey: keys.items.byProcurementInquiry(serverItem.procurementInquiryId ?? ""),
-			});
+			if (serverItem.procurementInquiryId) {
+				queryClient.invalidateQueries({
+					queryKey: keys.procurementInquiries.detail(serverItem.procurementInquiryId),
+				});
+			}
 		},
 		onError: () => {
 			toast.error("Не удалось обновить текущего поставщика");

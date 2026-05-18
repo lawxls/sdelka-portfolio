@@ -162,6 +162,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	const createFolderMutation = useCreateFolder();
 
 	const companiesById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
+	const hasNoCompanies = !companiesLoading && companies.length === 0;
 
 	const form = useCreateProcurementInquiryForm();
 
@@ -219,8 +220,10 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 			const result = form.advance();
 			if (!result.advanced) {
 				if (result.focus === "deadline") deadlineInputRef.current?.focus();
-				else if (result.focus === "company") companyTriggerRef.current?.focus();
-				else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
+				else if (result.focus === "company") {
+					companyTriggerRef.current?.focus();
+					if (hasNoCompanies) toast.error("Для создания запроса необходимо создать компанию");
+				} else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
 			}
 			return;
 		}
@@ -670,11 +673,14 @@ function Step1Body({
 					<Field label="Компания" required className="flex-1">
 						{hasNoCompanies ? (
 							<Button
+								ref={companyTriggerRef}
 								type="button"
 								variant="outline"
-								className="w-full justify-center"
+								className={cn("w-full justify-center", step1Errors.company && "border-destructive")}
 								onClick={() => setCreateCompanyOpen(true)}
 								aria-label="Создать компанию"
+								aria-invalid={step1Errors.company ? true : undefined}
+								aria-describedby={step1Errors.company ? "company-error" : undefined}
 								data-testid="create-company-cta"
 							>
 								<Plus className="size-4" aria-hidden="true" />
@@ -710,7 +716,7 @@ function Step1Body({
 						)}
 						{step1Errors.company && (
 							<p id="company-error" className="text-sm text-destructive">
-								{step1Errors.company}
+								{hasNoCompanies ? "Создайте компанию" : step1Errors.company}
 							</p>
 						)}
 					</Field>

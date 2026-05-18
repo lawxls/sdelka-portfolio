@@ -82,7 +82,6 @@ export function fakeItemsClient(overrides: Partial<ItemsClient> = {}): ItemsClie
 	return {
 		list: notImplemented("list"),
 		listAll: notImplemented("listAll"),
-		listByProcurementInquiry: notImplemented("listByProcurementInquiry"),
 		totals: notImplemented("totals"),
 		get: notImplemented("get"),
 		create: notImplemented("create"),

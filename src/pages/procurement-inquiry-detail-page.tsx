@@ -56,7 +56,7 @@ import type {
 import { formatPaymentType, RFQ_EDITABLE_STATUSES, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { useFolders } from "@/data/use-folders";
-import { useProcurementInquiryItems, useUpdateItemCurrentSupplier } from "@/data/use-items";
+import { useUpdateItemCurrentSupplier } from "@/data/use-items";
 import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
 import {
 	useAllSuppliers,
@@ -254,7 +254,7 @@ export function ProcurementInquiryDetailPage() {
 
 	const { data: procurementInquiry, isLoading, isError } = useProcurementInquiry(slug);
 	const { data: folders = [] } = useFolders();
-	const { data: items = [] } = useProcurementInquiryItems(slug || undefined);
+	const items = procurementInquiry?.items ?? [];
 	const { data: supplier } = useSupplierById(supplierId);
 
 	function handleClose() {

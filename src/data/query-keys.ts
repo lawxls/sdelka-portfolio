@@ -33,8 +33,6 @@ export const keys = {
 		all: () => ["items"] as const,
 		list: (params: ListItemsParams) => ["items", params] as const,
 		listAll: () => ["items-global"] as const,
-		byProcurementInquiry: (procurementInquiryId: string) =>
-			["items", "byProcurementInquiry", procurementInquiryId] as const,
 		detail: (id: string | null) => ["itemDetail", id] as const,
 		totals: (params: TotalsParams) => ["totals", params] as const,
 		totalsAll: () => ["totals"] as const,

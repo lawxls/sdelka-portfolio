@@ -72,11 +72,6 @@ export function createHttpItemsClient(http: HttpClient = defaultHttpClient): Ite
 			return items.map(itemFromApi);
 		},
 
-		listByProcurementInquiry: async (id: string) => {
-			const items = await http.get<ProcurementItemWire[]>(`/procurement/items/by-procurement-inquiry/${enc(id)}/`);
-			return items.map(itemFromApi);
-		},
-
 		totals: (params: TotalsParams) => http.get<Totals>(`/procurement/items/totals/${totalsQuery(params)}`),
 
 		get: async (id) => itemFromApi(await http.get<ProcurementItemWire>(`/procurement/items/${enc(id)}/`)),

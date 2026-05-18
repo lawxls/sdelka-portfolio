@@ -37,6 +37,13 @@ function renderPage({ procurementInquiries = [], items = [], slug }: RenderOpts)
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
+	// Items live on the inquiry's `items` field (the detail endpoint includes
+	// them inline); seed them there instead of via the items client so the
+	// detail page sees them via useProcurementInquiry(slug).data.items.
+	const inquiriesWithItems = procurementInquiries.map((inquiry) => {
+		const inquiryItems = items.filter((i) => i.procurementInquiryId === inquiry.id);
+		return inquiryItems.length > 0 ? { ...inquiry, items: inquiryItems } : inquiry;
+	});
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -45,7 +52,7 @@ function renderPage({ procurementInquiries = [], items = [], slug }: RenderOpts)
 				items: createInMemoryItemsClient({ seed: items }),
 				suppliers: createInMemorySuppliersClient({ seedByItemId: {} }),
 				tasks: createInMemoryTasksClient({ seed: [] }),
-				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
+				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: inquiriesWithItems }),
 				folders: createInMemoryFoldersClient({ seed: FOLDERS }),
 			}}
 		>

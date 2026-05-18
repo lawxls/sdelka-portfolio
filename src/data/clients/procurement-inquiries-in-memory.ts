@@ -25,7 +25,7 @@ export interface InMemoryProcurementInquiriesOptions {
 const FALLBACK_DATE = "2026-01-01T00:00:00+03:00";
 
 function fillDefaults(partial: Partial<ProcurementInquiry> & { id: string; companyId: string }): ProcurementInquiry {
-	return {
+	const base: ProcurementInquiry = {
 		id: partial.id,
 		name: partial.name ?? "",
 		companyId: partial.companyId,
@@ -49,10 +49,20 @@ function fillDefaults(partial: Partial<ProcurementInquiry> & { id: string; compa
 		createdAt: partial.createdAt ?? FALLBACK_DATE,
 		updatedAt: partial.updatedAt ?? partial.createdAt ?? FALLBACK_DATE,
 	};
+	if (partial.items !== undefined) base.items = partial.items;
+	return base;
 }
 
 function clone(t: ProcurementInquiry): ProcurementInquiry {
 	return { ...t };
+}
+
+/** Strip the nested `items` field — mirrors backend behavior where only the
+ * retrieve action serializes items, while list/archive/update omit them. */
+function withoutItems(t: ProcurementInquiry): ProcurementInquiry {
+	if (t.items === undefined) return t;
+	const { items: _items, ...rest } = t;
+	return rest;
 }
 
 function matchesFolder(inquiry: ProcurementInquiry, folder: string | undefined): boolean {
@@ -160,7 +170,7 @@ export function createInMemoryProcurementInquiriesClient(
 		if (idx === -1) throw new NotFoundError({ id });
 		const now = new Date().toISOString();
 		store[idx] = { ...store[idx], isArchived: archived, updatedAt: now };
-		return clone(store[idx]);
+		return withoutItems(clone(store[idx]));
 	}
 
 	return {
@@ -168,7 +178,7 @@ export function createInMemoryProcurementInquiriesClient(
 			await delay();
 			const filtered = sortInquiries(applyFilters(store, params, new Date()), params);
 			const page = paginate({ items: filtered, cursor: params.cursor, limit: params.limit, getId: (t) => t.id });
-			return { items: page.items.map(clone), nextCursor: page.nextCursor };
+			return { items: page.items.map((t) => withoutItems(clone(t))), nextCursor: page.nextCursor };
 		},
 
 		async get(id: string): Promise<ProcurementInquiry> {
@@ -181,8 +191,13 @@ export function createInMemoryProcurementInquiriesClient(
 		async create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry> {
 			await delay();
 			const now = new Date().toISOString();
+			// `items` on `CreateProcurementInquiryInput` is the write-only nested
+			// create payload (shape: `CreateProcurementInquiryItemInput[]`); the
+			// in-memory adapter doesn't simulate the items table, so it's dropped
+			// from the stored row to match the backend's write-only behavior.
+			const { items: _items, ...rest } = input;
 			const inquiry = fillDefaults({
-				...input,
+				...rest,
 				id: nextId("inquiry"),
 				createdAt: now,
 				updatedAt: now,
@@ -197,7 +212,7 @@ export function createInMemoryProcurementInquiriesClient(
 			if (idx === -1) throw new NotFoundError({ id });
 			const now = new Date().toISOString();
 			store[idx] = { ...store[idx], ...patch, id: store[idx].id, updatedAt: now };
-			return clone(store[idx]);
+			return withoutItems(clone(store[idx]));
 		},
 
 		archive: (id) => setArchived(id, true),
