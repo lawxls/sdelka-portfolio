@@ -84,7 +84,12 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter & { track: HttpAdapter
 						return desc ? -cmp : cmp;
 					});
 				}
-				return { status: 200, body: { next: null, previous: null, results: items } };
+				// Real DRF wire shape: `next` is an opaque URL (possibly carrying
+				// `?cursor=…`), not the SPA's `{ items, nextCursor }`. The shared
+				// `toCursorPage` adapter translates this for the HTTP adapter.
+				const hasMore = items.length > 50;
+				const next = hasMore ? "https://api.example.com/procurement/inquiries/?cursor=cD0yMDI2" : null;
+				return { status: 200, body: { next, previous: null, results: items } };
 			},
 		},
 		{
