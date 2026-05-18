@@ -75,6 +75,11 @@ export function useCreateAddress(companyId: string) {
 
 	return useMutation({
 		mutationFn: (data: CreateAddressData) => client.createAddress(companyId, data),
+		onSuccess: (created) => {
+			queryClient.setQueryData<Company>(keys.companies.detail(companyId), (prev) =>
+				prev ? { ...prev, addresses: [...prev.addresses, created] } : prev,
+			);
+		},
 		onSettled: () => invalidateAfterCompanyChange(queryClient, { companyId }),
 	});
 }
