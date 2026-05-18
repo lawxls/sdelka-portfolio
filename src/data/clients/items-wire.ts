@@ -1,19 +1,13 @@
 import type { UpdateItemData } from "../domains/items";
 import type { CurrentSupplier, NewItemInput, ProcurementItem, ProcurementStatus, Unit } from "../types";
 
-/**
- * Wire mapper for the items domain. The Django `ProcurementItemSerializer`
- * serialises `annualQuantity` / `quantityPerDelivery` as decimal strings, and
- * denormalises the current supplier as a nested object. This module is the
- * single seam where wire ↔ SPA shape conversion happens; the HTTP adapter
- * holds the only call site.
- *
- * Tests are co-located in `items-wire.test.ts` and cover decimal-string
- * parsing, nested supplier read, and round-trip behavior.
- */
+/** Wire ↔ SPA-shape mapper for items. Decimal strings (`annualQuantity`,
+ * `quantityPerDelivery`) get parsed to numbers; nested `currentSupplier` is
+ * shaped per the SPA domain type. */
 
-/** DRF wire shape for `currentSupplier`. The backend returns supplier identity
- * fields only — pricing / payment / delivery moved to the `Offer` resource. */
+/** Wire-side `currentSupplier`. Legacy pricing fields (`pricePerUnit` etc.)
+ * are accepted so older in-memory fixtures keep round-tripping; the backend
+ * itself will move them to the Offer resource over time. */
 interface CurrentSupplierWire {
 	companyName: string;
 	inn?: string | null;
@@ -44,10 +38,7 @@ export interface ProcurementItemWire {
 	currentSupplier?: CurrentSupplierWire | null;
 }
 
-/** Parse a DRF decimal — backend serialises as string, the SPA holds numbers. */
-function parseDecimal(value: number | string | null | undefined, fallback: number): number;
-function parseDecimal(value: number | string | null | undefined, fallback: number | null): number | null;
-function parseDecimal(value: number | string | null | undefined, fallback: number | null): number | null {
+function parseDecimal<F extends number | null>(value: number | string | null | undefined, fallback: F): number | F {
 	if (value === null || value === undefined || value === "") return fallback;
 	if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
 	const parsed = Number(value);
@@ -72,7 +63,6 @@ function mapCurrentSupplier(wire: CurrentSupplierWire | null | undefined): Curre
 	return supplier;
 }
 
-/** Translate a wire `ProcurementItem` into the SPA-canonical shape. */
 export function itemFromApi(wire: ProcurementItemWire): ProcurementItem {
 	const item: ProcurementItem = {
 		id: wire.id,
@@ -94,9 +84,8 @@ export function itemFromApi(wire: ProcurementItemWire): ProcurementItem {
 	return item;
 }
 
-/** Translate a SPA-side patch payload into the wire shape expected by PATCH
- * `/procurement/items/{id}/`. Decimal fields are serialised as strings so the
- * DRF deserialiser accepts them without precision loss. */
+/** Decimal fields are serialised as strings so the DRF deserialiser accepts
+ * them without precision loss. */
 export function itemToApiPatch(data: UpdateItemData): Record<string, unknown> {
 	const out: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(data)) {
@@ -110,8 +99,6 @@ export function itemToApiPatch(data: UpdateItemData): Record<string, unknown> {
 	return out;
 }
 
-/** Translate a `NewItemInput` into the wire shape for `POST /procurement/items/`.
- * The batch endpoint accepts `{ items: [<wire>...] }`. */
 export function newItemToApi(input: NewItemInput): Record<string, unknown> {
 	const out: Record<string, unknown> = { name: input.name };
 	if (input.companyId !== undefined) out.companyId = input.companyId;

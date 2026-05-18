@@ -3,6 +3,7 @@ import type { Task } from "../domains/tasks";
 import { ConflictError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
+import { BUCKET_TO_STATUSES } from "./tasks-buckets";
 import type { TasksClient } from "./tasks-client";
 import { createHttpTasksClient } from "./tasks-http";
 import { createInMemoryTasksClient } from "./tasks-in-memory";
@@ -89,19 +90,12 @@ interface HttpRoute {
 	respond: (req: { url: string; init?: RequestInit }) => { status: number; body?: unknown };
 }
 
-const BUCKET_TO_STATUSES: Record<string, Set<string>> = {
-	active: new Set(["assigned", "in_progress"]),
-	completed: new Set(["completed"]),
-	archived: new Set(["archived"]),
-};
-
 function bucketFilter(tasks: Task[], statusParam: string | null): Task[] {
 	if (!statusParam) return tasks;
-	const buckets = statusParam.split(",");
 	const allowed = new Set<string>();
-	for (const b of buckets) {
-		const set = BUCKET_TO_STATUSES[b];
-		if (set) for (const s of set) allowed.add(s);
+	for (const bucket of statusParam.split(",")) {
+		const statuses = BUCKET_TO_STATUSES[bucket as keyof typeof BUCKET_TO_STATUSES];
+		if (statuses) for (const s of statuses) allowed.add(s);
 	}
 	return tasks.filter((t) => allowed.has(t.status));
 }
@@ -168,24 +162,23 @@ function httpAdapter(): Adapter {
 				if (data.status === ("invalid" as Task["status"])) {
 					return { status: 400, body: { fieldErrors: { status: ["invalid"] } } };
 				}
-				// Empty body → unarchive (restore statusBeforeArchive).
+				if (data.status === undefined && existing.status !== "archived") {
+					return { status: 400, body: { fieldErrors: { status: ["required when the task is not archived"] } } };
+				}
 				const isUnarchive = data.status === undefined && existing.status === "archived";
 				const nextStatus = isUnarchive
 					? (existing.statusBeforeArchive ?? "assigned")
 					: (data.status ?? existing.status);
-				if (data.status === undefined && existing.status !== "archived") {
-					return { status: 400, body: { fieldErrors: { status: ["required when the task is not archived"] } } };
-				}
+				const justArchived = nextStatus === "archived" && existing.status !== "archived";
 				const updated: Task = {
 					...existing,
 					status: nextStatus,
 					completedResponse: data.completedResponse ?? existing.completedResponse,
-					statusBeforeArchive:
-						nextStatus === "archived" && existing.status !== "archived"
-							? existing.status
-							: nextStatus !== "archived"
-								? null
-								: existing.statusBeforeArchive,
+					statusBeforeArchive: justArchived
+						? existing.status
+						: nextStatus === "archived"
+							? existing.statusBeforeArchive
+							: null,
 				};
 				store.set(id, updated);
 				return { status: 200, body: toWire(updated) };

@@ -7,13 +7,8 @@ import type {
 	TaskStatus,
 } from "../task-types";
 
-/**
- * Wire mapper for the tasks domain. The Django `TaskSerializer` exposes the
- * parent inquiry under `inquiry` (the FK name) — the SPA rewires it to
- * `procurementInquiry` so the type alignment with `ProcurementInquiry` is
- * obvious. Denormalised arrays (`supplierQuestions`, `attachments`) come
- * inline; the assignee carries only the fields the avatar cluster needs.
- */
+/** Wire ↔ SPA-shape mapper for tasks. The backend exposes the parent inquiry
+ * under `inquiry` (its FK name); the SPA renames it to `procurementInquiry`. */
 
 interface TaskInquiryWire {
 	id: string;
@@ -33,8 +28,6 @@ export interface TaskWire {
 	id: string;
 	name: string;
 	status: TaskStatus;
-	/** Wire-side field name: backend exposes the parent as `inquiry`. The SPA
-	 * canonical shape is `procurementInquiry`. */
 	inquiry?: TaskInquiryWire | null;
 	procurementInquiry?: TaskInquiryWire | null;
 	assignee: TaskAssigneeWire | null;
@@ -68,7 +61,6 @@ function mapAssignee(wire: TaskAssigneeWire | null): TaskAssignee | null {
 	};
 }
 
-/** Translate a wire `Task` payload into the SPA-canonical `Task`. */
 export function taskFromApi(wire: TaskWire): Task {
 	return {
 		id: wire.id,

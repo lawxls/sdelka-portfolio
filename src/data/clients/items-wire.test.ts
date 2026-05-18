@@ -3,13 +3,6 @@ import type { UpdateItemData } from "../domains/items";
 import type { NewItemInput } from "../types";
 import { itemFromApi, itemToApiPatch, newItemToApi, type ProcurementItemWire } from "./items-wire";
 
-/**
- * Items wire mapper — the single seam between the DRF response shape and the
- * SPA-canonical `ProcurementItem`. Decimal-string parsing for `annualQuantity`
- * / `quantityPerDelivery` is the asymmetric bit; the rest is field renames /
- * pass-through.
- */
-
 function wire(overrides: Partial<ProcurementItemWire> = {}): ProcurementItemWire {
 	return {
 		id: "i-1",

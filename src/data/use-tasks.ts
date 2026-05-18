@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { statusToBucket } from "./clients/tasks-buckets";
+import { statusToBucket, TASK_STATUS_BUCKETS } from "./clients/tasks-buckets";
 import { useItemsClient, useTasksClient } from "./clients-context";
 import type { TaskBoardBucket, TaskBoardResponse } from "./domains/tasks";
 import type { Task, TaskFilterParams, TaskStatus } from "./task-types";
@@ -189,7 +189,7 @@ function findTaskInCaches(queryClient: ReturnType<typeof useQueryClient>) {
 		const boardEntries = queryClient.getQueriesData<TaskBoardResponse>({ queryKey: ["tasks-board"] });
 		for (const [key, data] of boardEntries) {
 			if (!data) continue;
-			for (const bucket of ["active", "completed", "archived"] as const) {
+			for (const bucket of TASK_STATUS_BUCKETS) {
 				const col = data[bucket];
 				if (!col) continue;
 				const found = col.results.find((t) => t.id === id);

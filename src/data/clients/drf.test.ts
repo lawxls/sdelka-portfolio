@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type DrfCursorPage, toCursorPage } from "./drf";
 
-/**
- * DRF cursor-pagination shape — the SPA's HTTP adapters route every paginated
- * GET through `toCursorPage` so the FE-canonical `CursorPage<T>` is the only
- * shape callers see. The opaque `?cursor=<token>` is parsed out of `next`.
- */
 describe("toCursorPage", () => {
 	it("returns null cursor when next is null", () => {
 		const page: DrfCursorPage<number> = { next: null, previous: null, results: [1, 2, 3] };

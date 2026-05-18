@@ -7,34 +7,23 @@ import type {
 	TaskListResponse,
 } from "../domains/tasks";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
-import { type DrfCursorPage, toCursorPage } from "./drf";
+import { buildQueryString, type DrfCursorPage, toCursorPage } from "./drf";
 import { composeTaskBoard, type ListLikeResponse } from "./tasks-board";
 import { statusesToBucketString } from "./tasks-buckets";
 import type { TasksClient } from "./tasks-client";
 import { type TaskWire, taskFromApi } from "./tasks-wire";
 
-function buildQuery(params: Record<string, unknown>): string {
-	const sp = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value === undefined || value === null || value === "") continue;
-		sp.set(key, String(value));
-	}
-	const qs = sp.toString();
-	return qs ? `?${qs}` : "";
-}
-
 const enc = encodeURIComponent;
 
 const LIST_ALL_PAGE_SIZE = 200;
+const LIST_ALL_HARD_CAP_PAGES = 500;
 
 interface ListParamsInternal extends FetchTasksParams {
 	status?: string;
 }
 
-/** Translate the SPA's list params to the DRF query surface. `statuses?:
- * TaskStatus[]` collapses into the API's bucket-string `status=` filter. */
 function listQuery(params: ListParamsInternal): string {
-	return buildQuery({
+	return buildQueryString({
 		q: params.q,
 		procurementInquiry: params.procurementInquiry,
 		company: params.company,
@@ -61,13 +50,13 @@ export function createHttpTasksClient(http: HttpClient = defaultHttpClient): Tas
 		listAll: async () => {
 			const collected: Task[] = [];
 			let cursor: string | undefined;
-			while (true) {
+			for (let i = 0; i < LIST_ALL_HARD_CAP_PAGES; i += 1) {
 				const page = await fetchListPage({ cursor, page_size: LIST_ALL_PAGE_SIZE });
 				collected.push(...page.results);
-				if (!page.next) break;
+				if (!page.next) return collected;
 				cursor = page.next;
 			}
-			return collected;
+			throw new Error(`tasks.listAll: hit ${LIST_ALL_HARD_CAP_PAGES}-page cap`);
 		},
 
 		list: async (params): Promise<TaskListResponse> => {
@@ -86,14 +75,11 @@ export function createHttpTasksClient(http: HttpClient = defaultHttpClient): Tas
 			return taskFromApi(await http.post<TaskWire>(`/tasks/${enc(id)}/change_status/`, { body }));
 		},
 
+		// Attachment endpoints are multipart-only and not yet on the API.
+		// The composition root swaps in the in-memory implementation.
 		uploadAttachments: async (_id: string, _files: File[]): Promise<Attachment[]> => {
-			// Attachment upload is multipart/form-data; the shared httpClient is JSON-only
-			// today. Production composition root falls back to the in-memory adapter for
-			// uploads until the backend exposes the endpoint and the client gains a
-			// FormData path.
 			throw new Error("HTTP uploadAttachments not implemented yet");
 		},
-
 		deleteAttachment: async (_id: string, _attachmentId: string): Promise<void> => {
 			throw new Error("HTTP deleteAttachment not implemented yet");
 		},

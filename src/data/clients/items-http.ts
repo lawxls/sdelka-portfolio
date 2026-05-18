@@ -10,22 +10,12 @@ import type {
 	UpdateItemData,
 } from "../domains/items";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
-import { type DrfCursorPage, toCursorPage } from "./drf";
+import { buildQueryString, type DrfCursorPage, toCursorPage } from "./drf";
 import type { ItemsClient } from "./items-client";
 import { itemFromApi, itemToApiPatch, newItemToApi, type ProcurementItemWire } from "./items-wire";
 
-function buildQuery(params: Record<string, unknown>): string {
-	const sp = new URLSearchParams();
-	for (const [key, value] of Object.entries(params)) {
-		if (value === undefined || value === null || value === "") continue;
-		sp.set(key, String(value));
-	}
-	const qs = sp.toString();
-	return qs ? `?${qs}` : "";
-}
-
 function listQuery(params: ListItemsParams): string {
-	return buildQuery({
+	return buildQueryString({
 		q: params.q,
 		status: params.status,
 		deviation: params.deviation,
@@ -40,7 +30,7 @@ function listQuery(params: ListItemsParams): string {
 }
 
 function totalsQuery(params: TotalsParams): string {
-	return buildQuery({
+	return buildQueryString({
 		q: params.q,
 		status: params.status,
 		deviation: params.deviation,

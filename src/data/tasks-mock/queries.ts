@@ -1,3 +1,4 @@
+import { BUCKET_TO_STATUSES, TASK_STATUS_BUCKETS } from "../clients/tasks-buckets";
 import type {
 	BoardColumn,
 	FetchTaskBoardParams,
@@ -7,14 +8,8 @@ import type {
 	TaskListResponse,
 } from "../domains/tasks";
 import { delay, paginate } from "../mock-utils";
-import type { Task, TaskFilterParams, TaskSortField, TaskStatus } from "../task-types";
+import type { Task, TaskFilterParams, TaskSortField } from "../task-types";
 import { cloneTask, findTaskIndex, readTasks } from "./store";
-
-const BUCKETS_TO_STATUSES: Record<TaskBoardBucket, readonly TaskStatus[]> = {
-	active: ["assigned", "in_progress"],
-	completed: ["completed"],
-	archived: ["archived"],
-};
 
 const COLUMN_PAGE_SIZE = 20;
 const LIST_PAGE_SIZE = 20;
@@ -53,7 +48,7 @@ function buildBucketColumn(bucket: TaskBoardBucket, params: FetchTaskBoardParams
 		sort: params.sort,
 		dir: params.dir,
 	};
-	const bucketStatuses = new Set(BUCKETS_TO_STATUSES[bucket]);
+	const bucketStatuses = new Set(BUCKET_TO_STATUSES[bucket]);
 	const filtered = applyFilters(readTasks(), filterParams).filter((t) => bucketStatuses.has(t.status));
 	const sorted = applySortIfAny(filtered, filterParams);
 	const page = paginate({
@@ -75,11 +70,11 @@ export async function fetchTaskBoardMock(params: FetchTaskBoardParams = {}): Pro
 		const col = buildBucketColumn(params.column, params, params.cursor);
 		return { results: col.results, next: col.next };
 	}
-	return {
-		active: buildBucketColumn("active", params),
-		completed: buildBucketColumn("completed", params),
-		archived: buildBucketColumn("archived", params),
-	};
+	const response: TaskBoardResponse = {};
+	for (const bucket of TASK_STATUS_BUCKETS) {
+		response[bucket] = buildBucketColumn(bucket, params);
+	}
+	return response;
 }
 
 export async function fetchAllTasksMock(): Promise<Task[]> {

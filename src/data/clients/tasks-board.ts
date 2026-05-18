@@ -2,16 +2,9 @@ import type { BoardColumn, FetchTaskBoardParams, FetchTasksParams, TaskBoardResp
 import type { Task } from "../task-types";
 import { TASK_STATUS_BUCKETS, type TaskStatusBucket } from "./tasks-buckets";
 
-/**
- * Tasks board composer — converts the SPA-canonical "board" request into a
- * fan-out of single-bucket list calls. The backend's `status` filter only
- * supports buckets, so the four columns the SPA used to render collapse to
- * three: `active` (assigned + in_progress) | `completed` | `archived`.
- *
- * The composer is shape-agnostic about *how* `list` returns its data — it
- * works against the SPA-canonical list shape so it can be unit-tested with a
- * plain stub.
- */
+/** Fan-out three bucket-filtered list calls (or one, for column-paginated
+ * follow-ups) and assemble a `TaskBoardResponse`. Shape-agnostic about the
+ * caller's `list` implementation so it unit-tests with a plain stub. */
 
 export interface ListLikeResponse {
 	results: Task[];
@@ -28,9 +21,6 @@ function pickBucketFromColumn(column: string | undefined): TaskStatusBucket | un
 	return undefined;
 }
 
-/** Compose a board response from three parallel bucket-filtered list calls.
- * If `column` is set on the params, returns a single-column page instead
- * (used by per-column pagination). */
 export async function composeTaskBoard(list: ListFn, params: FetchTaskBoardParams = {}): Promise<TaskBoardResponse> {
 	const shared: FetchTasksParams = {
 		q: params.q,
