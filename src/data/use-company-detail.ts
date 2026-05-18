@@ -49,6 +49,16 @@ export function useDeleteCompany() {
 	});
 }
 
+export function useArchiveCompany() {
+	const client = useCompaniesClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => client.archive(id),
+		onSettled: () => invalidateAfterCompanyChange(queryClient),
+	});
+}
+
 export function useCreateCompany() {
 	const client = useCompaniesClient();
 	const queryClient = useQueryClient();

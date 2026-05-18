@@ -125,6 +125,16 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 			return cloneCompany(store[idx]);
 		},
 
+		async archive(id: string): Promise<void> {
+			await delay();
+			// Mirror the server-side guard: never leave the workspace with zero
+			// active companies. Test fakes raise NotFoundError when the id is
+			// unknown so the mutation surfaces an error the UI can toast.
+			if (store.length <= 1) throw new Error("cannot archive the only company");
+			requireCompany(id);
+			store = store.filter((c) => c.id !== id);
+		},
+
 		async delete(id: string): Promise<void> {
 			await delay();
 			store = store.filter((c) => c.id !== id);

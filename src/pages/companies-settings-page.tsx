@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/companies";
 import { useCompanies } from "@/data/use-companies";
-import { useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
+import { useArchiveCompany, useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,7 @@ export function CompaniesSettingsPage() {
 	}
 	const createCompanyMutation = useCreateCompany();
 	const deleteCompanyMutation = useDeleteCompany();
+	const archiveCompanyMutation = useArchiveCompany();
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
@@ -120,6 +121,12 @@ export function CompaniesSettingsPage() {
 
 	const deleteDisabledReason =
 		companies.length > 0 && selected.size >= companies.length ? "Нельзя удалить единственную компанию" : undefined;
+	const archiveDisabledReason =
+		companies.length <= 1
+			? "Нельзя архивировать единственную компанию"
+			: selected.size >= companies.length
+				? "Нельзя архивировать все компании"
+				: undefined;
 
 	async function handleDelete() {
 		const ids = Array.from(selected);
@@ -133,10 +140,16 @@ export function CompaniesSettingsPage() {
 		}
 	}
 
-	function handleArchive() {
-		const count = selected.size;
-		clearSelection();
-		toast.success(`Архивировано ${formatRussianPlural(count, ["компания", "компании", "компаний"])}`);
+	async function handleArchive() {
+		const ids = Array.from(selected);
+		if (ids.length === 0) return;
+		try {
+			await Promise.all(ids.map((id) => archiveCompanyMutation.mutateAsync(id)));
+			clearSelection();
+			toast.success(`Архивировано ${formatRussianPlural(ids.length, ["компания", "компании", "компаний"])}`);
+		} catch {
+			toast.error("Не удалось архивировать");
+		}
 	}
 
 	return (
@@ -173,6 +186,8 @@ export function CompaniesSettingsPage() {
 							label: "Архивировать",
 							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
 							onClick: handleArchive,
+							disabled: Boolean(archiveDisabledReason),
+							disabledReason: archiveDisabledReason,
 						},
 						{
 							label: "Удалить",

@@ -115,6 +115,7 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 		},
 
 		update: (id, data) => http.patch<Company>(`/companies/${enc(id)}/`, { body: data }),
+		archive: (id) => http.post<void>(`/companies/${enc(id)}/archive/`),
 		delete: (id) => http.delete<void>(`/companies/${enc(id)}/`),
 
 		async createAddress(companyId: string, data: CreateAddressData): Promise<Address> {

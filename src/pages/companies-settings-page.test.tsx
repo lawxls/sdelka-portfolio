@@ -56,13 +56,15 @@ const MOCK_COMPANIES: Company[] = [
 
 let queryClient: QueryClient;
 let companies: Company[];
+let companiesClient: ReturnType<typeof createInMemoryCompaniesClient>;
 
 function renderPage(initialPath = "/settings/companies") {
+	companiesClient = createInMemoryCompaniesClient(companies);
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				companies: createInMemoryCompaniesClient(companies),
+				companies: companiesClient,
 				employees: createInMemoryEmployeesClient(),
 				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
@@ -176,6 +178,39 @@ describe("CompaniesSettingsPage table", () => {
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать все компании" }));
 		const deleteBtn = screen.getByRole("button", { name: /Удалить/ });
 		expect(deleteBtn).toBeDisabled();
+	});
+
+	test("Архивировать calls client.archive on the selected company", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => expect(screen.getByText("Сделка")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать Сделка" }));
+		await user.click(screen.getByRole("button", { name: /Архивировать/ }));
+
+		await waitFor(async () => {
+			const all = await companiesClient.listAll();
+			expect(all.map((c) => c.id)).toEqual(["company-2"]);
+		});
+	});
+
+	test("Архивировать disabled when workspace has a single company", async () => {
+		companies = [MOCK_COMPANIES[0]];
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => expect(screen.getByText("Сделка")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать Сделка" }));
+		expect(screen.getByRole("button", { name: /Архивировать/ })).toBeDisabled();
+	});
+
+	test("Архивировать disabled when selection covers every active company", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => expect(screen.getByText("Сделка")).toBeInTheDocument());
+
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать все компании" }));
+		expect(screen.getByRole("button", { name: /Архивировать/ })).toBeDisabled();
 	});
 });
 

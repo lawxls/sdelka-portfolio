@@ -51,6 +51,7 @@ export function fakeCompaniesClient(overrides: Partial<CompaniesClient> = {}): C
 		get: notImplemented("get"),
 		create: notImplemented("create"),
 		update: notImplemented("update"),
+		archive: notImplemented("archive"),
 		delete: notImplemented("delete"),
 		createAddress: notImplemented("createAddress"),
 		updateAddress: notImplemented("updateAddress"),

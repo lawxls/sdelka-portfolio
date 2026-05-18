@@ -177,6 +177,17 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 		},
 		{
 			method: "POST",
+			path: /^\/companies\/([^/]+)\/archive\/$/,
+			respond: ({ url }) => {
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/archive\/$/);
+				if (!store.has(id)) return { status: 404 };
+				if (store.size <= 1) return { status: 409, body: { detail: "cannot archive the only company" } };
+				store.delete(id);
+				return { status: 204 };
+			},
+		},
+		{
+			method: "POST",
 			path: /^\/companies\/addresses\/$/,
 			respond: ({ init }) => {
 				if (opts.failAddressCreate) {
@@ -370,6 +381,18 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 	it("delete removes the company", async () => {
 		await client.delete("c1");
 		await expect(client.get("c1")).rejects.toBeInstanceOf(NotFoundError);
+	});
+
+	it("archive moves the company out of the active list", async () => {
+		await client.archive("c1");
+		await expect(client.get("c1")).rejects.toBeInstanceOf(NotFoundError);
+		const all = await client.listAll();
+		expect(all.map((c) => c.id)).toEqual(["c2"]);
+	});
+
+	it("archive of the only remaining company is rejected", async () => {
+		await client.archive("c1");
+		await expect(client.archive("c2")).rejects.toBeTruthy();
 	});
 
 	it("createAddress appends an address", async () => {

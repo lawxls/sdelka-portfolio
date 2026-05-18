@@ -26,6 +26,9 @@ export interface CompaniesClient {
 	get(id: string): Promise<Company>;
 	create(data: CreateCompanyPayload): Promise<Company>;
 	update(id: string, data: UpdateCompanyData): Promise<Company>;
+	/** Archive a single company. Backend rejects the call when the workspace
+	 * would be left with zero active companies. */
+	archive(id: string): Promise<void>;
 	delete(id: string): Promise<void>;
 
 	createAddress(companyId: string, data: CreateAddressData): Promise<Address>;
