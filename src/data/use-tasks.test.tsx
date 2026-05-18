@@ -148,14 +148,14 @@ describe("useTasksList", () => {
 			.mockResolvedValueOnce({
 				count: 4,
 				results: [makeTask("t1"), makeTask("t2")],
-				next: "page=2",
+				next: "page-2",
 				previous: null,
 			})
 			.mockResolvedValueOnce({
 				count: 4,
 				results: [makeTask("t3"), makeTask("t4")],
 				next: null,
-				previous: "page=1",
+				previous: "page-1",
 			});
 		const tasks = fakeTasksClient({ list });
 		const { result } = renderHook(() => useTasksList(), { wrapper: wrapperFactory({ tasks }) });
@@ -169,7 +169,7 @@ describe("useTasksList", () => {
 		});
 
 		await waitFor(() => expect(result.current.tasks).toHaveLength(4));
-		expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+		expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: "page-2" }));
 		expect(result.current.hasNextPage).toBe(false);
 	});
 });

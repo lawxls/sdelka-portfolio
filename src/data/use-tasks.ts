@@ -115,7 +115,7 @@ export function useTasksList(params?: TasksListParams) {
 		queryKey: ["tasks", "list", queryParams],
 		queryFn: ({ pageParam }) =>
 			tasks.list({
-				page: pageParam,
+				cursor: pageParam ?? undefined,
 				page_size: 25,
 				q: queryParams.q,
 				procurementInquiry: queryParams.procurementInquiry,
@@ -124,8 +124,8 @@ export function useTasksList(params?: TasksListParams) {
 				sort: queryParams.sort,
 				dir: queryParams.dir,
 			}),
-		initialPageParam: 1,
-		getNextPageParam: (lastPage, _allPages, lastPageParam) => (lastPage.next ? lastPageParam + 1 : undefined),
+		initialPageParam: null as string | null,
+		getNextPageParam: (lastPage) => lastPage.next ?? undefined,
 	});
 
 	return {

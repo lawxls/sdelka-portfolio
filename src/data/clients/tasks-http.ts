@@ -9,7 +9,7 @@ import type {
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import { buildQueryString, type DrfCursorPage, toCursorPage } from "./drf";
 import { composeTaskBoard, type ListLikeResponse } from "./tasks-board";
-import { statusesToBucketString } from "./tasks-buckets";
+import { statusesToBucketString, TASK_STATUS_BUCKETS } from "./tasks-buckets";
 import type { TasksClient } from "./tasks-client";
 import { type TaskWire, taskFromApi } from "./tasks-wire";
 
@@ -48,10 +48,14 @@ export function createHttpTasksClient(http: HttpClient = defaultHttpClient): Tas
 
 	return {
 		listAll: async () => {
+			// Explicit bucket filter so the request is unambiguous (the API may
+			// require `status` to be set). Sequential because each cursor token
+			// depends on the previous response.
+			const status = TASK_STATUS_BUCKETS.join(",");
 			const collected: Task[] = [];
 			let cursor: string | undefined;
 			for (let i = 0; i < LIST_ALL_HARD_CAP_PAGES; i += 1) {
-				const page = await fetchListPage({ cursor, page_size: LIST_ALL_PAGE_SIZE });
+				const page = await fetchListPage({ cursor, page_size: LIST_ALL_PAGE_SIZE, status });
 				collected.push(...page.results);
 				if (!page.next) return collected;
 				cursor = page.next;

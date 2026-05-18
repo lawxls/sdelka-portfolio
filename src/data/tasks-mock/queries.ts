@@ -98,15 +98,17 @@ export async function fetchTasksMock(params: FetchTasksParams = {}): Promise<Tas
 	}
 	const sorted = applySortIfAny(filtered, filterParams);
 	const pageSize = params.page_size ?? LIST_PAGE_SIZE;
-	const page = params.page ?? 1;
+	// Cursors are opaque page tokens of the form "page-N"; the HTTP adapter's
+	// real cursor token plays the same role. Page 1 is requested with no cursor.
+	const page = params.cursor ? Number.parseInt(params.cursor.replace("page-", ""), 10) || 1 : (params.page ?? 1);
 	const start = (page - 1) * pageSize;
 	const end = start + pageSize;
 	const slice = sorted.slice(start, end);
 	return {
 		count: filtered.length,
 		results: slice.map(cloneTask),
-		next: end < filtered.length ? `page=${page + 1}` : null,
-		previous: page > 1 ? `page=${page - 1}` : null,
+		next: end < filtered.length ? `page-${page + 1}` : null,
+		previous: page > 1 ? `page-${page - 1}` : null,
 	};
 }
 

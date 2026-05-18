@@ -40,6 +40,19 @@ function totalsQuery(params: TotalsParams): string {
 	});
 }
 
+function exportQuery(params: ExportItemsParams): string {
+	return buildQueryString({
+		q: params.q,
+		status: params.status,
+		deviation: params.deviation,
+		folder: params.folder,
+		company: params.company,
+		procurementInquiry: params.procurementInquiry,
+		sort: params.sort,
+		dir: params.dir,
+	});
+}
+
 const enc = encodeURIComponent;
 
 interface CreateItemsResponse {
@@ -88,6 +101,6 @@ export function createHttpItemsClient(http: HttpClient = defaultHttpClient): Ite
 			),
 
 		export: (params: ExportItemsParams) =>
-			http.getBinary(`/procurement/items/export/${totalsQuery(params)}`, { fallbackFilename: "items.xlsx" }),
+			http.getBinary(`/procurement/items/export/${exportQuery(params)}`, { fallbackFilename: "items.xlsx" }),
 	};
 }

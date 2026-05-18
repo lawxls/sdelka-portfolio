@@ -227,7 +227,9 @@ export function ProcurementPage() {
 						folderId,
 						deadline,
 					},
-					items: group.items,
+					// Re-stamp companyId: items may have been parsed before companies
+					// loaded (dialog prop was ""), so trust the current page state.
+					items: group.items.map((item) => ({ ...item, companyId: item.companyId || targetCompanyId })),
 				}),
 			),
 		).then((results) => {
@@ -409,6 +411,7 @@ export function ProcurementPage() {
 				open={manualDrawerOpen}
 				onOpenChange={setManualDrawerOpen}
 				onSubmit={handleManualSubmit}
+				companyId={targetCompanyId ?? ""}
 			/>
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>

@@ -42,12 +42,9 @@ export interface TaskWire {
 	updatedAt: string;
 }
 
-function mapInquiry(wire: TaskInquiryWire | null | undefined): TaskProcurementInquiry {
-	return {
-		id: wire?.id ?? "",
-		name: wire?.name ?? "",
-		companyId: wire?.companyId ?? "",
-	};
+function mapInquiry(wire: TaskInquiryWire | null | undefined, taskId: string): TaskProcurementInquiry {
+	if (!wire) throw new Error(`Task ${taskId}: backend response missing 'inquiry' / 'procurementInquiry'`);
+	return { id: wire.id, name: wire.name, companyId: wire.companyId };
 }
 
 function mapAssignee(wire: TaskAssigneeWire | null): TaskAssignee | null {
@@ -66,7 +63,7 @@ export function taskFromApi(wire: TaskWire): Task {
 		id: wire.id,
 		name: wire.name,
 		status: wire.status,
-		procurementInquiry: mapInquiry(wire.procurementInquiry ?? wire.inquiry),
+		procurementInquiry: mapInquiry(wire.procurementInquiry ?? wire.inquiry, wire.id),
 		assignee: mapAssignee(wire.assignee),
 		createdAt: wire.createdAt,
 		deadlineAt: wire.deadlineAt,
