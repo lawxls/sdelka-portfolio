@@ -18,6 +18,7 @@ function renderDialog(
 		onOpenChange: overrides.onOpenChange ?? vi.fn(),
 		onManual: overrides.onManual ?? vi.fn(),
 		onImport: overrides.onImport ?? vi.fn(),
+		companyId: "company-1",
 	};
 	return { ...render(<AddPositionsDialog {...props} />), ...props };
 }
@@ -83,7 +84,10 @@ describe("AddPositionsDialog", () => {
 	});
 
 	test("after parsing completes, the import preview is shown with parsed items (flat list)", async () => {
-		const fakeItems: NewItemInput[] = [{ name: "Item 1" }, { name: "Item 2" }];
+		const fakeItems: NewItemInput[] = [
+			{ name: "Item 1", companyId: "company-1" },
+			{ name: "Item 2", companyId: "company-1" },
+		];
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 
 		renderDialog();
@@ -102,7 +106,10 @@ describe("AddPositionsDialog", () => {
 	});
 
 	test("clicking Импортировать calls onImport with parsed items and closes the dialog", async () => {
-		const fakeItems: NewItemInput[] = [{ name: "Item 1" }, { name: "Item 2" }];
+		const fakeItems: NewItemInput[] = [
+			{ name: "Item 1", companyId: "company-1" },
+			{ name: "Item 2", companyId: "company-1" },
+		];
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 		const onImport = vi.fn();
 		const onOpenChange = vi.fn();
@@ -122,7 +129,7 @@ describe("AddPositionsDialog", () => {
 	});
 
 	test("back from preview returns to upload step", async () => {
-		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		const fakeItems: NewItemInput[] = [{ name: "Item 1", companyId: "company-1" }];
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 
 		renderDialog();
@@ -141,7 +148,7 @@ describe("AddPositionsDialog", () => {
 	});
 
 	test("closing dialog on preview step shows close warning", async () => {
-		const fakeItems: NewItemInput[] = [{ name: "Item 1" }];
+		const fakeItems: NewItemInput[] = [{ name: "Item 1", companyId: "company-1" }];
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue(fakeItems);
 		const onOpenChange = vi.fn();
 		renderDialog({ onOpenChange });

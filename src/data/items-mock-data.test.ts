@@ -237,7 +237,10 @@ describe("deleteItemMock", () => {
 describe("createItemsBatchMock", () => {
 	it("creates items with generated ids and prepends to store", async () => {
 		_setItems([makeItem("existing")]);
-		const result = await createItemsBatchMock([{ name: "W1" }, { name: "W2" }]);
+		const result = await createItemsBatchMock([
+			{ name: "W1", companyId: "company-1" },
+			{ name: "W2", companyId: "company-1" },
+		]);
 		expect(result.isAsync).toBe(false);
 		expect(result.items).toHaveLength(2);
 		expect(result.items?.[0].name).toBe("W1");

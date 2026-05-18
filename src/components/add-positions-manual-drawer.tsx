@@ -36,7 +36,9 @@ interface AddPositionsManualDrawerProps {
 }
 
 function toItemInput(position: PositionDraft): NewItemInput {
-	const payload: NewItemInput = { name: position.name.trim() };
+	// `companyId` is stamped by the page-level submit handler (it owns the
+	// company filter). The drawer doesn't know which company to target.
+	const payload: NewItemInput = { name: position.name.trim(), companyId: "" };
 
 	const description = position.description.trim();
 	if (description) payload.description = description;

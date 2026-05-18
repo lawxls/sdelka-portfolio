@@ -1,6 +1,11 @@
 import type { NewItemInput } from "./types";
 
-const MOCK_ITEMS: NewItemInput[] = [
+/** Mock items used by `parseFile` to simulate xlsx import. Each entry omits
+ * `companyId` because that's stamped per import by the caller (page state →
+ * `parseFile(file, companyId)` threads it through). */
+type MockItem = Omit<NewItemInput, "companyId">;
+
+const MOCK_ITEMS: MockItem[] = [
 	{ name: "Арматура А500С ∅12", unit: "т", annualQuantity: 50, currentPrice: 45000 },
 	{ name: "Бетон М300 В22.5", unit: "м³", annualQuantity: 200, currentPrice: 5200 },
 	{ name: "Кирпич керамический М150", unit: "шт", annualQuantity: 50000, currentPrice: 12 },
@@ -38,8 +43,8 @@ const MOCK_ITEMS: NewItemInput[] = [
 	{ name: "Подвес прямой", unit: "шт", annualQuantity: 2000, currentPrice: 12 },
 ];
 
-export function parseFile(_file: File): Promise<NewItemInput[]> {
+export function parseFile(_file: File, companyId: string): Promise<NewItemInput[]> {
 	return new Promise((resolve) => {
-		setTimeout(() => resolve(MOCK_ITEMS), 1500);
+		setTimeout(() => resolve(MOCK_ITEMS.map((item) => ({ ...item, companyId }))), 1500);
 	});
 }

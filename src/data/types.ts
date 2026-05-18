@@ -197,6 +197,10 @@ export interface Totals {
 
 export interface NewItemInput {
 	name: string;
+	/** Owning company. Required by the backend: every position belongs to exactly
+	 * one company. The manual-add flow threads the page-level company filter
+	 * here; `createProcurementInquiryWithItems` threads the inquiry's company. */
+	companyId: string;
 	description?: string;
 	unit?: Unit;
 	annualQuantity?: number;

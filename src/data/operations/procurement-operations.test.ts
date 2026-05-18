@@ -266,8 +266,8 @@ describe("createProcurementInquiryWithItems", () => {
 			{
 				procurementInquiry: { name: "T", companyId: "company-1", folderId: null, deadline: "2026-05-01" },
 				items: [
-					{ name: "Pos A", paymentType: "prepayment" },
-					{ name: "Pos B", paymentType: "prepayment" },
+					{ name: "Pos A", companyId: "company-1", paymentType: "prepayment" },
+					{ name: "Pos B", companyId: "company-1", paymentType: "prepayment" },
 				],
 			},
 			{ procurementInquiries: fakeProcurementInquiriesClient({ create: procurementInquiriesCreate }) },
@@ -313,8 +313,8 @@ describe("createProcurementInquiryWithItems", () => {
 					deadline: "2026-06-15",
 				},
 				items: [
-					{ name: "Арматура", paymentType: "prepayment" },
-					{ name: "Цемент", paymentType: "prepayment" },
+					{ name: "Арматура", companyId: "company-1", paymentType: "prepayment" },
+					{ name: "Цемент", companyId: "company-1", paymentType: "prepayment" },
 				],
 			},
 			{ procurementInquiries },

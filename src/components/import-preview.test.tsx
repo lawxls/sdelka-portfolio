@@ -7,7 +7,7 @@ import { installMockIntersectionObserver, type ObserverRecord } from "@/test-int
 import { ImportPreview } from "./import-preview";
 
 function makeItems(count: number): NewItemInput[] {
-	return Array.from({ length: count }, (_, i) => ({ name: `Item ${i + 1}` }));
+	return Array.from({ length: count }, (_, i) => ({ name: `Item ${i + 1}`, companyId: "c-1" }));
 }
 
 function renderPreview(

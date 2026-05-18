@@ -503,9 +503,9 @@ describe("ProcurementPage", () => {
 
 	test("file import via dialog dispatches a inquiry per AI-grouped batch and closes the dialog", async () => {
 		vi.spyOn(mockParser, "parseFile").mockResolvedValue([
-			{ name: "Кабель ВВГнг 3x2.5" },
-			{ name: "Кабель ВВГнг 3x4" },
-			{ name: "Розетка серая" },
+			{ name: "Кабель ВВГнг 3x2.5", companyId: "company-1" },
+			{ name: "Кабель ВВГнг 3x4", companyId: "company-1" },
+			{ name: "Розетка серая", companyId: "company-1" },
 		]);
 
 		await renderAppReady();

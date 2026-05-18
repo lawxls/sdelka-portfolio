@@ -186,8 +186,18 @@ export function ProcurementPage() {
 		setDialogOpen(true);
 	}
 
+	const targetCompanyId = company ?? companies[0]?.id;
+
 	function handleManualSubmit(items: NewItemInput[]) {
-		const withStatus = items.map((item) => ({ ...item, status: "ready_for_analytics" as const }));
+		if (!targetCompanyId) {
+			toast.error("Не удалось определить компанию для добавления позиции");
+			return;
+		}
+		const withStatus = items.map((item) => ({
+			...item,
+			companyId: item.companyId || targetCompanyId,
+			status: "ready_for_analytics" as const,
+		}));
 		createItemsMutation.mutate(withStatus, {
 			onSuccess: () => {
 				toast.success(withStatus.length === 1 ? "Позиция добавлена" : `Добавлено позиций: ${withStatus.length}`);
@@ -202,7 +212,6 @@ export function ProcurementPage() {
 			toast.error("Выберите компанию для импорта позиций");
 			return;
 		}
-		const targetCompanyId = company ?? companies[0]?.id;
 		if (!targetCompanyId) {
 			toast.error("Не удалось определить компанию для импорта");
 			return;
@@ -394,6 +403,7 @@ export function ProcurementPage() {
 				onOpenChange={setDialogOpen}
 				onManual={() => setManualDrawerOpen(true)}
 				onImport={handleImportItems}
+				companyId={targetCompanyId ?? ""}
 			/>
 			<AddPositionsManualDrawer
 				open={manualDrawerOpen}

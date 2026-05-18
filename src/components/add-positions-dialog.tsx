@@ -26,6 +26,9 @@ interface AddPositionsDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onManual: () => void;
 	onImport: (items: NewItemInput[]) => void;
+	/** Owning company id stamped onto each parsed item so the backend create
+	 * call carries the required `companyId` field. */
+	companyId: string;
 }
 
 function ChoiceCard({
@@ -61,7 +64,7 @@ function ChoiceCard({
 	);
 }
 
-export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: AddPositionsDialogProps) {
+export function AddPositionsDialog({ open, onOpenChange, onManual, onImport, companyId }: AddPositionsDialogProps) {
 	const [step, setStep] = useState<Step>("choice");
 	const [parsedItems, setParsedItems] = useState<NewItemInput[]>([]);
 	const [showCloseWarning, setShowCloseWarning] = useState(false);
@@ -94,7 +97,7 @@ export function AddPositionsDialog({ open, onOpenChange, onManual, onImport }: A
 
 	function handleFile(file: File) {
 		setStep("loading");
-		parseFile(file).then(
+		parseFile(file, companyId).then(
 			(items) => {
 				setParsedItems(items);
 				setStep("preview");

@@ -233,7 +233,7 @@ describe.each(adapters.map((make) => [make().name, make]))("ItemsClient contract
 	});
 
 	it("create + get roundtrip", async () => {
-		const result = await client.create([{ name: "Дельта" }]);
+		const result = await client.create([{ name: "Дельта", companyId: "company-1" }]);
 		expect(result.isAsync).toBe(false);
 		expect(result.items?.[0].name).toBe("Дельта");
 		const id = result.items?.[0].id as string;
