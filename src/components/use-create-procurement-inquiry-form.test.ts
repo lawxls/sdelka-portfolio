@@ -201,7 +201,8 @@ describe("useCreateProcurementInquiryForm", () => {
 		const { result } = setup();
 		expect(result.current.isDirty).toBe(false);
 
-		act(() => result.current.update1("deadline", "2026-06-01"));
+		const userTyped = result.current.step1.deadline === "2030-01-01" ? "2030-01-02" : "2030-01-01";
+		act(() => result.current.update1("deadline", userTyped));
 		expect(result.current.isDirty).toBe(true);
 	});
 

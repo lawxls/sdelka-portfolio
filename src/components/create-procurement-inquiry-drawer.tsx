@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 // biome-ignore lint/style/noRestrictedImports: one-time external sync from React Query data (no stable mount point fits here)
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -626,6 +627,14 @@ function Step1Body({
 				if (mainAddress) update1("deliveryAddressId", mainAddress.id);
 				setCreateCompanyOpen(false);
 			},
+			onError: () => {
+				// The HTTP adapter's two-step create POSTs the company before the
+				// address. If the address step fails, the company is already
+				// server-side — close the sheet so a retry inside it can't create
+				// a duplicate. The user retries the address from the company drawer.
+				setCreateCompanyOpen(false);
+				toast.error("Не удалось создать компанию полностью. Откройте её, чтобы добавить адрес.");
+			},
 		});
 	}
 
@@ -676,6 +685,7 @@ function Step1Body({
 								value={step1.companyId || undefined}
 								onValueChange={(v) => {
 									update1("companyId", v);
+									update1("deliveryAddressId", null);
 								}}
 								disabled={companyDisabled}
 							>
