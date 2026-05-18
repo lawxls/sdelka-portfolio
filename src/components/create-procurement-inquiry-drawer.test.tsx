@@ -58,12 +58,17 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
+type PreviewResponse = { questions: { questionText: string; suggests: string[] }[] };
+
 interface RenderOverrides {
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	onSubmit?: (payload: CreateProcurementInquiryPayload) => void;
-	previewResponse?: { questions: { questionText: string; suggests: string[] }[] };
+	previewResponse?: PreviewResponse;
 	previewError?: unknown;
+	/** Per-call preview implementation. Overrides `previewResponse`/`previewError`
+	 * when set — use this to vary behavior across successive Step 1→2 entries. */
+	previewFn?: () => Promise<PreviewResponse>;
 }
 
 function renderDrawer(overrides: RenderOverrides = {}) {
@@ -78,14 +83,15 @@ function renderDrawer(overrides: RenderOverrides = {}) {
 	const procurementInquiriesClient = createInMemoryProcurementInquiriesClient({ seed: [] });
 	const itemsClient = createInMemoryItemsClient({ seed: [] });
 	const suppliersClient = createInMemorySuppliersClient();
-	const previewResponse =
-		overrides.previewResponse ??
-		({ questions: [{ questionText: "Срочность?", suggests: ["Срочно", "Стандарт"] }] } as const);
-	const generatedQuestionsClient = fakeGeneratedQuestionsClient({
-		preview: overrides.previewError
-			? () => Promise.reject(overrides.previewError)
-			: () => Promise.resolve(previewResponse),
-	});
+	const defaultResponse: PreviewResponse = overrides.previewResponse ?? {
+		questions: [{ questionText: "Срочность?", suggests: ["Срочно", "Стандарт"] }],
+	};
+	const previewImpl =
+		overrides.previewFn ??
+		(overrides.previewError
+			? () => Promise.reject(overrides.previewError) as Promise<PreviewResponse>
+			: () => Promise.resolve(defaultResponse));
+	const generatedQuestionsClient = fakeGeneratedQuestionsClient({ preview: previewImpl });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -555,6 +561,34 @@ describe("CreateProcurementInquiryDrawer — Step 2 clarifying questions", () =>
 		await fillFirstPositionName(user);
 		await advance(user);
 
+		await user.click(await screen.findByRole("button", { name: "Пропустить" }));
+		await screen.findByLabelText("Текст письма");
+		await create(user);
+
+		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
+		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
+	});
+
+	test("Пропустить in the error state clears questions answered on a prior visit", async () => {
+		const onSubmit = vi.fn();
+		// First Step 1→2 entry: preview succeeds with one question the user
+		// answers. After Back, second entry's preview fails — clicking
+		// «Пропустить» must drop the prior answer rather than carry it forward.
+		let call = 0;
+		const previewFn = () => {
+			call += 1;
+			if (call === 1) return Promise.resolve({ questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] });
+			return Promise.reject(new Error("boom"));
+		};
+		renderDrawer({ previewFn, onSubmit });
+		const user = userEvent.setup();
+
+		await fillFirstPositionName(user);
+		await advance(user);
+		await user.click(await screen.findByRole("button", { name: "A" }));
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+
+		await advance(user);
 		await user.click(await screen.findByRole("button", { name: "Пропустить" }));
 		await screen.findByLabelText("Текст письма");
 		await create(user);

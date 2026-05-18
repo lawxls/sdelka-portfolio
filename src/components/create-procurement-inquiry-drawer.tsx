@@ -491,7 +491,18 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 					<Button type="button" variant="outline" size="sm" onClick={runPreview}>
 						Повторить
 					</Button>
-					<Button type="button" variant="ghost" size="sm" onClick={onSkip}>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							// Clear any questions from a previous successful visit so
+							// they don't leak into the submit payload — mirrors the
+							// auto-skip path in `runPreview`.
+							setGeneratedQuestions([]);
+							onSkip();
+						}}
+					>
 						Пропустить
 					</Button>
 				</div>
