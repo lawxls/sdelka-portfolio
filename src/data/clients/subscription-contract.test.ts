@@ -18,10 +18,10 @@ const SEED: Subscription = {
 	tariff_name: "Бизнес",
 	requests_used: 12,
 	requests_limit: 15,
-	employees_used: 3,
-	employees_limit: 5,
-	emails_sent: 184,
-	emails_limit: 500,
+	employees_used: 0,
+	employees_limit: 0,
+	emails_sent: 0,
+	emails_limit: 0,
 };
 
 interface Adapter {
@@ -48,12 +48,18 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/billing\/subscription\/$/,
-			respond: () => ({ status: 200, body: snapshot }),
+			path: /^\/workspaces\/me\/tariff\/$/,
+			respond: () => ({
+				status: 200,
+				body: {
+					tariff: { slug: snapshot.tariff_id, name: snapshot.tariff_name },
+					usage: { monthlyUsed: snapshot.requests_used, monthlyLimit: snapshot.requests_limit },
+				},
+			}),
 		},
 		{
 			method: "POST",
-			path: /^\/billing\/subscription\/top-up\/$/,
+			path: /^\/workspaces\/me\/tariff\/top-up\/$/,
 			respond: ({ init }) => {
 				const { quantity } = JSON.parse(init?.body as string) as { quantity: number };
 				snapshot = { ...snapshot, requests_limit: snapshot.requests_limit + quantity };
