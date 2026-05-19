@@ -669,6 +669,7 @@ const ADMIN_PERMISSIONS: UpdatePermissionsData = {
 	procurementInquiries: "edit",
 	positions: "edit",
 	tasks: "edit",
+	workspaceSettings: "edit",
 	companies: "edit",
 	employees: "edit",
 	emails: "edit",

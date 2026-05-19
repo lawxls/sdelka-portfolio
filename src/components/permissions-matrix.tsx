@@ -1,4 +1,4 @@
-import { Building2, FileText, Layers, ListTodo, type LucideIcon, Mail, Users } from "lucide-react";
+import { Building2, FileText, Layers, ListTodo, type LucideIcon, Mail, Settings, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { EmployeePermissions, PermissionLevel, PermissionModuleKey } from "@/data/types";
 import { PERMISSION_MODULE_LABELS } from "@/data/types";
@@ -8,6 +8,7 @@ const PERMISSION_MODULES: { key: PermissionModuleKey; Icon: LucideIcon }[] = [
 	{ key: "procurementInquiries", Icon: FileText },
 	{ key: "positions", Icon: Layers },
 	{ key: "tasks", Icon: ListTodo },
+	{ key: "workspaceSettings", Icon: Settings },
 	{ key: "companies", Icon: Building2 },
 	{ key: "employees", Icon: Users },
 	{ key: "emails", Icon: Mail },

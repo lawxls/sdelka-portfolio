@@ -76,6 +76,7 @@ export function createInMemoryEmployeesClient(options: InMemoryEmployeesOptions 
 					procurementInquiries: "none",
 					positions: "none",
 					tasks: "none",
+					workspaceSettings: "none",
 					companies: "none",
 					employees: "none",
 					emails: "none",

@@ -278,6 +278,7 @@ export const PERMISSION_MODULE_KEYS = [
 	"procurementInquiries",
 	"positions",
 	"tasks",
+	"workspaceSettings",
 	"companies",
 	"employees",
 	"emails",
@@ -288,6 +289,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 	procurementInquiries: "Запросы",
 	positions: "Позиции",
 	tasks: "Вопросы",
+	workspaceSettings: "Общие настройки",
 	companies: "Компании",
 	employees: "Сотрудники",
 	emails: "Почты",
@@ -299,6 +301,7 @@ export interface EmployeePermissions {
 	procurementInquiries: PermissionLevel;
 	positions: PermissionLevel;
 	tasks: PermissionLevel;
+	workspaceSettings: PermissionLevel;
 	companies: PermissionLevel;
 	employees: PermissionLevel;
 	emails: PermissionLevel;

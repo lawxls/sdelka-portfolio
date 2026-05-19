@@ -43,6 +43,7 @@ export interface UpdatePermissionsData {
 	procurementInquiries?: PermissionLevel;
 	positions?: PermissionLevel;
 	tasks?: PermissionLevel;
+	workspaceSettings?: PermissionLevel;
 	companies?: PermissionLevel;
 	employees?: PermissionLevel;
 	emails?: PermissionLevel;

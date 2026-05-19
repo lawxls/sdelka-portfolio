@@ -29,6 +29,7 @@ function makeEmployee(id: string, overrides: Partial<EmployeeWithPermissions> = 
 			procurementInquiries: "edit",
 			positions: "edit",
 			tasks: "edit",
+			workspaceSettings: "view",
 			companies: "view",
 			employees: "view",
 			emails: "view",
