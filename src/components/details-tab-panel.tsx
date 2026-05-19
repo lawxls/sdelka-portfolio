@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
+import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import type { ProcurementItem, Unit, UnloadingType } from "@/data/types";
 import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
-import { useFolders } from "@/data/use-folders";
+import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
-import { useProcurementInquiry } from "@/data/use-procurement-inquiries";
+import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
 import { formatCurrency, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
@@ -22,15 +24,17 @@ interface InfoFormState {
 	unit: Unit | "";
 	quantityPerDelivery: string;
 	annualQuantity: string;
+	folderId: string | null;
 }
 
-function initInfoForm(item: ProcurementItem): InfoFormState {
+function initInfoForm(item: ProcurementItem, procurementInquiry: ProcurementInquiry | undefined): InfoFormState {
 	return {
 		name: item.name,
 		description: item.description ?? "",
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
+		folderId: procurementInquiry?.folderId ?? null,
 	};
 }
 
@@ -44,6 +48,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const { data: procurementInquiry } = useProcurementInquiry(item?.procurementInquiryId ?? null);
 	const { data: company } = useCompanyDetail(procurementInquiry?.companyId ?? null);
 	const updateMutation = useUpdateItemDetail();
+	const updateInquiryMutation = useUpdateProcurementInquiry();
+	const createFolderMutation = useCreateFolder();
+	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
 
 	const [editingInfo, setEditingInfo] = useState(false);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
@@ -86,12 +93,23 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	}
 
 	function handleEditInfo() {
-		setInfoForm(initInfoForm(currentItem));
+		setInfoForm(initInfoForm(currentItem, procurementInquiry));
 		setEditingInfo(true);
 	}
 
 	function updateInfo<K extends keyof InfoFormState>(key: K, value: InfoFormState[K]) {
 		setInfoForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+	}
+
+	function handleCreateFolder(name: string, color: string) {
+		createFolderMutation.mutate(
+			{ name, color },
+			{
+				onSuccess: (created) => {
+					setInfoForm((prev) => (prev ? { ...prev, folderId: created.id } : prev));
+				},
+			},
+		);
 	}
 
 	function handleSaveInfo() {
@@ -104,9 +122,29 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		if (qpd !== currentItem.quantityPerDelivery) data.quantityPerDelivery = qpd;
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		if (aq !== undefined && aq !== currentItem.annualQuantity) data.annualQuantity = aq;
-		updateMutation.mutate({ id: itemId, ...data } as Parameters<typeof updateMutation.mutate>[0], {
-			onSuccess: () => setEditingInfo(false),
-		});
+
+		const folderChanged = procurementInquiry && infoForm.folderId !== (procurementInquiry.folderId ?? null);
+		const hasItemChanges = Object.keys(data).length > 0;
+
+		const pending: Promise<unknown>[] = [];
+		if (hasItemChanges) {
+			pending.push(updateMutation.mutateAsync({ id: itemId, ...data } as Parameters<typeof updateMutation.mutate>[0]));
+		}
+		if (folderChanged && procurementInquiry) {
+			pending.push(
+				updateInquiryMutation.mutateAsync({ id: procurementInquiry.id, patch: { folderId: infoForm.folderId } }),
+			);
+		}
+		if (pending.length === 0) {
+			setEditingInfo(false);
+			return;
+		}
+		// Errors are surfaced via each mutation's onError toast; on failure
+		// we leave edit mode open so the user can retry.
+		Promise.all(pending).then(
+			() => setEditingInfo(false),
+			() => {},
+		);
 	}
 
 	function isInfoDirty() {
@@ -117,11 +155,13 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			infoForm.description !== (currentItem.description ?? "") ||
 			infoForm.unit !== (currentItem.unit ?? "") ||
 			toNumberOrUndefined(infoForm.quantityPerDelivery) !== currentItem.quantityPerDelivery ||
-			(aq !== undefined && aq !== currentItem.annualQuantity)
+			(aq !== undefined && aq !== currentItem.annualQuantity) ||
+			infoForm.folderId !== (procurementInquiry?.folderId ?? null)
 		);
 	}
 
 	const isEditingInfo = editingInfo && infoForm !== null;
+	const isSavingInfo = updateMutation.isPending || updateInquiryMutation.isPending;
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 	const currentSupplier = item.currentSupplier;
@@ -136,8 +176,8 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				onEdit={handleEditInfo}
 				onCancel={handleCancel}
 				onSave={handleSaveInfo}
-				saveDisabled={!isInfoDirty() || (infoForm?.name.trim() ?? "") === "" || updateMutation.isPending}
-				isPending={updateMutation.isPending}
+				saveDisabled={!isInfoDirty() || (infoForm?.name.trim() ?? "") === "" || isSavingInfo}
+				isPending={isSavingInfo}
 			>
 				<CardGrid>
 					<FieldCard label="Компания">
@@ -145,7 +185,17 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 
 					<FieldCard label="Категория">
-						<ValueText value={folder?.name ?? ""} />
+						{isEditingInfo && procurementInquiry ? (
+							<FolderSelect
+								folders={folders}
+								value={infoForm.folderId}
+								onChange={(id) => updateInfo("folderId", id)}
+								onCreateFolder={handleCreateFolder}
+								nextFolderColor={nextFolderColor}
+							/>
+						) : (
+							<ValueText value={folder?.name ?? ""} />
+						)}
 					</FieldCard>
 
 					<FieldCard label="Название" span="full">

@@ -267,11 +267,28 @@ export function useCreateProcurementInquiryForm() {
 	const [step2, setStep2] = useState<Step2State>(defaultStep2);
 	const [step3, setStep3] = useState<Step3State>(defaultStep3);
 	const [step1Errors, setStep1Errors] = useState<Step1Errors>(defaultStep1Errors);
+	// Tracks whether the user has interacted with the form. Auto-fills
+	// (e.g. locking the company when the workspace has only one) must NOT
+	// flip this — otherwise we'd prompt "Закрыть без сохранения?" on a
+	// pristine drawer the user never typed in.
+	const [touched, setTouched] = useState(false);
 
-	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
+	function writeStep1<K extends SharedStep1Key>(key: K, value: Step1State[K], markTouched: boolean) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
+		if (markTouched) setTouched(true);
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
 		if (key === "deadline") setStep1Errors((prev) => (prev.deadline ? { ...prev, deadline: undefined } : prev));
+	}
+
+	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
+		writeStep1(key, value, true);
+	}
+
+	/** Apply a server-side default (auto-lock single company, auto-pick main
+	 * delivery address) without flipping `touched`, so we don't prompt
+	 * "Закрыть без сохранения?" on a drawer the user never typed in. */
+	function setInitial<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
+		writeStep1(key, value, false);
 	}
 
 	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
@@ -282,6 +299,7 @@ export function useCreateProcurementInquiryForm() {
 			positions[index] = { ...current, [key]: value };
 			return { ...prev, positions };
 		});
+		setTouched(true);
 		if (key === "name") {
 			setStep1Errors((prev) => {
 				if (!prev.positions[index]?.name) return prev;
@@ -295,6 +313,7 @@ export function useCreateProcurementInquiryForm() {
 	function addPosition() {
 		setStep1((prev) => ({ ...prev, positions: [...prev.positions, defaultPosition()] }));
 		setStep1Errors((prev) => ({ ...prev, positions: [...prev.positions, {}] }));
+		setTouched(true);
 	}
 
 	function removePosition(index: number) {
@@ -306,6 +325,7 @@ export function useCreateProcurementInquiryForm() {
 			if (prev.positions.length <= 1) return prev;
 			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
 		});
+		setTouched(true);
 	}
 
 	/** Bulk-set positions — used when importing items from /positions.
@@ -314,6 +334,7 @@ export function useCreateProcurementInquiryForm() {
 		const next = positions.length > 0 ? positions : [defaultPosition()];
 		setStep1((prev) => ({ ...prev, positions: next }));
 		setStep1Errors((prev) => ({ ...prev, positions: next.map(() => ({})) }));
+		setTouched(true);
 	}
 
 	function setGeneratedQuestions(qs: Step2GeneratedQuestion[]) {
@@ -328,10 +349,12 @@ export function useCreateProcurementInquiryForm() {
 			next[index] = { ...current, answer };
 			return { generatedQuestions: next };
 		});
+		setTouched(true);
 	}
 
 	function update3<K extends keyof Step3State>(key: K, value: Step3State[K]) {
 		setStep3((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
+		setTouched(true);
 	}
 
 	function buildEmailContext(folderName: string | null) {
@@ -412,27 +435,10 @@ export function useCreateProcurementInquiryForm() {
 		setStep2(defaultStep2());
 		setStep3(defaultStep3());
 		setStep1Errors(defaultStep1Errors());
+		setTouched(false);
 	}
 
-	function isPositionDirty(p: PositionDraft) {
-		return isPositionDraftDirty(p);
-	}
-
-	const isDirty =
-		step1.deadline !== initialDeadline ||
-		step1.companyId !== "" ||
-		step1.folderId !== null ||
-		step1.positions.length > 1 ||
-		step1.positions.some(isPositionDirty) ||
-		step1.deliveryAddressId !== null ||
-		step1.unloading !== null ||
-		step1.cashAllowed ||
-		step1.analoguesNotAllowed ||
-		step1.additionalInfo !== "" ||
-		step1.copySuppliersFromInquiryId !== null ||
-		step2.generatedQuestions.some((q) => q.answer !== "") ||
-		step3.autoSend ||
-		step3.generated;
+	const isDirty = touched;
 
 	const canAddPosition = (() => {
 		const last = step1.positions[step1.positions.length - 1];
@@ -458,6 +464,7 @@ export function useCreateProcurementInquiryForm() {
 		step3,
 		step1Errors,
 		update1,
+		setInitial,
 		updatePosition,
 		addPosition,
 		removePosition,

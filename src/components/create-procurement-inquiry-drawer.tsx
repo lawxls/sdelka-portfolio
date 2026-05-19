@@ -196,13 +196,13 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	const selectedCompany = step1.companyId ? companiesById.get(step1.companyId) : undefined;
 	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
 
-	const { update1 } = form;
-	// biome-ignore lint/correctness/useExhaustiveDependencies: update1 is stable via setState; including it would re-fire on every render
+	const { setInitial } = form;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: setInitial is stable via setState; including it would re-fire on every render
 	useEffect(() => {
 		if (!open) return;
 		if (!lockedCompany) return;
 		if (step1.companyId === lockedCompany.id) return;
-		update1("companyId", lockedCompany.id);
+		setInitial("companyId", lockedCompany.id);
 	}, [open, lockedCompany, step1.companyId]);
 
 	function handleCreateFolder(name: string, color: string) {
@@ -710,7 +710,8 @@ function Step1Body({
 	companyTriggerRef,
 	onAddPosition,
 }: Step1BodyProps) {
-	const { step1, step1Errors, update1, updatePosition, removePosition, setPositions, canAddPosition } = form;
+	const { step1, step1Errors, update1, setInitial, updatePosition, removePosition, setPositions, canAddPosition } =
+		form;
 	const companyDisabled = !!lockedCompany;
 	const showRemove = step1.positions.length > 1;
 	const [pickerOpen, setPickerOpen] = useState(false);
@@ -911,6 +912,7 @@ function Step1Body({
 						companyId={selectedCompany?.id ?? null}
 						value={step1.deliveryAddressId}
 						onChange={(id) => update1("deliveryAddressId", id)}
+						onInitialSelect={(id) => setInitial("deliveryAddressId", id)}
 					/>
 				</Field>
 
@@ -986,6 +988,22 @@ function SingleSupplierBanner() {
 					Все позиции в рамках одного запроса должны поставляться поставщиками из одной отрасли. Для товаров из разных
 					категорий создавайте отдельные запросы.
 				</p>
+				<ul className="flex flex-col gap-1 text-pretty">
+					<li>
+						<span aria-hidden="true" className="font-semibold text-emerald-700 dark:text-emerald-300">
+							✓ Правильно:
+						</span>{" "}
+						<span className="sr-only">Правильно: </span>
+						Болты&nbsp;+ гайки&nbsp;+ шурупы
+					</li>
+					<li>
+						<span aria-hidden="true" className="font-semibold text-rose-700 dark:text-rose-300">
+							✗ Неправильно:
+						</span>{" "}
+						<span className="sr-only">Неправильно: </span>
+						Болты&nbsp;+ бумага для принтера
+					</li>
+				</ul>
 			</div>
 		</div>
 	);
@@ -1081,46 +1099,49 @@ export function PositionCard({
 				htmlFor={descId}
 				hint="Добавьте спецификацию: опишите позицию, укажите требования и прикрепите макеты, чертежи или другие материалы, которые помогут поставщикам подготовить наиболее подходящее предложение"
 			>
-				<Textarea
-					id={descId}
-					placeholder="Опишите дополнительные требования к позиции"
-					value={position.description}
-					onChange={(e) => onChange("description", e.target.value)}
-					rows={3}
-				/>
-				<div className="flex flex-wrap items-center gap-1.5">
+				<div className="flex flex-col overflow-hidden rounded-lg border border-input bg-background transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">
 					<input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleAddFiles} tabIndex={-1} />
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon-sm"
-								aria-label="Прикрепить файл"
-								onClick={() => fileInputRef.current?.click()}
-								className="text-muted-foreground hover:text-foreground"
+					<Textarea
+						id={descId}
+						placeholder="Опишите дополнительные требования к позиции"
+						value={position.description}
+						onChange={(e) => onChange("description", e.target.value)}
+						rows={3}
+						className="resize-none rounded-none border-0 bg-transparent! focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent!"
+					/>
+					<div className="flex flex-wrap items-center gap-1.5 px-1.5 pb-1.5">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-label="Прикрепить файл"
+									onClick={() => fileInputRef.current?.click()}
+									className="relative text-muted-foreground transition-[color,scale] duration-100 hover:text-foreground active:scale-[0.96] before:absolute before:-inset-1.5 before:content-[''] motion-reduce:transition-none motion-reduce:active:scale-100"
+								>
+									<Paperclip aria-hidden="true" className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Прикрепить файл</TooltipContent>
+						</Tooltip>
+						{position.attachments.map((file, i) => (
+							<span
+								key={`${file.name}-${file.size}-${file.lastModified}`}
+								className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs"
 							>
-								<Paperclip aria-hidden="true" className="size-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>Прикрепить файл</TooltipContent>
-					</Tooltip>
-					{position.attachments.map((file, i) => (
-						<span
-							key={`${file.name}-${file.size}-${file.lastModified}`}
-							className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-xs"
-						>
-							<span className="max-w-40 truncate">{file.name}</span>
-							<button
-								type="button"
-								onClick={() => handleRemoveFile(i)}
-								className="rounded-sm text-muted-foreground transition-colors hover:text-foreground"
-								aria-label={`Удалить ${file.name}`}
-							>
-								<X className="size-3" aria-hidden="true" />
-							</button>
-						</span>
-					))}
+								<span className="max-w-40 truncate">{file.name}</span>
+								<button
+									type="button"
+									onClick={() => handleRemoveFile(i)}
+									className="rounded-sm text-muted-foreground transition-[color,scale] duration-100 hover:text-foreground active:scale-[0.96] motion-reduce:transition-none motion-reduce:active:scale-100"
+									aria-label={`Удалить ${file.name}`}
+								>
+									<X className="size-3" aria-hidden="true" />
+								</button>
+							</span>
+						))}
+					</div>
 				</div>
 			</Field>
 
@@ -1532,9 +1553,13 @@ interface AddressSelectProps {
 	companyId: string | null;
 	value: string | null;
 	onChange: (id: string | null) => void;
+	/** Auto-pick handler for the main-address default. Separate from
+	 * `onChange` so callers can route this silent default to a setter that
+	 * does NOT mark the form as touched. */
+	onInitialSelect: (id: string | null) => void;
 }
 
-function AddressSelect({ companyId, value, onChange }: AddressSelectProps) {
+function AddressSelect({ companyId, value, onChange, onInitialSelect }: AddressSelectProps) {
 	const [open, setOpen] = useState(false);
 	const [creating, setCreating] = useState(false);
 	const detailQuery = useCompanyDetail(companyId);
@@ -1545,15 +1570,15 @@ function AddressSelect({ companyId, value, onChange }: AddressSelectProps) {
 	const isLoading = companyId != null && detailQuery.isLoading;
 	const disabled = !companyId || isLoading;
 
-	const onChangeRef = useRef(onChange);
-	onChangeRef.current = onChange;
+	const onInitialRef = useRef(onInitialSelect);
+	onInitialRef.current = onInitialSelect;
 
 	useEffect(() => {
 		if (!companyId) return;
 		if (!detailQuery.data) return;
 		if (value && detailQuery.data.addresses.some((a) => a.id === value)) return;
 		const main = detailQuery.data.addresses.find((a) => a.isMain) ?? detailQuery.data.addresses[0];
-		if (main) onChangeRef.current(main.id);
+		if (main) onInitialRef.current(main.id);
 	}, [companyId, detailQuery.data, value]);
 
 	function handleSelect(id: string | null) {

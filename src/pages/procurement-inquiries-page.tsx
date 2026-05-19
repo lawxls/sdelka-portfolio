@@ -4,8 +4,8 @@ import {
 	ArrowDown,
 	ArrowUp,
 	ArrowUpDown,
+	FileText,
 	FolderInput,
-	Inbox,
 	Pencil,
 	Trash2,
 } from "lucide-react";
@@ -119,6 +119,18 @@ function parseSort(params: URLSearchParams): ProcurementInquirySortState | null 
 	const dir = params.get("dir");
 	if (!field || !PROCUREMENT_INQUIRY_SORT_FIELDS.has(field) || (dir !== "asc" && dir !== "desc")) return null;
 	return { field: field as ProcurementInquirySortField, direction: dir };
+}
+
+function InquiriesEmptyState({ className }: { className?: string }) {
+	return (
+		<div
+			className={cn("flex flex-col items-center justify-center gap-3 text-muted-foreground", className)}
+			data-testid="procurement-inquiries-empty"
+		>
+			<FileText className="size-8" aria-hidden="true" />
+			<p className="text-sm">Создайте свой первый запрос</p>
+		</div>
+	);
 }
 
 function FolderBadge({ folder }: { folder?: Folder }) {
@@ -594,12 +606,7 @@ export function ProcurementInquiriesPage() {
 								))}
 							</div>
 						)}
-						{!isLoading && items.length === 0 && (
-							<div className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
-								<Inbox className="size-8" aria-hidden="true" />
-								<p className="text-sm">Запросов нет</p>
-							</div>
-						)}
+						{!isLoading && items.length === 0 && <InquiriesEmptyState className="h-48" />}
 						{!isLoading && items.length > 0 && (
 							<div className="flex flex-col gap-3 p-4">
 								{items.map((procurementInquiry, index) => (
@@ -692,6 +699,7 @@ export function ProcurementInquiriesPage() {
 										))}
 							</TableBody>
 						</Table>
+						{!isLoading && items.length === 0 && <InquiriesEmptyState className="flex-1" />}
 					</div>
 				)}
 			</main>
