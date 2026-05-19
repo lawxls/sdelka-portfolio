@@ -4,7 +4,8 @@ import type { WorkspaceSettingsClient } from "./workspace-settings-client";
 
 export function createHttpWorkspaceSettingsClient(http: HttpClient = defaultHttpClient): WorkspaceSettingsClient {
 	return {
-		get: () => http.get<WorkspaceSettings>(`/workspace/settings/`),
-		update: (patch: WorkspaceSettingsPatch) => http.patch<WorkspaceSettings>(`/workspace/settings/`, { body: patch }),
+		get: () => http.get<WorkspaceSettings>(`/workspaces/me/settings/`),
+		update: (patch: WorkspaceSettingsPatch) =>
+			http.patch<WorkspaceSettings>(`/workspaces/me/settings/`, { body: patch }),
 	};
 }

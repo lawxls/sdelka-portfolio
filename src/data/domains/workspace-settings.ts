@@ -3,7 +3,7 @@
  * member of the active workspace. Today the surface is just
  * `agentInstructions` (free-form natural-language guidance the AI agent
  * follows when negotiating with suppliers). Backed by GET/PATCH
- * `/workspace/settings/` on the HTTP adapter.
+ * `/workspaces/me/settings/` on the HTTP adapter.
  */
 export interface WorkspaceSettings {
 	agentInstructions: string;

@@ -3,7 +3,7 @@ import type { WorkspaceSettings, WorkspaceSettingsPatch } from "../domains/works
 /**
  * Public seam for the workspace-settings domain. Single-row, workspace-scoped
  * config. Backs `useWorkspaceSettings` and `useUpdateWorkspaceSettings` —
- * both hit `/workspace/settings/` on the HTTP adapter.
+ * both hit `/workspaces/me/settings/` on the HTTP adapter.
  */
 export interface WorkspaceSettingsClient {
 	get(): Promise<WorkspaceSettings>;
