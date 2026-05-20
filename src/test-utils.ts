@@ -5,7 +5,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CurrentEmployee } from "@/data/domains/profile";
 import type { Supplier } from "@/data/supplier-types";
 import type { Task } from "@/data/task-types";
-import type { Company, CompanySummary, ProcurementInquiry, ProcurementItem } from "@/data/types";
+import type {
+	Company,
+	CompanySummary,
+	EmployeePermissions,
+	PermissionLevel,
+	ProcurementInquiry,
+	ProcurementItem,
+} from "@/data/types";
 
 export function mockHostname(hostname: string) {
 	vi.spyOn(window, "location", "get").mockReturnValue({
@@ -108,6 +115,24 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 	};
 }
 
+/** Build an `EmployeePermissions` row. Defaults every module to `none`; pass
+ * overrides for the modules under test. */
+export function makePermissions(overrides: Partial<EmployeePermissions> = {}): EmployeePermissions {
+	const none: PermissionLevel = "none";
+	return {
+		id: "perm-test",
+		employeeId: "1",
+		procurementInquiries: none,
+		positions: none,
+		tasks: none,
+		workspaceSettings: none,
+		companies: none,
+		employees: none,
+		emails: none,
+		...overrides,
+	};
+}
+
 export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmployee {
 	return {
 		id: 1,
@@ -120,6 +145,18 @@ export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmploye
 		mailingAllowed: true,
 		emailSignature: "",
 		role: "admin",
+		isWorkspaceOwner: true,
+		permissions: {
+			id: "perm-me",
+			employeeId: "1",
+			procurementInquiries: "edit",
+			positions: "edit",
+			tasks: "edit",
+			workspaceSettings: "edit",
+			companies: "edit",
+			employees: "edit",
+			emails: "edit",
+		},
 		...overrides,
 	};
 }

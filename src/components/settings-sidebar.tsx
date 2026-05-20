@@ -1,5 +1,8 @@
 import { Building2, CreditCard, LogOut, Mail, Settings, User, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
+import { canViewNavItem } from "@/data/permissions";
+import type { PermissionModuleKey } from "@/data/types";
+import { useMe } from "@/data/use-me";
 import { useLogout } from "@/data/use-session";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +10,7 @@ interface NavItemDef {
 	path: string;
 	label: string;
 	icon: React.ReactNode;
+	module?: PermissionModuleKey;
 }
 
 const ACCOUNT_ITEMS: NavItemDef[] = [
@@ -15,10 +19,15 @@ const ACCOUNT_ITEMS: NavItemDef[] = [
 ];
 
 const WORKSPACE_ITEMS: NavItemDef[] = [
-	{ path: "/settings/workspace", label: "Общие настройки", icon: <Settings className="size-4" /> },
-	{ path: "/settings/companies", label: "Компании", icon: <Building2 className="size-4" /> },
-	{ path: "/settings/employees", label: "Сотрудники", icon: <Users className="size-4" /> },
-	{ path: "/settings/emails", label: "Почты", icon: <Mail className="size-4" /> },
+	{
+		path: "/settings/workspace",
+		label: "Общие настройки",
+		icon: <Settings className="size-4" />,
+		module: "workspaceSettings",
+	},
+	{ path: "/settings/companies", label: "Компании", icon: <Building2 className="size-4" />, module: "companies" },
+	{ path: "/settings/employees", label: "Сотрудники", icon: <Users className="size-4" />, module: "employees" },
+	{ path: "/settings/emails", label: "Почты", icon: <Mail className="size-4" />, module: "emails" },
 ];
 
 function NavItem({ path, label, icon, isActive }: NavItemDef & { isActive: boolean }) {
@@ -42,6 +51,7 @@ function NavItem({ path, label, icon, isActive }: NavItemDef & { isActive: boole
 }
 
 function NavSection({ title, items, currentPath }: { title: string; items: NavItemDef[]; currentPath: string }) {
+	if (items.length === 0) return null;
 	return (
 		<div className="mb-3">
 			<div className="px-2 pb-1 text-xs font-medium text-muted-foreground">{title}</div>
@@ -73,6 +83,8 @@ function LogoutItem() {
 
 export function SettingsSidebar() {
 	const location = useLocation();
+	const { data: me } = useMe();
+	const workspaceItems = WORKSPACE_ITEMS.filter((item) => canViewNavItem(me, item));
 
 	return (
 		<aside
@@ -81,7 +93,7 @@ export function SettingsSidebar() {
 		>
 			<nav className="flex-1 overflow-y-auto p-2" aria-label="Настройки">
 				<NavSection title="Аккаунт" items={ACCOUNT_ITEMS} currentPath={location.pathname} />
-				<NavSection title="Рабочее пространство" items={WORKSPACE_ITEMS} currentPath={location.pathname} />
+				<NavSection title="Рабочее пространство" items={workspaceItems} currentPath={location.pathname} />
 			</nav>
 			<div className="p-2">
 				<LogoutItem />

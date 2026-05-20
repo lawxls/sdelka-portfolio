@@ -38,6 +38,7 @@ function renderConfirmEmail(initialEntries: string[], session: SessionClient) {
 						<Route path="/confirm-email" element={<ConfirmEmailPage />} />
 					</Route>
 					<Route path="/login" element={<div>Login Page</div>} />
+					<Route path="/" element={<div>Inquiries Page</div>} />
 					<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 				</Routes>
 			</MemoryRouter>
@@ -127,6 +128,7 @@ describe("ConfirmEmailPage", () => {
 					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
 						<Routes>
 							<Route path="/confirm-email" element={<ConfirmEmailPage />} />
+							<Route path="/" element={<div>Inquiries Page</div>} />
 							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 						</Routes>
 					</MemoryRouter>

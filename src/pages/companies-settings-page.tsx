@@ -15,6 +15,7 @@ import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/compan
 import { useCompanies } from "@/data/use-companies";
 import { useArchiveCompany, useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export function CompaniesSettingsPage() {
 	const createCompanyMutation = useCreateCompany();
 	const deleteCompanyMutation = useDeleteCompany();
 	const archiveCompanyMutation = useArchiveCompany();
+	const { guard } = useModuleGuard("companies");
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
@@ -163,7 +165,7 @@ export function CompaniesSettingsPage() {
 							type="button"
 							size="sm"
 							className="btn-cta ml-2 rounded-full border-0"
-							onClick={() => setCreationOpen(true)}
+							onClick={guard(() => setCreationOpen(true))}
 						>
 							<span>Добавить компанию</span>
 						</Button>
@@ -185,14 +187,14 @@ export function CompaniesSettingsPage() {
 						{
 							label: "Архивировать",
 							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleArchive,
+							onClick: guard(handleArchive),
 							disabled: Boolean(archiveDisabledReason),
 							disabledReason: archiveDisabledReason,
 						},
 						{
 							label: "Удалить",
 							icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleDelete,
+							onClick: guard(handleDelete),
 							variant: "destructive",
 							disabled: Boolean(deleteDisabledReason),
 							disabledReason: deleteDisabledReason,

@@ -4,7 +4,9 @@ import type {
 	InviteEmployeeData,
 	UpdatePermissionsData,
 	UpdateWorkspaceEmployeeData,
+	WorkspaceEmployee,
 } from "./domains/workspace-employees";
+import { toastModulePermissionDenied } from "./permission-toasts";
 
 export function useWorkspaceEmployees(options?: { enabled?: boolean }) {
 	const client = useWorkspaceEmployeesClient();
@@ -42,6 +44,13 @@ export function useInviteEmployees() {
 
 	return useMutation({
 		mutationFn: (invites: InviteEmployeeData[]) => client.invite(invites),
+		onSuccess: (created) => {
+			queryClient.setQueryData<WorkspaceEmployee[]>(["workspace-employees"], (prev) => {
+				if (!prev) return created;
+				const existing = new Set(prev.map((e) => e.id));
+				return [...prev, ...created.filter((e) => !existing.has(e.id))];
+			});
+		},
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
 		},
@@ -66,6 +75,7 @@ export function useUpdateWorkspaceEmployee() {
 
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: UpdateWorkspaceEmployeeData }) => client.update(id, data),
+		onError: toastModulePermissionDenied,
 		onSettled: (_data, _error, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employee", variables.id] });
 			queryClient.invalidateQueries({ queryKey: ["workspace-employees"] });
@@ -79,6 +89,7 @@ export function useUpdateWorkspaceEmployeePermissions() {
 
 	return useMutation({
 		mutationFn: ({ id, data }: { id: string; data: UpdatePermissionsData }) => client.updatePermissions(id, data),
+		onError: toastModulePermissionDenied,
 		onSettled: (_data, _error, variables) => {
 			queryClient.invalidateQueries({ queryKey: ["workspace-employee", variables.id] });
 		},

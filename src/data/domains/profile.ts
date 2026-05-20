@@ -1,4 +1,4 @@
-import type { EmployeeRole } from "../types";
+import type { EmployeePermissions, EmployeeRole } from "../types";
 
 /**
  * Profile domain types — current-user identity. Backs `useMe` and
@@ -8,6 +8,12 @@ import type { EmployeeRole } from "../types";
  * record, there is no list shape. Both reads and patches go through
  * `/users/me/`. Wire format is camelCase (Django side rewrites snake_case
  * via djangorestframework-camel-case).
+ *
+ * `role`, `permissions`, and `isWorkspaceOwner` come from the same
+ * `/users/me/` payload and feed the client-side permission resolution
+ * (`effectiveLevel` / `canView` / `canEdit`). An archived-only user shows up
+ * with `role: null` and `permissions: null` — every module resolves to
+ * `"none"` for them.
  */
 export interface CurrentEmployee {
 	id: number;
@@ -20,8 +26,9 @@ export interface CurrentEmployee {
 	mailingAllowed: boolean;
 	emailSignature: string;
 	dateJoined: string;
-	// TODO(api): role isn't on /users/me/ yet — drop `?` once the backend exposes it.
-	role?: EmployeeRole;
+	role: EmployeeRole | null;
+	permissions: EmployeePermissions | null;
+	isWorkspaceOwner: boolean;
 }
 
 export type SettingsPatch = Partial<

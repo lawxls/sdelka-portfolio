@@ -16,6 +16,7 @@ import type { EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useDeleteWorkspaceEmployees, useWorkspaceEmployees } from "@/data/use-workspace-employees";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { getAvatarColorForId } from "@/lib/avatar-colors";
 import { formatFullName, formatRussianPlural, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,7 @@ export function EmployeesSettingsPage() {
 	const { employeesInviteOpen: inviteOpen, setEmployeesInviteOpen: setInviteOpen } = useSettingsOutletContext();
 	const { employees } = useWorkspaceEmployees();
 	const deleteMutation = useDeleteWorkspaceEmployees();
+	const { guard } = useModuleGuard("employees");
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
@@ -113,23 +115,33 @@ export function EmployeesSettingsPage() {
 	}
 
 	const selectedEmployees = employees.filter((e) => selected.has(e.id));
-	const hasNonUserSelected = selectedEmployees.some((e) => e.role !== "user");
-	const deleteDisabledReason = hasNonUserSelected
-		? "Можно удалить только сотрудников с ролью «Пользователь»"
-		: undefined;
 
 	function handleDelete() {
-		const ids = selectedEmployees.filter((e) => e.role === "user").map((e) => e.id);
+		const ids = selectedEmployees.map((e) => e.id);
 		if (ids.length === 0) {
 			clearSelection();
 			return;
 		}
 		deleteMutation.mutate(ids, {
-			onSuccess: () => {
+			onSuccess: (result) => {
 				clearSelection();
-				toast.success(ids.length === 1 ? "Сотрудник удалён" : "Сотрудники удалены");
+				const archivedCount = result.archived.length;
+				if (archivedCount > 0) {
+					toast.success(
+						archivedCount === 1
+							? "Сотрудник архивирован"
+							: `Архивировано ${formatRussianPlural(archivedCount, ["сотрудник", "сотрудника", "сотрудников"])}`,
+					);
+				}
+				for (const failure of result.failed) {
+					if (failure.code === "cannot_archive_owner") {
+						toast.error("Владелец пространства");
+					} else if (failure.code === "cannot_archive_admin") {
+						toast.error("Сначала измените роль на «Пользователь»");
+					}
+				}
 			},
-			onError: () => toast.error("Не удалось удалить"),
+			onError: () => toast.error("Не удалось архивировать"),
 		});
 	}
 
@@ -150,7 +162,7 @@ export function EmployeesSettingsPage() {
 							type="button"
 							size="sm"
 							className="btn-cta ml-2 rounded-full border-0"
-							onClick={() => setInviteOpen(true)}
+							onClick={guard(() => setInviteOpen(true))}
 						>
 							<span>Добавить сотрудника</span>
 						</Button>
@@ -189,15 +201,13 @@ export function EmployeesSettingsPage() {
 						{
 							label: "Архивировать",
 							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleArchive,
+							onClick: guard(handleArchive),
 						},
 						{
 							label: "Удалить",
 							icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleDelete,
+							onClick: guard(handleDelete),
 							variant: "destructive",
-							disabled: Boolean(deleteDisabledReason),
-							disabledReason: deleteDisabledReason,
 						},
 					]}
 				/>

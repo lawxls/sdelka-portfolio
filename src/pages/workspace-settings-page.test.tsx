@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setTokens } from "@/data/auth";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import type { WorkspaceSettingsClient } from "@/data/clients/workspace-settings-client";
 import { createInMemoryWorkspaceSettingsClient } from "@/data/clients/workspace-settings-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
@@ -20,7 +21,10 @@ let workspaceSettings: WorkspaceSettingsClient;
 function renderPage(opts: { workspaceSettings?: WorkspaceSettingsClient } = {}) {
 	workspaceSettings = opts.workspaceSettings ?? createInMemoryWorkspaceSettingsClient();
 	return render(
-		<TestClientsProvider queryClient={queryClient} clients={{ workspaceSettings }}>
+		<TestClientsProvider
+			queryClient={queryClient}
+			clients={{ workspaceSettings, profile: createInMemoryProfileClient() }}
+		>
 			<WorkspaceSettingsPage />
 		</TestClientsProvider>,
 	);

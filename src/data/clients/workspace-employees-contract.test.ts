@@ -19,8 +19,11 @@ import { createInMemoryWorkspaceEmployeesClient } from "./workspace-employees-in
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
  *
- * Workspace-employees' list shape is a flat `WorkspaceEmployee[]` — not
- * `CursorPage<T>`, since the workspace roster is a small bounded list.
+ * Wire shapes mirror the backend:
+ *   - `GET .../workspace/employees/` is cursor-paginated; adapter unwraps `.results`.
+ *   - `POST .../invite/` returns the freshly-created `WorkspaceEmployee[]` (201 body).
+ *   - `POST .../delete/` returns `{ archived, failed }` so the bulk-archive
+ *     toolbar can surface per-row reasons.
  */
 
 const SEED: WorkspaceEmployeeDetail[] = [
@@ -147,14 +150,21 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/workspace\/employees$/,
-			respond: () => ({ status: 200, body: Array.from(store.values()).map(stripPermissions) }),
+			path: /^\/workspace\/employees\/$/,
+			respond: () => ({
+				status: 200,
+				body: {
+					next: null,
+					previous: null,
+					results: Array.from(store.values()).map(stripPermissions),
+				},
+			}),
 		},
 		{
 			method: "GET",
-			path: /^\/workspace\/employees\/(\d+)$/,
+			path: /^\/workspace\/employees\/(\d+)\/$/,
 			respond: ({ url }) => {
-				const id = /\/(\d+)$/.exec(url)?.[1] ?? "";
+				const id = /\/(\d+)\/$/.exec(url)?.[1] ?? "";
 				const found = store.get(id);
 				if (!found) return { status: 404, body: { detail: `employee ${id} not found` } };
 				return { status: 200, body: found };
@@ -162,16 +172,17 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/workspace\/employees\/invite$/,
+			path: /^\/workspace\/employees\/invite\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { invites: InviteEmployeeData[] };
+				const created: ReturnType<typeof stripPermissions>[] = [];
 				for (const invite of data.invites) {
 					if (!invite.email) return { status: 400, body: { fieldErrors: { email: ["required"] } } };
 					if (invite.email === "__conflict__@example.com") {
 						return { status: 409, body: { detail: "email already invited" } };
 					}
 					counter += 1;
-					store.set(String(counter), {
+					const detail: WorkspaceEmployeeDetail = {
 						id: String(counter),
 						firstName: invite.firstName,
 						lastName: invite.lastName,
@@ -193,46 +204,65 @@ function httpAdapter(): Adapter {
 							employees: "none",
 							emails: "none",
 						},
-					});
+					};
+					store.set(String(counter), detail);
+					created.push(stripPermissions(detail));
 				}
-				return { status: 204 };
+				return { status: 201, body: created };
 			},
 		},
 		{
 			method: "PATCH",
-			path: /^\/workspace\/employees\/(\d+)$/,
+			path: /^\/workspace\/employees\/(\d+)\/$/,
 			respond: ({ url, init }) => {
-				const id = /\/(\d+)$/.exec(url)?.[1] ?? "";
+				const id = /\/(\d+)\/$/.exec(url)?.[1] ?? "";
 				const existing = store.get(id);
 				if (!existing) return { status: 404, body: { detail: `employee ${id} not found` } };
 				const data = JSON.parse(init?.body as string) as UpdateWorkspaceEmployeeData;
 				if (data.firstName === "__validation__") {
 					return { status: 400, body: { fieldErrors: { firstName: ["invalid"] } } };
 				}
-				const updated: WorkspaceEmployeeDetail = { ...existing, ...data };
+				const { companies: companyIds, ...rest } = data;
+				const updated: WorkspaceEmployeeDetail = {
+					...existing,
+					...rest,
+					companies: companyIds === undefined ? existing.companies : [],
+				};
 				store.set(id, updated);
 				return { status: 200, body: updated };
 			},
 		},
 		{
 			method: "POST",
-			path: /^\/workspace\/employees\/delete$/,
+			path: /^\/workspace\/employees\/delete\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
+				const archived: string[] = [];
+				const failed: Array<{
+					id: string;
+					code: "not_found" | "cannot_archive_owner" | "cannot_archive_admin";
+				}> = [];
 				for (const id of data.ids) {
 					const existing = store.get(id);
-					// HTTP mirrors the in-memory rule: admins can't be deleted.
-					if (existing && existing.role !== "user") continue;
+					if (!existing) {
+						failed.push({ id, code: "not_found" });
+						continue;
+					}
+					if (existing.role === "admin") {
+						failed.push({ id, code: "cannot_archive_admin" });
+						continue;
+					}
 					store.delete(id);
+					archived.push(id);
 				}
-				return { status: 204 };
+				return { status: 200, body: { archived, failed } };
 			},
 		},
 		{
 			method: "PATCH",
-			path: /^\/workspace\/employees\/(\d+)\/permissions$/,
+			path: /^\/workspace\/employees\/(\d+)\/permissions\/$/,
 			respond: ({ url, init }) => {
-				const id = /\/(\d+)\/permissions$/.exec(url)?.[1] ?? "";
+				const id = /\/(\d+)\/permissions\/$/.exec(url)?.[1] ?? "";
 				const existing = store.get(id);
 				if (!existing) return { status: 404, body: { detail: `employee ${id} not found` } };
 				const data = JSON.parse(init?.body as string) as UpdatePermissionsData;
@@ -320,11 +350,21 @@ describe.each(
 		expect(added?.registeredAt).toBeNull();
 	});
 
+	it("invite returns the freshly-created rows (201 body)", async () => {
+		const created = await client.invite([VALID_INVITE]);
+		expect(created).toHaveLength(1);
+		expect(created[0].email).toBe(VALID_INVITE.email);
+		expect(created[0].registeredAt).toBeNull();
+		// The 201 body matches the list shape (no `permissions` field).
+		expect(created[0]).not.toHaveProperty("permissions");
+	});
+
 	it("invite supports bulk", async () => {
-		await client.invite([
+		const created = await client.invite([
 			{ ...VALID_INVITE, email: "a@x.com" },
 			{ ...VALID_INVITE, email: "b@x.com", role: "admin" },
 		]);
+		expect(created.map((e) => e.email).sort()).toEqual(["a@x.com", "b@x.com"]);
 		const list = await client.list();
 		expect(list.find((e) => e.email === "a@x.com")).toBeDefined();
 		expect(list.find((e) => e.email === "b@x.com")).toBeDefined();
@@ -342,16 +382,41 @@ describe.each(
 		await expect(client.update("99999", { position: "Test" })).rejects.toBeInstanceOf(NotFoundError);
 	});
 
-	it("delete removes user-role employees", async () => {
-		await client.delete(["2"]);
+	it("update accepts a companies array on the payload", async () => {
+		// Both adapters must accept the field without rejecting — the in-memory
+		// adapter resolves the ids to summaries (via the injected port), and the
+		// HTTP adapter just forwards them in the patch body.
+		await client.update("2", { companies: [] });
+		const detail = await client.get("2");
+		expect(detail.companies).toEqual([]);
+	});
+
+	it("delete removes user-role employees and returns them in archived[]", async () => {
+		const result = await client.delete(["2"]);
+		expect(result.archived).toEqual(["2"]);
+		expect(result.failed).toEqual([]);
 		const list = await client.list();
 		expect(list.find((e) => e.id === "2")).toBeUndefined();
 	});
 
-	it("delete leaves admin employees in place", async () => {
-		await client.delete(["1"]);
+	it("delete reports admin employees in failed[] with cannot_archive_admin", async () => {
+		const result = await client.delete(["1"]);
+		expect(result.archived).toEqual([]);
+		expect(result.failed).toEqual([{ id: "1", code: "cannot_archive_admin" }]);
 		const list = await client.list();
 		expect(list.find((e) => e.id === "1")).toBeDefined();
+	});
+
+	it("delete reports unknown ids in failed[] with not_found", async () => {
+		const result = await client.delete(["99999"]);
+		expect(result.archived).toEqual([]);
+		expect(result.failed).toEqual([{ id: "99999", code: "not_found" }]);
+	});
+
+	it("delete handles a mixed batch — partial archive + failures", async () => {
+		const result = await client.delete(["1", "2", "99999"]);
+		expect(result.archived).toEqual(["2"]);
+		expect(result.failed.map((f) => f.id).sort()).toEqual(["1", "99999"]);
 	});
 
 	it("updatePermissions patches only provided levels", async () => {

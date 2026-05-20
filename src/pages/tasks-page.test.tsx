@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
@@ -55,6 +56,7 @@ function renderPage(initialEntries?: string[]) {
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: allTasks }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: [] }),
+				profile: createInMemoryProfileClient(),
 			}}
 		>
 			<TooltipProvider>

@@ -10,7 +10,7 @@ import { NotFoundError } from "../errors";
 import { delay, nextId } from "../mock-utils";
 import { SEED_WORKSPACE_EMPLOYEES } from "../seeds/workspace-employees";
 import type { EmployeePermissions } from "../types";
-import type { WorkspaceEmployeesClient } from "./workspace-employees-client";
+import type { DeleteWorkspaceEmployeesResult, WorkspaceEmployeesClient } from "./workspace-employees-client";
 
 function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
 	return {
@@ -77,12 +77,13 @@ export function createInMemoryWorkspaceEmployeesClient(
 			return cloneEmployee(store[requireIndex(id)]);
 		},
 
-		async invite(invites: InviteEmployeeData[]): Promise<void> {
+		async invite(invites: InviteEmployeeData[]): Promise<WorkspaceEmployee[]> {
 			await delay();
+			const created: WorkspaceEmployee[] = [];
 			for (const invite of invites) {
 				const id = nextEmployeeId();
 				const companies = invite.companies.length > 0 ? await getCompanySummaries(invite.companies) : [];
-				store.push({
+				const detail: WorkspaceEmployeeDetail = {
 					id,
 					firstName: invite.firstName,
 					lastName: invite.lastName,
@@ -104,24 +105,48 @@ export function createInMemoryWorkspaceEmployeesClient(
 						employees: "none",
 						emails: "none",
 					},
-				});
+				};
+				store.push(detail);
+				const { permissions: _permissions, ...rest } = detail;
+				created.push({ ...rest, companies: rest.companies.map((c) => ({ ...c })) });
 			}
+			return created;
 		},
 
 		async update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail> {
 			await delay();
 			const idx = requireIndex(id);
-			store[idx] = { ...store[idx], ...data };
+			const { companies: companyIds, ...rest } = data;
+			const companies =
+				companyIds === undefined
+					? store[idx].companies
+					: companyIds.length > 0
+						? await getCompanySummaries(companyIds)
+						: [];
+			store[idx] = { ...store[idx], ...rest, companies };
 			return cloneEmployee(store[idx]);
 		},
 
-		async delete(ids: string[]): Promise<void> {
+		async delete(ids: string[]): Promise<DeleteWorkspaceEmployeesResult> {
 			await delay();
-			const toRemove = new Set(ids);
-			store = store.filter((e) => {
-				if (!toRemove.has(e.id)) return true;
-				return e.role !== "user";
-			});
+			const archived: string[] = [];
+			const failed: DeleteWorkspaceEmployeesResult["failed"] = [];
+			const toRemove = new Set<string>();
+			for (const id of ids) {
+				const existing = store.find((e) => e.id === id);
+				if (!existing) {
+					failed.push({ id, code: "not_found" });
+					continue;
+				}
+				if (existing.role === "admin") {
+					failed.push({ id, code: "cannot_archive_admin" });
+					continue;
+				}
+				toRemove.add(id);
+				archived.push(id);
+			}
+			store = store.filter((e) => !toRemove.has(e.id));
+			return { archived, failed };
 		},
 
 		async updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions> {
