@@ -36,6 +36,7 @@ function renderImpersonate(initialEntries: string[], session: SessionClient) {
 						<Route path="/impersonate" element={<ImpersonatePage />} />
 					</Route>
 					<Route path="/login" element={<div>Login Page</div>} />
+					<Route path="/" element={<div>Inquiries Page</div>} />
 					<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 				</Routes>
 			</MemoryRouter>

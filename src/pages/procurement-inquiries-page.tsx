@@ -60,6 +60,7 @@ import {
 } from "@/data/use-procurement-inquiries";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatDayMonthShort, formatRussianPlural } from "@/lib/format";
 import { inquiryDetailPath } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
@@ -372,6 +373,7 @@ export function ProcurementInquiriesPage() {
 	const updateProcurementInquiryMutation = useUpdateProcurementInquiry();
 	const deleteProcurementInquiryMutation = useDeleteProcurementInquiry();
 	const createProcurementInquiryMutation = useCreateProcurementInquiryWithItems();
+	const { guard: inquiriesGuard } = useModuleGuard("procurementInquiries");
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const [editingProcurementInquiryId, setEditingProcurementInquiryId] = useState<string | null>(null);
 	const [deletingProcurementInquiry, setDeletingProcurementInquiry] = useState<ProcurementInquiry | null>(null);
@@ -512,7 +514,7 @@ export function ProcurementInquiriesPage() {
 			showCompanies={isMultiCompany}
 			isArchiveView={isArchiveView}
 			onArchiveToggle={handleArchiveToggle}
-			onCreateProcurementInquiry={() => setDrawerOpen(true)}
+			onCreateProcurementInquiry={inquiriesGuard(() => setDrawerOpen(true))}
 		/>
 	);
 
@@ -520,9 +522,9 @@ export function ProcurementInquiriesPage() {
 		navigate({ pathname: inquiryDetailPath(procurementInquiry.id), search: searchParams.toString() });
 	}
 
-	function handleArchive(id: string, isArchived: boolean) {
+	const handleArchive = inquiriesGuard((id: string, isArchived: boolean) => {
 		archiveProcurementInquiryMutation.mutate({ id, isArchived });
-	}
+	});
 
 	function handleRename(id: string) {
 		setEditingProcurementInquiryId(id);
@@ -541,13 +543,13 @@ export function ProcurementInquiriesPage() {
 		updateProcurementInquiryMutation.mutate({ id, patch: { folderId } });
 	}
 
-	function handleConfirmDelete() {
+	const handleConfirmDelete = inquiriesGuard(() => {
 		if (!deletingProcurementInquiry) return;
 		deleteProcurementInquiryMutation.mutate(deletingProcurementInquiry.id, {
 			onSuccess: () => toast.success(`Запрос ${deletingProcurementInquiry.id} удалён`),
 		});
 		setDeletingProcurementInquiry(null);
-	}
+	});
 
 	return (
 		<div className="flex h-full flex-1 flex-col overflow-hidden bg-background text-foreground">

@@ -2,7 +2,10 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RequireModule } from "@/components/require-module";
 import { SettingsLayout } from "@/components/settings-layout";
+import { firstAccessiblePath } from "@/data/permissions";
+import { useMe } from "@/data/use-me";
 import { INQUIRIES_PATH } from "@/lib/nav-items";
 import { CompaniesSettingsPage } from "@/pages/companies-settings-page";
 import { ConfirmEmailPage } from "@/pages/confirm-email-page";
@@ -32,14 +35,11 @@ function ProcurementInquiriesOutletHost() {
 	);
 }
 
-function RootRedirect() {
+function FirstAccessibleRedirect() {
+	const { data: me, isPending } = useMe();
 	const { search, hash } = useLocation();
-	return <Navigate to={`${INQUIRIES_PATH}${search}${hash}`} replace />;
-}
-
-function ProcurementRedirect() {
-	const { search, hash } = useLocation();
-	return <Navigate to={`/positions${search}${hash}`} replace />;
+	if (isPending) return null;
+	return <Navigate to={`${firstAccessiblePath(me)}${search}${hash}`} replace />;
 }
 
 function App() {
@@ -58,23 +58,37 @@ function App() {
 
 			{/* App routes (protected) */}
 			<Route element={<ProtectedRoute />}>
-				<Route path="/" element={<RootRedirect />} />
-				<Route path="/procurement" element={<ProcurementRedirect />} />
+				<Route path="/" element={<FirstAccessibleRedirect />} />
+				<Route path="/procurement" element={<FirstAccessibleRedirect />} />
 				<Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
 				<Route element={<AppLayout />}>
-					<Route path={INQUIRIES_PATH} element={<ProcurementInquiriesOutletHost />}>
-						<Route path=":slug" element={<ProcurementInquiryDetailPage />} />
+					<Route element={<RequireModule module="procurementInquiries" />}>
+						<Route path={INQUIRIES_PATH} element={<ProcurementInquiriesOutletHost />}>
+							<Route path=":slug" element={<ProcurementInquiryDetailPage />} />
+						</Route>
 					</Route>
-					<Route path="/positions" element={<ProcurementPage />} />
-					<Route path="/tasks" element={<TasksPage />} />
+					<Route element={<RequireModule module="positions" />}>
+						<Route path="/positions" element={<ProcurementPage />} />
+					</Route>
+					<Route element={<RequireModule module="tasks" />}>
+						<Route path="/tasks" element={<TasksPage />} />
+					</Route>
 					{/* Settings */}
 					<Route element={<SettingsLayout />}>
 						<Route path="/settings" element={<SettingsIndexPage />} />
 						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
-						<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
-						<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
-						<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
-						<Route path="/settings/emails" element={<EmailsSettingsPage />} />
+						<Route element={<RequireModule module="workspaceSettings" />}>
+							<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+						</Route>
+						<Route element={<RequireModule module="companies" />}>
+							<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
+						</Route>
+						<Route element={<RequireModule module="employees" />}>
+							<Route path="/settings/employees" element={<EmployeesSettingsPage />} />
+						</Route>
+						<Route element={<RequireModule module="emails" />}>
+							<Route path="/settings/emails" element={<EmailsSettingsPage />} />
+						</Route>
 						<Route path="/settings/tariffs" element={<TariffsSettingsPage />} />
 					</Route>
 				</Route>

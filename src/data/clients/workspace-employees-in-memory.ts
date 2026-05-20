@@ -10,7 +10,7 @@ import { NotFoundError } from "../errors";
 import { delay, nextId } from "../mock-utils";
 import { SEED_WORKSPACE_EMPLOYEES } from "../seeds/workspace-employees";
 import type { EmployeePermissions } from "../types";
-import type { WorkspaceEmployeesClient } from "./workspace-employees-client";
+import type { DeleteWorkspaceEmployeesResult, WorkspaceEmployeesClient } from "./workspace-employees-client";
 
 function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
 	return {
@@ -34,6 +34,10 @@ export interface InMemoryWorkspaceEmployeesOptions {
 	 * Defaults to a no-op `() => []` so tests don't need to wire it. Production
 	 * wires this to the active CompaniesClient via `clients-config.ts`. */
 	getCompanySummaries?: GetCompanySummariesByIds;
+	/** Employee IDs that map to the workspace owner. `delete()` rejects these
+	 * with `cannot_archive_owner` — mirrors the backend, where ownership lives
+	 * on a separate `WorkspaceMembership` row not exposed in this domain. */
+	ownerIds?: ReadonlyArray<string>;
 }
 
 /**
@@ -52,6 +56,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
 	let idCounter = 1000;
 	const getCompanySummaries: GetCompanySummariesByIds = options?.getCompanySummaries ?? (async () => []);
+	const ownerIds = new Set<string>(options?.ownerIds ?? []);
 	function nextEmployeeId(): string {
 		idCounter += 1;
 		return String(idCounter);
@@ -77,12 +82,13 @@ export function createInMemoryWorkspaceEmployeesClient(
 			return cloneEmployee(store[requireIndex(id)]);
 		},
 
-		async invite(invites: InviteEmployeeData[]): Promise<void> {
+		async invite(invites: InviteEmployeeData[]): Promise<WorkspaceEmployee[]> {
 			await delay();
+			const created: WorkspaceEmployee[] = [];
 			for (const invite of invites) {
 				const id = nextEmployeeId();
 				const companies = invite.companies.length > 0 ? await getCompanySummaries(invite.companies) : [];
-				store.push({
+				const detail: WorkspaceEmployeeDetail = {
 					id,
 					firstName: invite.firstName,
 					lastName: invite.lastName,
@@ -104,24 +110,52 @@ export function createInMemoryWorkspaceEmployeesClient(
 						employees: "none",
 						emails: "none",
 					},
-				});
+				};
+				store.push(detail);
+				const { permissions: _permissions, ...rest } = detail;
+				created.push({ ...rest, companies: rest.companies.map((c) => ({ ...c })) });
 			}
+			return created;
 		},
 
 		async update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail> {
 			await delay();
 			const idx = requireIndex(id);
-			store[idx] = { ...store[idx], ...data };
+			const { companies: companyIds, ...rest } = data;
+			const companies =
+				companyIds === undefined
+					? store[idx].companies
+					: companyIds.length > 0
+						? await getCompanySummaries(companyIds)
+						: [];
+			store[idx] = { ...store[idx], ...rest, companies };
 			return cloneEmployee(store[idx]);
 		},
 
-		async delete(ids: string[]): Promise<void> {
+		async delete(ids: string[]): Promise<DeleteWorkspaceEmployeesResult> {
 			await delay();
-			const toRemove = new Set(ids);
-			store = store.filter((e) => {
-				if (!toRemove.has(e.id)) return true;
-				return e.role !== "user";
-			});
+			const archived: string[] = [];
+			const failed: DeleteWorkspaceEmployeesResult["failed"] = [];
+			const toRemove = new Set<string>();
+			for (const id of ids) {
+				const existing = store.find((e) => e.id === id);
+				if (!existing) {
+					failed.push({ id, code: "not_found" });
+					continue;
+				}
+				if (ownerIds.has(id)) {
+					failed.push({ id, code: "cannot_archive_owner" });
+					continue;
+				}
+				if (existing.role === "admin") {
+					failed.push({ id, code: "cannot_archive_admin" });
+					continue;
+				}
+				toRemove.add(id);
+				archived.push(id);
+			}
+			store = store.filter((e) => !toRemove.has(e.id));
+			return { archived, failed };
 		},
 
 		async updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions> {

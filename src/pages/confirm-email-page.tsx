@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { extractFormErrors } from "@/data/auth-errors";
 import { useConfirmEmail } from "@/data/use-session";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { INQUIRIES_PATH } from "@/lib/nav-items";
 
 type Status = "loading" | "error";
 
@@ -32,7 +31,7 @@ export function ConfirmEmailPage() {
 		// the page stuck on the loading state.
 		confirmEmail.mutateAsync({ uid, token }).then(
 			() => {
-				navigate(INQUIRIES_PATH, { replace: true });
+				navigate("/", { replace: true });
 			},
 			(err) => {
 				const { error } = extractFormErrors(err);

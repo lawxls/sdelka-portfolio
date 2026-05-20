@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry } from "@/data/types";
@@ -48,6 +49,7 @@ function renderPage(
 				items: createInMemoryItemsClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
 				folders: testFoldersClient(FOLDERS),
+				profile: createInMemoryProfileClient(),
 			}}
 		>
 			<TooltipProvider>

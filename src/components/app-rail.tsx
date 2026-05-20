@@ -4,8 +4,10 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { LogoWordmark } from "@/components/logo-wordmark";
 import { SupportDialog } from "@/components/support-dialog";
 import { UserAvatarMenu } from "@/components/user-avatar-menu";
+import { canView, canViewNavItem } from "@/data/permissions";
+import { useMe } from "@/data/use-me";
 import { useActiveTasksCount } from "@/data/use-tasks";
-import { INQUIRIES_PATH, NAV_ITEMS } from "@/lib/nav-items";
+import { INQUIRIES_PATH, NAV_ITEMS, type NavItem } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 
 const TOP_NAV = NAV_ITEMS.filter((item) => item.placement === "top");
@@ -14,12 +16,10 @@ const BOTTOM_NAV = NAV_ITEMS.filter((item) => item.placement === "bottom");
 const NAV_ITEM_CLASSES =
 	"flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-[background-color,color,scale] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.96] motion-reduce:active:scale-100";
 
-type NavItem = (typeof NAV_ITEMS)[number];
-
 function NavLinkItem({ item, pathname, badge }: { item: NavItem; pathname: string; badge?: ReactNode }) {
 	const navigate = useNavigate();
 	const Icon = item.icon;
-	const matchPath = "activePrefix" in item ? item.activePrefix : item.path;
+	const matchPath = item.activePrefix ?? item.path;
 	const active = pathname.startsWith(matchPath);
 	return (
 		<button
@@ -55,7 +55,11 @@ function TasksCountBadge({ count }: { count: number }) {
 export function AppRail() {
 	const { pathname } = useLocation();
 	const [supportOpen, setSupportOpen] = useState(false);
-	const activeTasksCount = useActiveTasksCount();
+	const { data: me } = useMe();
+	const canViewTasks = canView(me, "tasks");
+	const activeTasksCount = useActiveTasksCount({ enabled: canViewTasks });
+	const topNav = TOP_NAV.filter((item) => canViewNavItem(me, item));
+	const bottomNav = BOTTOM_NAV.filter((item) => canViewNavItem(me, item));
 	return (
 		<>
 			<aside
@@ -69,18 +73,18 @@ export function AppRail() {
 					</Link>
 				</div>
 				<nav aria-label="Основная навигация" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-					{TOP_NAV.map((item) => (
+					{topNav.map((item) => (
 						<NavLinkItem
 							key={item.path}
 							item={item}
 							pathname={pathname}
-							badge={item.path === "/tasks" ? <TasksCountBadge count={activeTasksCount} /> : undefined}
+							badge={item.path === "/tasks" && canViewTasks ? <TasksCountBadge count={activeTasksCount} /> : undefined}
 						/>
 					))}
 				</nav>
 				<div className="flex flex-col px-2 py-2" data-testid="app-rail-bottom">
 					<div className="flex flex-col gap-0.5">
-						{BOTTOM_NAV.map((item) => (
+						{bottomNav.map((item) => (
 							<NavLinkItem key={item.path} item={item} pathname={pathname} />
 						))}
 						<button

@@ -14,6 +14,7 @@ import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
@@ -81,6 +82,7 @@ function renderPage(initialEntries?: string[]) {
 				generatedQuestions: fakeGeneratedQuestionsClient({
 					preview: async () => ({ questions: [] }),
 				}),
+				profile: createInMemoryProfileClient(),
 			}}
 		>
 			<MemoryRouter initialEntries={initialEntries ?? ["/positions"]}>

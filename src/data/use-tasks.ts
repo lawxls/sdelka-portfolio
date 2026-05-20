@@ -138,7 +138,7 @@ export function useTasksList(params?: TasksListParams) {
 	};
 }
 
-export function useTasksCount(params?: TasksListParams) {
+export function useTasksCount(params?: TasksListParams, options?: { enabled?: boolean }) {
 	const queryParams = params ?? {};
 	const tasks = useTasksClient();
 	const query = useQuery({
@@ -152,14 +152,15 @@ export function useTasksCount(params?: TasksListParams) {
 				company: queryParams.company,
 				statuses: queryParams.statuses,
 			}),
+		enabled: options?.enabled ?? true,
 	});
 	return query.data?.count ?? 0;
 }
 
 const ACTIVE_TASKS_PARAMS: TasksListParams = { statuses: [...ACTIVE_TASK_STATUSES] };
 
-export function useActiveTasksCount() {
-	return useTasksCount(ACTIVE_TASKS_PARAMS);
+export function useActiveTasksCount(options?: { enabled?: boolean }) {
+	return useTasksCount(ACTIVE_TASKS_PARAMS, options);
 }
 
 export function useTask(id: string | null) {

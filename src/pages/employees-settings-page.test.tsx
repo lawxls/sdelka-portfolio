@@ -2,7 +2,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { toast } from "sonner";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
@@ -12,6 +13,10 @@ import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
 import { EmployeesSettingsPage } from "./employees-settings-page";
+
+vi.mock("sonner", () => ({
+	toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
+}));
 
 const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 	{
@@ -75,12 +80,12 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 
 let queryClient: QueryClient;
 
-function renderPage(initialPath = "/settings/employees") {
+function renderPage(initialPath = "/settings/employees", me = makeMe()) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
-				profile: createInMemoryProfileClient({ me: makeMe() }),
+				profile: createInMemoryProfileClient({ me }),
 				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
 				session: createInMemorySessionClient(),
 			}}
@@ -136,6 +141,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	sessionStorage.setItem("auth-access-token", "test-token");
+	vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -204,15 +210,14 @@ describe("EmployeesSettingsPage multi-select", () => {
 		expect(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" })).toBeInTheDocument();
 	});
 
-	test("selecting admin employee disables Удалить action", async () => {
+	test("Удалить is enabled even when an admin is selected — the backend surfaces per-row failures", async () => {
 		renderPage();
 		const user = userEvent.setup();
 		await waitFor(() => {
 			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
 		});
-		// Иванов has role=admin → cannot delete
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" }));
-		expect(screen.getByRole("button", { name: /Удалить/ })).toBeDisabled();
+		expect(screen.getByRole("button", { name: /Удалить/ })).toBeEnabled();
 	});
 
 	test("selecting only user-role employee enables Удалить", async () => {
@@ -221,7 +226,6 @@ describe("EmployeesSettingsPage multi-select", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Петрова Мария Сергеевна")).toBeInTheDocument();
 		});
-		// Петрова has role=user → can delete
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать Петрова Мария Сергеевна" }));
 		expect(screen.getByRole("button", { name: /Удалить/ })).toBeEnabled();
 	});
@@ -231,5 +235,32 @@ describe("EmployeesSettingsPage toolbar", () => {
 	test("renders Добавить сотрудника button in the toolbar", async () => {
 		renderPage();
 		expect(screen.getByRole("button", { name: /Добавить сотрудника/i })).toBeInTheDocument();
+	});
+});
+
+describe("EmployeesSettingsPage view-only gating", () => {
+	test("view-only user clicking «Добавить сотрудника» fires a module toast and does not open the drawer", async () => {
+		const me = makeMe({
+			role: "user",
+			isWorkspaceOwner: false,
+			permissions: {
+				id: "p-1",
+				employeeId: "1",
+				procurementInquiries: "view",
+				positions: "view",
+				tasks: "view",
+				workspaceSettings: "view",
+				companies: "view",
+				employees: "view",
+				emails: "view",
+			},
+		});
+		renderPage("/settings/employees", me);
+		const user = userEvent.setup();
+		await user.click(await screen.findByRole("button", { name: /Добавить сотрудника/i }));
+		await waitFor(() => {
+			expect(toast.error).toHaveBeenCalledWith("Нет прав на редактирование в модуле «Сотрудники»");
+		});
+		expect(screen.queryByRole("dialog", { name: /пригласить/i })).not.toBeInTheDocument();
 	});
 });

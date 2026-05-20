@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type { WorkspaceSettings } from "@/data/domains/workspace-settings";
 import { useUpdateWorkspaceSettings, useWorkspaceSettings } from "@/data/use-workspace-settings";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { cn } from "@/lib/utils";
 
 const CARD_BASE = "rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-6";
@@ -37,11 +38,11 @@ function WorkspaceForm({ data }: { data: WorkspaceSettings }) {
 	const [instructions, setInstructions] = useState(data.agentInstructions);
 	const updateMutation = useUpdateWorkspaceSettings();
 	const instructionsId = useId();
+	const { guard } = useModuleGuard("workspaceSettings");
 
 	const isDirty = instructions !== data.agentInstructions;
 
-	function handleSave(e: React.FormEvent) {
-		e.preventDefault();
+	const submitSave = guard(() => {
 		updateMutation.mutate(
 			{ agentInstructions: instructions },
 			{
@@ -49,6 +50,11 @@ function WorkspaceForm({ data }: { data: WorkspaceSettings }) {
 				onError: () => toast.error("Не удалось сохранить настройки"),
 			},
 		);
+	});
+
+	function handleSave(e: React.FormEvent) {
+		e.preventDefault();
+		submitSave();
 	}
 
 	return (

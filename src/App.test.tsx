@@ -330,9 +330,11 @@ describe("ProcurementPage", () => {
 		expect(screen.getByRole("button", { name: /Добавить позиции/ })).toBeInTheDocument();
 	});
 
-	test("shows skeleton rows during initial load", () => {
+	test("shows skeleton rows during initial load", async () => {
 		renderApp();
-		expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
+		await waitFor(() => {
+			expect(screen.getAllByTestId("skeleton-row").length).toBeGreaterThan(0);
+		});
 	});
 
 	test("search filters table rows via API refetch", async () => {

@@ -18,6 +18,7 @@ import {
 } from "@/data/emails-mock-data";
 import { useAddEmail, useArchiveEmails, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatInteger, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,8 @@ function StatusLabel({ status }: { status: WorkspaceEmail["status"] }) {
 export function EmailsSettingsPage() {
 	const isMobile = useIsMobile();
 	const { emailsCreateOpen, setEmailsCreateOpen } = useSettingsOutletContext();
+	const { guard } = useModuleGuard("emails");
+
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const [searchExpanded, setSearchExpanded] = useState(false);
@@ -182,7 +185,7 @@ export function EmailsSettingsPage() {
 							type="button"
 							size="sm"
 							className="btn-cta ml-2 rounded-full border-0"
-							onClick={() => setEmailsCreateOpen(true)}
+							onClick={guard(() => setEmailsCreateOpen(true))}
 						>
 							<span>Добавить почту</span>
 						</Button>
@@ -213,19 +216,19 @@ export function EmailsSettingsPage() {
 						{
 							label: "Отключить",
 							icon: <Power data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleDisable,
+							onClick: guard(handleDisable),
 							disabled: Boolean(disableDisabledReason),
 							disabledReason: disableDisabledReason,
 						},
 						{
 							label: "Архивировать",
 							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleArchive,
+							onClick: guard(handleArchive),
 						},
 						{
 							label: "Удалить",
 							icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: handleDelete,
+							onClick: guard(handleDelete),
 							variant: "destructive",
 						},
 					]}

@@ -38,6 +38,7 @@ function renderConfirmEmail(initialEntries: string[], session: SessionClient) {
 						<Route path="/confirm-email" element={<ConfirmEmailPage />} />
 					</Route>
 					<Route path="/login" element={<div>Login Page</div>} />
+					<Route path="/" element={<div>Inquiries Page</div>} />
 					<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 				</Routes>
 			</MemoryRouter>
@@ -127,6 +128,7 @@ describe("ConfirmEmailPage", () => {
 					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
 						<Routes>
 							<Route path="/confirm-email" element={<ConfirmEmailPage />} />
+							<Route path="/" element={<div>Inquiries Page</div>} />
 							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
 						</Routes>
 					</MemoryRouter>
@@ -140,7 +142,7 @@ describe("ConfirmEmailPage", () => {
 		expect(confirmEmail).toHaveBeenCalledTimes(1);
 	});
 
-	test("redirects to /inquiries under StrictMode", async () => {
+	test("redirects to the permission-aware root under StrictMode", async () => {
 		const confirmEmail = vi
 			.fn()
 			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "x@y.z" } });
@@ -151,7 +153,7 @@ describe("ConfirmEmailPage", () => {
 					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
 						<Routes>
 							<Route path="/confirm-email" element={<ConfirmEmailPage />} />
-							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
+							<Route path="/" element={<div>Root Page</div>} />
 						</Routes>
 					</MemoryRouter>
 				</TestClientsProvider>
@@ -159,7 +161,7 @@ describe("ConfirmEmailPage", () => {
 		);
 
 		await waitFor(() => {
-			expect(screen.getByText("Inquiries Page")).toBeInTheDocument();
+			expect(screen.getByText("Root Page")).toBeInTheDocument();
 		});
 	});
 

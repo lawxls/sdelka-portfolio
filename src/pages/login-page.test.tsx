@@ -42,6 +42,7 @@ function renderLogin(initialEntries: InitialEntries = ["/login"], session: Sessi
 						<Route element={<AuthLayout />}>
 							<Route path="/login" element={<LoginPage />} />
 						</Route>
+						<Route path="/" element={<div>ProcurementInquiries Page</div>} />
 						<Route path="/inquiries" element={<div>ProcurementInquiries Page</div>} />
 						<Route path="/positions" element={<div>Positions Page</div>} />
 						<Route path="/analytics" element={<div>Analytics Page</div>} />
