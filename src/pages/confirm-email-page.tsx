@@ -25,17 +25,19 @@ export function ConfirmEmailPage() {
 	useMountEffect(() => {
 		if (!uid || !token || submitted.current) return undefined;
 		submitted.current = true;
-		confirmEmail.mutate(
-			{ uid, token },
-			{
-				onSuccess: () => {
-					navigate(INQUIRIES_PATH, { replace: true });
-				},
-				onError: (err) => {
-					const { error } = extractFormErrors(err);
-					setErrorMessage(error ?? "Произошла ошибка. Попробуйте ещё раз.");
-					setStatus("error");
-				},
+		// `mutateAsync` (not `mutate`) so the resolution survives React 19
+		// StrictMode's mount/cleanup/remount cycle — per-call callbacks passed
+		// to `mutate()` are bound to the observer that issued them and are
+		// dropped when StrictMode tears it down between effect runs, leaving
+		// the page stuck on the loading state.
+		confirmEmail.mutateAsync({ uid, token }).then(
+			() => {
+				navigate(INQUIRIES_PATH, { replace: true });
+			},
+			(err) => {
+				const { error } = extractFormErrors(err);
+				setErrorMessage(error ?? "Произошла ошибка. Попробуйте ещё раз.");
+				setStatus("error");
 			},
 		);
 		return undefined;

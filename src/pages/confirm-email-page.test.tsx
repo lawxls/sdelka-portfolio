@@ -140,6 +140,29 @@ describe("ConfirmEmailPage", () => {
 		expect(confirmEmail).toHaveBeenCalledTimes(1);
 	});
 
+	test("redirects to /inquiries under StrictMode", async () => {
+		const confirmEmail = vi
+			.fn()
+			.mockResolvedValue({ access: "fresh-access", refresh: "fresh-refresh", user: { id: "1", email: "x@y.z" } });
+		const session = buildSession({ confirmEmail });
+		render(
+			<StrictMode>
+				<TestClientsProvider queryClient={queryClient} clients={{ session }}>
+					<MemoryRouter initialEntries={["/confirm-email?uid=u&token=t"]}>
+						<Routes>
+							<Route path="/confirm-email" element={<ConfirmEmailPage />} />
+							<Route path="/inquiries" element={<div>Inquiries Page</div>} />
+						</Routes>
+					</MemoryRouter>
+				</TestClientsProvider>
+			</StrictMode>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("Inquiries Page")).toBeInTheDocument();
+		});
+	});
+
 	test("renders pending state while confirmEmail is in flight", () => {
 		// Mutation never resolves — page stays in the loading branch.
 		const confirmEmail = vi.fn().mockReturnValue(new Promise(() => {}));
