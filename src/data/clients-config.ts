@@ -10,6 +10,7 @@ import { createHttpProfileClient } from "./clients/profile-http";
 import { createHttpSessionClient } from "./clients/session-http";
 import { createHttpSubscriptionClient } from "./clients/subscription-http";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
+import { createHttpTariffsClient } from "./clients/tariffs-http";
 import { createHttpTasksClient } from "./clients/tasks-http";
 import { createHttpWorkspaceEmployeesClient } from "./clients/workspace-employees-http";
 import { createHttpWorkspaceSettingsClient } from "./clients/workspace-settings-http";
@@ -37,5 +38,6 @@ export function buildDataClients(): DataClients {
 		companyInfo: createHttpCompanyInfoClient(),
 		session: createHttpSessionClient(),
 		subscription: createHttpSubscriptionClient(),
+		tariffs: createHttpTariffsClient(),
 	};
 }

@@ -38,7 +38,10 @@ export interface ProcurementItemWire {
 	currentSupplier?: CurrentSupplierWire | null;
 }
 
-function parseDecimal<F extends number | null>(value: number | string | null | undefined, fallback: F): number | F {
+export function parseDecimal<F extends number | null>(
+	value: number | string | null | undefined,
+	fallback: F,
+): number | F {
 	if (value === null || value === undefined || value === "") return fallback;
 	if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
 	const parsed = Number(value);

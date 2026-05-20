@@ -49,4 +49,7 @@ export const keys = {
 	subscription: {
 		current: () => ["subscription"] as const,
 	},
+	tariffs: {
+		list: () => ["tariffs"] as const,
+	},
 } as const;

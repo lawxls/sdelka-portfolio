@@ -11,6 +11,7 @@ import type { ProfileClient } from "./clients/profile-client";
 import type { SessionClient } from "./clients/session-client";
 import type { SubscriptionClient } from "./clients/subscription-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
+import type { TariffsClient } from "./clients/tariffs-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
 import type { WorkspaceSettingsClient } from "./clients/workspace-settings-client";
@@ -36,6 +37,7 @@ export interface DataClients {
 	companyInfo?: CompanyInfoClient;
 	session?: SessionClient;
 	subscription?: SubscriptionClient;
+	tariffs?: TariffsClient;
 }
 
 const DataClientsContext = createContext<DataClients | null>(null);
@@ -144,4 +146,10 @@ export function useSubscriptionClient(): SubscriptionClient {
 	const { subscription } = useClients();
 	if (!subscription) throw new Error("subscription client not provided");
 	return subscription;
+}
+
+export function useTariffsClient(): TariffsClient {
+	const { tariffs } = useClients();
+	if (!tariffs) throw new Error("tariffs client not provided");
+	return tariffs;
 }
