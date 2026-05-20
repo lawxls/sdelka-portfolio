@@ -15,6 +15,21 @@ export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS)
 		return rest;
 	}
 
+	function makeRecord(payload: AddEmailPayload): MockRecord {
+		return {
+			id: nextId("email"),
+			email: payload.email,
+			status: "active",
+			type: "corporate",
+			sentCount: 0,
+			smtpHost: payload.smtpHost,
+			smtpPort: payload.smtpPort,
+			imapHost: payload.imapHost,
+			imapPort: payload.imapPort,
+			archived: false,
+		};
+	}
+
 	return {
 		async list({ archived = false }: { archived?: boolean } = {}): Promise<WorkspaceEmail[]> {
 			await delay();
@@ -23,20 +38,16 @@ export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS)
 
 		async add(payload: AddEmailPayload): Promise<WorkspaceEmail> {
 			await delay();
-			const record: MockRecord = {
-				id: nextId("email"),
-				email: payload.email,
-				status: "active",
-				type: "corporate",
-				sentCount: 0,
-				smtpHost: payload.smtpHost,
-				smtpPort: payload.smtpPort,
-				imapHost: payload.imapHost,
-				imapPort: payload.imapPort,
-				archived: false,
-			};
+			const record = makeRecord(payload);
 			store = [...store, record];
 			return toPublic(record);
+		},
+
+		async addMany(payloads: AddEmailPayload[]): Promise<WorkspaceEmail[]> {
+			await delay();
+			const created = payloads.map(makeRecord);
+			store = [...store, ...created];
+			return created.map(toPublic);
 		},
 
 		async delete(ids: string[]): Promise<void> {

@@ -16,7 +16,7 @@ import {
 	type EmailType,
 	type WorkspaceEmail,
 } from "@/data/emails-mock-data";
-import { useAddEmail, useArchiveEmails, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
+import { useAddEmails, useArchiveEmails, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatInteger, formatRussianPlural } from "@/lib/format";
@@ -48,7 +48,7 @@ export function EmailsSettingsPage() {
 	const [typeFilter, setTypeFilter] = useState<EmailType | null>(null);
 
 	const { emails, isLoading } = useEmails({ archived: archiveActive });
-	const addMutation = useAddEmail();
+	const addMutation = useAddEmails();
 	const deleteMutation = useDeleteEmails();
 	const archiveMutation = useArchiveEmails();
 	const disableMutation = useDisableEmails();
@@ -157,11 +157,15 @@ export function EmailsSettingsPage() {
 		});
 	}
 
-	function handleAdd(payload: AddEmailPayload) {
-		addMutation.mutate(payload, {
-			onSuccess: () => {
+	function handleAdd(payloads: AddEmailPayload[]) {
+		addMutation.mutate(payloads, {
+			onSuccess: (created) => {
 				setEmailsCreateOpen(false);
-				toast.success("Почта добавлена");
+				toast.success(
+					created.length === 1
+						? "Почта добавлена"
+						: `Добавлено ${formatRussianPlural(created.length, ["почта", "почты", "почт"])}`,
+				);
 			},
 			onError: () => toast.error("Не удалось добавить"),
 		});

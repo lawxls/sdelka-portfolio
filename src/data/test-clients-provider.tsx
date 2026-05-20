@@ -233,6 +233,7 @@ export function fakeEmailsClient(overrides: Partial<EmailsClient> = {}): EmailsC
 	return {
 		list: notImplemented("list"),
 		add: notImplemented("add"),
+		addMany: notImplemented("addMany"),
 		delete: notImplemented("delete"),
 		archive: notImplemented("archive"),
 		disable: notImplemented("disable"),

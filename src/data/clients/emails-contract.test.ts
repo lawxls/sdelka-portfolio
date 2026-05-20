@@ -99,6 +99,34 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
+			path: /^\/emails\/inboxes\/bulk-create\/$/,
+			respond: ({ init }) => {
+				const data = JSON.parse(init?.body as string) as AddEmailPayload[];
+				const created: WorkspaceEmail[] = [];
+				for (const payload of data) {
+					if (!payload.email) return { status: 400, body: { fieldErrors: { email: ["required"] } } };
+					counter += 1;
+					const record: Row = {
+						id: `new-${counter}`,
+						email: payload.email,
+						status: "active",
+						type: "corporate",
+						sentCount: 0,
+						smtpHost: payload.smtpHost,
+						smtpPort: payload.smtpPort,
+						imapHost: payload.imapHost,
+						imapPort: payload.imapPort,
+						archived: false,
+					};
+					store.set(record.id, record);
+					const { archived: _archived, ...publicRecord } = record;
+					created.push(publicRecord);
+				}
+				return { status: 201, body: created };
+			},
+		},
+		{
+			method: "POST",
 			path: /^\/emails\/inboxes\/bulk-delete\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
@@ -191,6 +219,18 @@ describe.each(adapters.map((make) => [make().name, make]))("EmailsClient contrac
 		const created = await client.add(VALID_PAYLOAD);
 		const emails = await client.list();
 		expect(emails.find((e) => e.id === created.id)?.email).toBe(VALID_PAYLOAD.email);
+	});
+
+	it("addMany returns one record per payload and surfaces them on list", async () => {
+		const payloads: AddEmailPayload[] = [
+			{ ...VALID_PAYLOAD, email: "first@example.com" },
+			{ ...VALID_PAYLOAD, email: "second@example.com" },
+		];
+		const created = await client.addMany(payloads);
+		expect(created.map((c) => c.email)).toEqual(["first@example.com", "second@example.com"]);
+		const emails = await client.list();
+		const addresses = emails.map((e) => e.email);
+		expect(addresses).toEqual(expect.arrayContaining(["first@example.com", "second@example.com"]));
 	});
 
 	it("delete removes the given ids", async () => {

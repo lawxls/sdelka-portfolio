@@ -36,6 +36,17 @@ export function useAddEmail() {
 	});
 }
 
+export function useAddEmails() {
+	const client = useEmailsClient();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (payloads: AddEmailPayload[]) => client.addMany(payloads),
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey: EMAILS_KEY });
+		},
+	});
+}
+
 function useEmailIdsMutation(pick: (c: EmailsClient) => (ids: string[]) => Promise<void>) {
 	const client = useEmailsClient();
 	const queryClient = useQueryClient();

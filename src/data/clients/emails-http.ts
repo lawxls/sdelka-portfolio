@@ -14,6 +14,9 @@ export function createHttpEmailsClient(http: HttpClient = defaultHttpClient): Em
 
 		add: (payload: AddEmailPayload) => http.post<WorkspaceEmail>(`/emails/inboxes/`, { body: payload }),
 
+		addMany: (payloads: AddEmailPayload[]) =>
+			http.post<WorkspaceEmail[]>(`/emails/inboxes/bulk-create/`, { body: payloads }),
+
 		delete: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-delete/`, { body: { ids } }),
 
 		archive: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-archive/`, { body: { ids } }),
