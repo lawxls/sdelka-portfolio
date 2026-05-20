@@ -37,6 +37,7 @@ export interface UpdateWorkspaceEmployeeData {
 	position?: string;
 	role?: EmployeeRole;
 	phone?: string;
+	companies?: string[];
 }
 
 export interface UpdatePermissionsData {

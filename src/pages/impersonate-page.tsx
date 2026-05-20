@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { extractFormErrors } from "@/data/auth-errors";
 import { useImpersonate } from "@/data/use-session";
 import { useMountEffect } from "@/hooks/use-mount-effect";
-import { INQUIRIES_PATH } from "@/lib/nav-items";
 
 type Status = "loading" | "error";
 
@@ -22,7 +21,7 @@ export function ImpersonatePage() {
 			{ handoff },
 			{
 				onSuccess: () => {
-					navigate(INQUIRIES_PATH, { replace: true });
+					navigate("/", { replace: true });
 				},
 				onError: (err) => {
 					const { error } = extractFormErrors(err);

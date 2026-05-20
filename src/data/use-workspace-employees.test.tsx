@@ -158,7 +158,7 @@ describe("useInviteEmployees", () => {
 			.fn()
 			.mockResolvedValueOnce([makeEmployee("1")])
 			.mockResolvedValueOnce([makeEmployee("1"), makeEmployee("2", { email: "new@example.com" })]);
-		const invite = vi.fn().mockResolvedValue(undefined);
+		const invite = vi.fn().mockResolvedValue([makeEmployee("2", { email: "new@example.com" })]);
 		const client = fakeWorkspaceEmployeesClient({ list, invite });
 
 		const { result: read } = renderHook(() => useWorkspaceEmployees(), { wrapper: wrapperFactory(client) });
@@ -223,7 +223,7 @@ describe("useDeleteWorkspaceEmployees", () => {
 			.fn()
 			.mockResolvedValueOnce([makeEmployee("1"), makeEmployee("2")])
 			.mockResolvedValueOnce([makeEmployee("2")]);
-		const deleteFn = vi.fn().mockResolvedValue(undefined);
+		const deleteFn = vi.fn().mockResolvedValue({ archived: ["1"], failed: [] });
 		const client = fakeWorkspaceEmployeesClient({ list, delete: deleteFn });
 
 		const { result: read } = renderHook(() => useWorkspaceEmployees(), { wrapper: wrapperFactory(client) });

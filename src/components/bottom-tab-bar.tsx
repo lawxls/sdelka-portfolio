@@ -1,4 +1,6 @@
 import { Link, useLocation } from "react-router";
+import { canView, canViewNavItem } from "@/data/permissions";
+import { useMe } from "@/data/use-me";
 import { useActiveTasksCount } from "@/data/use-tasks";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
@@ -18,16 +20,19 @@ function TasksCountDot({ count }: { count: number }) {
 
 export function BottomTabBar() {
 	const { pathname } = useLocation();
-	const activeTasksCount = useActiveTasksCount();
+	const { data: me } = useMe();
+	const canViewTasks = canView(me, "tasks");
+	const activeTasksCount = useActiveTasksCount({ enabled: canViewTasks });
+	const items = NAV_ITEMS.filter((item) => canViewNavItem(me, item));
 	return (
 		<nav
 			aria-label="Основная навигация"
 			className="flex shrink-0 border-t border-sidebar-border bg-sidebar md:hidden"
 			data-testid="bottom-tab-bar"
 		>
-			{NAV_ITEMS.map((item) => {
+			{items.map((item) => {
 				const { path, label, icon: Icon } = item;
-				const matchPath = "activePrefix" in item ? item.activePrefix : path;
+				const matchPath = item.activePrefix ?? path;
 				const active = pathname.startsWith(matchPath);
 				return (
 					<Link
@@ -42,7 +47,7 @@ export function BottomTabBar() {
 					>
 						<span className="relative">
 							<Icon className="size-5" aria-hidden="true" />
-							{path === "/tasks" && <TasksCountDot count={activeTasksCount} />}
+							{path === "/tasks" && canViewTasks && <TasksCountDot count={activeTasksCount} />}
 						</span>
 						<span>{label}</span>
 					</Link>

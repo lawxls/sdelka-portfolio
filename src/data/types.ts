@@ -272,7 +272,8 @@ export interface Address {
 	isMain: boolean;
 }
 
-export type PermissionLevel = "none" | "view" | "edit";
+export const PERMISSION_LEVELS = ["none", "view", "edit"] as const;
+export type PermissionLevel = (typeof PERMISSION_LEVELS)[number];
 
 export const PERMISSION_MODULE_KEYS = [
 	"procurementInquiries",

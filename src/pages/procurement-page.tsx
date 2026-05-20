@@ -34,6 +34,7 @@ import {
 } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { isoDateInDays } from "@/lib/format";
 
 const SORT_FIELDS = new Set<string>([
@@ -125,6 +126,7 @@ export function ProcurementPage() {
 	const createProcurementInquiryWithItemsMutation = useCreateProcurementInquiryWithItems();
 	const createItemsMutation = useCreateItems();
 	const exportItemsMutation = useExportItems();
+	const { guard: positionsGuard } = useModuleGuard("positions");
 
 	const isMobile = useIsMobile();
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -178,13 +180,13 @@ export function ProcurementPage() {
 		});
 	}
 
-	function handleAddPositions() {
+	const handleAddPositions = positionsGuard(() => {
 		if (isMultiCompany && !company) {
 			toast.error("Выберите компанию, чтобы добавить позиции");
 			return;
 		}
 		setDialogOpen(true);
-	}
+	});
 
 	const targetCompanyId = company ?? companies[0]?.id;
 

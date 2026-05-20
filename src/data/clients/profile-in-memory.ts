@@ -14,6 +14,18 @@ const DEFAULT_ME: CurrentEmployee = {
 	emailSignature: "",
 	dateJoined: "2024-01-15T10:00:00Z",
 	role: "admin",
+	isWorkspaceOwner: true,
+	permissions: {
+		id: "perm-me-1",
+		employeeId: "1",
+		procurementInquiries: "edit",
+		positions: "edit",
+		tasks: "edit",
+		workspaceSettings: "edit",
+		companies: "edit",
+		employees: "edit",
+		emails: "edit",
+	},
 };
 
 export interface InMemoryProfileOptions {

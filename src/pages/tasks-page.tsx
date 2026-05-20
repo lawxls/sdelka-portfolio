@@ -27,6 +27,7 @@ import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useTasksCount, useTasksList, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { getAvatarColor } from "@/lib/avatar-colors";
 import {
@@ -409,6 +410,7 @@ export function TasksPage() {
 	const searchExpanded = search.length > 0 || searchUserExpanded;
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const updateStatus = useUpdateTaskStatus();
+	const { guard: tasksGuard } = useModuleGuard("tasks");
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	function updateParams(modifier: (p: URLSearchParams) => void, replace = true) {
@@ -526,23 +528,23 @@ export function TasksPage() {
 		}
 	}
 
-	function handleArchiveSelected() {
+	const handleArchiveSelected = tasksGuard(() => {
 		const ids = [...selectedIds];
 		for (const id of ids) updateStatus.mutate({ id, status: "archived" });
 		setSelectedIds(new Set());
 		toast.success(`Архивировано ${formatRussianPlural(ids.length, ["вопрос", "вопроса", "вопросов"])}`);
-	}
+	});
 
-	function handleUnarchiveSelected() {
+	const handleUnarchiveSelected = tasksGuard(() => {
 		const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
 		for (const t of selectedTasks) {
 			updateStatus.mutate({ id: t.id, status: t.statusBeforeArchive ?? "assigned" });
 		}
 		setSelectedIds(new Set());
 		toast.success(`Разархивировано ${formatRussianPlural(selectedTasks.length, ["вопрос", "вопроса", "вопросов"])}`);
-	}
+	});
 
-	function handleArchiveRow(id: string) {
+	const handleArchiveRow = tasksGuard((id: string) => {
 		updateStatus.mutate({ id, status: "archived" });
 		setSelectedIds((prev) => {
 			if (!prev.has(id)) return prev;
@@ -550,9 +552,9 @@ export function TasksPage() {
 			next.delete(id);
 			return next;
 		});
-	}
+	});
 
-	function handleUnarchiveRow(task: Task) {
+	const handleUnarchiveRow = tasksGuard((task: Task) => {
 		updateStatus.mutate({ id: task.id, status: task.statusBeforeArchive ?? "assigned" });
 		setSelectedIds((prev) => {
 			if (!prev.has(task.id)) return prev;
@@ -560,7 +562,7 @@ export function TasksPage() {
 			next.delete(task.id);
 			return next;
 		});
-	}
+	});
 
 	function handleDownload() {
 		if (tasks.length === 0) {
