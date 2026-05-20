@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateCompanyPayload } from "@/data/domains/companies";
 import { cn } from "@/lib/utils";
+import { SURFACE_TINT } from "./create-procurement-inquiry-drawer";
 
 interface AddressFormState {
 	key: string;
@@ -17,15 +18,15 @@ interface AddressFormState {
 
 interface CompanyFormState {
 	name: string;
+	inn: string;
 	website: string;
-	description: string;
 	additionalComments: string;
 }
 
 const EMPTY_COMPANY: CompanyFormState = {
 	name: "",
+	inn: "",
 	website: "",
-	description: "",
 	additionalComments: "",
 };
 
@@ -64,24 +65,29 @@ function CreationForm({
 }) {
 	const [company, setCompany] = useState<CompanyFormState>(EMPTY_COMPANY);
 	const [addresses, setAddresses] = useState<AddressFormState[]>(() => [makeEmptyAddress()]);
-	const [validatedKeys, setValidatedKeys] = useState<Set<string>>(() => new Set());
+	const [submitAttempted, setSubmitAttempted] = useState(false);
 
-	const canSubmit =
-		company.name.trim() !== "" && addresses.some((a) => a.name.trim() !== "" && a.address.trim() !== "");
+	const companyNameMissing = company.name.trim() === "";
+	const addressMissingByKey = new Map(addresses.map((a) => [a.key, a.address.trim() === ""]));
+	const hasValidAddress = addresses.some((a) => a.address.trim() !== "");
+
+	const showCompanyNameError = submitAttempted && companyNameMissing;
 
 	function handleSubmit() {
-		const validAddresses = addresses.filter((a) => a.name.trim() !== "" && a.address.trim() !== "");
-		if (validAddresses.length === 0) return;
+		setSubmitAttempted(true);
+		if (companyNameMissing) return;
+		if (!hasValidAddress) return;
 
+		const primary = addresses.find((a) => a.address.trim() !== "") ?? addresses[0];
 		onSubmit({
 			name: company.name.trim(),
+			inn: company.inn.trim() || undefined,
 			website: company.website || undefined,
-			description: company.description || undefined,
 			additionalComments: company.additionalComments || undefined,
 			address: {
-				name: validAddresses[0].name,
-				address: validAddresses[0].address,
-				phone: validAddresses[0].phone,
+				name: primary.name.trim(),
+				address: primary.address.trim(),
+				phone: primary.phone,
 			},
 		});
 	}
@@ -95,15 +101,6 @@ function CreationForm({
 	}
 
 	function addAddress() {
-		const invalid = addresses.filter((a) => a.name.trim() === "" || a.address.trim() === "");
-		if (invalid.length > 0) {
-			setValidatedKeys((prev) => {
-				const next = new Set(prev);
-				for (const a of invalid) next.add(a.key);
-				return next;
-			});
-			return;
-		}
 		setAddresses((prev) => [...prev, makeEmptyAddress()]);
 	}
 
@@ -113,7 +110,7 @@ function CreationForm({
 
 	return (
 		<>
-			<SheetHeader className="border-b pb-4">
+			<SheetHeader className={cn("border-b pb-4", SURFACE_TINT)}>
 				<SheetTitle>Новая компания</SheetTitle>
 				<SheetDescription className="sr-only">Создание новой компании</SheetDescription>
 			</SheetHeader>
@@ -133,6 +130,20 @@ function CreationForm({
 								spellCheck={false}
 								autoComplete="off"
 								autoFocus
+								aria-invalid={showCompanyNameError || undefined}
+								className={cn(showCompanyNameError && "border-destructive")}
+							/>
+						</FieldRow>
+						<FieldRow label="ИНН">
+							<Input
+								value={company.inn}
+								onChange={(e) => updateCompany("inn", e.target.value)}
+								aria-label="ИНН"
+								placeholder="7701234567"
+								inputMode="numeric"
+								maxLength={12}
+								spellCheck={false}
+								autoComplete="off"
 							/>
 						</FieldRow>
 						<FieldRow label="Сайт">
@@ -143,15 +154,6 @@ function CreationForm({
 								placeholder="example.ru"
 								spellCheck={false}
 								autoComplete="off"
-							/>
-						</FieldRow>
-						<FieldRow label="Описание">
-							<Textarea
-								value={company.description}
-								onChange={(e) => updateCompany("description", e.target.value)}
-								aria-label="Описание"
-								placeholder="Оптовый поставщик мебели для офисов"
-								rows={2}
 							/>
 						</FieldRow>
 						<FieldRow label="Дополнительные комментарии для агента">
@@ -169,61 +171,61 @@ function CreationForm({
 						<h3 className="border-b border-border pb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
 							Адреса компании
 						</h3>
-						{addresses.map((addr, i) => (
-							<div key={addr.key} data-testid={`address-row-${i}`} className="rounded-lg border border-border p-3">
-								<div className="mb-2 flex items-center justify-between">
-									<span className="text-sm font-medium text-muted-foreground">Адрес {i + 1}</span>
-									{addresses.length > 1 && (
-										<Button
-											type="button"
-											variant="ghost"
-											size="icon-xs"
-											onClick={() => removeAddress(addr.key)}
-											aria-label="Удалить адрес"
-										>
-											<Trash2 aria-hidden="true" />
-										</Button>
+						{addresses.map((addr, i) => {
+							const showAddrError = submitAttempted && (addressMissingByKey.get(addr.key) ?? false);
+							return (
+								<div
+									key={addr.key}
+									data-testid={`address-row-${i}`}
+									className={cn(
+										"rounded-lg border border-border p-3",
+										SURFACE_TINT,
+										"[&_input]:bg-background dark:[&_input]:bg-input/30",
 									)}
+								>
+									<div className="mb-2 flex items-center justify-between">
+										<span className="text-sm font-medium text-muted-foreground">Адрес {i + 1}</span>
+										{addresses.length > 1 && (
+											<Button
+												type="button"
+												variant="ghost"
+												size="icon-xs"
+												onClick={() => removeAddress(addr.key)}
+												aria-label="Удалить адрес"
+											>
+												<Trash2 aria-hidden="true" />
+											</Button>
+										)}
+									</div>
+									<div className="flex flex-col gap-2">
+										<Input
+											className={cn(showAddrError && "border-destructive")}
+											placeholder="Адрес *"
+											value={addr.address}
+											onChange={(e) => updateAddress(addr.key, "address", e.target.value)}
+											aria-label="Адрес"
+											aria-invalid={showAddrError || undefined}
+											spellCheck={false}
+											autoComplete="off"
+										/>
+										<Input
+											placeholder="Название"
+											value={addr.name}
+											onChange={(e) => updateAddress(addr.key, "name", e.target.value)}
+											aria-label="Название адреса"
+											spellCheck={false}
+											autoComplete="off"
+										/>
+										<PhoneInput
+											value={addr.phone}
+											onChange={(v) => updateAddress(addr.key, "phone", v)}
+											aria-label="Телефон контактного лица"
+											placeholder="Телефон контактного лица"
+										/>
+									</div>
 								</div>
-								<div className="flex flex-col gap-2">
-									{(() => {
-										const showErrors = validatedKeys.has(addr.key);
-										const nameError = showErrors && addr.name.trim() === "";
-										const addrError = showErrors && addr.address.trim() === "";
-										return (
-											<>
-												<Input
-													className={cn(nameError && "border-destructive")}
-													placeholder="Название *"
-													value={addr.name}
-													onChange={(e) => updateAddress(addr.key, "name", e.target.value)}
-													aria-label="Название адреса"
-													aria-invalid={nameError || undefined}
-													spellCheck={false}
-													autoComplete="off"
-												/>
-												<Input
-													className={cn(addrError && "border-destructive")}
-													placeholder="Адрес *"
-													value={addr.address}
-													onChange={(e) => updateAddress(addr.key, "address", e.target.value)}
-													aria-label="Адрес"
-													aria-invalid={addrError || undefined}
-													spellCheck={false}
-													autoComplete="off"
-												/>
-											</>
-										);
-									})()}
-									<PhoneInput
-										value={addr.phone}
-										onChange={(v) => updateAddress(addr.key, "phone", v)}
-										aria-label="Телефон контактного лица"
-										placeholder="Телефон контактного лица"
-									/>
-								</div>
-							</div>
-						))}
+							);
+						})}
 
 						<Button type="button" variant="outline" size="sm" className="self-start" onClick={addAddress}>
 							<Plus aria-hidden="true" />
@@ -233,11 +235,11 @@ function CreationForm({
 				</div>
 			</div>
 
-			<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
+			<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
 				<Button type="button" variant="ghost" onClick={onCancel}>
 					Отмена
 				</Button>
-				<Button type="button" disabled={!canSubmit || isPending} onClick={handleSubmit}>
+				<Button type="button" disabled={isPending} onClick={handleSubmit}>
 					{isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
 					Создать компанию
 				</Button>
