@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes } from "react-router";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { AppLayout } from "@/components/app-layout";
 import { AuthLayout } from "@/components/auth-layout";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -37,8 +37,9 @@ function ProcurementInquiriesOutletHost() {
 
 function FirstAccessibleRedirect() {
 	const { data: me, isPending } = useMe();
+	const { search, hash } = useLocation();
 	if (isPending) return null;
-	return <Navigate to={firstAccessiblePath(me)} replace />;
+	return <Navigate to={`${firstAccessiblePath(me)}${search}${hash}`} replace />;
 }
 
 function App() {

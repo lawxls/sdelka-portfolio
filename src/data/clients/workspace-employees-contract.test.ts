@@ -150,7 +150,7 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/workspace\/employees\/$/,
+			path: /^\/workspace\/employees\/(?:\?.*)?$/,
 			respond: () => ({
 				status: 200,
 				body: {
@@ -522,5 +522,93 @@ describe("HTTP-only error branches", () => {
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });
 		const client = createHttpWorkspaceEmployeesClient(http);
 		await expect(client.list()).rejects.toBeInstanceOf(NetworkError);
+	});
+
+	it("list traverses all cursor pages and returns the concatenated rows", async () => {
+		// Two-page response: page 1 returns ids 1/2 and a `next` cursor; page 2 returns id 3 and null.
+		const pages = [
+			{
+				next: "http://test/workspace/employees/?cursor=p2",
+				previous: null,
+				results: [
+					{
+						id: "1",
+						firstName: "А",
+						lastName: "А",
+						patronymic: "",
+						position: "",
+						role: "user" as const,
+						phone: "",
+						email: "a@x.com",
+						registeredAt: null,
+						companies: [],
+					},
+					{
+						id: "2",
+						firstName: "Б",
+						lastName: "Б",
+						patronymic: "",
+						position: "",
+						role: "user" as const,
+						phone: "",
+						email: "b@x.com",
+						registeredAt: null,
+						companies: [],
+					},
+				],
+			},
+			{
+				next: null,
+				previous: "http://test/workspace/employees/",
+				results: [
+					{
+						id: "3",
+						firstName: "В",
+						lastName: "В",
+						patronymic: "",
+						position: "",
+						role: "user" as const,
+						phone: "",
+						email: "c@x.com",
+						registeredAt: null,
+						companies: [],
+					},
+				],
+			},
+		];
+		const fetchStub = vi.fn(async (input: string) => {
+			const cursor = new URL(input, "http://test").searchParams.get("cursor");
+			const page = cursor === "p2" ? pages[1] : pages[0];
+			return new Response(JSON.stringify(page), { status: 200, headers: { "content-type": "application/json" } });
+		});
+		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => "test-token" });
+		const client = createHttpWorkspaceEmployeesClient(http);
+		const list = await client.list();
+		expect(list.map((e) => e.id)).toEqual(["1", "2", "3"]);
+		expect(fetchStub).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe("in-memory adapter — owner archive guard", () => {
+	beforeEach(() => {
+		_setMockDelay(0, 0);
+	});
+
+	afterEach(() => {
+		_resetMockDelay();
+	});
+
+	it("rejects archive of an owner with cannot_archive_owner", async () => {
+		// Reuse SEED but mark employee "2" (role=user) as the workspace owner so the rejection
+		// path doesn't shadow the cannot_archive_admin rule.
+		const client = createInMemoryWorkspaceEmployeesClient({
+			seed: SEED.map((e) => structuredClone(e)),
+			ownerIds: ["2"],
+		});
+		const result = await client.delete(["2"]);
+		expect(result.archived).toEqual([]);
+		expect(result.failed).toEqual([{ id: "2", code: "cannot_archive_owner" }]);
+		const list = await client.list();
+		expect(list.find((e) => e.id === "2")).toBeDefined();
 	});
 });

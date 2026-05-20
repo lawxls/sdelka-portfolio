@@ -34,6 +34,10 @@ export interface InMemoryWorkspaceEmployeesOptions {
 	 * Defaults to a no-op `() => []` so tests don't need to wire it. Production
 	 * wires this to the active CompaniesClient via `clients-config.ts`. */
 	getCompanySummaries?: GetCompanySummariesByIds;
+	/** Employee IDs that map to the workspace owner. `delete()` rejects these
+	 * with `cannot_archive_owner` — mirrors the backend, where ownership lives
+	 * on a separate `WorkspaceMembership` row not exposed in this domain. */
+	ownerIds?: ReadonlyArray<string>;
 }
 
 /**
@@ -52,6 +56,7 @@ export function createInMemoryWorkspaceEmployeesClient(
 	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
 	let idCounter = 1000;
 	const getCompanySummaries: GetCompanySummariesByIds = options?.getCompanySummaries ?? (async () => []);
+	const ownerIds = new Set<string>(options?.ownerIds ?? []);
 	function nextEmployeeId(): string {
 		idCounter += 1;
 		return String(idCounter);
@@ -136,6 +141,10 @@ export function createInMemoryWorkspaceEmployeesClient(
 				const existing = store.find((e) => e.id === id);
 				if (!existing) {
 					failed.push({ id, code: "not_found" });
+					continue;
+				}
+				if (ownerIds.has(id)) {
+					failed.push({ id, code: "cannot_archive_owner" });
 					continue;
 				}
 				if (existing.role === "admin") {

@@ -135,7 +135,7 @@ export function EmployeesSettingsPage() {
 				}
 				for (const failure of result.failed) {
 					if (failure.code === "cannot_archive_owner") {
-						toast.error("Владелец пространства");
+						toast.error("Нельзя архивировать владельца рабочего пространства");
 					} else if (failure.code === "cannot_archive_admin") {
 						toast.error("Сначала измените роль на «Пользователь»");
 					}
