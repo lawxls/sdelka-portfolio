@@ -20,7 +20,6 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		name: `Company ${id}`,
 		inn: "",
 		website: "",
-		description: "",
 		additionalComments: "",
 		isMain: false,
 		cardFile: null,

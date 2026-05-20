@@ -94,7 +94,6 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 				name: data.name,
 				inn: data.inn ?? "",
 				website: data.website ?? "",
-				description: data.description ?? "",
 				additionalComments: data.additionalComments ?? "",
 				isMain: false,
 				cardFile: null,

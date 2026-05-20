@@ -186,7 +186,7 @@ function CompanyDrawerContent({
 	);
 }
 
-type InfoFormState = { name: string; website: string; description: string };
+type InfoFormState = { name: string; inn: string; website: string };
 type CommentsFormState = { additionalComments: string };
 type GeneralSection = "info" | "comments" | null;
 
@@ -194,15 +194,15 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	const [editing, setEditing] = useState<GeneralSection>(null);
 	const [info, setInfo] = useState<InfoFormState>({
 		name: company.name,
+		inn: company.inn,
 		website: company.website,
-		description: company.description,
 	});
 	const [comments, setComments] = useState<CommentsFormState>({ additionalComments: company.additionalComments });
 
 	const updateMutation = useUpdateCompany(companyId);
 
 	function handleEditInfo() {
-		setInfo({ name: company.name, website: company.website, description: company.description });
+		setInfo({ name: company.name, inn: company.inn, website: company.website });
 		setEditing("info");
 	}
 
@@ -212,7 +212,7 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	}
 
 	function infoDirty(): boolean {
-		return info.name !== company.name || info.website !== company.website || info.description !== company.description;
+		return info.name !== company.name || info.inn !== company.inn || info.website !== company.website;
 	}
 
 	function commentsDirty(): boolean {
@@ -222,8 +222,8 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	function handleSaveInfo() {
 		const data: UpdateCompanyData = {};
 		if (info.name !== company.name) data.name = info.name;
+		if (info.inn !== company.inn) data.inn = info.inn;
 		if (info.website !== company.website) data.website = info.website;
-		if (info.description !== company.description) data.description = info.description;
 		if (Object.keys(data).length === 0) {
 			setEditing(null);
 			return;
@@ -273,6 +273,22 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 						)}
 					</FieldCard>
 
+					<FieldCard label="ИНН" span="full">
+						{isEditingInfo ? (
+							<Input
+								aria-label="ИНН"
+								value={info.inn}
+								onChange={(e) => setInfo((p) => ({ ...p, inn: e.target.value }))}
+								inputMode="numeric"
+								maxLength={12}
+								spellCheck={false}
+								autoComplete="off"
+							/>
+						) : (
+							<ValueText value={company.inn} />
+						)}
+					</FieldCard>
+
 					<FieldCard label="Сайт" span="full">
 						{isEditingInfo ? (
 							<Input
@@ -284,19 +300,6 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 							/>
 						) : (
 							<ValueText value={company.website} />
-						)}
-					</FieldCard>
-
-					<FieldCard label="Описание" span="full">
-						{isEditingInfo ? (
-							<Textarea
-								aria-label="Описание"
-								value={info.description}
-								onChange={(e) => setInfo((p) => ({ ...p, description: e.target.value }))}
-								autoComplete="off"
-							/>
-						) : (
-							<ValueText value={company.description} />
 						)}
 					</FieldCard>
 				</CardGrid>

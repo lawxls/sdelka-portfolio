@@ -97,7 +97,6 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 			const body: Record<string, unknown> = { name: data.name };
 			if (data.inn !== undefined) body.inn = data.inn;
 			if (data.website !== undefined) body.website = data.website;
-			if (data.description !== undefined) body.description = data.description;
 			if (data.additionalComments !== undefined) body.additionalComments = data.additionalComments;
 			const created = await http.post<Company>(`/companies/`, { body });
 			const address = await http.post<DrfAddress>(`/companies/addresses/`, {

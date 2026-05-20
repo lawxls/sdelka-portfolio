@@ -81,7 +81,6 @@ const TEST_COMPANIES: Company[] = [
 		name: "Тестовая компания",
 		inn: "",
 		website: "",
-		description: "",
 		additionalComments: "",
 		isMain: true,
 		cardFile: null,

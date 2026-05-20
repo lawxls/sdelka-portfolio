@@ -325,7 +325,6 @@ export interface Company {
 	name: string;
 	inn: string;
 	website: string;
-	description: string;
 	additionalComments: string;
 	isMain: boolean;
 	cardFile: string | null;

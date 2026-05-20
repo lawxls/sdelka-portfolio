@@ -17,7 +17,6 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		name: `Company ${id}`,
 		inn: "",
 		website: "",
-		description: "",
 		additionalComments: "",
 		isMain: false,
 		cardFile: null,
@@ -55,9 +54,7 @@ beforeEach(() => {
 	queryClient = createTestQueryClient();
 	mockHostname("acme.localhost");
 	sessionStorage.setItem("auth-access-token", "test-token");
-	companiesClient = createInMemoryCompaniesClient([
-		makeStored("c1", { name: "Сделка", website: "sdelka.ru", description: "Старое" }),
-	]);
+	companiesClient = createInMemoryCompaniesClient([makeStored("c1", { name: "Сделка", website: "sdelka.ru" })]);
 });
 
 afterEach(() => {
@@ -78,14 +75,10 @@ describe("CompanyDrawer — Основная информация", () => {
 		await user.clear(nameInput);
 		await user.type(nameInput, "Сделка 2");
 
-		const descTextarea = screen.getByLabelText("Описание");
-		await user.clear(descTextarea);
-		await user.type(descTextarea, "Новое описание");
-
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
 		await waitFor(() => {
-			expect(updateSpy).toHaveBeenCalledWith("c1", { name: "Сделка 2", description: "Новое описание" });
+			expect(updateSpy).toHaveBeenCalledWith("c1", { name: "Сделка 2" });
 		});
 
 		await waitFor(() => {
@@ -94,7 +87,6 @@ describe("CompanyDrawer — Основная информация", () => {
 
 		const updated = await companiesClient.get("c1");
 		expect(updated.name).toBe("Сделка 2");
-		expect(updated.description).toBe("Новое описание");
 		expect(updated.website).toBe("sdelka.ru");
 	});
 

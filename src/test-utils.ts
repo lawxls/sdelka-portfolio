@@ -93,7 +93,6 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 		name: `Company ${id}`,
 		inn: "",
 		website: "",
-		description: "",
 		additionalComments: "",
 		isMain: false,
 		cardFile: null,

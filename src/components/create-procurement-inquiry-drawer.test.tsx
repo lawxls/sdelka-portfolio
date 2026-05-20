@@ -23,7 +23,6 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 		name,
 		inn: "",
 		website: "",
-		description: "",
 		additionalComments: "",
 		isMain: false,
 		cardFile: null,

@@ -34,7 +34,6 @@ export interface CreateCompanyPayload {
 	name: string;
 	inn?: string;
 	website?: string;
-	description?: string;
 	additionalComments?: string;
 	address: CreateAddressData;
 }
@@ -43,7 +42,6 @@ export interface UpdateCompanyData {
 	name?: string;
 	inn?: string;
 	website?: string;
-	description?: string;
 	additionalComments?: string;
 }
 
