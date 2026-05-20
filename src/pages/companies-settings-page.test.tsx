@@ -6,9 +6,9 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
 import { createTestQueryClient, makeMe, mockHostname } from "@/test-utils";
@@ -66,7 +66,7 @@ function renderPage(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: companiesClient,
-				employees: createInMemoryEmployeesClient(),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}
@@ -95,7 +95,7 @@ function renderPageWithSpy(initialPath = "/settings/companies") {
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				employees: createInMemoryEmployeesClient(),
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
 				profile: createInMemoryProfileClient({ me: makeMe() }),
 				session: createInMemorySessionClient(),
 			}}

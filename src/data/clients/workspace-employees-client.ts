@@ -29,8 +29,13 @@ export interface DeleteWorkspaceEmployeesResult {
  * returns the freshly-created `WorkspaceEmployee[]` for optimistic insertion;
  * `delete()` returns a per-row archive/failure breakdown.
  */
+export interface ListWorkspaceEmployeesFilter {
+	/** Restrict to employees belonging to this company. Maps to `?company=<UUID>`. */
+	company?: string;
+}
+
 export interface WorkspaceEmployeesClient {
-	list(): Promise<WorkspaceEmployee[]>;
+	list(filter?: ListWorkspaceEmployeesFilter): Promise<WorkspaceEmployee[]>;
 	get(id: string): Promise<WorkspaceEmployeeDetail>;
 	invite(invites: InviteEmployeeData[]): Promise<WorkspaceEmployee[]>;
 	update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail>;

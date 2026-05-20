@@ -6,11 +6,11 @@ import type { DeleteWorkspaceEmployeesResult, WorkspaceEmployeesClient } from ".
 
 export function createHttpWorkspaceEmployeesClient(http: HttpClient = defaultHttpClient): WorkspaceEmployeesClient {
 	return {
-		list: async () => {
+		list: async (filter) => {
 			const all: WorkspaceEmployee[] = [];
 			let cursor: string | null = null;
 			do {
-				const qs = buildQueryString({ cursor });
+				const qs = buildQueryString({ cursor, company: filter?.company });
 				const page = await http.get<DrfCursorPage<WorkspaceEmployee>>(`/workspace/employees/${qs}`);
 				const { items, nextCursor } = toCursorPage(page);
 				all.push(...items);

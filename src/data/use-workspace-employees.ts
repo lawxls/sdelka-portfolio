@@ -8,11 +8,12 @@ import type {
 } from "./domains/workspace-employees";
 import { toastModulePermissionDenied } from "./permission-toasts";
 
-export function useWorkspaceEmployees(options?: { enabled?: boolean }) {
+export function useWorkspaceEmployees(options?: { company?: string; enabled?: boolean }) {
 	const client = useWorkspaceEmployeesClient();
+	const company = options?.company;
 	const query = useQuery({
-		queryKey: ["workspace-employees"],
-		queryFn: () => client.list(),
+		queryKey: company === undefined ? ["workspace-employees"] : ["workspace-employees", { company }],
+		queryFn: () => client.list(company === undefined ? undefined : { company }),
 		enabled: options?.enabled ?? true,
 	});
 

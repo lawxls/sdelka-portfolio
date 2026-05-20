@@ -69,9 +69,11 @@ export function createInMemoryWorkspaceEmployeesClient(
 	}
 
 	return {
-		async list(): Promise<WorkspaceEmployee[]> {
+		async list(filter): Promise<WorkspaceEmployee[]> {
 			await delay();
-			return store.map(({ permissions: _permissions, ...rest }) => ({
+			const filtered =
+				filter?.company !== undefined ? store.filter((e) => e.companies.some((c) => c.id === filter.company)) : store;
+			return filtered.map(({ permissions: _permissions, ...rest }) => ({
 				...rest,
 				companies: rest.companies.map((c) => ({ ...c })),
 			}));

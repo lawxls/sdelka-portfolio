@@ -14,16 +14,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Address, Company, CreateAddressData, UpdateCompanyData } from "@/data/domains/companies";
+import type { EmployeeRole, PermissionLevel, PermissionModuleKey } from "@/data/domains/employees";
 import type {
-	Employee,
-	EmployeePermissions,
-	EmployeeRole,
-	EmployeeWithPermissions,
-	PermissionLevel,
-	PermissionModuleKey,
-	UpdateEmployeeData,
 	UpdatePermissionsData,
-} from "@/data/domains/employees";
+	UpdateWorkspaceEmployeeData,
+	WorkspaceEmployee,
+	WorkspaceEmployeeDetail,
+} from "@/data/domains/workspace-employees";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import {
 	useCompanyDetail,
@@ -34,13 +31,14 @@ import {
 	useUpdateCompany,
 	useUploadCompanyCard,
 } from "@/data/use-company-detail";
-import {
-	useCompanyEmployees,
-	useDeleteEmployee,
-	useUpdateEmployee,
-	useUpdateEmployeePermissions,
-} from "@/data/use-company-employees";
 import { useMe } from "@/data/use-me";
+import {
+	useDeleteWorkspaceEmployees,
+	useUpdateWorkspaceEmployee,
+	useUpdateWorkspaceEmployeePermissions,
+	useWorkspaceEmployeeDetail,
+	useWorkspaceEmployees,
+} from "@/data/use-workspace-employees";
 import { formatFullName, formatPhone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +105,7 @@ function CompanyDrawerContent({
 	onTabChange: (tab: CompanyTab) => void;
 }) {
 	const { data: company, isLoading, error } = useCompanyDetail(companyId);
-	const { data: employees } = useCompanyEmployees(companyId);
+	const { employees } = useWorkspaceEmployees({ company: companyId });
 
 	if (isLoading) {
 		return (
@@ -128,7 +126,7 @@ function CompanyDrawerContent({
 		);
 	}
 
-	const employeeCount = employees?.length ?? company.employeeCount;
+	const employeeCount = employees.length > 0 ? employees.length : company.employeeCount;
 
 	return (
 		<>
@@ -680,14 +678,14 @@ function EmployeesTab({ companyId, initialAddEmployee }: { companyId: string; in
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [inviteOpen, setInviteOpen] = useState(initialAddEmployee ?? false);
 
-	const { data: employees, isLoading, error } = useCompanyEmployees(companyId);
-	const updateMutation = useUpdateEmployee(companyId);
-	const deleteMutation = useDeleteEmployee(companyId);
-	const permsMutation = useUpdateEmployeePermissions(companyId);
+	const { employees, isLoading, error } = useWorkspaceEmployees({ company: companyId });
+	const updateMutation = useUpdateWorkspaceEmployee();
+	const deleteMutation = useDeleteWorkspaceEmployees();
+	const permsMutation = useUpdateWorkspaceEmployeePermissions();
 	const { data: me } = useMe();
 
-	function handleSave(employeeId: string, original: Employee, form: EmployeeFormState) {
-		const changed: UpdateEmployeeData = {};
+	function handleSave(employeeId: string, original: WorkspaceEmployee, form: EmployeeFormState) {
+		const changed: UpdateWorkspaceEmployeeData = {};
 		if (form.firstName !== original.firstName) changed.firstName = form.firstName;
 		if (form.lastName !== original.lastName) changed.lastName = form.lastName;
 		if (form.patronymic !== original.patronymic) changed.patronymic = form.patronymic;
@@ -699,17 +697,17 @@ function EmployeesTab({ companyId, initialAddEmployee }: { companyId: string; in
 			return;
 		}
 		if (changed.role === "admin") {
-			permsMutation.mutate({ employeeId, data: ADMIN_PERMISSIONS });
+			permsMutation.mutate({ id: employeeId, data: ADMIN_PERMISSIONS });
 		}
-		updateMutation.mutate({ employeeId, data: changed }, { onSuccess: () => setEditingId(null) });
+		updateMutation.mutate({ id: employeeId, data: changed }, { onSuccess: () => setEditingId(null) });
 	}
 
 	function handleDelete(employeeId: string) {
-		deleteMutation.mutate(employeeId, { onError: () => toast.error("Не удалось удалить сотрудника") });
+		deleteMutation.mutate([employeeId], { onError: () => toast.error("Не удалось удалить сотрудника") });
 	}
 
 	function handlePermissionChange(employeeId: string, module: PermissionModuleKey, level: PermissionLevel) {
-		permsMutation.mutate({ employeeId, data: { [module]: level } });
+		permsMutation.mutate({ id: employeeId, data: { [module]: level } });
 	}
 
 	function handleEdit(employeeId: string) {
@@ -723,7 +721,6 @@ function EmployeesTab({ companyId, initialAddEmployee }: { companyId: string; in
 	}
 
 	const isUserRole = me?.role === "user";
-	const list: EmployeeWithPermissions[] = employees ?? [];
 
 	return (
 		<div className="flex flex-col gap-3" data-testid="tab-content-employees">
@@ -737,13 +734,13 @@ function EmployeesTab({ companyId, initialAddEmployee }: { companyId: string; in
 					Не удалось загрузить сотрудников
 				</p>
 			)}
-			{list.map((emp) => (
+			{employees.map((emp) => (
 				<EmployeeCard
 					key={emp.id}
 					employee={emp}
 					isExpanded={expandedId === emp.id}
 					isEditing={editingId === emp.id}
-					canDelete={list.length > 1}
+					canDelete={employees.length > 1}
 					canEdit={!isUserRole || (me != null && emp.id === String(me.id))}
 					onToggle={() => handleToggle(emp.id)}
 					onEdit={() => handleEdit(emp.id)}
@@ -776,7 +773,7 @@ function EmployeeCard({
 	onDelete,
 	onPermissionChange,
 }: {
-	employee: Employee & { permissions: EmployeePermissions };
+	employee: WorkspaceEmployee;
 	isExpanded: boolean;
 	isEditing: boolean;
 	canDelete: boolean;
@@ -879,7 +876,7 @@ function EmployeeExpandedContent({
 	onDelete,
 	onPermissionChange,
 }: {
-	employee: Employee & { permissions: EmployeePermissions };
+	employee: WorkspaceEmployee;
 	isEditing: boolean;
 	canDelete: boolean;
 	onCancelEdit: () => void;
@@ -887,11 +884,14 @@ function EmployeeExpandedContent({
 	onDelete: () => void;
 	onPermissionChange: (module: PermissionModuleKey, level: PermissionLevel) => void;
 }) {
+	const { employee: detail, isLoading } = useWorkspaceEmployeeDetail(employee.id);
+
 	if (isEditing) {
 		return (
 			<EmployeeEditForm
 				key={`edit-${employee.id}`}
 				employee={employee}
+				detail={detail}
 				canDelete={canDelete}
 				onCancel={onCancelEdit}
 				onSave={onSave}
@@ -910,7 +910,13 @@ function EmployeeExpandedContent({
 
 			<div className="flex flex-col gap-2 border-t border-border/70 pt-3">
 				<h4 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Права доступа</h4>
-				<PermissionsMatrix permissions={employee.permissions} onChange={onPermissionChange} mode="view" />
+				{detail ? (
+					<PermissionsMatrix permissions={detail.permissions} onChange={onPermissionChange} mode="view" />
+				) : isLoading ? (
+					<div className="flex items-center py-2" data-testid={`permissions-loading-${employee.id}`}>
+						<LoaderCircle className="size-4 animate-spin text-muted-foreground" aria-label="Загрузка прав…" />
+					</div>
+				) : null}
 			</div>
 		</div>
 	);
@@ -918,13 +924,15 @@ function EmployeeExpandedContent({
 
 function EmployeeEditForm({
 	employee,
+	detail,
 	canDelete,
 	onCancel,
 	onSave,
 	onDelete,
 	onPermissionChange,
 }: {
-	employee: Employee & { permissions: EmployeePermissions };
+	employee: WorkspaceEmployee;
+	detail: WorkspaceEmployeeDetail | undefined;
 	canDelete: boolean;
 	onCancel: () => void;
 	onSave: (form: EmployeeFormState) => void;
@@ -1021,7 +1029,13 @@ function EmployeeEditForm({
 
 			<div className="flex flex-col gap-2 border-t border-border/70 pt-3">
 				<h4 className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">Права доступа</h4>
-				<PermissionsMatrix permissions={employee.permissions} onChange={onPermissionChange} mode="edit" />
+				{detail ? (
+					<PermissionsMatrix permissions={detail.permissions} onChange={onPermissionChange} mode="edit" />
+				) : (
+					<div className="flex items-center py-2" data-testid={`permissions-loading-${employee.id}`}>
+						<LoaderCircle className="size-4 animate-spin text-muted-foreground" aria-label="Загрузка прав…" />
+					</div>
+				)}
 			</div>
 
 			<div className="flex justify-between">

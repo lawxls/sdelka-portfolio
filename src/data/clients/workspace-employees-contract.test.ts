@@ -151,14 +151,17 @@ function httpAdapter(): Adapter {
 		{
 			method: "GET",
 			path: /^\/workspace\/employees\/(?:\?.*)?$/,
-			respond: () => ({
-				status: 200,
-				body: {
-					next: null,
-					previous: null,
-					results: Array.from(store.values()).map(stripPermissions),
-				},
-			}),
+			respond: ({ url }) => {
+				const search = url.includes("?") ? url.slice(url.indexOf("?")) : "";
+				const company = new URLSearchParams(search).get("company");
+				const rows = Array.from(store.values()).filter((e) =>
+					company === null ? true : e.companies.some((c) => c.id === company),
+				);
+				return {
+					status: 200,
+					body: { next: null, previous: null, results: rows.map(stripPermissions) },
+				};
+			},
 		},
 		{
 			method: "GET",
@@ -327,6 +330,16 @@ describe.each(
 	it("list exposes pending employees (registeredAt=null)", async () => {
 		const list = await client.list();
 		expect(list.some((e) => e.registeredAt == null)).toBe(true);
+	});
+
+	it("list with company filter returns only members of that company", async () => {
+		const list = await client.list({ company: "c1" });
+		expect(list.map((e) => e.id)).toEqual(["1"]);
+	});
+
+	it("list with unknown company returns empty", async () => {
+		const list = await client.list({ company: "c-missing" });
+		expect(list).toEqual([]);
 	});
 
 	it("get returns detail with permissions for known id", async () => {

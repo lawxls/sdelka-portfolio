@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryEmailsClient } from "@/data/clients/emails-in-memory";
-import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
 import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryNotificationsClient } from "@/data/clients/notifications-in-memory";
@@ -108,7 +107,6 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 			queryClient={queryClient}
 			clients={{
 				companies: companiesClient,
-				employees: createInMemoryEmployeesClient(),
 				items: itemsClient,
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),

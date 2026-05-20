@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { CompaniesClient } from "@/data/clients/companies-client";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
-import { createInMemoryEmployeesClient } from "@/data/clients/employees-in-memory";
+import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import type { Company } from "@/data/types";
 import { createTestQueryClient, mockHostname } from "@/test-utils";
@@ -39,7 +39,10 @@ function renderDrawer() {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
-			clients={{ companies: companiesClient, employees: createInMemoryEmployeesClient() }}
+			clients={{
+				companies: companiesClient,
+				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: [] }),
+			}}
 		>
 			<TooltipProvider>
 				<CompanyDrawer companyId="c1" activeTab="general" onClose={() => {}} onTabChange={() => {}} />

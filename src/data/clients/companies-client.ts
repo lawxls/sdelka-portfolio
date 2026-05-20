@@ -15,10 +15,9 @@ import type {
  * in-memory (a test fake) or HTTP (production). Hooks pull this through
  * context, so swapping adapters is a one-line change in the composition root.
  *
- * Employees + per-module permissions live on a separate `EmployeesClient` —
- * the backend's `/companies/employees/` endpoint requires an existing user FK
- * on create and has no permissions endpoint, so that domain stays in-memory
- * until the invite/user-resolution flow lands. See `employees-client.ts`.
+ * Employees + per-module permissions live on the workspace-employees seam
+ * (`WorkspaceEmployeesClient`). The per-company view in the company drawer
+ * filters that endpoint by `?company=<UUID>`.
  */
 export interface CompaniesClient {
 	list(params: ListCompaniesParams): Promise<CursorPage<CompanySummary>>;
