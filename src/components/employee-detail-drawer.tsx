@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
+import { validateNames } from "@/data/name-validation";
 import type { EmployeeRole, PermissionLevel, PermissionModuleKey } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useMe } from "@/data/use-me";
@@ -146,6 +147,12 @@ function InfoTab({ employee, canEdit }: { employee: WorkspaceEmployeeDetail; can
 	const [form, setForm] = useState<InfoFormState>(() => formStateFor(employee));
 	const updateMutation = useUpdateWorkspaceEmployee();
 
+	const nameErrors = validateNames(form, { firstName: "firstName", lastName: "lastName", patronymic: "patronymic" });
+	const hasNameError = nameErrors !== null;
+	const firstNameError = nameErrors?.firstName;
+	const lastNameError = nameErrors?.lastName;
+	const patronymicError = nameErrors?.patronymic;
+
 	function startEdit() {
 		setForm(formStateFor(employee));
 		setEditing(true);
@@ -162,6 +169,7 @@ function InfoTab({ employee, canEdit }: { employee: WorkspaceEmployeeDetail; can
 			setEditing(false);
 			return;
 		}
+		if (hasNameError) return;
 		const data: Partial<InfoFormState> = {};
 		for (const key of Object.keys(form) as (keyof InfoFormState)[]) {
 			if (form[key] !== employee[key]) (data as Record<string, unknown>)[key] = form[key];
@@ -183,45 +191,57 @@ function InfoTab({ employee, canEdit }: { employee: WorkspaceEmployeeDetail; can
 				onEdit={canEdit ? startEdit : undefined}
 				onCancel={cancelEdit}
 				onSave={handleSave}
-				saveDisabled={!dirty || updateMutation.isPending}
+				saveDisabled={!dirty || hasNameError || updateMutation.isPending}
 				isPending={updateMutation.isPending}
 			>
 				<CardGrid>
 					<FieldCard label="Фамилия">
 						{editing ? (
-							<Input
-								aria-label="Фамилия"
-								value={form.lastName}
-								onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
-								autoComplete="family-name"
-								spellCheck={false}
-							/>
+							<>
+								<Input
+									aria-label="Фамилия"
+									aria-invalid={Boolean(lastNameError) || undefined}
+									value={form.lastName}
+									onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+									autoComplete="family-name"
+									spellCheck={false}
+								/>
+								{lastNameError && <p className="mt-1 text-xs text-destructive">{lastNameError}</p>}
+							</>
 						) : (
 							<ValueText value={employee.lastName} />
 						)}
 					</FieldCard>
 					<FieldCard label="Имя">
 						{editing ? (
-							<Input
-								aria-label="Имя"
-								value={form.firstName}
-								onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
-								autoComplete="given-name"
-								spellCheck={false}
-							/>
+							<>
+								<Input
+									aria-label="Имя"
+									aria-invalid={Boolean(firstNameError) || undefined}
+									value={form.firstName}
+									onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+									autoComplete="given-name"
+									spellCheck={false}
+								/>
+								{firstNameError && <p className="mt-1 text-xs text-destructive">{firstNameError}</p>}
+							</>
 						) : (
 							<ValueText value={employee.firstName} />
 						)}
 					</FieldCard>
 					<FieldCard label="Отчество">
 						{editing ? (
-							<Input
-								aria-label="Отчество"
-								value={form.patronymic}
-								onChange={(e) => setForm((p) => ({ ...p, patronymic: e.target.value }))}
-								autoComplete="off"
-								spellCheck={false}
-							/>
+							<>
+								<Input
+									aria-label="Отчество"
+									aria-invalid={Boolean(patronymicError) || undefined}
+									value={form.patronymic}
+									onChange={(e) => setForm((p) => ({ ...p, patronymic: e.target.value }))}
+									autoComplete="off"
+									spellCheck={false}
+								/>
+								{patronymicError && <p className="mt-1 text-xs text-destructive">{patronymicError}</p>}
+							</>
 						) : (
 							<ValueText value={employee.patronymic} />
 						)}

@@ -5,6 +5,7 @@ import { FormErrorBanner } from "@/components/form-error-banner";
 import { PhoneInput } from "@/components/phone-input";
 import { Button } from "@/components/ui/button";
 import { extractFormErrors } from "@/data/auth-errors";
+import { validateNames } from "@/data/name-validation";
 import { validatePasswordWithConfirm } from "@/data/password-validation";
 import { useCheckEmail, useRegister } from "@/data/use-session";
 
@@ -50,9 +51,10 @@ export function RegisterPage() {
 		setError(null);
 		setFieldErrors({});
 
+		const nameErrors = validateNames({ firstName, lastName, patronymic });
 		const localErrors = validatePasswordWithConfirm(password, passwordConfirm);
-		if (localErrors) {
-			setFieldErrors(localErrors);
+		if (nameErrors || localErrors) {
+			setFieldErrors({ ...(nameErrors ?? {}), ...(localErrors ?? {}) });
 			return;
 		}
 

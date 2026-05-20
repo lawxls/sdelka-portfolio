@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { extractFormErrors } from "@/data/auth-errors";
 import type { CurrentEmployee, SettingsPatch } from "@/data/domains/profile";
 import type { Subscription } from "@/data/domains/subscription";
+import { validateNames } from "@/data/name-validation";
 import { useMe, useUpdateSettings } from "@/data/use-me";
 import { useRequestPasswordChange } from "@/data/use-session";
 import { useSubscription } from "@/data/use-subscription";
@@ -81,6 +82,15 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 		e.preventDefault();
 		setPhoneError(null);
 		setFieldErrors({});
+
+		const nameErrors = validateNames(
+			{ firstName, lastName, patronymic },
+			{ firstName: "firstName", lastName: "lastName", patronymic: "patronymic" },
+		);
+		if (nameErrors) {
+			setFieldErrors(nameErrors);
+			return;
+		}
 
 		if (phone && !PHONE_RE.test(phone)) {
 			setPhoneError("Неверный формат номера телефона");

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { InviteEmployeeData } from "@/data/domains/workspace-employees";
+import { validateName } from "@/data/name-validation";
 import type { CompanySummary, EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
@@ -36,6 +37,28 @@ function createEmptyCard(initialCompanyIds: string[]): InviteCard {
 		role: "user",
 		companies: [...initialCompanyIds],
 	};
+}
+
+interface CardNameErrors {
+	firstName: string | null;
+	lastName: string | null;
+	patronymic: string | null;
+}
+
+function cardNameErrors(c: InviteCard): CardNameErrors {
+	return {
+		firstName: validateName(c.firstName),
+		lastName: validateName(c.lastName),
+		patronymic: validateName(c.patronymic),
+	};
+}
+
+function cardHasInvalidName(c: InviteCard): boolean {
+	return validateName(c.firstName) !== null || validateName(c.lastName) !== null || validateName(c.patronymic) !== null;
+}
+
+function cardIsComplete(c: InviteCard): boolean {
+	return c.email.trim() !== "" && c.firstName.trim() !== "" && c.lastName.trim() !== "" && !cardHasInvalidName(c);
 }
 
 interface InviteEmployeesDrawerProps {
@@ -97,7 +120,7 @@ function InviteEmployeesForm({
 	const [validatedKeys, setValidatedKeys] = useState<Set<string>>(() => new Set());
 
 	function addCard() {
-		const invalid = cards.filter((c) => c.email.trim() === "" || c.firstName.trim() === "" || c.lastName.trim() === "");
+		const invalid = cards.filter((c) => !cardIsComplete(c));
 		if (invalid.length > 0) {
 			setValidatedKeys((prev) => {
 				const next = new Set(prev);
@@ -139,9 +162,7 @@ function InviteEmployeesForm({
 		});
 	}
 
-	const canSubmit =
-		cards.every((c) => c.email.trim() !== "" && c.firstName.trim() !== "" && c.lastName.trim() !== "") &&
-		!inviteMutation.isPending;
+	const canSubmit = cards.every(cardIsComplete) && !inviteMutation.isPending;
 
 	return (
 		<>
@@ -151,24 +172,19 @@ function InviteEmployeesForm({
 			</SheetHeader>
 
 			<div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-				{cards.map((card, idx) => {
-					const validated = validatedKeys.has(card.key);
-					return (
-						<InviteCardRow
-							key={card.key}
-							card={card}
-							cardNumber={idx + 1}
-							canRemove={cards.length > 1}
-							emailError={validated && card.email.trim() === ""}
-							firstNameError={validated && card.firstName.trim() === ""}
-							lastNameError={validated && card.lastName.trim() === ""}
-							allCompanies={allCompanies}
-							hideCompanyPicker={lockedCompanyId != null}
-							onUpdate={(patch) => updateCard(card.key, patch)}
-							onRemove={() => removeCard(card.key)}
-						/>
-					);
-				})}
+				{cards.map((card, idx) => (
+					<InviteCardRow
+						key={card.key}
+						card={card}
+						cardNumber={idx + 1}
+						canRemove={cards.length > 1}
+						validated={validatedKeys.has(card.key)}
+						allCompanies={allCompanies}
+						hideCompanyPicker={lockedCompanyId != null}
+						onUpdate={(patch) => updateCard(card.key, patch)}
+						onRemove={() => removeCard(card.key)}
+					/>
+				))}
 
 				<Button type="button" variant="outline" size="sm" className="self-start" onClick={addCard}>
 					<Plus aria-hidden="true" />
@@ -193,9 +209,7 @@ function InviteCardRow({
 	card,
 	cardNumber,
 	canRemove,
-	emailError,
-	firstNameError,
-	lastNameError,
+	validated,
 	allCompanies,
 	hideCompanyPicker,
 	onUpdate,
@@ -204,14 +218,21 @@ function InviteCardRow({
 	card: InviteCard;
 	cardNumber: number;
 	canRemove: boolean;
-	emailError: boolean;
-	firstNameError: boolean;
-	lastNameError: boolean;
+	/** True once the parent has tried to submit/add — gates inline error display. */
+	validated: boolean;
 	allCompanies: CompanySummary[];
 	hideCompanyPicker: boolean;
 	onUpdate: (patch: Partial<Omit<InviteCard, "key">>) => void;
 	onRemove: () => void;
 }) {
+	const nameErrors = validated ? cardNameErrors(card) : null;
+	const emailError = validated && card.email.trim() === "";
+	const firstNameError = validated && (card.firstName.trim() === "" || nameErrors?.firstName != null);
+	const lastNameError = validated && (card.lastName.trim() === "" || nameErrors?.lastName != null);
+	const patronymicError = nameErrors?.patronymic != null;
+	const firstNameMessage = nameErrors?.firstName ?? null;
+	const lastNameMessage = nameErrors?.lastName ?? null;
+	const patronymicMessage = nameErrors?.patronymic ?? null;
 	return (
 		<div className="flex flex-col gap-2 rounded-lg border border-border p-3" data-testid={`invite-card-${cardNumber}`}>
 			<div className="flex items-center justify-between">
@@ -244,6 +265,7 @@ function InviteCardRow({
 							spellCheck={false}
 							autoComplete="family-name"
 						/>
+						{lastNameMessage && <p className="text-xs text-destructive">{lastNameMessage}</p>}
 					</div>
 					<div className="flex flex-col gap-1">
 						<label className="text-xs text-muted-foreground" htmlFor={`firstName-${card.key}`}>
@@ -259,6 +281,7 @@ function InviteCardRow({
 							spellCheck={false}
 							autoComplete="given-name"
 						/>
+						{firstNameMessage && <p className="text-xs text-destructive">{firstNameMessage}</p>}
 					</div>
 					<div className="flex flex-col gap-1">
 						<label className="text-xs text-muted-foreground" htmlFor={`patronymic-${card.key}`}>
@@ -266,12 +289,15 @@ function InviteCardRow({
 						</label>
 						<Input
 							id={`patronymic-${card.key}`}
+							className={cn(patronymicError && "border-destructive")}
 							value={card.patronymic}
 							onChange={(e) => onUpdate({ patronymic: e.target.value })}
 							placeholder="Иванович"
+							aria-invalid={patronymicError || undefined}
 							spellCheck={false}
 							autoComplete="off"
 						/>
+						{patronymicMessage && <p className="text-xs text-destructive">{patronymicMessage}</p>}
 					</div>
 				</div>
 
