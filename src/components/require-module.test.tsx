@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter, Outlet, Route, Routes, useOutletContext } from "react-router";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import type { CurrentEmployee } from "@/data/domains/profile";
@@ -115,6 +115,32 @@ describe("RequireModule", () => {
 		});
 		renderRoute({ initialPath: "/settings/companies", me, module: "companies" });
 		expect(await screen.findByText("companies-page")).toBeInTheDocument();
+	});
+
+	test("forwards parent outlet context to children", async () => {
+		const me = makeMe();
+		queryClient.setQueryData(["me"], me);
+		function Parent() {
+			return <Outlet context={{ marker: "from-parent" }} />;
+		}
+		function Child() {
+			const ctx = useOutletContext<{ marker: string }>();
+			return <div>ctx:{ctx?.marker ?? "none"}</div>;
+		}
+		render(
+			<TestClientsProvider queryClient={queryClient} clients={{ profile: createInMemoryProfileClient({ me }) }}>
+				<MemoryRouter initialEntries={["/settings/companies"]}>
+					<Routes>
+						<Route element={<Parent />}>
+							<Route element={<RequireModule module="companies" />}>
+								<Route path="/settings/companies" element={<Child />} />
+							</Route>
+						</Route>
+					</Routes>
+				</MemoryRouter>
+			</TestClientsProvider>,
+		);
+		expect(await screen.findByText("ctx:from-parent")).toBeInTheDocument();
 	});
 
 	test("gates the nested detail route when the parent module is hidden", async () => {
