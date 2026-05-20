@@ -25,6 +25,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",
@@ -135,6 +136,7 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 				const company: Company = {
 					id,
 					name: data.name,
+					inn: data.inn ?? "",
 					website: data.website ?? "",
 					description: data.description ?? "",
 					additionalComments: data.additionalComments ?? "",

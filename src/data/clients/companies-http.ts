@@ -95,6 +95,7 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 
 		async create(data: CreateCompanyPayload): Promise<Company> {
 			const body: Record<string, unknown> = { name: data.name };
+			if (data.inn !== undefined) body.inn = data.inn;
 			if (data.website !== undefined) body.website = data.website;
 			if (data.description !== undefined) body.description = data.description;
 			if (data.additionalComments !== undefined) body.additionalComments = data.additionalComments;

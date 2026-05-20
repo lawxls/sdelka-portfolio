@@ -323,6 +323,7 @@ export interface Employee {
 export interface Company {
 	id: string;
 	name: string;
+	inn: string;
 	website: string;
 	description: string;
 	additionalComments: string;

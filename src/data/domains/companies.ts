@@ -32,6 +32,7 @@ export interface CreateAddressData {
 
 export interface CreateCompanyPayload {
 	name: string;
+	inn?: string;
 	website?: string;
 	description?: string;
 	additionalComments?: string;
@@ -40,6 +41,7 @@ export interface CreateCompanyPayload {
 
 export interface UpdateCompanyData {
 	name?: string;
+	inn?: string;
 	website?: string;
 	description?: string;
 	additionalComments?: string;

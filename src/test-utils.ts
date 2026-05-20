@@ -91,6 +91,7 @@ export function makeCompanyDetail(id: string, overrides: Partial<Company> = {}):
 	return {
 		id,
 		name: `Company ${id}`,
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",

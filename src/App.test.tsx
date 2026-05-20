@@ -80,6 +80,7 @@ const TEST_COMPANIES: Company[] = [
 	{
 		id: "company-1",
 		name: "Тестовая компания",
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",

@@ -21,6 +21,7 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 	return {
 		id,
 		name,
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",

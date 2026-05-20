@@ -18,6 +18,7 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",

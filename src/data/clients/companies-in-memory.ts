@@ -92,6 +92,7 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 			const company: Company = {
 				id: nextId("company"),
 				name: data.name,
+				inn: data.inn ?? "",
 				website: data.website ?? "",
 				description: data.description ?? "",
 				additionalComments: data.additionalComments ?? "",

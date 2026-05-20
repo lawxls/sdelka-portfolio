@@ -15,6 +15,7 @@ function makeCompanyDoc(id: string, name: string): Company {
 	return {
 		id,
 		name,
+		inn: "",
 		website: "",
 		description: "",
 		additionalComments: "",
