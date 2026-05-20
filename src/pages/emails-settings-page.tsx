@@ -16,7 +16,7 @@ import {
 	type EmailType,
 	type WorkspaceEmail,
 } from "@/data/emails-mock-data";
-import { useAddEmail, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
+import { useAddEmail, useArchiveEmails, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { formatInteger, formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -37,11 +37,6 @@ function StatusLabel({ status }: { status: WorkspaceEmail["status"] }) {
 export function EmailsSettingsPage() {
 	const isMobile = useIsMobile();
 	const { emailsCreateOpen, setEmailsCreateOpen } = useSettingsOutletContext();
-	const { emails, isLoading } = useEmails();
-	const addMutation = useAddEmail();
-	const deleteMutation = useDeleteEmails();
-	const disableMutation = useDisableEmails();
-
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const [searchExpanded, setSearchExpanded] = useState(false);
@@ -49,8 +44,13 @@ export function EmailsSettingsPage() {
 	const [statusFilter, setStatusFilter] = useState<EmailStatus | null>(null);
 	const [typeFilter, setTypeFilter] = useState<EmailType | null>(null);
 
+	const { emails, isLoading } = useEmails({ archived: archiveActive });
+	const addMutation = useAddEmail();
+	const deleteMutation = useDeleteEmails();
+	const archiveMutation = useArchiveEmails();
+	const disableMutation = useDisableEmails();
+
 	const visibleEmails = useMemo(() => {
-		if (archiveActive) return [];
 		const needle = search.toLowerCase();
 		return emails.filter(
 			(e) =>
@@ -58,7 +58,7 @@ export function EmailsSettingsPage() {
 				(statusFilter == null || e.status === statusFilter) &&
 				(typeFilter == null || e.type === typeFilter),
 		);
-	}, [emails, search, archiveActive, statusFilter, typeFilter]);
+	}, [emails, search, statusFilter, typeFilter]);
 
 	const allSelected = visibleEmails.length > 0 && visibleEmails.every((e) => selected.has(e.id));
 	const someSelected = selected.size > 0;
@@ -143,9 +143,15 @@ export function EmailsSettingsPage() {
 	}
 
 	function handleArchive() {
-		const count = selected.size;
-		clearSelection();
-		toast.success(`Архивировано ${formatRussianPlural(count, ["почта", "почты", "почт"])}`);
+		const ids = Array.from(selected);
+		if (ids.length === 0) return;
+		archiveMutation.mutate(ids, {
+			onSuccess: () => {
+				clearSelection();
+				toast.success(`Архивировано ${formatRussianPlural(ids.length, ["почта", "почты", "почт"])}`);
+			},
+			onError: () => toast.error("Не удалось архивировать"),
+		});
 	}
 
 	function handleAdd(payload: AddEmailPayload) {
@@ -162,6 +168,8 @@ export function EmailsSettingsPage() {
 		someSelected && !Array.from(selected).some((id) => emails.find((e) => e.id === id)?.status === "active")
 			? "Выбранные почты уже отключены"
 			: undefined;
+
+	const emptyMessage = search ? "Ничего не нашли" : archiveActive ? "В архиве пусто" : "Пока нет добавленных почт";
 
 	return (
 		<>
@@ -222,9 +230,7 @@ export function EmailsSettingsPage() {
 						},
 					]}
 				/>
-				{archiveActive ? (
-					<TableEmptyState message="В архиве пусто" />
-				) : isMobile ? (
+				{isMobile ? (
 					<div className="flex flex-col gap-3 p-4">
 						{visibleEmails.map((email, index) => {
 							const isSelected = selected.has(email.id);
@@ -265,9 +271,7 @@ export function EmailsSettingsPage() {
 								</article>
 							);
 						})}
-						{!isLoading && visibleEmails.length === 0 && (
-							<TableEmptyState message={search ? "Ничего не нашли" : "Пока нет добавленных почт"} />
-						)}
+						{!isLoading && visibleEmails.length === 0 && <TableEmptyState message={emptyMessage} />}
 					</div>
 				) : (
 					<table className="w-full text-sm">
@@ -320,7 +324,7 @@ export function EmailsSettingsPage() {
 							{!isLoading && visibleEmails.length === 0 && (
 								<tr>
 									<td colSpan={5} className="px-lg py-10 text-center text-muted-foreground">
-										{search ? "Ничего не нашли" : "Пока нет добавленных почт"}
+										{emptyMessage}
 									</td>
 								</tr>
 							)}

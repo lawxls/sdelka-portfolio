@@ -3,26 +3,27 @@ import { delay, nextId } from "../mock-utils";
 import { SEED_EMAILS } from "../seeds/emails";
 import type { EmailsClient } from "./emails-client";
 
-/**
- * Build a fresh in-memory emails adapter with isolated state. The emails
- * domain has no cross-entity callers (nothing else mutates the inbox roster),
- * so closure isolation is the cleanest fit — a test that seeds with `[]` gets
- * a clean slate without any reach-in to a module-level singleton.
- *
- * Production composition root passes the default seed; tests pass their own.
- */
+interface MockRecord extends WorkspaceEmail {
+	archived: boolean;
+}
+
 export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS): EmailsClient {
-	let store: WorkspaceEmail[] = seed.map((e) => ({ ...e }));
+	let store: MockRecord[] = seed.map((e) => ({ ...e, archived: false }));
+
+	function toPublic(r: MockRecord): WorkspaceEmail {
+		const { archived: _archived, ...rest } = r;
+		return rest;
+	}
 
 	return {
-		async list(): Promise<WorkspaceEmail[]> {
+		async list({ archived = false }: { archived?: boolean } = {}): Promise<WorkspaceEmail[]> {
 			await delay();
-			return store.map((e) => ({ ...e }));
+			return store.filter((e) => e.archived === archived).map(toPublic);
 		},
 
 		async add(payload: AddEmailPayload): Promise<WorkspaceEmail> {
 			await delay();
-			const record: WorkspaceEmail = {
+			const record: MockRecord = {
 				id: nextId("email"),
 				email: payload.email,
 				status: "active",
@@ -32,15 +33,22 @@ export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS)
 				smtpPort: payload.smtpPort,
 				imapHost: payload.imapHost,
 				imapPort: payload.imapPort,
+				archived: false,
 			};
 			store = [...store, record];
-			return { ...record };
+			return toPublic(record);
 		},
 
 		async delete(ids: string[]): Promise<void> {
 			await delay();
 			const toRemove = new Set(ids);
 			store = store.filter((e) => !toRemove.has(e.id));
+		},
+
+		async archive(ids: string[]): Promise<void> {
+			await delay();
+			const toArchive = new Set(ids);
+			store = store.map((e) => (toArchive.has(e.id) ? { ...e, archived: true } : e));
 		},
 
 		async disable(ids: string[]): Promise<void> {

@@ -12,9 +12,6 @@ import { createInMemoryEmailsClient } from "./emails-in-memory";
  * in-memory adapter and once against the HTTP adapter (with `fetch` stubbed at
  * the network layer). Both runs assert identical observable behavior so the
  * adapters are interchangeable from a hook's point of view.
- *
- * Emails' list shape is a flat `WorkspaceEmail[]` — not `CursorPage<T>`,
- * since the workspace inbox roster is a small bounded list.
  */
 
 const SEED: WorkspaceEmail[] = [
@@ -51,24 +48,39 @@ interface HttpRoute {
 }
 
 function httpAdapter(): Adapter {
-	const store = new Map<string, WorkspaceEmail>(SEED.map((e) => [e.id, { ...e }]));
+	interface Row extends WorkspaceEmail {
+		archived: boolean;
+	}
+	const store = new Map<string, Row>(SEED.map((e) => [e.id, { ...e, archived: false }]));
 	let counter = 0;
+
+	function rowsFor(archived: boolean): WorkspaceEmail[] {
+		return Array.from(store.values())
+			.filter((r) => r.archived === archived)
+			.map(({ archived: _archived, ...rest }) => rest);
+	}
 
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: /^\/workspace\/emails$/,
-			respond: () => ({ status: 200, body: Array.from(store.values()) }),
+			path: /^\/emails\/inboxes\/(?:\?archived=true)?$/,
+			respond: ({ url }) => {
+				const archived = new URL(url, "http://test").searchParams.get("archived") === "true";
+				return {
+					status: 200,
+					body: { next: null, previous: null, results: rowsFor(archived) },
+				};
+			},
 		},
 		{
 			method: "POST",
-			path: /^\/workspace\/emails$/,
+			path: /^\/emails\/inboxes\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as AddEmailPayload;
 				if (!data.email) return { status: 400, body: { fieldErrors: { email: ["required"] } } };
 				if (data.email === "__conflict__@example.com") return { status: 409, body: { detail: "email already exists" } };
 				counter += 1;
-				const record: WorkspaceEmail = {
+				const record: Row = {
 					id: `new-${counter}`,
 					email: data.email,
 					status: "active",
@@ -78,14 +90,16 @@ function httpAdapter(): Adapter {
 					smtpPort: data.smtpPort,
 					imapHost: data.imapHost,
 					imapPort: data.imapPort,
+					archived: false,
 				};
 				store.set(record.id, record);
-				return { status: 201, body: record };
+				const { archived: _archived, ...publicRecord } = record;
+				return { status: 201, body: publicRecord };
 			},
 		},
 		{
 			method: "POST",
-			path: /^\/workspace\/emails\/delete$/,
+			path: /^\/emails\/inboxes\/bulk-delete\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
 				for (const id of data.ids) store.delete(id);
@@ -94,7 +108,19 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "POST",
-			path: /^\/workspace\/emails\/disable$/,
+			path: /^\/emails\/inboxes\/bulk-archive\/$/,
+			respond: ({ init }) => {
+				const data = JSON.parse(init?.body as string) as { ids: string[] };
+				for (const id of data.ids) {
+					const existing = store.get(id);
+					if (existing) store.set(id, { ...existing, archived: true });
+				}
+				return { status: 204 };
+			},
+		},
+		{
+			method: "POST",
+			path: /^\/emails\/inboxes\/bulk-disable\/$/,
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string) as { ids: string[] };
 				for (const id of data.ids) {
@@ -177,6 +203,16 @@ describe.each(adapters.map((make) => [make().name, make]))("EmailsClient contrac
 		await client.delete([]);
 		const emails = await client.list();
 		expect(emails.map((e) => e.id).sort()).toEqual(["e1", "e2", "e3"]);
+	});
+
+	it("archive hides the given ids from the active list and surfaces them in the archive view", async () => {
+		await client.archive(["e1"]);
+		const active = await client.list();
+		expect(active.find((e) => e.id === "e1")).toBeUndefined();
+		expect(active.map((e) => e.id).sort()).toEqual(["e2", "e3"]);
+
+		const archived = await client.list({ archived: true });
+		expect(archived.map((e) => e.id)).toEqual(["e1"]);
 	});
 
 	it("disable flips status on the given ids and leaves others untouched", async () => {
