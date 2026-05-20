@@ -907,6 +907,8 @@ function EmployeeExpandedContent({
 	return (
 		<div className="flex flex-col gap-4">
 			<dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+				<EmployeeViewRow label="Должность" value={employee.position} />
+				<EmployeeViewRow label="Роль" value={ROLE_LABELS[employee.role]} />
 				<EmployeeViewRow label="Электронная почта" value={employee.email} />
 				<EmployeeViewRow label="Телефон" value={formatPhone(employee.phone)} numeric />
 			</dl>
