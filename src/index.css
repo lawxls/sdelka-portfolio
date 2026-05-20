@@ -52,6 +52,18 @@
 	--folder-pink: oklch(0.68 0.17 350);
 	--folder-teal: oklch(0.65 0.12 195);
 	--highlight-foreground: var(--primary);
+
+	/* CTA pill ingredients — overridden in `.dark` and re-asserted in
+	   `[data-theme="light"]` for forced-light islands inside a dark ancestor. */
+	--btn-cta-text: oklch(1 0 0);
+	--btn-cta-stroke: color-mix(in oklch, var(--primary) 94%, black 6%);
+	--btn-cta-stroke-hover: color-mix(in oklch, var(--primary) 92%, black 8%);
+	--btn-cta-sheen: rgb(255 255 255 / 0.25);
+	--btn-cta-sheen-hover: rgb(255 255 255 / 0.3);
+	--btn-cta-drop1: rgb(1 1 1 / 0.15);
+	--btn-cta-drop1-hover: rgb(1 1 1 / 0.2);
+	--btn-cta-drop2: 0 4px 4px -3px color-mix(in oklch, var(--primary) 40%, oklch(0 0 0 / 0.2));
+	--btn-cta-drop2-hover: 0 6px 8px -3px color-mix(in oklch, var(--primary) 50%, oklch(0 0 0 / 0.24));
 }
 
 .dark {
@@ -99,6 +111,18 @@
 	--folder-pink: oklch(0.74 0.14 350);
 	--folder-teal: oklch(0.72 0.1 195);
 	--highlight-foreground: oklch(0.8 0.18 var(--primary-hue));
+
+	/* Dark text on the orange gradient reads better than white; stroke flips
+	   to a primary-tinted recipe so the 1px ring is visible against dark bg. */
+	--btn-cta-text: var(--primary-foreground);
+	--btn-cta-stroke: color-mix(in oklch, var(--primary) 30%, black 70%);
+	--btn-cta-stroke-hover: color-mix(in oklch, var(--primary) 25%, black 75%);
+	--btn-cta-sheen: rgb(255 255 255 / 0.18);
+	--btn-cta-sheen-hover: rgb(255 255 255 / 0.3);
+	--btn-cta-drop1: rgb(0 0 0 / 0.45);
+	--btn-cta-drop1-hover: rgb(0 0 0 / 0.5);
+	--btn-cta-drop2: 0 4px 10px -3px color-mix(in oklch, var(--primary) 25%, transparent);
+	--btn-cta-drop2-hover: 0 8px 20px -2px color-mix(in oklch, var(--primary) 55%, transparent);
 }
 
 @theme inline {
@@ -220,8 +244,11 @@ tbody tr.negotiating-stripe:hover {
 	--stripe-row-bg: color-mix(in oklch, var(--muted) 60%, var(--background));
 }
 
-/* High-emphasis CTA — orange glossy pill. Top→bottom primary gradient with a
-   1px stroke, soft white inner top sheen, and layered drop shadows for lift. */
+/* High-emphasis CTA — orange glossy pill. Theme-varying ingredients live in
+   `--btn-cta-*` vars declared in `:root` / `.dark` / `[data-theme="light"]` so
+   a forced-light island inside `<html class="dark">` (auth pages) inherits the
+   light recipe instead of the dark stroke. The utility only assembles them.
+   Padding/gap come from the `Button` size variants, not from here. */
 @utility btn-cta {
 	background-image: linear-gradient(
 		180deg,
@@ -229,53 +256,24 @@ tbody tr.negotiating-stripe:hover {
 		var(--primary) 55%,
 		color-mix(in oklch, var(--primary) 86%, black 14%) 100%
 	);
-	color: oklch(1 0 0);
+	color: var(--btn-cta-text);
 	border: 0;
 	border-radius: 9999px;
 	font-weight: 600;
-	padding-inline: 1rem;
-	gap: 0.375rem;
-	/* Why: call sites pass `border-0`, so the 1px stroke is expressed via the
-	   first box-shadow layer (a 0/0/0/1px ring) instead of the border property. */
+	/* Call sites pass `border-0`, so the 1px stroke is expressed via the first
+	   box-shadow layer (a 0/0/0/1px ring) instead of the border property. */
 	box-shadow:
-		0 0 0 1px color-mix(in oklch, var(--primary) 94%, black 6%),
-		inset 0 4px 4px 0 rgb(255 255 255 / 0.25),
-		0 2px 4px 0 rgb(1 1 1 / 0.15),
-		0 4px 4px -3px color-mix(in oklch, var(--primary) 40%, oklch(0 0 0 / 0.2));
-
-	&:has([data-icon="inline-start"]) {
-		padding-inline-start: 0.75rem;
-	}
-
-	&:has([data-icon="inline-end"]) {
-		padding-inline-end: 0.75rem;
-	}
+		0 0 0 1px var(--btn-cta-stroke),
+		inset 0 4px 4px 0 var(--btn-cta-sheen),
+		0 2px 4px 0 var(--btn-cta-drop1),
+		var(--btn-cta-drop2);
 
 	&:hover {
 		box-shadow:
-			0 0 0 1px color-mix(in oklch, var(--primary) 92%, black 8%),
-			inset 0 4px 4px 0 rgb(255 255 255 / 0.3),
-			0 3px 6px 0 rgb(1 1 1 / 0.2),
-			0 6px 8px -3px color-mix(in oklch, var(--primary) 50%, oklch(0 0 0 / 0.24));
-	}
-
-	.dark & {
-		/* On dark bg pure-black drops disappear — replace the last layer with a
-		   primary-tinted halo so the hover intensification is actually visible.
-		   Stroke flips to a lighter primary so it reads as a rim against dark bg. */
-		box-shadow:
-			0 0 0 1px color-mix(in oklch, var(--primary) 30%, black 70%),
-			inset 0 4px 4px 0 rgb(255 255 255 / 0.18),
-			0 2px 4px 0 rgb(0 0 0 / 0.45),
-			0 4px 10px -3px color-mix(in oklch, var(--primary) 25%, transparent);
-	}
-
-	.dark &:hover {
-		box-shadow:
-			0 0 0 1px color-mix(in oklch, var(--primary) 25%, black 75%),
-			inset 0 4px 4px 0 rgb(255 255 255 / 0.3),
-			0 3px 6px 0 rgb(0 0 0 / 0.5),
-			0 8px 20px -2px color-mix(in oklch, var(--primary) 55%, transparent);
+			0 0 0 1px var(--btn-cta-stroke-hover),
+			inset 0 4px 4px 0 var(--btn-cta-sheen-hover),
+			0 3px 6px 0 var(--btn-cta-drop1-hover),
+			var(--btn-cta-drop2-hover);
 	}
 }
 
@@ -340,6 +338,18 @@ tbody tr.negotiating-stripe:hover {
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
 	--ring: oklch(0.65 0.2 var(--primary-hue));
+	/* Mirror `btn-cta`'s light defaults so a forced-light island inside a
+	   `.dark` ancestor (e.g. auth pages) doesn't inherit the near-black
+	   dark-mode stroke onto an orange button on a white background. */
+	--btn-cta-text: oklch(1 0 0);
+	--btn-cta-stroke: color-mix(in oklch, var(--primary) 94%, black 6%);
+	--btn-cta-stroke-hover: color-mix(in oklch, var(--primary) 92%, black 8%);
+	--btn-cta-sheen: rgb(255 255 255 / 0.25);
+	--btn-cta-sheen-hover: rgb(255 255 255 / 0.3);
+	--btn-cta-drop1: rgb(1 1 1 / 0.15);
+	--btn-cta-drop1-hover: rgb(1 1 1 / 0.2);
+	--btn-cta-drop2: 0 4px 4px -3px color-mix(in oklch, var(--primary) 40%, oklch(0 0 0 / 0.2));
+	--btn-cta-drop2-hover: 0 6px 8px -3px color-mix(in oklch, var(--primary) 50%, oklch(0 0 0 / 0.24));
 }
 
 @layer base {
