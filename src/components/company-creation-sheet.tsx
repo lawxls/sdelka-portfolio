@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateCompanyPayload } from "@/data/domains/companies";
+import { SURFACE_TINT } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
-import { SURFACE_TINT } from "./create-procurement-inquiry-drawer";
 
 interface AddressFormState {
 	key: string;

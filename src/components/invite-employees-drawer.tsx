@@ -1,6 +1,7 @@
-import { ChevronDown, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, LoaderCircle, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BulkCard } from "@/components/ui/bulk-card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import type { CompanySummary, EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useInviteEmployees } from "@/data/use-workspace-employees";
+import { SURFACE_TINT } from "@/lib/class-presets";
 import { cn } from "@/lib/utils";
 
 interface InviteCard {
@@ -86,7 +88,7 @@ function InviteEmployeesDrawerContent({ lockedCompanyId, onClose }: { lockedComp
 	if (isLoading) {
 		return (
 			<>
-				<SheetHeader className="border-b pb-4">
+				<SheetHeader className={cn("border-b pb-4", SURFACE_TINT)}>
 					<SheetTitle>Добавить сотрудника</SheetTitle>
 					<SheetDescription className="sr-only">Приглашение сотрудников</SheetDescription>
 				</SheetHeader>
@@ -192,7 +194,7 @@ function InviteEmployeesForm({
 				</Button>
 			</div>
 
-			<SheetFooter className="sticky bottom-0 flex-row justify-between border-t bg-background">
+			<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
 				<Button type="button" variant="ghost" onClick={onClose}>
 					Отмена
 				</Button>
@@ -234,21 +236,13 @@ function InviteCardRow({
 	const lastNameMessage = nameErrors?.lastName ?? null;
 	const patronymicMessage = nameErrors?.patronymic ?? null;
 	return (
-		<div className="flex flex-col gap-2 rounded-lg border border-border p-3" data-testid={`invite-card-${cardNumber}`}>
-			<div className="flex items-center justify-between">
-				<span className="text-xs font-medium text-muted-foreground">Сотрудник {cardNumber}</span>
-				{canRemove && (
-					<button
-						type="button"
-						onClick={onRemove}
-						aria-label="Удалить приглашение"
-						className="relative flex size-6 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring after:absolute after:inset-[-8px] after:content-['']"
-					>
-						<Trash2 className="size-3.5" aria-hidden="true" />
-					</button>
-				)}
-			</div>
-
+		<BulkCard
+			label={`Сотрудник ${cardNumber}`}
+			canRemove={canRemove}
+			onRemove={onRemove}
+			removeAriaLabel="Удалить приглашение"
+			data-testid={`invite-card-${cardNumber}`}
+		>
 			<div className="flex flex-col gap-2">
 				<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
 					<div className="flex flex-col gap-1">
@@ -361,7 +355,7 @@ function InviteCardRow({
 					</div>
 				)}
 			</div>
-		</div>
+		</BulkCard>
 	);
 }
 

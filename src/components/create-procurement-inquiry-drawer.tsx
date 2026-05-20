@@ -57,6 +57,7 @@ import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
+import { SURFACE_TINT } from "@/lib/class-presets";
 import { formatCurrency, pluralizeRu } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CompanyCreationSheet } from "./company-creation-sheet";
@@ -92,11 +93,6 @@ const TOTAL_STEPS = 3;
 
 const DEADLINE_TOOLTIP =
 	"По истечении дедлайна запрос автоматически перейдёт в статус «Переговоры завершены». При необходимости его можно будет вернуть в работу вручную.";
-
-/** Subtle surface tint used for header, footer, and position cards — slightly darker than `--muted`
- * so chrome reads as a layer above the popover body in both themes. */
-export const SURFACE_TINT =
-	"bg-[color-mix(in_oklch,var(--muted)_99%,var(--foreground)_0.4%)] dark:bg-[color-mix(in_oklch,var(--muted)_95%,var(--foreground)_1.5%)]";
 
 function SectionGroupHeader({ title }: { title: string }) {
 	return (

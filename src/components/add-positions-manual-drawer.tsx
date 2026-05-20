@@ -14,9 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { NewItemInput } from "@/data/types";
+import { SURFACE_TINT } from "@/lib/class-presets";
 import { toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PositionCard, SURFACE_TINT } from "./create-procurement-inquiry-drawer";
+import { PositionCard } from "./create-procurement-inquiry-drawer";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import {
 	type CurrentSupplierDraft,
