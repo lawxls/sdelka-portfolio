@@ -185,6 +185,7 @@ describe("SettingsSidebar logout", () => {
 			resetPassword: () => Promise.reject(new Error("not used")),
 			requestPasswordChange: () => Promise.reject(new Error("not used")),
 			impersonate: () => Promise.reject(new Error("not used")),
+			inviteAccept: () => Promise.reject(new Error("not used")),
 		};
 		renderSidebar("/settings/profile", session);
 

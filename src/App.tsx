@@ -13,6 +13,7 @@ import { EmailsSettingsPage } from "@/pages/emails-settings-page";
 import { EmployeesSettingsPage } from "@/pages/employees-settings-page";
 import { ForgotPasswordPage } from "@/pages/forgot-password-page";
 import { ImpersonatePage } from "@/pages/impersonate-page";
+import { InviteAcceptPage } from "@/pages/invite-accept-page";
 import { LoginPage } from "@/pages/login-page";
 import { ProcurementInquiriesPage } from "@/pages/procurement-inquiries-page";
 import { ProcurementInquiryDetailPage } from "@/pages/procurement-inquiry-detail-page";
@@ -53,6 +54,7 @@ function App() {
 				<Route path="/resend-confirmation" element={<ResendConfirmationPage />} />
 				<Route path="/forgot-password" element={<ForgotPasswordPage />} />
 				<Route path="/reset-password" element={<ResetPasswordPage />} />
+				<Route path="/invite/accept" element={<InviteAcceptPage />} />
 				<Route path="/impersonate" element={<ImpersonatePage />} />
 			</Route>
 

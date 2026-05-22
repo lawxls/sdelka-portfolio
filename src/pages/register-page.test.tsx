@@ -161,6 +161,7 @@ describe("RegisterPage", () => {
 			resetPassword: vi.fn(),
 			requestPasswordChange: vi.fn(),
 			impersonate: vi.fn(),
+			inviteAccept: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -208,6 +209,7 @@ describe("RegisterPage", () => {
 			resetPassword: vi.fn(),
 			requestPasswordChange: vi.fn(),
 			impersonate: vi.fn(),
+			inviteAccept: vi.fn(),
 		};
 
 		renderRegister({ session });
@@ -247,6 +249,7 @@ describe("RegisterPage", () => {
 			resetPassword: vi.fn(),
 			requestPasswordChange: vi.fn(),
 			impersonate: vi.fn(),
+			inviteAccept: vi.fn(),
 		};
 
 		renderRegister({ session });

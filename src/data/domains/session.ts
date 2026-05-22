@@ -67,6 +67,16 @@ export interface ResetPasswordInput {
 	new_password_confirm: string;
 }
 
+export interface InviteAcceptInput {
+	uid: string;
+	token: string;
+	password: string;
+	password_confirm: string;
+}
+
+/** invite-accept auto-logs the user in: same shape as `LoginResult`. */
+export type InviteAcceptResult = LoginResult;
+
 export interface ImpersonateInput {
 	handoff: string;
 }

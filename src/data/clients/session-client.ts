@@ -5,6 +5,8 @@ import type {
 	ForgotPasswordInput,
 	ImpersonateInput,
 	ImpersonateResult,
+	InviteAcceptInput,
+	InviteAcceptResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -34,6 +36,9 @@ export interface SessionClient {
 	forgotPassword(input: ForgotPasswordInput): Promise<void>;
 	/** User is NOT auto-logged-in — they re-enter via /login. */
 	resetPassword(input: ResetPasswordInput): Promise<void>;
+	/** Sets the password on an admin-invited account, activates it, and issues a
+	 * fresh JWT pair so the invitee lands signed in. */
+	inviteAccept(input: InviteAcceptInput): Promise<InviteAcceptResult>;
 	/** Authed-only: backend pulls the email from the session and emails a
 	 * reset link that lands on /reset-password. */
 	requestPasswordChange(): Promise<void>;

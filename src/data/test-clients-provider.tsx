@@ -304,6 +304,7 @@ export function fakeSessionClient(overrides: Partial<SessionClient> = {}): Sessi
 		resendConfirmation: notImplemented("resendConfirmation"),
 		forgotPassword: notImplemented("forgotPassword"),
 		resetPassword: notImplemented("resetPassword"),
+		inviteAccept: notImplemented("inviteAccept"),
 		requestPasswordChange: notImplemented("requestPasswordChange"),
 		impersonate: notImplemented("impersonate"),
 		...overrides,

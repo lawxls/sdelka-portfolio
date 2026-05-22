@@ -5,6 +5,8 @@ import type {
 	ForgotPasswordInput,
 	ImpersonateInput,
 	ImpersonateResult,
+	InviteAcceptInput,
+	InviteAcceptResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -31,6 +33,9 @@ interface SessionUserSeed {
 	 * `resetPassword`. Same uid-as-stringified-id convention as confirmation
 	 * tokens — keeps the round-trip drivable from a test. */
 	passwordResetToken?: string;
+	/** Pending invite-accept token. Seeded for users created via admin invite;
+	 * consumed by `inviteAccept`, which sets the password and activates them. */
+	inviteToken?: string;
 }
 
 const DEFAULT_SEED: SessionUserSeed[] = [
@@ -150,6 +155,25 @@ export function createInMemorySessionClient(options: InMemorySessionOptions = {}
 			if (match) {
 				match.passwordResetToken = genToken();
 			}
+		},
+
+		async inviteAccept(input: InviteAcceptInput): Promise<InviteAcceptResult> {
+			await delay();
+			if (input.password !== input.password_confirm) {
+				throw new ValidationError(
+					{},
+					{ password_confirm: [{ code: "passwords_do_not_match", message: "Passwords do not match" }] },
+				);
+			}
+			const match = findByUid(input.uid);
+			if (!match || match.inviteToken !== input.token) {
+				throw new ValidationError({}, { code: "invalid_or_expired_link" });
+			}
+			match.password = input.password;
+			match.inviteToken = undefined;
+			match.verified = true;
+			refreshAvailable = true;
+			return { access: nextId("access"), refresh: nextId("refresh"), user: { ...match.user } };
 		},
 
 		async resetPassword(input: ResetPasswordInput): Promise<void> {

@@ -10,6 +10,8 @@ import type {
 	ForgotPasswordInput,
 	ImpersonateInput,
 	ImpersonateResult,
+	InviteAcceptInput,
+	InviteAcceptResult,
 	LoginInput,
 	LoginResult,
 	RegisterInput,
@@ -105,6 +107,18 @@ export function useResetPassword() {
 
 	return useMutation({
 		mutationFn: async (input: ResetPasswordInput): Promise<void> => client.resetPassword(input),
+	});
+}
+
+export function useInviteAccept() {
+	const client = useSessionClient();
+
+	return useMutation({
+		mutationFn: async (input: InviteAcceptInput): Promise<InviteAcceptResult> => {
+			const result = await client.inviteAccept(input);
+			setTokens(result.access, result.refresh);
+			return result;
+		},
 	});
 }
 

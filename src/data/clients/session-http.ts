@@ -6,6 +6,8 @@ import type {
 	ForgotPasswordInput,
 	ImpersonateInput,
 	ImpersonateResult,
+	InviteAcceptInput,
+	InviteAcceptResult,
 	LoginInput,
 	LoginResult,
 	RefreshResult,
@@ -45,6 +47,9 @@ export function createHttpSessionClient(http: HttpClient = defaultHttpClient): S
 
 		resetPassword: (input: ResetPasswordInput) =>
 			http.post<void>(`/auth/reset-password/`, { body: input, skipRefresh: true }),
+
+		inviteAccept: (input: InviteAcceptInput) =>
+			http.post<InviteAcceptResult>(`/auth/invite/accept/`, { body: input, skipRefresh: true }),
 
 		// Authed call: rides the standard 401-refresh path (no skipRefresh) — if
 		// the access token has just expired, the interceptor refreshes silently.
