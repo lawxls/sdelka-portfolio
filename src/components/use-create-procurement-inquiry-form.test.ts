@@ -343,45 +343,35 @@ describe("useCreateProcurementInquiryForm", () => {
 
 	// --- Step 3 — supplier email ---
 
-	test("seedEmail fills subject + body once based on positions and folder", () => {
+	test("applyGeneratedEmail stores subject + body and marks generated=true", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.seedEmail("Металлопрокат"));
+		act(() => result.current.applyGeneratedEmail({ subject: "Запрос КП", body: "Здравствуйте!" }));
 
-		expect(result.current.step3.subject).toContain("Металлопрокат");
-		expect(result.current.step3.body).toContain("Арматура");
+		expect(result.current.step3.subject).toBe("Запрос КП");
+		expect(result.current.step3.body).toBe("Здравствуйте!");
 		expect(result.current.step3.generated).toBe(true);
 	});
 
-	test("seedEmail is idempotent — second call doesn't overwrite", () => {
+	test("applyGeneratedEmail overwrites prior subject + body (regenerate path)", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.seedEmail("Металлопрокат"));
-		act(() => result.current.update3("subject", "Custom subject"));
-		act(() => result.current.seedEmail("Металлопрокат"));
+		act(() => result.current.applyGeneratedEmail({ subject: "v0", body: "body v0" }));
+		act(() => result.current.applyGeneratedEmail({ subject: "v1", body: "body v1" }));
 
-		expect(result.current.step3.subject).toBe("Custom subject");
+		expect(result.current.step3.subject).toBe("v1");
+		expect(result.current.step3.body).toBe("body v1");
 	});
 
-	test("regenerateEmail cycles to next variant and overwrites subject + body", () => {
+	test("toPayload defaults sendRequestsAutomatically=false and includes email when generated", () => {
 		const { result } = setup();
 		fillStep1Required(result);
-		act(() => result.current.seedEmail("Металлопрокат"));
-		const firstSubject = result.current.step3.subject;
-
-		act(() => result.current.regenerateEmail("Металлопрокат"));
-		expect(result.current.step3.subject).not.toBe(firstSubject);
-		expect(result.current.step3.regenerateIndex).toBe(1);
-	});
-
-	test("toPayload defaults sendRequestsAutomatically=false and includes email when seeded", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-		act(() => result.current.seedEmail("Металлопрокат"));
+		act(() => result.current.applyGeneratedEmail({ subject: "Запрос КП", body: "Здравствуйте!" }));
 
 		const payload = result.current.toPayload();
 		expect(payload.procurementInquiry.sendRequestsAutomatically).toBe(false);
-		expect(payload.procurementInquiry.emailSubject).toContain("Металлопрокат");
+		expect(payload.procurementInquiry.emailSubject).toBe("Запрос КП");
+		expect(payload.procurementInquiry.emailBody).toBe("Здравствуйте!");
 	});
 
 	test("toPayload reports sendRequestsAutomatically=true when autoSend is checked", () => {

@@ -3,6 +3,7 @@ import type { CompaniesClient } from "./clients/companies-client";
 import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
+import type { GeneratedEmailClient } from "./clients/generated-email-client";
 import type { GeneratedQuestionsClient } from "./clients/generated-questions-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
@@ -29,6 +30,7 @@ export interface DataClients {
 	procurementInquiries?: ProcurementInquiriesClient;
 	folders?: FoldersClient;
 	generatedQuestions?: GeneratedQuestionsClient;
+	generatedEmail?: GeneratedEmailClient;
 	notifications?: NotificationsClient;
 	emails?: EmailsClient;
 	profile?: ProfileClient;
@@ -98,6 +100,12 @@ export function useGeneratedQuestionsClient(): GeneratedQuestionsClient {
 	const { generatedQuestions } = useClients();
 	if (!generatedQuestions) throw new Error("generatedQuestions client not provided");
 	return generatedQuestions;
+}
+
+export function useGeneratedEmailClient(): GeneratedEmailClient {
+	const { generatedEmail } = useClients();
+	if (!generatedEmail) throw new Error("generatedEmail client not provided");
+	return generatedEmail;
 }
 
 export function useNotificationsClient(): NotificationsClient {

@@ -21,6 +21,7 @@ import { createInMemoryWorkspaceSettingsClient } from "@/data/clients/workspace-
 import { _setInquiryStateResolver } from "@/data/items-mock-data";
 import * as mockParser from "@/data/mock-file-parser";
 import {
+	fakeGeneratedEmailClient,
 	fakeGeneratedQuestionsClient,
 	fakeItemsClient,
 	TestClientsProvider,
@@ -113,6 +114,9 @@ function renderApp(initialEntries?: string[], opts: { items?: ItemsClient } = {}
 				folders: testFoldersClient(TEST_FOLDERS),
 				generatedQuestions: fakeGeneratedQuestionsClient({
 					preview: async () => ({ questions: [{ questionText: "Срочность?", suggests: ["Срочно"] }] }),
+				}),
+				generatedEmail: fakeGeneratedEmailClient({
+					preview: async () => ({ subject: "Запрос КП", body: "Здравствуйте!" }),
 				}),
 				notifications: createInMemoryNotificationsClient({ seed: [] }),
 				emails: createInMemoryEmailsClient([]),

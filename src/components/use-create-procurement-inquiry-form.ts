@@ -5,7 +5,6 @@ import type {
 } from "@/data/domains/procurement-inquiries";
 import type { CurrentSupplier, NewItemInput, PaymentType, Unit, UnloadingType } from "@/data/types";
 import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
-import { buildEmailVariant } from "./procurement-inquiry-email-templates";
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -119,6 +118,10 @@ interface Step3State {
 	subject: string;
 	body: string;
 	generated: boolean;
+	/** Variant counter driving the mock email generator's rotation. Lives in
+	 * form state (not component state) so Назад → Далее resumes from where
+	 * the user left off instead of restarting at 0 and re-showing a variant
+	 * already cycled through. */
 	regenerateIndex: number;
 }
 
@@ -273,11 +276,29 @@ export function useCreateProcurementInquiryForm() {
 	// pristine drawer the user never typed in.
 	const [touched, setTouched] = useState(false);
 
+	/** Drop cached AI artifacts when the data they were generated from
+	 * changes. Step 2 (questions) and Step 3 (email) both close over Step 1
+	 * inputs; if the buyer goes Назад and edits a position/logistics field,
+	 * the cached questions and email are stale and must be regenerated on
+	 * next entry. Subject/body are kept around so the previous render
+	 * doesn't flash empty before the refetch lands. */
+	function invalidateGeneratedArtifacts() {
+		setStep2((prev) => (prev.generatedQuestions.length === 0 ? prev : { generatedQuestions: [] }));
+		setStep3((prev) =>
+			prev.generated || prev.regenerateIndex !== 0 ? { ...prev, generated: false, regenerateIndex: 0 } : prev,
+		);
+	}
+
 	function writeStep1<K extends SharedStep1Key>(key: K, value: Step1State[K], markTouched: boolean) {
 		setStep1((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
 		if (markTouched) setTouched(true);
 		if (key === "companyId") setStep1Errors((prev) => (prev.company ? { ...prev, company: undefined } : prev));
 		if (key === "deadline") setStep1Errors((prev) => (prev.deadline ? { ...prev, deadline: undefined } : prev));
+		// Only flip caches on real user edits. Auto-fills (markTouched=false)
+		// don't represent intent and shouldn't trigger a refetch. The
+		// invalidator is idempotent — no-op when nothing's cached — so we
+		// don't bother short-circuiting when the value didn't actually change.
+		if (markTouched) invalidateGeneratedArtifacts();
 	}
 
 	function update1<K extends SharedStep1Key>(key: K, value: Step1State[K]) {
@@ -292,13 +313,16 @@ export function useCreateProcurementInquiryForm() {
 	}
 
 	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
+		let changed = false;
 		setStep1((prev) => {
 			const current = prev.positions[index];
 			if (!current || current[key] === value) return prev;
+			changed = true;
 			const positions = prev.positions.slice();
 			positions[index] = { ...current, [key]: value };
 			return { ...prev, positions };
 		});
+		if (!changed) return;
 		setTouched(true);
 		if (key === "name") {
 			setStep1Errors((prev) => {
@@ -308,24 +332,30 @@ export function useCreateProcurementInquiryForm() {
 				return { ...prev, positions };
 			});
 		}
+		invalidateGeneratedArtifacts();
 	}
 
 	function addPosition() {
 		setStep1((prev) => ({ ...prev, positions: [...prev.positions, defaultPosition()] }));
 		setStep1Errors((prev) => ({ ...prev, positions: [...prev.positions, {}] }));
 		setTouched(true);
+		invalidateGeneratedArtifacts();
 	}
 
 	function removePosition(index: number) {
+		let removed = false;
 		setStep1((prev) => {
 			if (prev.positions.length <= 1) return prev;
+			removed = true;
 			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
 		});
 		setStep1Errors((prev) => {
 			if (prev.positions.length <= 1) return prev;
 			return { ...prev, positions: prev.positions.filter((_, i) => i !== index) };
 		});
+		if (!removed) return;
 		setTouched(true);
+		invalidateGeneratedArtifacts();
 	}
 
 	/** Bulk-set positions — used when importing items from /positions.
@@ -335,6 +365,7 @@ export function useCreateProcurementInquiryForm() {
 		setStep1((prev) => ({ ...prev, positions: next }));
 		setStep1Errors((prev) => ({ ...prev, positions: next.map(() => ({})) }));
 		setTouched(true);
+		invalidateGeneratedArtifacts();
 	}
 
 	function setGeneratedQuestions(qs: Step2GeneratedQuestion[]) {
@@ -357,39 +388,28 @@ export function useCreateProcurementInquiryForm() {
 		setTouched(true);
 	}
 
-	function buildEmailContext(folderName: string | null) {
-		return {
-			folderName,
-			deadline: step1.deadline,
-			positions: step1.positions.map((p) => ({
-				name: p.name,
-				quantityPerDelivery: p.quantityPerDelivery,
-				annualQuantity: p.annualQuantity,
-				unit: p.unit,
-			})),
-		};
-	}
-
-	function seedEmail(folderName: string | null) {
-		setStep3((prev) => {
-			if (prev.generated) return prev;
-			const variant = buildEmailVariant(0, buildEmailContext(folderName));
-			return { ...prev, subject: variant.subject, body: variant.body, generated: true, regenerateIndex: 0 };
-		});
-	}
-
-	function regenerateEmail(folderName: string | null) {
-		setStep3((prev) => {
-			const nextIndex = prev.regenerateIndex + 1;
-			const variant = buildEmailVariant(nextIndex, buildEmailContext(folderName));
-			return {
-				...prev,
-				subject: variant.subject,
-				body: variant.body,
-				generated: true,
-				regenerateIndex: nextIndex,
-			};
-		});
+	/** Replace subject/body after a successful preview call. Marks the
+	 * email as generated so re-mounts (Назад → Далее) don't refetch. The
+	 * optional ``regenerateIndex`` is the variant the BE was asked to
+	 * produce; only advance the persisted counter when the request succeeds
+	 * so a failed Перегенерировать doesn't skip a variant the user never
+	 * saw. */
+	function applyGeneratedEmail({
+		subject,
+		body,
+		regenerateIndex,
+	}: {
+		subject: string;
+		body: string;
+		regenerateIndex?: number;
+	}) {
+		setStep3((prev) => ({
+			...prev,
+			subject,
+			body,
+			generated: true,
+			regenerateIndex: regenerateIndex ?? prev.regenerateIndex,
+		}));
 	}
 
 	function validateStep1(): Step1Errors {
@@ -472,8 +492,7 @@ export function useCreateProcurementInquiryForm() {
 		setGeneratedQuestions,
 		updateGeneratedAnswer,
 		update3,
-		seedEmail,
-		regenerateEmail,
+		applyGeneratedEmail,
 		advance,
 		goBack,
 		reset,

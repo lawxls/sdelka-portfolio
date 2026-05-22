@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError, ValidationError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
-import { createHttpGeneratedQuestionsClient } from "./generated-questions-http";
+import { createHttpGeneratedEmailClient } from "./generated-email-http";
 
 /**
- * Adapter contract test for the generated-questions HTTP client. Stubs `fetch`
+ * Adapter contract test for the generated-email HTTP client. Stubs `fetch`
  * and asserts the preview endpoint round-trips, including auth/validation
  * error mapping.
  */
@@ -26,7 +26,7 @@ function httpAdapter() {
 	const routes: HttpRoute[] = [
 		{
 			method: "POST",
-			path: /^\/procurement\/generated-questions\/preview\/$/,
+			path: /^\/procurement\/generated-email\/preview\/$/,
 			respond: ({ init }) => {
 				const body = JSON.parse(init?.body as string) as { positions?: unknown[] };
 				if (!Array.isArray(body.positions) || body.positions.length === 0) {
@@ -35,10 +35,8 @@ function httpAdapter() {
 				return {
 					status: 200,
 					body: {
-						questions: [
-							{ questionText: "Marka materiala?", suggests: ["Standart", "Premium"] },
-							{ questionText: "Срочность поставки?", suggests: ["Срочно", "По графику"] },
-						],
+						subject: "Запрос КП — Арматура",
+						body: "Здравствуйте!\nПросим направить КП.\nСпасибо!",
 					},
 				};
 			},
@@ -65,10 +63,10 @@ function httpAdapter() {
 	});
 
 	const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => "test-token" });
-	return { build: () => createHttpGeneratedQuestionsClient(http), track };
+	return { build: () => createHttpGeneratedEmailClient(http), track };
 }
 
-describe("GeneratedQuestionsClient HTTP contract", () => {
+describe("GeneratedEmailClient HTTP contract", () => {
 	let adapter: ReturnType<typeof httpAdapter>;
 
 	beforeEach(() => {
@@ -81,70 +79,38 @@ describe("GeneratedQuestionsClient HTTP contract", () => {
 		_resetMockDelay();
 	});
 
-	it("preview POSTs the camelCase body to /procurement/generated-questions/preview/", async () => {
+	it("preview POSTs the camelCase body to /procurement/generated-email/preview/", async () => {
 		const client = adapter.build();
 		await client.preview({
-			positions: [
-				{
-					name: "Арматура",
-					description: "А500С",
-					unit: "шт",
-					quantityPerDelivery: 50,
-					annualQuantity: 600,
-					currentSupplier: {
-						companyName: "ООО Поставщик",
-						inn: "1234567890",
-						deferralDays: 0,
-						pricePerUnit: 125.5,
-						paymentType: "prepayment",
-						deliveryIncluded: false,
-						deliveryCost: 1000,
-					},
-				},
-			],
+			positions: [{ name: "Арматура", description: "А500С", unit: "шт", quantityPerDelivery: 50 }],
 			folderId: "f1",
-			additionalInfo: "Срочно",
-			deliveryAddressId: "addr-1",
-			unloading: "supplier",
+			folderName: "Металлопрокат",
+			deadline: "2026-06-15",
 			cashAllowed: true,
 			analoguesNotAllowed: false,
+			generatedQuestions: [{ questionText: "Срок?", suggests: ["Срочно", "По графику"], answer: "Срочно" }],
+			regenerateIndex: 1,
 		});
 		const last = adapter.track.requests.at(-1);
 		expect(last?.method).toBe("POST");
-		expect(last?.path).toBe("/procurement/generated-questions/preview/");
+		expect(last?.path).toBe("/procurement/generated-email/preview/");
 		expect(last?.body).toEqual({
-			positions: [
-				{
-					name: "Арматура",
-					description: "А500С",
-					unit: "шт",
-					quantityPerDelivery: 50,
-					annualQuantity: 600,
-					currentSupplier: {
-						companyName: "ООО Поставщик",
-						inn: "1234567890",
-						deferralDays: 0,
-						pricePerUnit: 125.5,
-						paymentType: "prepayment",
-						deliveryIncluded: false,
-						deliveryCost: 1000,
-					},
-				},
-			],
+			positions: [{ name: "Арматура", description: "А500С", unit: "шт", quantityPerDelivery: 50 }],
 			folderId: "f1",
-			additionalInfo: "Срочно",
-			deliveryAddressId: "addr-1",
-			unloading: "supplier",
+			folderName: "Металлопрокат",
+			deadline: "2026-06-15",
 			cashAllowed: true,
 			analoguesNotAllowed: false,
+			generatedQuestions: [{ questionText: "Срок?", suggests: ["Срочно", "По графику"], answer: "Срочно" }],
+			regenerateIndex: 1,
 		});
 	});
 
-	it("preview returns the parsed questions array", async () => {
+	it("preview returns the parsed subject and body", async () => {
 		const client = adapter.build();
 		const result = await client.preview({ positions: [{ name: "Арматура" }] });
-		expect(result.questions).toHaveLength(2);
-		expect(result.questions[0]).toEqual({ questionText: "Marka materiala?", suggests: ["Standart", "Premium"] });
+		expect(result.subject).toBe("Запрос КП — Арматура");
+		expect(result.body).toContain("Спасибо!");
 	});
 
 	it("preview surfaces ValidationError on 400 with fieldErrors", async () => {
@@ -161,14 +127,14 @@ describe("GeneratedQuestionsClient HTTP contract", () => {
 	it("preview surfaces AuthError on 401", async () => {
 		const fetchStub = vi.fn(async () => new Response(null, { status: 401 }));
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });
-		const client = createHttpGeneratedQuestionsClient(http);
+		const client = createHttpGeneratedEmailClient(http);
 		await expect(client.preview({ positions: [{ name: "X" }] })).rejects.toBeInstanceOf(AuthError);
 	});
 
 	it("preview network failures bubble up as NetworkError", async () => {
 		const fetchStub = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });
-		const client = createHttpGeneratedQuestionsClient(http);
+		const client = createHttpGeneratedEmailClient(http);
 		await expect(client.preview({ positions: [{ name: "X" }] })).rejects.toMatchObject({ name: "NetworkError" });
 	});
 });

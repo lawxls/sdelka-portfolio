@@ -6,7 +6,12 @@ import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memor
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
-import { fakeGeneratedQuestionsClient, TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
+import {
+	fakeGeneratedEmailClient,
+	fakeGeneratedQuestionsClient,
+	TestClientsProvider,
+	testFoldersClient,
+} from "@/data/test-clients-provider";
 import type { Address, Company, Folder } from "@/data/types";
 import { createTestQueryClient } from "@/test-utils";
 import { CreateProcurementInquiryDrawer } from "./create-procurement-inquiry-drawer";
@@ -61,6 +66,7 @@ afterEach(() => {
 });
 
 type PreviewResponse = { questions: { questionText: string; suggests: string[] }[] };
+type EmailPreviewResponse = { subject: string; body: string };
 
 interface RenderOverrides {
 	open?: boolean;
@@ -71,6 +77,13 @@ interface RenderOverrides {
 	/** Per-call preview implementation. Overrides `previewResponse`/`previewError`
 	 * when set — use this to vary behavior across successive Step 1→2 entries. */
 	previewFn?: () => Promise<PreviewResponse>;
+	/** Per-call email preview implementation. Defaults to a payload-aware stub
+	 * that includes the first position name in subject + body so existing
+	 * tests can assert on it. */
+	emailPreviewFn?: (input: {
+		positions: { name: string }[];
+		regenerateIndex?: number;
+	}) => Promise<EmailPreviewResponse>;
 }
 
 function renderDrawer(overrides: RenderOverrides = {}) {
@@ -94,6 +107,16 @@ function renderDrawer(overrides: RenderOverrides = {}) {
 			? () => Promise.reject(overrides.previewError) as Promise<PreviewResponse>
 			: () => Promise.resolve(defaultResponse));
 	const generatedQuestionsClient = fakeGeneratedQuestionsClient({ preview: previewImpl });
+	const defaultEmailFn = (input: { positions: { name: string }[]; regenerateIndex?: number }) => {
+		const first = input.positions[0]?.name ?? "";
+		const variant = input.regenerateIndex ?? 0;
+		return Promise.resolve({
+			subject: `Запрос КП — ${first} (v${variant})`,
+			body: `Здравствуйте! Просим направить КП по позиции «${first}» (вариант ${variant}).`,
+		});
+	};
+	const emailImpl = (overrides.emailPreviewFn ?? defaultEmailFn) as (input: unknown) => Promise<EmailPreviewResponse>;
+	const generatedEmailClient = fakeGeneratedEmailClient({ preview: emailImpl });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -104,6 +127,7 @@ function renderDrawer(overrides: RenderOverrides = {}) {
 				items: itemsClient,
 				suppliers: suppliersClient,
 				generatedQuestions: generatedQuestionsClient,
+				generatedEmail: generatedEmailClient,
 			}}
 		>
 			{children}
@@ -571,32 +595,32 @@ describe("CreateProcurementInquiryDrawer — Step 2 clarifying questions", () =>
 		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
 	});
 
-	test("Пропустить in the error state clears questions answered on a prior visit", async () => {
+	test("Назад → Далее reuses cached questions without re-fetching", async () => {
 		const onSubmit = vi.fn();
-		// First Step 1→2 entry: preview succeeds with one question the user
-		// answers. After Back, second entry's preview fails — clicking
-		// «Пропустить» must drop the prior answer rather than carry it forward.
-		let call = 0;
-		const previewFn = () => {
-			call += 1;
-			if (call === 1) return Promise.resolve({ questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] });
-			return Promise.reject(new Error("boom"));
-		};
+		const previewFn = vi.fn(() => Promise.resolve({ questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] }));
 		renderDrawer({ previewFn, onSubmit });
 		const user = userEvent.setup();
 
 		await fillFirstPositionName(user);
 		await advance(user);
 		await user.click(await screen.findByRole("button", { name: "A" }));
+		expect(previewFn).toHaveBeenCalledTimes(1);
+
 		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		expect(await screen.findByText("Marka?")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "A" })).toHaveAttribute("aria-pressed", "true");
+		expect(previewFn).toHaveBeenCalledTimes(1);
 
 		await advance(user);
-		await user.click(await screen.findByRole("button", { name: "Пропустить" }));
 		await screen.findByLabelText("Текст письма");
 		await create(user);
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
-		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
+		expect(payload.procurementInquiry.generatedQuestions).toEqual([
+			{ questionText: "Marka?", suggests: ["A", "B"], answer: "A" },
+		]);
 	});
 
 	test("picking a suggest chip clears any typed freetext (mutually exclusive)", async () => {

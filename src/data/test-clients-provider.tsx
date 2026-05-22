@@ -5,6 +5,7 @@ import type { CompaniesClient } from "./clients/companies-client";
 import type { CompanyInfoClient } from "./clients/company-info-client";
 import type { EmailsClient } from "./clients/emails-client";
 import type { FoldersClient } from "./clients/folders-client";
+import type { GeneratedEmailClient } from "./clients/generated-email-client";
 import type { GeneratedQuestionsClient } from "./clients/generated-questions-client";
 import type { ItemsClient } from "./clients/items-client";
 import type { NotificationsClient } from "./clients/notifications-client";
@@ -153,6 +154,18 @@ export function fakeGeneratedQuestionsClient(
 ): GeneratedQuestionsClient {
 	const notImplemented = (method: string) => () => {
 		throw new Error(`fakeGeneratedQuestionsClient.${method} not stubbed`);
+	};
+	return {
+		preview: notImplemented("preview"),
+		...overrides,
+	};
+}
+
+/** Build a fake `GeneratedEmailClient` for hook tests — methods default to
+ * throwing "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeGeneratedEmailClient(overrides: Partial<GeneratedEmailClient> = {}): GeneratedEmailClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeGeneratedEmailClient.${method} not stubbed`);
 	};
 	return {
 		preview: notImplemented("preview"),

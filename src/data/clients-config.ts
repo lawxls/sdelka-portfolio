@@ -2,6 +2,7 @@ import { createHttpCompaniesClient } from "./clients/companies-http";
 import { createHttpCompanyInfoClient } from "./clients/company-info-http";
 import { createHttpEmailsClient } from "./clients/emails-http";
 import { createHttpFoldersClient } from "./clients/folders-http";
+import { createHttpGeneratedEmailClient } from "./clients/generated-email-http";
 import { createHttpGeneratedQuestionsClient } from "./clients/generated-questions-http";
 import { createHttpItemsClient } from "./clients/items-http";
 import { createHttpNotificationsClient } from "./clients/notifications-http";
@@ -30,6 +31,7 @@ export function buildDataClients(): DataClients {
 		procurementInquiries: createHttpProcurementInquiriesClient(),
 		folders: createHttpFoldersClient(),
 		generatedQuestions: createHttpGeneratedQuestionsClient(),
+		generatedEmail: createHttpGeneratedEmailClient(),
 		notifications: createHttpNotificationsClient(),
 		emails: createHttpEmailsClient(),
 		profile: createHttpProfileClient(),

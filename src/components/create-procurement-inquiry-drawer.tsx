@@ -46,24 +46,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import type { GenerateEmailPreviewInput } from "@/data/clients/generated-email-client";
+import type {
+	GenerateQuestionsPreviewInput,
+	GenerateQuestionsPreviewPositionInput,
+} from "@/data/clients/generated-questions-client";
 import type { CreateCompanyPayload } from "@/data/domains/companies";
 import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
 import { PICKABLE_ITEM_STATUSES, type ProcurementItem, UNITS, UNLOADING_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCompanyDetail, useCreateAddress, useCreateCompany } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
+import { useGenerateEmailPreview } from "@/data/use-generated-email";
 import { useGeneratePreview } from "@/data/use-generated-questions";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useMountEffect } from "@/hooks/use-mount-effect";
 import { SURFACE_TINT } from "@/lib/class-presets";
-import { formatCurrency, pluralizeRu } from "@/lib/format";
+import { formatCurrency, pluralizeRu, toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CompanyCreationSheet } from "./company-creation-sheet";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import { ProcurementStatusIcon, STATUS_CONFIG } from "./procurement-card";
 import {
+	buildCurrentSupplierFromDraft,
 	type CreateProcurementInquiryPayload,
 	type CurrentSupplierDraft,
 	type PositionDraft,
@@ -94,15 +101,20 @@ const TOTAL_STEPS = 3;
 const DEADLINE_TOOLTIP =
 	"По истечении дедлайна запрос автоматически перейдёт в статус «Переговоры завершены». При необходимости его можно будет вернуть в работу вручную.";
 
-function SectionGroupHeader({ title }: { title: string }) {
+export function SectionGroupHeader({ title, className }: { title: string; className?: string }) {
 	return (
-		<h3 className="mt-5 mb-1 text-xs font-semibold uppercase tracking-wide text-balance text-muted-foreground">
+		<h3
+			className={cn(
+				"mb-1 text-xs font-semibold uppercase tracking-wide text-balance text-muted-foreground",
+				className ?? "mt-5",
+			)}
+		>
 			{title}
 		</h3>
 	);
 }
 
-function Field({
+export function Field({
 	label,
 	hint,
 	htmlFor,
@@ -167,21 +179,9 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	const { step, step1 } = form;
 
 	const [showConfirm, setShowConfirm] = useState(false);
-	const [step3Ready, setStep3Ready] = useState(false);
-	const [emailRegenerating, setEmailRegenerating] = useState(false);
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const deadlineInputRef = useRef<HTMLInputElement>(null);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
-	const regenerateTimerRef = useRef<number | null>(null);
-
-	function clearRegenerateTimer() {
-		if (regenerateTimerRef.current !== null) {
-			window.clearTimeout(regenerateTimerRef.current);
-			regenerateTimerRef.current = null;
-		}
-	}
-
-	useMountEffect(() => clearRegenerateTimer);
 
 	const selectedFolderName = useMemo(() => {
 		if (!step1.folderId) return null;
@@ -231,21 +231,8 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 		handleSubmit();
 	}
 
-	function handleRegenerateEmail() {
-		if (emailRegenerating) return;
-		setEmailRegenerating(true);
-		regenerateTimerRef.current = window.setTimeout(() => {
-			form.regenerateEmail(selectedFolderName);
-			setEmailRegenerating(false);
-			regenerateTimerRef.current = null;
-		}, 600);
-	}
-
 	function resetForm() {
-		clearRegenerateTimer();
 		form.reset();
-		setStep3Ready(false);
-		setEmailRegenerating(false);
 		nameInputRefs.current = [];
 	}
 
@@ -335,16 +322,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 							</TooltipProvider>
 						)}
 						{step === 2 && <Step2Body form={form} onSkip={() => form.advance()} />}
-						{step === 3 && (
-							<Step3Body
-								form={form}
-								folderName={selectedFolderName}
-								ready={step3Ready}
-								onReady={() => setStep3Ready(true)}
-								regenerating={emailRegenerating}
-								onRegenerate={handleRegenerateEmail}
-							/>
-						)}
+						{step === 3 && <Step3Body form={form} folderName={selectedFolderName} />}
 					</div>
 
 					<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
@@ -388,29 +366,53 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 /** Floor on loader visibility so a fast success doesn't flash. */
 const PREVIEW_LOADER_MIN_MS = 400;
 
-function buildPreviewInput(step1: Step1ForPreview) {
-	return {
-		positions: step1.positions
-			.filter((p) => p.name.trim() !== "")
-			.map((p) => {
-				const desc = p.description.trim();
-				return desc ? { name: p.name.trim(), description: desc } : { name: p.name.trim() };
-			}),
+function buildPreviewInput(
+	step1: ReturnType<typeof useCreateProcurementInquiryForm>["step1"],
+): GenerateQuestionsPreviewInput {
+	const input: GenerateQuestionsPreviewInput = {
+		positions: step1.positions.filter((p) => p.name.trim() !== "").map(buildPreviewPosition),
 		folderId: step1.folderId,
-		additionalInfo: step1.additionalInfo.trim() || undefined,
+		cashAllowed: step1.cashAllowed,
+		analoguesNotAllowed: step1.analoguesNotAllowed,
 	};
+	const info = step1.additionalInfo.trim();
+	if (info) input.additionalInfo = info;
+	if (step1.deliveryAddressId) input.deliveryAddressId = step1.deliveryAddressId;
+	if (step1.unloading) input.unloading = step1.unloading;
+	return input;
 }
 
-interface Step1ForPreview {
-	positions: { name: string; description: string }[];
-	folderId: string | null;
-	additionalInfo: string;
+function buildPreviewPosition(p: PositionDraft): GenerateQuestionsPreviewPositionInput {
+	const position: GenerateQuestionsPreviewPositionInput = { name: p.name.trim() };
+	const desc = p.description.trim();
+	if (desc) position.description = desc;
+	if (p.unit) position.unit = p.unit;
+	const perDelivery = toNumberOrUndefined(p.quantityPerDelivery);
+	if (perDelivery !== undefined) position.quantityPerDelivery = perDelivery;
+	const annual = toNumberOrUndefined(p.annualQuantity);
+	if (annual !== undefined) position.annualQuantity = annual;
+	if (p.currentSupplier) {
+		const canonical = buildCurrentSupplierFromDraft(p.currentSupplier);
+		// `CurrentSupplier.deliveryCost` overloads `null` to mean «delivery
+		// included»; flatten that to an explicit boolean on the preview
+		// wire so the BE doesn't have to infer intent from missing-vs-null.
+		position.currentSupplier = {
+			...canonical,
+			deliveryIncluded: p.currentSupplier.deliveryIncluded,
+			deliveryCost: canonical.deliveryCost ?? null,
+		};
+	}
+	return position;
 }
 
 function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurementInquiryForm>; onSkip: () => void }) {
 	const { step1, step2, setGeneratedQuestions, updateGeneratedAnswer } = form;
 	const preview = useGeneratePreview();
-	const [minLoaderElapsed, setMinLoaderElapsed] = useState(false);
+	// Cache hit at mount → user previously visited Step 2 in this flow and we
+	// already have questions. Skip both the loader and the network call so
+	// answers entered before Назад survive the round trip.
+	const [hasCachedAtMount] = useState(() => step2.generatedQuestions.length > 0);
+	const [minLoaderElapsed, setMinLoaderElapsed] = useState(hasCachedAtMount);
 	const minLoaderTimerRef = useRef<number | null>(null);
 	const startTimerRef = useRef<number | null>(null);
 	// Late preview responses can land after the user has left Step 2 (Back, or
@@ -453,6 +455,11 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 	// cancels the first scheduled fire before it reaches the network.
 	useMountEffect(() => {
 		aliveRef.current = true;
+		if (hasCachedAtMount) {
+			return () => {
+				aliveRef.current = false;
+			};
+		}
 		const startTimerId = window.setTimeout(() => {
 			startTimerRef.current = null;
 			runPreview();
@@ -573,32 +580,105 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 	);
 }
 
+function buildEmailPreviewInput(
+	step1: ReturnType<typeof useCreateProcurementInquiryForm>["step1"],
+	step2: ReturnType<typeof useCreateProcurementInquiryForm>["step2"],
+	folderName: string | null,
+	regenerateIndex: number,
+): GenerateEmailPreviewInput {
+	const base = buildPreviewInput(step1);
+	const email: GenerateEmailPreviewInput = { ...base, regenerateIndex };
+	if (step1.deadline) email.deadline = step1.deadline;
+	if (folderName) email.folderName = folderName;
+	if (step2.generatedQuestions.length > 0) {
+		email.generatedQuestions = step2.generatedQuestions.map((q) => ({
+			questionText: q.questionText,
+			suggests: q.suggests,
+			answer: q.answer,
+		}));
+	}
+	return email;
+}
+
 function Step3Body({
 	form,
 	folderName,
-	ready,
-	onReady,
-	regenerating,
-	onRegenerate,
 }: {
 	form: ReturnType<typeof useCreateProcurementInquiryForm>;
 	folderName: string | null;
-	ready: boolean;
-	onReady: () => void;
-	regenerating: boolean;
-	onRegenerate: () => void;
 }) {
-	const { step3, update3, seedEmail } = form;
+	const { step1, step2, step3, update3, applyGeneratedEmail } = form;
 	const bodyId = "procurement-inquiry-email-body";
+	const preview = useGenerateEmailPreview();
+	// Hide-on-first-mount loader: stays true until the initial preview lands.
+	// Subsequent «Перегенерировать» clicks use the inline button spinner instead.
+	const [hasGenerated, setHasGenerated] = useState(step3.generated);
+	// Late preview responses can land after the user has left Step 3
+	// (Назад, or another regenerate in flight). Ignore them so a stale
+	// success can't overwrite fresher state.
+	const aliveRef = useRef(true);
 
+	const step1Ref = useRef(step1);
+	step1Ref.current = step1;
+	const step2Ref = useRef(step2);
+	step2Ref.current = step2;
+	const step3Ref = useRef(step3);
+	step3Ref.current = step3;
+	const folderNameRef = useRef(folderName);
+	folderNameRef.current = folderName;
+	const applyRef = useRef(applyGeneratedEmail);
+	applyRef.current = applyGeneratedEmail;
+	const previewRef = useRef(preview);
+	previewRef.current = preview;
+
+	function runPreview(nextIndex: number) {
+		previewRef.current.reset();
+		previewRef.current.mutate(
+			buildEmailPreviewInput(step1Ref.current, step2Ref.current, folderNameRef.current, nextIndex),
+			{
+				onSuccess: (data) => {
+					if (!aliveRef.current) return;
+					// Persist the index that produced this response so a
+					// failed regenerate (which never reaches onSuccess) can't
+					// skip a variant the user never saw.
+					applyRef.current({ subject: data.subject, body: data.body, regenerateIndex: nextIndex });
+					setHasGenerated(true);
+				},
+				onError: () => {
+					if (!aliveRef.current) return;
+					// First-mount errors render inline below; only the
+					// regenerate-after-success path needs a toast, since the
+					// editor keeps rendering with the prior content and the
+					// user would otherwise get no feedback.
+					if (step3Ref.current.generated) {
+						toast.error("Не удалось перегенерировать письмо");
+					}
+				},
+			},
+		);
+	}
+
+	// Defer the initial call via setTimeout(0) so StrictMode's dev
+	// mount→unmount→mount cancels the first scheduled fire before it reaches
+	// the network — mirrors the Step 2 preview pattern.
 	useMountEffect(() => {
-		seedEmail(folderName);
-		if (ready) return undefined;
-		const id = window.setTimeout(onReady, 600);
-		return () => window.clearTimeout(id);
+		aliveRef.current = true;
+		if (step3.generated) {
+			return () => {
+				aliveRef.current = false;
+			};
+		}
+		const id = window.setTimeout(() => runPreview(0), 0);
+		return () => {
+			aliveRef.current = false;
+			window.clearTimeout(id);
+		};
 	});
 
-	if (!ready) {
+	const regenerating = preview.isPending && hasGenerated;
+	const initialLoading = preview.isPending && !hasGenerated;
+
+	if (initialLoading) {
 		return (
 			<div
 				role="status"
@@ -607,6 +687,21 @@ function Step3Body({
 			>
 				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary motion-reduce:animate-none" />
 				<p className="text-sm">Генерируем письмо…</p>
+			</div>
+		);
+	}
+
+	if (preview.isError && !hasGenerated) {
+		return (
+			<div
+				role="alert"
+				className="flex flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground"
+			>
+				<TriangleAlert aria-hidden="true" className="size-6 text-destructive" />
+				<p className="text-sm text-foreground">Не удалось сгенерировать письмо</p>
+				<Button type="button" variant="outline" size="sm" onClick={() => runPreview(step3.regenerateIndex)}>
+					Повторить
+				</Button>
 			</div>
 		);
 	}
@@ -624,7 +719,7 @@ function Step3Body({
 							type="button"
 							variant="ghost"
 							size="sm"
-							onClick={onRegenerate}
+							onClick={() => runPreview(step3.regenerateIndex + 1)}
 							disabled={regenerating}
 							aria-label="Перегенерировать письмо"
 						>
