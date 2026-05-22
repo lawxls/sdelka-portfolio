@@ -237,6 +237,7 @@ export function fakeEmailsClient(overrides: Partial<EmailsClient> = {}): EmailsC
 		addMany: notImplemented("addMany"),
 		delete: notImplemented("delete"),
 		archive: notImplemented("archive"),
+		unarchive: notImplemented("unarchive"),
 		disable: notImplemented("disable"),
 		...overrides,
 	};

@@ -31,9 +31,19 @@ export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS)
 	}
 
 	return {
-		async list({ archived = false }: { archived?: boolean } = {}): Promise<WorkspaceEmail[]> {
+		async list(opts = {}): Promise<WorkspaceEmail[]> {
 			await delay();
-			return store.filter((e) => e.archived === archived).map(toPublic);
+			const archived = opts.archived ?? false;
+			const needle = opts.q?.toLowerCase();
+			return store
+				.filter((e) => {
+					if (e.archived !== archived) return false;
+					if (opts.status && e.status !== opts.status) return false;
+					if (opts.type && e.type !== opts.type) return false;
+					if (needle && !e.email.toLowerCase().includes(needle)) return false;
+					return true;
+				})
+				.map(toPublic);
 		},
 
 		async add(payload: AddEmailPayload): Promise<WorkspaceEmail> {
@@ -60,6 +70,12 @@ export function createInMemoryEmailsClient(seed: WorkspaceEmail[] = SEED_EMAILS)
 			await delay();
 			const toArchive = new Set(ids);
 			store = store.map((e) => (toArchive.has(e.id) ? { ...e, archived: true } : e));
+		},
+
+		async unarchive(ids: string[]): Promise<void> {
+			await delay();
+			const toUnarchive = new Set(ids);
+			store = store.map((e) => (toUnarchive.has(e.id) ? { ...e, archived: false } : e));
 		},
 
 		async disable(ids: string[]): Promise<void> {

@@ -1,8 +1,7 @@
-import { Archive, Power, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Power, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AddEmailSheet } from "@/components/add-email-sheet";
-import { includesCI } from "@/components/global-search-matcher";
 import { useSettingsOutletContext } from "@/components/settings-layout";
 import { SettingsTableToolbar } from "@/components/settings-table-toolbar";
 import { TableEmptyState } from "@/components/table-empty-state";
@@ -16,7 +15,14 @@ import {
 	type EmailType,
 	type WorkspaceEmail,
 } from "@/data/emails-mock-data";
-import { useAddEmails, useArchiveEmails, useDeleteEmails, useDisableEmails, useEmails } from "@/data/use-emails";
+import {
+	useAddEmails,
+	useArchiveEmails,
+	useDeleteEmails,
+	useDisableEmails,
+	useEmails,
+	useUnarchiveEmails,
+} from "@/data/use-emails";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatInteger, formatRussianPlural } from "@/lib/format";
@@ -47,23 +53,19 @@ export function EmailsSettingsPage() {
 	const [statusFilter, setStatusFilter] = useState<EmailStatus | null>(null);
 	const [typeFilter, setTypeFilter] = useState<EmailType | null>(null);
 
-	const { emails, isLoading } = useEmails({ archived: archiveActive });
+	const { emails, isLoading } = useEmails({
+		archived: archiveActive,
+		q: search || undefined,
+		status: statusFilter ?? undefined,
+		type: typeFilter ?? undefined,
+	});
 	const addMutation = useAddEmails();
 	const deleteMutation = useDeleteEmails();
 	const archiveMutation = useArchiveEmails();
+	const unarchiveMutation = useUnarchiveEmails();
 	const disableMutation = useDisableEmails();
 
-	const visibleEmails = useMemo(() => {
-		const needle = search.toLowerCase();
-		return emails.filter(
-			(e) =>
-				(!needle || includesCI(e.email, needle)) &&
-				(statusFilter == null || e.status === statusFilter) &&
-				(typeFilter == null || e.type === typeFilter),
-		);
-	}, [emails, search, statusFilter, typeFilter]);
-
-	const allSelected = visibleEmails.length > 0 && visibleEmails.every((e) => selected.has(e.id));
+	const allSelected = emails.length > 0 && emails.every((e) => selected.has(e.id));
 	const someSelected = selected.size > 0;
 
 	const emailFilterSections = useMemo(
@@ -103,13 +105,13 @@ export function EmailsSettingsPage() {
 		if (allSelected) {
 			setSelected((prev) => {
 				const next = new Set(prev);
-				for (const e of visibleEmails) next.delete(e.id);
+				for (const e of emails) next.delete(e.id);
 				return next;
 			});
 		} else {
 			setSelected((prev) => {
 				const next = new Set(prev);
-				for (const e of visibleEmails) next.add(e.id);
+				for (const e of emails) next.add(e.id);
 				return next;
 			});
 		}
@@ -154,6 +156,18 @@ export function EmailsSettingsPage() {
 				toast.success(`Архивировано ${formatRussianPlural(ids.length, ["почта", "почты", "почт"])}`);
 			},
 			onError: () => toast.error("Не удалось архивировать"),
+		});
+	}
+
+	function handleUnarchive() {
+		const ids = Array.from(selected);
+		if (ids.length === 0) return;
+		unarchiveMutation.mutate(ids, {
+			onSuccess: () => {
+				clearSelection();
+				toast.success(`Разархивировано ${formatRussianPlural(ids.length, ["почта", "почты", "почт"])}`);
+			},
+			onError: () => toast.error("Не удалось разархивировать"),
 		});
 	}
 
@@ -212,34 +226,53 @@ export function EmailsSettingsPage() {
 						/>
 					}
 					archiveActive={archiveActive}
-					onToggleArchive={() => setArchiveActive((v) => !v)}
+					onToggleArchive={() => {
+						clearSelection();
+						setArchiveActive((v) => !v);
+					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}
 					bulkForms={["почта", "почты", "почт"]}
-					bulkActions={[
-						{
-							label: "Отключить",
-							icon: <Power data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: guard(handleDisable),
-							disabled: Boolean(disableDisabledReason),
-							disabledReason: disableDisabledReason,
-						},
-						{
-							label: "Архивировать",
-							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: guard(handleArchive),
-						},
-						{
-							label: "Удалить",
-							icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: guard(handleDelete),
-							variant: "destructive",
-						},
-					]}
+					bulkActions={
+						archiveActive
+							? [
+									{
+										label: "Разархивировать",
+										icon: <ArchiveRestore data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+										onClick: guard(handleUnarchive),
+									},
+									{
+										label: "Удалить",
+										icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+										onClick: guard(handleDelete),
+										variant: "destructive",
+									},
+								]
+							: [
+									{
+										label: "Отключить",
+										icon: <Power data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+										onClick: guard(handleDisable),
+										disabled: Boolean(disableDisabledReason),
+										disabledReason: disableDisabledReason,
+									},
+									{
+										label: "Архивировать",
+										icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+										onClick: guard(handleArchive),
+									},
+									{
+										label: "Удалить",
+										icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+										onClick: guard(handleDelete),
+										variant: "destructive",
+									},
+								]
+					}
 				/>
 				{isMobile ? (
 					<div className="flex flex-col gap-3 p-4">
-						{visibleEmails.map((email, index) => {
+						{emails.map((email, index) => {
 							const isSelected = selected.has(email.id);
 							return (
 								<article
@@ -278,7 +311,7 @@ export function EmailsSettingsPage() {
 								</article>
 							);
 						})}
-						{!isLoading && visibleEmails.length === 0 && <TableEmptyState message={emptyMessage} />}
+						{!isLoading && emails.length === 0 && <TableEmptyState message={emptyMessage} />}
 					</div>
 				) : (
 					<table className="w-full text-sm">
@@ -289,7 +322,7 @@ export function EmailsSettingsPage() {
 										checked={allSelected}
 										onCheckedChange={toggleAll}
 										aria-label="Выбрать все почты"
-										disabled={visibleEmails.length === 0}
+										disabled={emails.length === 0}
 									/>
 								</th>
 								<th className="px-lg py-sm font-medium text-left">Почта</th>
@@ -299,7 +332,7 @@ export function EmailsSettingsPage() {
 							</tr>
 						</thead>
 						<tbody>
-							{visibleEmails.map((email) => {
+							{emails.map((email) => {
 								const isSelected = selected.has(email.id);
 								return (
 									<tr
@@ -328,7 +361,7 @@ export function EmailsSettingsPage() {
 									</tr>
 								);
 							})}
-							{!isLoading && visibleEmails.length === 0 && (
+							{!isLoading && emails.length === 0 && (
 								<tr>
 									<td colSpan={5} className="px-lg py-10 text-center text-muted-foreground">
 										{emptyMessage}

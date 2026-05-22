@@ -1,21 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { EmailsClient } from "./clients/emails-client";
+import type { EmailsClient, ListEmailsFilter } from "./clients/emails-client";
 import { useEmailsClient } from "./clients-context";
 import type { AddEmailPayload } from "./domains/emails";
 
 const EMAILS_KEY = ["workspace-emails"] as const;
 
-function emailsKey(archived: boolean) {
-	return [...EMAILS_KEY, { archived }] as const;
+export interface UseEmailsOptions extends ListEmailsFilter {
+	enabled?: boolean;
 }
 
-export function useEmails(options?: { enabled?: boolean; archived?: boolean }) {
+export function useEmails(options: UseEmailsOptions = {}) {
 	const client = useEmailsClient();
-	const archived = options?.archived ?? false;
+	const { enabled, ...rest } = options;
+	const filter: ListEmailsFilter = {
+		archived: rest.archived ?? false,
+		q: rest.q,
+		status: rest.status,
+		type: rest.type,
+	};
 	const query = useQuery({
-		queryKey: emailsKey(archived),
-		queryFn: () => client.list({ archived }),
-		enabled: options?.enabled ?? true,
+		queryKey: [...EMAILS_KEY, filter],
+		queryFn: () => client.list(filter),
+		enabled: enabled ?? true,
 	});
 
 	return {
@@ -60,4 +66,5 @@ function useEmailIdsMutation(pick: (c: EmailsClient) => (ids: string[]) => Promi
 
 export const useDeleteEmails = () => useEmailIdsMutation((c) => c.delete);
 export const useArchiveEmails = () => useEmailIdsMutation((c) => c.archive);
+export const useUnarchiveEmails = () => useEmailIdsMutation((c) => c.unarchive);
 export const useDisableEmails = () => useEmailIdsMutation((c) => c.disable);

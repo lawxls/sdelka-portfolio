@@ -6,8 +6,13 @@ import type { EmailsClient } from "./emails-client";
 
 export function createHttpEmailsClient(http: HttpClient = defaultHttpClient): EmailsClient {
 	return {
-		async list({ archived }: { archived?: boolean } = {}) {
-			const qs = buildQueryString({ archived: archived ? "true" : undefined });
+		async list(opts = {}) {
+			const qs = buildQueryString({
+				archived: opts.archived ? "true" : undefined,
+				q: opts.q,
+				status: opts.status,
+				type: opts.type,
+			});
 			const page = await http.get<DrfCursorPage<WorkspaceEmail>>(`/emails/inboxes/${qs}`);
 			return page.results;
 		},
@@ -20,6 +25,8 @@ export function createHttpEmailsClient(http: HttpClient = defaultHttpClient): Em
 		delete: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-delete/`, { body: { ids } }),
 
 		archive: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-archive/`, { body: { ids } }),
+
+		unarchive: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-unarchive/`, { body: { ids } }),
 
 		disable: (ids: string[]) => http.post<void>(`/emails/inboxes/bulk-disable/`, { body: { ids } }),
 	};
