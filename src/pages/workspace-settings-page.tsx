@@ -58,31 +58,32 @@ function WorkspaceForm({ data }: { data: WorkspaceSettings }) {
 	}
 
 	return (
-		<form onSubmit={handleSave} className="space-y-5">
+		<form onSubmit={handleSave}>
 			<SectionCard>
 				<SectionHeader icon={Cog} title="Общие настройки" />
-				<div className="space-y-1.5">
-					<label htmlFor={instructionsId} className="text-sm font-medium text-foreground">
-						Инструкции для агента
-					</label>
-					<p className="text-xs text-muted-foreground">Опишите стиль переговоров, приоритеты и ограничения</p>
-					<Textarea
-						id={instructionsId}
-						value={instructions}
-						onChange={(e) => setInstructions(e.target.value)}
-						placeholder="Например: Всегда уточняй сроки поставки…"
-						rows={5}
-						className="mt-1.5"
-					/>
+				<div className="space-y-5">
+					<div className="space-y-1.5">
+						<label htmlFor={instructionsId} className="text-sm font-medium text-foreground">
+							Инструкции для агента
+						</label>
+						<p className="text-xs text-muted-foreground">Опишите стиль переговоров, приоритеты и ограничения</p>
+						<Textarea
+							id={instructionsId}
+							value={instructions}
+							onChange={(e) => setInstructions(e.target.value)}
+							placeholder="Например: Всегда уточняй сроки поставки…"
+							rows={5}
+							className="mt-1.5"
+						/>
+					</div>
+					<div className="flex justify-end border-t border-border pt-5">
+						<Button type="submit" disabled={!isDirty || updateMutation.isPending}>
+							{updateMutation.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+							Сохранить
+						</Button>
+					</div>
 				</div>
 			</SectionCard>
-
-			<div className="flex justify-end">
-				<Button type="submit" disabled={!isDirty || updateMutation.isPending}>
-					{updateMutation.isPending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-					Сохранить
-				</Button>
-			</div>
 		</form>
 	);
 }
