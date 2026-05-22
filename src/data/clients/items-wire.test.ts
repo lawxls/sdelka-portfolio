@@ -119,6 +119,16 @@ describe("newItemToApi", () => {
 		expect(newItemToApi(input).companyId).toBe("c-1");
 	});
 
+	it("forwards folderId when set", () => {
+		const input: NewItemInput = { name: "X", companyId: "c-1", folderId: "f-1" };
+		expect(newItemToApi(input).folderId).toBe("f-1");
+	});
+
+	it("forwards a null folderId to clear the category", () => {
+		const input: NewItemInput = { name: "X", companyId: "c-1", folderId: null };
+		expect(newItemToApi(input).folderId).toBeNull();
+	});
+
 	it("drops optional fields when undefined", () => {
 		const input: NewItemInput = { name: "X", companyId: "c-1" };
 		const wire = newItemToApi(input);

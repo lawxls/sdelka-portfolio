@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
-import { useRef, useState } from "react";
+// biome-ignore lint/style/noRestrictedImports: re-seeds Company/Категория from URL state when the sheet re-opens — no stable mount point fits here
+import { useEffect, useRef, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -11,13 +12,15 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { FolderSelect } from "@/components/ui/folder-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { NewItemInput } from "@/data/types";
+import type { CompanySummary, Folder, NewItemInput } from "@/data/types";
 import { SURFACE_TINT } from "@/lib/class-presets";
 import { toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { PositionCard } from "./create-procurement-inquiry-drawer";
+import { Field, PositionCard, SectionGroupHeader } from "./create-procurement-inquiry-drawer";
 import { CurrentSupplierDialog } from "./current-supplier-dialog";
 import {
 	type CurrentSupplierDraft,
@@ -30,11 +33,26 @@ interface PositionError {
 	name?: string;
 }
 
+interface GeneralInfoError {
+	companyId?: string;
+}
+
 interface AddPositionsManualDrawerProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (items: NewItemInput[]) => void;
-	companyId: string;
+	/** `folderId` is forwarded separately so the parent can decide whether to wrap
+	 * the batch in an inquiry that carries the category (items have no folder FK). */
+	onSubmit: (items: NewItemInput[], folderId: string | null) => void;
+	companies: CompanySummary[];
+	folders: Folder[];
+	/** Returns the persisted folder so the drawer can auto-select it. Without
+	 * the awaited id the popover closes and `folderId` stays at whatever the
+	 * user had before — the in-line "create" gesture would silently fail to
+	 * stamp the category onto the submitted items. */
+	onCreateFolder: (name: string, color: string) => Promise<Folder>;
+	nextFolderColor: string;
+	initialCompanyId?: string;
+	initialFolderId?: string | null;
 }
 
 function toItemInput(position: PositionDraft, companyId: string): NewItemInput {
@@ -56,16 +74,42 @@ function toItemInput(position: PositionDraft, companyId: string): NewItemInput {
 	return payload;
 }
 
-export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, companyId }: AddPositionsManualDrawerProps) {
+export function AddPositionsManualDrawer({
+	open,
+	onOpenChange,
+	onSubmit,
+	companies,
+	folders,
+	onCreateFolder,
+	nextFolderColor,
+	initialCompanyId,
+	initialFolderId,
+}: AddPositionsManualDrawerProps) {
 	const [positions, setPositions] = useState<PositionDraft[]>(() => [defaultPosition()]);
 	const [errors, setErrors] = useState<PositionError[]>(() => [{}]);
+	const [companyId, setCompanyId] = useState<string>(initialCompanyId ?? "");
+	const [folderId, setFolderId] = useState<string | null>(initialFolderId ?? null);
+	const [generalInfoErrors, setGeneralInfoErrors] = useState<GeneralInfoError>({});
 	const [showDiscard, setShowDiscard] = useState(false);
 	const [activeSupplierPositionIndex, setActiveSupplierPositionIndex] = useState<number | null>(null);
 	const activeSupplierInitial =
 		activeSupplierPositionIndex !== null ? positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+	const companyTriggerRef = useRef<HTMLButtonElement>(null);
 
-	const isDirty = positions.length > 1 || positions.some(isPositionDraftDirty);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-seed only on open transitions; keeping `initialCompanyId`/`initialFolderId` out of deps avoids snapping the user's choices back to URL state mid-edit
+	useEffect(() => {
+		if (!open) return;
+		setCompanyId(initialCompanyId ?? "");
+		setFolderId(initialFolderId ?? null);
+		setGeneralInfoErrors({});
+	}, [open]);
+
+	const isDirty =
+		positions.length > 1 ||
+		positions.some(isPositionDraftDirty) ||
+		companyId !== (initialCompanyId ?? "") ||
+		folderId !== (initialFolderId ?? null);
 	const canAddPosition = (() => {
 		const last = positions[positions.length - 1];
 		return !!last && last.name.trim() !== "";
@@ -75,6 +119,9 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, company
 	function reset() {
 		setPositions([defaultPosition()]);
 		setErrors([{}]);
+		setCompanyId(initialCompanyId ?? "");
+		setFolderId(initialFolderId ?? null);
+		setGeneralInfoErrors({});
 	}
 
 	function updatePosition<K extends keyof PositionDraft>(index: number, key: K, value: PositionDraft[K]) {
@@ -107,20 +154,34 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, company
 		setErrors((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
 	}
 
-	function validate(): { ok: boolean; firstErrorIndex: number } {
-		const nextErrors = positions.map((p) => (p.name.trim() ? {} : { name: "Укажите название позиции" }));
-		setErrors(nextErrors);
-		const firstErrorIndex = nextErrors.findIndex((e) => e.name);
-		return { ok: firstErrorIndex < 0, firstErrorIndex };
+	function validate(): { ok: boolean; focus: "company" | "name"; firstPositionErrorIndex: number } {
+		const nextPositionErrors = positions.map((p) => (p.name.trim() ? {} : { name: "Укажите название позиции" }));
+		const firstPositionErrorIndex = nextPositionErrors.findIndex((e) => e.name);
+		const nextGeneralErrors: GeneralInfoError = companyId ? {} : { companyId: "Выберите компанию" };
+
+		setErrors(nextPositionErrors);
+		setGeneralInfoErrors(nextGeneralErrors);
+
+		if (nextGeneralErrors.companyId) {
+			return { ok: false, focus: "company", firstPositionErrorIndex };
+		}
+		if (firstPositionErrorIndex >= 0) {
+			return { ok: false, focus: "name", firstPositionErrorIndex };
+		}
+		return { ok: true, focus: "name", firstPositionErrorIndex };
 	}
 
 	function handleSubmit() {
-		const { ok, firstErrorIndex } = validate();
-		if (!ok) {
-			nameInputRefs.current[firstErrorIndex]?.focus();
+		const result = validate();
+		if (!result.ok) {
+			if (result.focus === "company") companyTriggerRef.current?.focus();
+			else nameInputRefs.current[result.firstPositionErrorIndex]?.focus();
 			return;
 		}
-		onSubmit(positions.map((p) => toItemInput(p, companyId)));
+		onSubmit(
+			positions.map((p) => toItemInput(p, companyId)),
+			folderId,
+		);
 		reset();
 		onOpenChange(false);
 	}
@@ -142,6 +203,13 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, company
 		onOpenChange(false);
 	}
 
+	function handleCompanyChange(next: string) {
+		setCompanyId(next);
+		if (generalInfoErrors.companyId) {
+			setGeneralInfoErrors((prev) => ({ ...prev, companyId: undefined }));
+		}
+	}
+
 	return (
 		<>
 			<Sheet open={open} onOpenChange={handleOpenChange}>
@@ -157,6 +225,48 @@ export function AddPositionsManualDrawer({ open, onOpenChange, onSubmit, company
 					<div className="flex-1 overflow-y-auto px-4 py-4">
 						<TooltipProvider>
 							<div className="flex flex-col gap-3">
+								<SectionGroupHeader title="Общая информация" className="mt-2" />
+								<Field label="Компания" required htmlFor="add-positions-company">
+									<Select value={companyId || undefined} onValueChange={handleCompanyChange}>
+										<SelectTrigger
+											id="add-positions-company"
+											ref={companyTriggerRef}
+											aria-label="Компания"
+											aria-required="true"
+											aria-invalid={generalInfoErrors.companyId ? true : undefined}
+											aria-describedby={generalInfoErrors.companyId ? "add-positions-company-error" : undefined}
+											className={cn("w-full", generalInfoErrors.companyId && "border-destructive")}
+										>
+											<SelectValue placeholder="— выберите —" />
+										</SelectTrigger>
+										<SelectContent position="popper">
+											{companies.map((c) => (
+												<SelectItem key={c.id} value={c.id}>
+													{c.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									{generalInfoErrors.companyId && (
+										<p id="add-positions-company-error" className="text-sm text-destructive">
+											{generalInfoErrors.companyId}
+										</p>
+									)}
+								</Field>
+								<Field label="Категория">
+									<FolderSelect
+										folders={folders}
+										value={folderId}
+										onChange={setFolderId}
+										onCreateFolder={async (name, color) => {
+											const created = await onCreateFolder(name, color);
+											setFolderId(created.id);
+										}}
+										nextFolderColor={nextFolderColor}
+									/>
+								</Field>
+
+								<SectionGroupHeader title="Позиции" className="mt-2" />
 								{positions.map((position, index) => (
 									<PositionCard
 										// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available

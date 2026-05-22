@@ -21,7 +21,14 @@ import type {
 	StatusFilter,
 } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
-import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
+import {
+	nextUnusedColor,
+	useCreateFolder,
+	useDeleteFolder,
+	useFolderStats,
+	useFolders,
+	useUpdateFolder,
+} from "@/data/use-folders";
 import {
 	buildFilterParams,
 	useArchiveItem,
@@ -190,7 +197,7 @@ export function ProcurementPage() {
 
 	const targetCompanyId = company ?? companies[0]?.id;
 
-	function handleManualSubmit(items: NewItemInput[]) {
+	function handleManualSubmit(items: NewItemInput[], folderId: string | null) {
 		if (!targetCompanyId) {
 			toast.error("Не удалось определить компанию для добавления позиции");
 			return;
@@ -198,6 +205,7 @@ export function ProcurementPage() {
 		const withStatus = items.map((item) => ({
 			...item,
 			companyId: item.companyId || targetCompanyId,
+			folderId,
 			status: "ready_for_analytics" as const,
 		}));
 		createItemsMutation.mutate(withStatus, {
@@ -413,7 +421,12 @@ export function ProcurementPage() {
 				open={manualDrawerOpen}
 				onOpenChange={setManualDrawerOpen}
 				onSubmit={handleManualSubmit}
-				companyId={targetCompanyId ?? ""}
+				companies={companies}
+				folders={folders}
+				onCreateFolder={(name, color) => createFolderMutation.mutateAsync({ name, color })}
+				nextFolderColor={nextUnusedColor(folders)}
+				initialCompanyId={targetCompanyId}
+				initialFolderId={folder && folder !== "none" && folder !== "archive" ? folder : null}
 			/>
 			<ProcurementItemDrawer item={selectedItem} />
 		</div>

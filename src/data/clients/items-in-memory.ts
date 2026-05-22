@@ -35,7 +35,10 @@ function matchesFolder(item: ProcurementItem, folder: string | undefined, archiv
 	if (folder === "archive") return archived;
 	if (archived) return false;
 	if (folder === undefined || folder === "all") return true;
-	const folderId = procurementInquiryFolderId(item);
+	// Item's own folder wins; inquiry-level folder is the fallback so legacy
+	// inquiry-grouped items keep filtering correctly. Mirrors the backend
+	// Coalesce semantics in `ProcurementItemFilter.filter_folder`.
+	const folderId = item.folderId ?? procurementInquiryFolderId(item);
 	if (folder === "none") return folderId === null;
 	return folderId === folder;
 }
@@ -184,6 +187,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
 				procurementInquiryId: input.procurementInquiryId,
+				folderId: input.folderId ?? undefined,
 			}));
 			const current = _getAllItems();
 			const archivedNow = current.filter((c) => _isArchived(c.id)).map((c) => c.id);

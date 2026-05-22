@@ -116,6 +116,9 @@ export interface ProcurementItem {
 	averagePrice: number | null;
 	/** Parent inquiry slug. Items belong to exactly one inquiry. */
 	procurementInquiryId?: string;
+	/** Optional category. Set directly on the item by the manual-add flow on
+	 * /positions; for inquiry-grouped items the category lives on the inquiry. */
+	folderId?: string | null;
 	description?: string;
 	unit?: Unit;
 	quantityPerDelivery?: number;
@@ -231,6 +234,10 @@ export interface NewItemInput {
 	 * inherit company / folder / supplier context from the freshly-created
 	 * inquiry. Direct callers (legacy import flows) leave it unset. */
 	procurementInquiryId?: string;
+	/** Optional category. Stamped per-item on the bulk-create endpoint when the
+	 * manual-add flow on /positions selects a folder without wrapping items
+	 * in an inquiry. `null` clears any previously-set folder; `undefined` omits. */
+	folderId?: string | null;
 }
 
 /** Annual cost in ₽ = annualQuantity × currentPrice. Null when no current price recorded. */
