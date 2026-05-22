@@ -15,7 +15,6 @@ interface NavItemDef {
 
 const ACCOUNT_ITEMS: NavItemDef[] = [
 	{ path: "/settings/profile", label: "Профиль", icon: <User className="size-4" /> },
-	{ path: "/settings/tariffs", label: "Тарифы", icon: <CreditCard className="size-4" /> },
 ];
 
 const WORKSPACE_ITEMS: NavItemDef[] = [
@@ -23,6 +22,12 @@ const WORKSPACE_ITEMS: NavItemDef[] = [
 		path: "/settings/workspace",
 		label: "Общие настройки",
 		icon: <Settings className="size-4" />,
+		module: "workspaceSettings",
+	},
+	{
+		path: "/settings/tariffs",
+		label: "Тарифы",
+		icon: <CreditCard className="size-4" />,
 		module: "workspaceSettings",
 	},
 	{ path: "/settings/companies", label: "Компании", icon: <Building2 className="size-4" />, module: "companies" },

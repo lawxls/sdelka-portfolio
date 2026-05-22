@@ -81,6 +81,7 @@ function App() {
 						<Route path="/settings/profile" element={<ProfileSettingsPage />} />
 						<Route element={<RequireModule module="workspaceSettings" />}>
 							<Route path="/settings/workspace" element={<WorkspaceSettingsPage />} />
+							<Route path="/settings/tariffs" element={<TariffsSettingsPage />} />
 						</Route>
 						<Route element={<RequireModule module="companies" />}>
 							<Route path="/settings/companies" element={<CompaniesSettingsPage />} />
@@ -91,7 +92,6 @@ function App() {
 						<Route element={<RequireModule module="emails" />}>
 							<Route path="/settings/emails" element={<EmailsSettingsPage />} />
 						</Route>
-						<Route path="/settings/tariffs" element={<TariffsSettingsPage />} />
 					</Route>
 				</Route>
 			</Route>

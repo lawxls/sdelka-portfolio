@@ -123,3 +123,32 @@ export class TooManyRequestsError extends HttpError {
 		this.retryAfter = retryAfter;
 	}
 }
+
+/** Stable per-restriction codes mirrored from
+ * `sdelka_django.tariffs.choices.TariffRestriction` — drives the SPA's
+ * per-feature toast and upgrade prompts. */
+type TariffRestriction =
+	| "monthly_inquiries"
+	| "daily_inquiries"
+	| "employees"
+	| "companies"
+	| "daily_emails"
+	| "trial_expired";
+
+/** 402 — caller's workspace hit a tariff-gated cap. The structured body
+ * carries `restriction` so the UI can pick a per-feature toast. */
+export class TariffLimitExceededError extends HttpError {
+	readonly restriction: TariffRestriction | null;
+
+	constructor(body?: unknown) {
+		super(402, "Tariff limit exceeded", body);
+		this.name = "TariffLimitExceededError";
+		this.restriction = readRestriction(body);
+	}
+}
+
+function readRestriction(body: unknown): TariffRestriction | null {
+	if (!body || typeof body !== "object") return null;
+	const value = (body as { restriction?: unknown }).restriction;
+	return typeof value === "string" ? (value as TariffRestriction) : null;
+}

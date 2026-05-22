@@ -1,10 +1,9 @@
 import { Archive, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CompanyCreationSheet } from "@/components/company-creation-sheet";
 import { CompanyDrawer, type CompanyTab, parseCompanyTab } from "@/components/company-drawer";
-import { includesCI } from "@/components/global-search-matcher";
 import { useSettingsOutletContext } from "@/components/settings-layout";
 import { SettingsTableToolbar } from "@/components/settings-table-toolbar";
 import { TableEmptyState } from "@/components/table-empty-state";
@@ -12,6 +11,7 @@ import { TruncatedName } from "@/components/truncated-name";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/companies";
+import { TariffLimitExceededError } from "@/data/errors";
 import { useCompanies } from "@/data/use-companies";
 import { useArchiveCompany, useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -27,7 +27,15 @@ export function CompaniesSettingsPage() {
 	const companyId = searchParams.get("company");
 	const activeTab = parseCompanyTab(searchParams.get("tab"));
 
-	const { companies, hasNextPage, loadMore, isFetchingNextPage } = useCompanies({ search: "", sort: null });
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [search, setSearch] = useState("");
+	const [searchExpanded, setSearchExpanded] = useState(false);
+	const [archiveActive, setArchiveActive] = useState(false);
+
+	const { companies, hasNextPage, loadMore, isFetchingNextPage } = useCompanies({
+		search,
+		sort: null,
+	});
 
 	if (hasNextPage && !isFetchingNextPage) {
 		loadMore();
@@ -37,17 +45,7 @@ export function CompaniesSettingsPage() {
 	const archiveCompanyMutation = useArchiveCompany();
 	const { guard } = useModuleGuard("companies");
 
-	const [selected, setSelected] = useState<Set<string>>(new Set());
-	const [search, setSearch] = useState("");
-	const [searchExpanded, setSearchExpanded] = useState(false);
-	const [archiveActive, setArchiveActive] = useState(false);
-
-	const visibleCompanies = useMemo(() => {
-		if (archiveActive) return [];
-		const needle = search.toLowerCase();
-		return companies.filter((c) => !needle || includesCI(c.name, needle));
-	}, [companies, search, archiveActive]);
-
+	const visibleCompanies = archiveActive ? [] : companies;
 	const allSelected = visibleCompanies.length > 0 && visibleCompanies.every((c) => selected.has(c.id));
 
 	function toggleRow(id: string) {
@@ -117,7 +115,13 @@ export function CompaniesSettingsPage() {
 	function handleCreateCompany(data: CreateCompanyPayload) {
 		createCompanyMutation.mutate(data, {
 			onSuccess: () => setCreationOpen(false),
-			onError: () => toast.error("Не удалось создать компанию"),
+			onError: (err) => {
+				if (err instanceof TariffLimitExceededError && err.restriction === "companies") {
+					toast.error("Превышен лимит тарифа на создание компаний в рабочем пространстве");
+					return;
+				}
+				toast.error("Не удалось создать компанию");
+			},
 		});
 	}
 

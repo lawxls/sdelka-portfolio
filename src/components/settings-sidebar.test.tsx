@@ -29,13 +29,12 @@ function renderSidebar(
 }
 
 describe("SettingsSidebar sections", () => {
-	test("Аккаунт section is first and contains Профиль then Тарифы", async () => {
+	test("Аккаунт section is first and contains Профиль", async () => {
 		renderSidebar();
 		const sectionLabel = await screen.findByText("Аккаунт");
 		const section = sectionLabel.closest("div")?.parentElement as HTMLElement;
 		const buttons = section.querySelectorAll("button");
 		expect(buttons[0]).toHaveTextContent("Профиль");
-		expect(buttons[1]).toHaveTextContent("Тарифы");
 	});
 
 	test("does not render the legacy Пользователь section header", async () => {
@@ -44,10 +43,11 @@ describe("SettingsSidebar sections", () => {
 		expect(screen.queryByText("Пользователь")).not.toBeInTheDocument();
 	});
 
-	test("renders Рабочее пространство section with all items including Почты", async () => {
+	test("renders Рабочее пространство section with all items including Почты and Тарифы", async () => {
 		renderSidebar();
 		expect(await screen.findByText("Рабочее пространство")).toBeInTheDocument();
 		expect(screen.getByText("Общие настройки")).toBeInTheDocument();
+		expect(screen.getByText("Тарифы")).toBeInTheDocument();
 		expect(screen.getByText("Компании")).toBeInTheDocument();
 		expect(screen.getByText("Сотрудники")).toBeInTheDocument();
 		expect(screen.getByText("Почты")).toBeInTheDocument();
@@ -59,9 +59,10 @@ describe("SettingsSidebar sections", () => {
 		const section = sectionLabel.closest("div")?.parentElement as HTMLElement;
 		const buttons = section.querySelectorAll("button");
 		expect(buttons[0]).toHaveTextContent("Общие настройки");
-		expect(buttons[1]).toHaveTextContent("Компании");
-		expect(buttons[2]).toHaveTextContent("Сотрудники");
-		expect(buttons[3]).toHaveTextContent("Почты");
+		expect(buttons[1]).toHaveTextContent("Тарифы");
+		expect(buttons[2]).toHaveTextContent("Компании");
+		expect(buttons[3]).toHaveTextContent("Сотрудники");
+		expect(buttons[4]).toHaveTextContent("Почты");
 	});
 });
 
@@ -143,7 +144,8 @@ describe("SettingsSidebar permission filtering", () => {
 		renderSidebar("/settings/profile", createInMemorySessionClient({ refreshAvailable: true }), me);
 		expect(await screen.findByText("Аккаунт")).toBeInTheDocument();
 		expect(screen.getByText("Профиль")).toBeInTheDocument();
-		expect(screen.getByText("Тарифы")).toBeInTheDocument();
+		// Тарифы now lives under the gated "Рабочее пространство" section
+		expect(screen.queryByText("Тарифы")).not.toBeInTheDocument();
 	});
 });
 

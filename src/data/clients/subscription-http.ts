@@ -2,14 +2,23 @@ import type { Subscription, TariffId, TopUpPayload, TopUpResult } from "../domai
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { SubscriptionClient } from "./subscription-client";
 
+interface UsageBlock {
+	used: number;
+	limit: number | null;
+	remaining: number | null;
+}
+
 interface WorkspaceTariffResponse {
 	tariff: {
 		slug: string;
 		name: string;
 	};
 	usage: {
-		monthlyUsed: number;
-		monthlyLimit: number;
+		monthlyInquiries: UsageBlock;
+		dailyInquiries: UsageBlock;
+		employees: UsageBlock;
+		companies: UsageBlock;
+		dailyEmails: UsageBlock;
 	};
 }
 
@@ -20,15 +29,16 @@ function toTariffId(slug: string): TariffId {
 }
 
 function toSubscription(payload: WorkspaceTariffResponse): Subscription {
+	const { monthlyInquiries, employees, dailyEmails } = payload.usage;
 	return {
 		tariff_id: toTariffId(payload.tariff.slug),
 		tariff_name: payload.tariff.name,
-		requests_used: payload.usage.monthlyUsed,
-		requests_limit: payload.usage.monthlyLimit,
-		employees_used: 0,
-		employees_limit: 0,
-		emails_sent: 0,
-		emails_limit: 0,
+		requests_used: monthlyInquiries.used,
+		requests_limit: monthlyInquiries.limit ?? 0,
+		employees_used: employees.used,
+		employees_limit: employees.limit ?? 0,
+		emails_sent: dailyEmails.used,
+		emails_limit: dailyEmails.limit ?? 0,
 	};
 }
 

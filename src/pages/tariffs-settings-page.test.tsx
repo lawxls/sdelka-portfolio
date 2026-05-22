@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in-memory";
 import type { TariffsClient } from "@/data/clients/tariffs-client";
 import { createInMemoryTariffsClient } from "@/data/clients/tariffs-in-memory";
 import type { Tariff } from "@/data/domains/tariffs";
@@ -90,7 +91,24 @@ let queryClient: QueryClient;
 function renderWithClient(client: TariffsClient): void {
 	function Wrapper({ children }: { children: ReactNode }) {
 		return (
-			<TestClientsProvider queryClient={queryClient} clients={{ tariffs: client }}>
+			<TestClientsProvider
+				queryClient={queryClient}
+				clients={{
+					tariffs: client,
+					subscription: createInMemorySubscriptionClient({
+						subscription: {
+							tariff_id: "none",
+							tariff_name: "Без подписки",
+							requests_used: 0,
+							requests_limit: 0,
+							employees_used: 0,
+							employees_limit: 0,
+							emails_sent: 0,
+							emails_limit: 0,
+						},
+					}),
+				}}
+			>
 				{children}
 			</TestClientsProvider>
 		);

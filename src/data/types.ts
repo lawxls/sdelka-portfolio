@@ -290,7 +290,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModuleKey, string> = {
 	procurementInquiries: "Запросы",
 	positions: "Позиции",
 	tasks: "Вопросы",
-	workspaceSettings: "Общие настройки",
+	workspaceSettings: "Общие настройки и тарифы",
 	companies: "Компании",
 	employees: "Сотрудники",
 	emails: "Почты",

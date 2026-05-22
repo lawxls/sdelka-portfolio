@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { InviteEmployeeData } from "@/data/domains/workspace-employees";
+import { TariffLimitExceededError, ValidationError } from "@/data/errors";
 import { validateName } from "@/data/name-validation";
 import type { CompanySummary, EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
@@ -61,6 +62,17 @@ function cardHasInvalidName(c: InviteCard): boolean {
 
 function cardIsComplete(c: InviteCard): boolean {
 	return c.email.trim() !== "" && c.firstName.trim() !== "" && c.lastName.trim() !== "" && !cardHasInvalidName(c);
+}
+
+function hasAlreadyBelongsError(body: unknown): boolean {
+	if (!body || typeof body !== "object") return false;
+	const invites = (body as { invites?: unknown }).invites;
+	if (!Array.isArray(invites)) return false;
+	return invites.some((row) => {
+		if (!row || typeof row !== "object") return false;
+		const emailErrs = (row as { email?: unknown }).email;
+		return Array.isArray(emailErrs) && emailErrs.includes("already_belongs_to_a_workspace");
+	});
 }
 
 interface InviteEmployeesDrawerProps {
@@ -158,7 +170,15 @@ function InviteEmployeesForm({
 				toast.success("Приглашения отправлены");
 				onClose();
 			},
-			onError: () => {
+			onError: (err) => {
+				if (err instanceof TariffLimitExceededError && err.restriction === "employees") {
+					toast.error("Превышен лимит тарифа на количество сотрудников в рабочем пространстве");
+					return;
+				}
+				if (err instanceof ValidationError && hasAlreadyBelongsError(err.body)) {
+					toast.error("Пользователь с таким email адресом уже зарегистрирован в системе");
+					return;
+				}
 				toast.error("Не удалось отправить приглашения");
 			},
 		});
@@ -168,7 +188,7 @@ function InviteEmployeesForm({
 
 	return (
 		<>
-			<SheetHeader className="border-b pb-4">
+			<SheetHeader className={cn("border-b pb-4", SURFACE_TINT)}>
 				<SheetTitle>Добавить сотрудника</SheetTitle>
 				<SheetDescription className="sr-only">Приглашение сотрудников</SheetDescription>
 			</SheetHeader>

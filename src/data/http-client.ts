@@ -6,6 +6,7 @@ import {
 	HttpError,
 	NetworkError,
 	NotFoundError,
+	TariffLimitExceededError,
 	TooManyRequestsError,
 	ValidationError,
 } from "./errors";
@@ -233,6 +234,7 @@ async function mapStatusToError(res: Response): Promise<HttpError> {
 	const body = await safeJson(res);
 	if (res.status === 400) return new ValidationError(extractFieldErrors(body), body);
 	if (res.status === 401) return new AuthError(401, body);
+	if (res.status === 402) return new TariffLimitExceededError(body);
 	if (res.status === 403) return new AuthError(403, body);
 	if (res.status === 404) return new NotFoundError(body);
 	if (res.status === 409) return new ConflictError(body);

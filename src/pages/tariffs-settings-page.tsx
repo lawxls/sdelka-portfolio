@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Tariff } from "@/data/domains/tariffs";
+import { useSubscription } from "@/data/use-subscription";
 import { useTariffs } from "@/data/use-tariffs";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,7 @@ function yearlyTotalPrice(tariff: Tariff): number | null {
 	return Math.round((tariff.price * 12 * (100 - tariff.yearlyPriceDiscount)) / 100);
 }
 
-function TariffCard({ tariff, period }: { tariff: Tariff; period: Period }) {
+function TariffCard({ tariff, period, isCurrent }: { tariff: Tariff; period: Period; isCurrent: boolean }) {
 	const isIndividual = tariff.priceType === "individual";
 	const isPopular = tariff.isPopular;
 	const Icon = ICONS_BY_SLUG[tariff.slug] ?? Rocket;
@@ -142,15 +143,19 @@ function TariffCard({ tariff, period }: { tariff: Tariff; period: Period }) {
 			<Button
 				type="button"
 				size="lg"
-				variant={isPopular ? "default" : "outline"}
+				variant={isCurrent ? "outline" : isPopular ? "default" : "outline"}
+				disabled={isCurrent}
 				className="mt-6 gap-2"
 				onClick={handleClick}
+				aria-current={isCurrent ? "true" : undefined}
 			>
-				{isIndividual ? "Запросить расчёт" : "Подключить"}
-				<ArrowRight
-					className="size-4 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
-					aria-hidden="true"
-				/>
+				{isCurrent ? "Подключен" : isIndividual ? "Запросить расчёт" : "Подключить"}
+				{!isCurrent && (
+					<ArrowRight
+						className="size-4 transition-transform duration-150 ease-out group-hover/button:translate-x-0.5"
+						aria-hidden="true"
+					/>
+				)}
 			</Button>
 		</article>
 	);
@@ -230,6 +235,8 @@ function TariffsSkeleton() {
 export function TariffsSettingsPage() {
 	const [period, setPeriod] = useState<Period>("monthly");
 	const { data: tariffs, isError, isLoading, refetch } = useTariffs();
+	const { data: subscription } = useSubscription();
+	const currentTariffId = subscription?.tariff_id ?? null;
 
 	return (
 		<main className="flex min-h-0 flex-1 flex-col overflow-auto bg-muted/30 px-xl py-lg">
@@ -251,7 +258,12 @@ export function TariffsSettingsPage() {
 			) : (
 				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 					{tariffs.map((tariff) => (
-						<TariffCard key={tariff.id} tariff={tariff} period={period} />
+						<TariffCard
+							key={tariff.id}
+							tariff={tariff}
+							period={period}
+							isCurrent={currentTariffId !== null && tariff.slug === currentTariffId}
+						/>
 					))}
 				</div>
 			)}

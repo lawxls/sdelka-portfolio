@@ -34,7 +34,7 @@ const BREADCRUMBS: Record<string, [parent: string, current: string]> = {
 	"/settings/companies": ["Рабочее пространство", "Компании"],
 	"/settings/employees": ["Рабочее пространство", "Сотрудники"],
 	"/settings/emails": ["Рабочее пространство", "Почты"],
-	"/settings/tariffs": ["Аккаунт", "Тарифы"],
+	"/settings/tariffs": ["Рабочее пространство", "Тарифы"],
 };
 
 export function SettingsLayout() {
