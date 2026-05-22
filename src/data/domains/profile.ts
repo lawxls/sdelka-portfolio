@@ -22,6 +22,7 @@ export interface CurrentEmployee {
 	lastName: string;
 	patronymic?: string | null;
 	phone: string;
+	position: string;
 	avatarIcon: string;
 	mailingAllowed: boolean;
 	emailSignature: string;
@@ -32,5 +33,8 @@ export interface CurrentEmployee {
 }
 
 export type SettingsPatch = Partial<
-	Pick<CurrentEmployee, "firstName" | "lastName" | "patronymic" | "phone" | "mailingAllowed" | "emailSignature">
+	Pick<
+		CurrentEmployee,
+		"firstName" | "lastName" | "patronymic" | "phone" | "position" | "mailingAllowed" | "emailSignature"
+	>
 >;

@@ -130,6 +130,13 @@ export function formatShortDate(iso: string): string {
 	return shortDateFormatter.format(new Date(iso));
 }
 
+/** Numeric short date for an employee row, or «Приглашение отправлено» when the
+ * invite is still pending (backend returns `null` until the invitee redeems). */
+export function formatRegistrationDate(registeredAt: string | null | undefined): string {
+	if (!registeredAt) return "Приглашение отправлено";
+	return shortDateFormatter.format(new Date(registeredAt));
+}
+
 /** ISO `YYYY-MM-DD` for today + N days, suitable for `<input type="date">` defaults. */
 export function isoDateInDays(daysFromNow: number): string {
 	const d = new Date();

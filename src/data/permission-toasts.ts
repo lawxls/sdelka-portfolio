@@ -14,3 +14,14 @@ export function toastModulePermissionDenied(err: unknown): boolean {
 	toast.error(moduleEditDeniedMessage(err.module));
 	return true;
 }
+
+/** Dispatches the right toast for any `AuthError` the permissions matrix can
+ * surface: module-permission denial, or the owner-row guard. Returns true if a
+ * toast was fired so callers can chain further error handling. */
+export function toastPermissionsMatrixError(err: unknown): boolean {
+	if (err instanceof AuthError && err.code === "cannot_modify_workspace_owner") {
+		toast.error("Изменить права доступа создателя этого рабочего пространства нельзя");
+		return true;
+	}
+	return toastModulePermissionDenied(err);
+}

@@ -63,6 +63,7 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 	const [lastName, setLastName] = useState(data.lastName);
 	const [patronymic, setPatronymic] = useState(data.patronymic ?? "");
 	const [phone, setPhone] = useState(data.phone);
+	const [position, setPosition] = useState(data.position);
 	const [mailingAllowed, setMailingAllowed] = useState(data.mailingAllowed);
 	const [emailSignature, setEmailSignature] = useState(initialSignature);
 	const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 		lastName !== data.lastName ||
 		patronymic !== (data.patronymic ?? "") ||
 		phone !== data.phone ||
+		position !== data.position ||
 		mailingAllowed !== data.mailingAllowed ||
 		emailSignature !== savedSignature;
 
@@ -102,6 +104,7 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 		if (lastName !== data.lastName) patch.lastName = lastName;
 		if (patronymic !== (data.patronymic ?? "")) patch.patronymic = patronymic;
 		if (phone !== data.phone) patch.phone = phone;
+		if (position !== data.position) patch.position = position;
 		if (mailingAllowed !== data.mailingAllowed) patch.mailingAllowed = mailingAllowed;
 		if (emailSignature !== savedSignature) patch.emailSignature = emailSignature;
 
@@ -171,13 +174,21 @@ function ProfileForm({ data }: { data: CurrentEmployee }) {
 								autoComplete="off"
 							/>
 						</div>
-						<div className="grid gap-4 sm:grid-cols-2">
+						<div className="grid gap-4 sm:grid-cols-3">
 							<FloatingPhoneInput
 								label="Номер телефона"
 								name="phone"
 								value={phone}
 								onChange={setPhone}
 								error={phoneError ?? fieldErrors.phone}
+							/>
+							<FloatingInput
+								label="Должность"
+								name="position"
+								value={position}
+								onChange={(e) => setPosition(e.target.value)}
+								error={fieldErrors.position}
+								autoComplete="organization-title"
 							/>
 							<FloatingInput label="Почта" name="email" type="email" value={data.email} readOnly autoComplete="email" />
 						</div>

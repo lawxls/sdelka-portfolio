@@ -1,9 +1,8 @@
-import { Archive, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { EmployeeDetailDrawer } from "@/components/employee-detail-drawer";
-import { includesCI } from "@/components/global-search-matcher";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { useSettingsOutletContext } from "@/components/settings-layout";
 import { SettingsTableToolbar } from "@/components/settings-table-toolbar";
@@ -14,35 +13,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { WorkspaceEmployee } from "@/data/domains/workspace-employees";
 import type { EmployeeRole } from "@/data/types";
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
-import { useDeleteWorkspaceEmployees, useWorkspaceEmployees } from "@/data/use-workspace-employees";
+import {
+	useDeleteWorkspaceEmployees,
+	useUnarchiveWorkspaceEmployees,
+	useWorkspaceEmployees,
+} from "@/data/use-workspace-employees";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useModuleGuard } from "@/hooks/use-module-guard";
 import { getAvatarColorForId } from "@/lib/avatar-colors";
-import { formatFullName, formatRussianPlural, getInitials } from "@/lib/format";
+import { formatFullName, formatRegistrationDate, formatRussianPlural, getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
-
-function formatRegistrationDate(registeredAt: string | null | undefined): string {
-	if (!registeredAt) return "Приглашение отправлено";
-	return dateFormatter.format(new Date(registeredAt));
-}
-
-function matchesEmployee(employee: WorkspaceEmployee, needle: string): boolean {
-	if (!needle) return true;
-	return (
-		includesCI(formatFullName(employee.lastName, employee.firstName, employee.patronymic), needle) ||
-		includesCI(employee.email, needle) ||
-		includesCI(employee.position, needle)
-	);
-}
 
 export function EmployeesSettingsPage() {
 	const isMobile = useIsMobile();
 	const [, setSearchParams] = useSearchParams();
 	const { employeesInviteOpen: inviteOpen, setEmployeesInviteOpen: setInviteOpen } = useSettingsOutletContext();
-	const { employees } = useWorkspaceEmployees();
-	const deleteMutation = useDeleteWorkspaceEmployees();
 	const { guard } = useModuleGuard("employees");
 
 	const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -51,13 +36,16 @@ export function EmployeesSettingsPage() {
 	const [archiveActive, setArchiveActive] = useState(false);
 	const [roleFilter, setRoleFilter] = useState<EmployeeRole | null>(null);
 
-	const visibleEmployees = useMemo(() => {
-		if (archiveActive) return [];
-		const needle = search.toLowerCase();
-		return employees.filter((e) => matchesEmployee(e, needle) && (roleFilter == null || e.role === roleFilter));
-	}, [employees, search, archiveActive, roleFilter]);
+	const { employees } = useWorkspaceEmployees({
+		q: search || undefined,
+		role: roleFilter ?? undefined,
+		archived: archiveActive,
+	});
 
-	const allSelected = visibleEmployees.length > 0 && visibleEmployees.every((e) => selected.has(e.id));
+	const archiveMutation = useDeleteWorkspaceEmployees();
+	const unarchiveMutation = useUnarchiveWorkspaceEmployees();
+
+	const allSelected = employees.length > 0 && employees.every((e) => selected.has(e.id));
 
 	const roleFilterSections = useMemo(
 		() => [
@@ -87,13 +75,13 @@ export function EmployeesSettingsPage() {
 		if (allSelected) {
 			setSelected((prev) => {
 				const next = new Set(prev);
-				for (const e of visibleEmployees) next.delete(e.id);
+				for (const e of employees) next.delete(e.id);
 				return next;
 			});
 		} else {
 			setSelected((prev) => {
 				const next = new Set(prev);
-				for (const e of visibleEmployees) next.add(e.id);
+				for (const e of employees) next.add(e.id);
 				return next;
 			});
 		}
@@ -114,15 +102,10 @@ export function EmployeesSettingsPage() {
 		);
 	}
 
-	const selectedEmployees = employees.filter((e) => selected.has(e.id));
-
-	function handleDelete() {
-		const ids = selectedEmployees.map((e) => e.id);
-		if (ids.length === 0) {
-			clearSelection();
-			return;
-		}
-		deleteMutation.mutate(ids, {
+	function handleArchive() {
+		const ids = Array.from(selected);
+		if (ids.length === 0) return;
+		archiveMutation.mutate(ids, {
 			onSuccess: (result) => {
 				clearSelection();
 				const archivedCount = result.archived.length;
@@ -145,11 +128,26 @@ export function EmployeesSettingsPage() {
 		});
 	}
 
-	function handleArchive() {
-		const count = selected.size;
-		clearSelection();
-		toast.success(`Архивировано ${formatRussianPlural(count, ["сотрудник", "сотрудника", "сотрудников"])}`);
+	function handleUnarchive() {
+		const ids = Array.from(selected);
+		if (ids.length === 0) return;
+		unarchiveMutation.mutate(ids, {
+			onSuccess: (result) => {
+				clearSelection();
+				const count = result.unarchived.length;
+				if (count > 0) {
+					toast.success(
+						count === 1
+							? "Сотрудник разархивирован"
+							: `Разархивировано ${formatRussianPlural(count, ["сотрудник", "сотрудника", "сотрудников"])}`,
+					);
+				}
+			},
+			onError: () => toast.error("Не удалось разархивировать"),
+		});
 	}
+
+	const emptyMessage = archiveActive ? "В архиве пусто" : "Никого не нашли";
 
 	return (
 		<>
@@ -193,29 +191,30 @@ export function EmployeesSettingsPage() {
 						/>
 					}
 					archiveActive={archiveActive}
-					onToggleArchive={() => setArchiveActive((v) => !v)}
+					onToggleArchive={() => {
+						clearSelection();
+						setArchiveActive((v) => !v);
+					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}
 					bulkForms={["сотрудник", "сотрудника", "сотрудников"]}
 					bulkActions={[
-						{
-							label: "Архивировать",
-							icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: guard(handleArchive),
-						},
-						{
-							label: "Удалить",
-							icon: <Trash2 data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
-							onClick: guard(handleDelete),
-							variant: "destructive",
-						},
+						archiveActive
+							? {
+									label: "Разархивировать",
+									icon: <ArchiveRestore data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+									onClick: guard(handleUnarchive),
+								}
+							: {
+									label: "Архивировать",
+									icon: <Archive data-icon="inline-start" className="size-3.5" aria-hidden="true" />,
+									onClick: guard(handleArchive),
+								},
 					]}
 				/>
-				{archiveActive ? (
-					<TableEmptyState message="В архиве пусто" />
-				) : isMobile ? (
+				{isMobile ? (
 					<div className="flex flex-col gap-3 p-4">
-						{visibleEmployees.map((employee, index) => {
+						{employees.map((employee, index) => {
 							const isSelected = selected.has(employee.id);
 							const fullName = formatFullName(employee.lastName, employee.firstName, employee.patronymic);
 							const displayName = fullName || "Без имени";
@@ -278,7 +277,7 @@ export function EmployeesSettingsPage() {
 								</article>
 							);
 						})}
-						{visibleEmployees.length === 0 && <TableEmptyState message="Никого не нашли" />}
+						{employees.length === 0 && <TableEmptyState message={emptyMessage} />}
 					</div>
 				) : (
 					<table className="w-full text-sm">
@@ -289,7 +288,7 @@ export function EmployeesSettingsPage() {
 										checked={allSelected}
 										onCheckedChange={toggleAll}
 										aria-label="Выбрать всех сотрудников"
-										disabled={visibleEmployees.length === 0}
+										disabled={employees.length === 0}
 									/>
 								</th>
 								<th className="px-lg py-sm font-medium">ФИО</th>
@@ -299,7 +298,7 @@ export function EmployeesSettingsPage() {
 							</tr>
 						</thead>
 						<tbody>
-							{visibleEmployees.map((employee) => {
+							{employees.map((employee) => {
 								const isSelected = selected.has(employee.id);
 								const displayName =
 									formatFullName(employee.lastName, employee.firstName, employee.patronymic) || "Без имени";
@@ -354,10 +353,10 @@ export function EmployeesSettingsPage() {
 									</tr>
 								);
 							})}
-							{visibleEmployees.length === 0 && (
+							{employees.length === 0 && (
 								<tr>
 									<td colSpan={5} className="px-lg py-10 text-center text-muted-foreground">
-										Никого не нашли
+										{emptyMessage}
 									</td>
 								</tr>
 							)}

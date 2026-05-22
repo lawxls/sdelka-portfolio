@@ -17,6 +17,11 @@ export interface DeleteWorkspaceEmployeesResult {
 	failed: Array<{ id: string; code: DeleteFailureCode }>;
 }
 
+export interface UnarchiveWorkspaceEmployeesResult {
+	unarchived: string[];
+	failed: Array<{ id: string; code: "not_found" }>;
+}
+
 /**
  * Public seam for the workspace-employees domain. The full employee roster
  * across the active workspace, including pending invitations.
@@ -30,8 +35,10 @@ export interface DeleteWorkspaceEmployeesResult {
  * `delete()` returns a per-row archive/failure breakdown.
  */
 export interface ListWorkspaceEmployeesFilter {
-	/** Restrict to employees belonging to this company. Maps to `?company=<UUID>`. */
 	company?: string;
+	q?: string;
+	role?: string;
+	archived?: boolean;
 }
 
 export interface WorkspaceEmployeesClient {
@@ -40,5 +47,6 @@ export interface WorkspaceEmployeesClient {
 	invite(invites: InviteEmployeeData[]): Promise<WorkspaceEmployee[]>;
 	update(id: string, data: UpdateWorkspaceEmployeeData): Promise<WorkspaceEmployeeDetail>;
 	delete(ids: string[]): Promise<DeleteWorkspaceEmployeesResult>;
+	unarchive(ids: string[]): Promise<UnarchiveWorkspaceEmployeesResult>;
 	updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions>;
 }

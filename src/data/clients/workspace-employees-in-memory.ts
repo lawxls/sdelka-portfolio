@@ -1,3 +1,4 @@
+import { includesCI } from "../../components/global-search-matcher";
 import type { CompanySummary } from "../domains/companies";
 import type {
 	InviteEmployeeData,
@@ -10,7 +11,11 @@ import { NotFoundError } from "../errors";
 import { delay, nextId } from "../mock-utils";
 import { SEED_WORKSPACE_EMPLOYEES } from "../seeds/workspace-employees";
 import type { EmployeePermissions } from "../types";
-import type { DeleteWorkspaceEmployeesResult, WorkspaceEmployeesClient } from "./workspace-employees-client";
+import type {
+	DeleteWorkspaceEmployeesResult,
+	UnarchiveWorkspaceEmployeesResult,
+	WorkspaceEmployeesClient,
+} from "./workspace-employees-client";
 
 function cloneEmployee(e: WorkspaceEmployeeDetail): WorkspaceEmployeeDetail {
 	return {
@@ -53,7 +58,7 @@ export interface InMemoryWorkspaceEmployeesOptions {
 export function createInMemoryWorkspaceEmployeesClient(
 	options?: InMemoryWorkspaceEmployeesOptions,
 ): WorkspaceEmployeesClient {
-	let store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
+	const store: WorkspaceEmployeeDetail[] = (options?.seed ?? SEED_WORKSPACE_EMPLOYEES).map(cloneEmployee);
 	let idCounter = 1000;
 	const getCompanySummaries: GetCompanySummariesByIds = options?.getCompanySummaries ?? (async () => []);
 	const ownerIds = new Set<string>(options?.ownerIds ?? []);
@@ -68,11 +73,23 @@ export function createInMemoryWorkspaceEmployeesClient(
 		return idx;
 	}
 
+	function matchesQuery(e: WorkspaceEmployeeDetail, q: string): boolean {
+		const needle = q.toLowerCase();
+		const fullName = `${e.firstName} ${e.lastName} ${e.patronymic}`;
+		return includesCI(fullName, needle) || includesCI(e.email, needle) || includesCI(e.position, needle);
+	}
+
 	return {
 		async list(filter): Promise<WorkspaceEmployee[]> {
 			await delay();
-			const filtered =
-				filter?.company !== undefined ? store.filter((e) => e.companies.some((c) => c.id === filter.company)) : store;
+			const wantArchived = filter?.archived === true;
+			const filtered = store.filter((e) => {
+				if ((e.isArchived ?? false) !== wantArchived) return false;
+				if (filter?.company !== undefined && !e.companies.some((c) => c.id === filter.company)) return false;
+				if (filter?.role && e.role !== filter.role) return false;
+				if (filter?.q && !matchesQuery(e, filter.q)) return false;
+				return true;
+			});
 			return filtered.map(({ permissions: _permissions, ...rest }) => ({
 				...rest,
 				companies: rest.companies.map((c) => ({ ...c })),
@@ -138,7 +155,6 @@ export function createInMemoryWorkspaceEmployeesClient(
 			await delay();
 			const archived: string[] = [];
 			const failed: DeleteWorkspaceEmployeesResult["failed"] = [];
-			const toRemove = new Set<string>();
 			for (const id of ids) {
 				const existing = store.find((e) => e.id === id);
 				if (!existing) {
@@ -153,11 +169,26 @@ export function createInMemoryWorkspaceEmployeesClient(
 					failed.push({ id, code: "cannot_archive_admin" });
 					continue;
 				}
-				toRemove.add(id);
+				existing.isArchived = true;
 				archived.push(id);
 			}
-			store = store.filter((e) => !toRemove.has(e.id));
 			return { archived, failed };
+		},
+
+		async unarchive(ids: string[]): Promise<UnarchiveWorkspaceEmployeesResult> {
+			await delay();
+			const unarchived: string[] = [];
+			const failed: UnarchiveWorkspaceEmployeesResult["failed"] = [];
+			for (const id of ids) {
+				const existing = store.find((e) => e.id === id);
+				if (!existing) {
+					failed.push({ id, code: "not_found" });
+					continue;
+				}
+				existing.isArchived = false;
+				unarchived.push(id);
+			}
+			return { unarchived, failed };
 		},
 
 		async updatePermissions(id: string, data: UpdatePermissionsData): Promise<EmployeePermissions> {

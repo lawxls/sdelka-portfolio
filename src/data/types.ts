@@ -318,6 +318,7 @@ export interface Employee {
 	phone: string;
 	email: string;
 	registeredAt?: string | null;
+	isArchived?: boolean;
 }
 
 export interface Company {

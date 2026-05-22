@@ -210,24 +210,34 @@ describe("EmployeesSettingsPage multi-select", () => {
 		expect(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" })).toBeInTheDocument();
 	});
 
-	test("Удалить is enabled even when an admin is selected — the backend surfaces per-row failures", async () => {
+	test("Архивировать is enabled even when an admin is selected — the backend surfaces per-row failures", async () => {
 		renderPage();
 		const user = userEvent.setup();
 		await waitFor(() => {
 			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
 		});
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать Иванов Иван Иванович" }));
-		expect(screen.getByRole("button", { name: /Удалить/ })).toBeEnabled();
+		expect(screen.getByRole("button", { name: /Архивировать/ })).toBeEnabled();
 	});
 
-	test("selecting only user-role employee enables Удалить", async () => {
+	test("selecting only user-role employee enables Архивировать", async () => {
 		renderPage();
 		const user = userEvent.setup();
 		await waitFor(() => {
 			expect(screen.getByText("Петрова Мария Сергеевна")).toBeInTheDocument();
 		});
 		await user.click(screen.getByRole("checkbox", { name: "Выбрать Петрова Мария Сергеевна" }));
-		expect(screen.getByRole("button", { name: /Удалить/ })).toBeEnabled();
+		expect(screen.getByRole("button", { name: /Архивировать/ })).toBeEnabled();
+	});
+
+	test("Удалить bulk action is no longer present", async () => {
+		renderPage();
+		const user = userEvent.setup();
+		await waitFor(() => {
+			expect(screen.getByText("Петрова Мария Сергеевна")).toBeInTheDocument();
+		});
+		await user.click(screen.getByRole("checkbox", { name: "Выбрать Петрова Мария Сергеевна" }));
+		expect(screen.queryByRole("button", { name: /Удалить/ })).not.toBeInTheDocument();
 	});
 });
 

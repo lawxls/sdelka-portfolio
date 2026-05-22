@@ -41,10 +41,15 @@ const DOT_FILL: Record<PermissionLevel, string> = {
 export function PermissionsMatrix({
 	permissions,
 	onChange,
+	onSetAll,
 	mode,
 }: {
 	permissions: EmployeePermissions;
 	onChange: (module: PermissionModuleKey, level: PermissionLevel) => void;
+	/** Optional single-call bulk setter. When omitted, the matrix falls back
+	 * to a loop of `onChange` calls — preserves backwards compatibility for
+	 * callers that haven't wired the bulk endpoint yet. */
+	onSetAll?: (level: PermissionLevel) => void;
 	mode: "view" | "edit";
 }) {
 	if (mode === "view") {
@@ -76,6 +81,10 @@ export function PermissionsMatrix({
 	})();
 
 	function setAll(level: PermissionLevel) {
+		if (onSetAll) {
+			onSetAll(level);
+			return;
+		}
 		for (const mod of PERMISSION_MODULES) {
 			if (permissions[mod.key] !== level) onChange(mod.key, level);
 		}

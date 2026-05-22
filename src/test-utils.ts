@@ -140,6 +140,7 @@ export function makeMe(overrides: Partial<CurrentEmployee> = {}): CurrentEmploye
 		lastName: "Иванов",
 		email: "ivan@example.com",
 		phone: "+79991234567",
+		position: "",
 		avatarIcon: "blue",
 		dateJoined: "2024-01-15T10:00:00Z",
 		mailingAllowed: true,

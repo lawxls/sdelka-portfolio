@@ -9,6 +9,7 @@ const DEFAULT_ME: CurrentEmployee = {
 	lastName: "Журавлёв",
 	patronymic: "Сергеевич",
 	phone: "+79161000001",
+	position: "",
 	avatarIcon: "blue",
 	mailingAllowed: true,
 	emailSignature: "",

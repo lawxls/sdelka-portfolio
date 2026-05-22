@@ -271,6 +271,7 @@ export function fakeWorkspaceEmployeesClient(
 		invite: notImplemented("invite"),
 		update: notImplemented("update"),
 		delete: notImplemented("delete"),
+		unarchive: notImplemented("unarchive"),
 		updatePermissions: notImplemented("updatePermissions"),
 		...overrides,
 	};

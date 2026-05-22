@@ -7,19 +7,17 @@ import { PhoneInput } from "@/components/phone-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
+import type { UpdatePermissionsData, WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import { validateNames } from "@/data/name-validation";
 import type { EmployeeRole, PermissionLevel, PermissionModuleKey } from "@/data/types";
-import { ASSIGNABLE_ROLES, ROLE_LABELS } from "@/data/types";
+import { ASSIGNABLE_ROLES, PERMISSION_MODULE_KEYS, ROLE_LABELS } from "@/data/types";
 import { useMe } from "@/data/use-me";
 import {
 	useUpdateWorkspaceEmployee,
 	useUpdateWorkspaceEmployeePermissions,
 	useWorkspaceEmployeeDetail,
 } from "@/data/use-workspace-employees";
-import { formatFullName, formatPhone } from "@/lib/format";
-
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" });
+import { formatFullName, formatPhone, formatRegistrationDate } from "@/lib/format";
 
 type DrawerTab = "info" | "permissions";
 
@@ -94,6 +92,12 @@ function EmployeeDetailContent({ employeeId }: { employeeId: string }) {
 		updatePermsMutation.mutate({ id: employeeId, data: { [module]: level } });
 	}
 
+	function handlePermissionSetAll(level: PermissionLevel) {
+		if (!canEdit) return;
+		const data = Object.fromEntries(PERMISSION_MODULE_KEYS.map((k) => [k, level])) as UpdatePermissionsData;
+		updatePermsMutation.mutate({ id: employeeId, data });
+	}
+
 	return (
 		<>
 			<SheetHeader>
@@ -125,7 +129,12 @@ function EmployeeDetailContent({ employeeId }: { employeeId: string }) {
 				{activeTab === "info" && <InfoTab employee={employee} canEdit={canEdit} />}
 				{activeTab === "permissions" && (
 					<div data-testid="employee-permissions-tab">
-						<PermissionsMatrix permissions={employee.permissions} onChange={handlePermissionChange} mode="edit" />
+						<PermissionsMatrix
+							permissions={employee.permissions}
+							onChange={handlePermissionChange}
+							onSetAll={handlePermissionSetAll}
+							mode="edit"
+						/>
 					</div>
 				)}
 			</div>
@@ -178,9 +187,7 @@ function InfoTab({ employee, canEdit }: { employee: WorkspaceEmployeeDetail; can
 	}
 
 	const companiesText = employee.companies.length > 0 ? employee.companies.map((c) => c.name).join(", ") : "";
-	const registrationText = employee.registeredAt
-		? dateFormatter.format(new Date(employee.registeredAt))
-		: "Приглашение отправлено";
+	const registrationText = formatRegistrationDate(employee.registeredAt);
 
 	return (
 		<div data-testid="employee-info-tab">

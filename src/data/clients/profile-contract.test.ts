@@ -26,6 +26,7 @@ const SEED_ME: CurrentEmployee = {
 	lastName: "Иванов",
 	patronymic: "Иванович",
 	phone: "+79991234567",
+	position: "",
 	avatarIcon: "blue",
 	mailingAllowed: true,
 	emailSignature: "",
