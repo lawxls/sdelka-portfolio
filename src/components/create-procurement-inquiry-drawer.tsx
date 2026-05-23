@@ -62,6 +62,7 @@ import { useGeneratePreview } from "@/data/use-generated-questions";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { useMountEffect } from "@/hooks/use-mount-effect";
 import { SURFACE_TINT } from "@/lib/class-presets";
 import { formatCurrency, pluralizeRu, toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -226,12 +227,11 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 		}
 	}
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: unmount-only cleanup; resetForm covers the in-session path
-	useEffect(() => {
+	useMountEffect(() => {
 		return () => {
 			if (minQuestionsTimerRef.current !== null) window.clearTimeout(minQuestionsTimerRef.current);
 		};
-	}, []);
+	});
 
 	function startMinQuestionsLoaderTimer() {
 		setMinQuestionsLoaderElapsed(false);
