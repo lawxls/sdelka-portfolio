@@ -62,7 +62,6 @@ import { useGeneratePreview } from "@/data/use-generated-questions";
 import { useAllItems } from "@/data/use-items";
 import { useProcurementInquiries } from "@/data/use-procurement-inquiries";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { useMountEffect } from "@/hooks/use-mount-effect";
 import { SURFACE_TINT } from "@/lib/class-presets";
 import { formatCurrency, pluralizeRu, toNumberOrUndefined } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -201,6 +200,109 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 		setInitial("companyId", lockedCompany.id);
 	}, [open, lockedCompany, step1.companyId]);
 
+	// Preview mutations live at the drawer level (not inside Step2Body/Step3Body)
+	// so an in-flight request survives Назад → Далее: the child unmounts on
+	// «Назад» but the mutation stays alive at the parent. On re-entry, the
+	// child observes the existing pending/success state instead of re-firing.
+	const questionsPreview = useGeneratePreview();
+	const emailPreview = useGenerateEmailPreview();
+	// Bumped whenever we (re)fire a preview or reset the form, so an old
+	// in-flight Promise's onSuccess can identify itself as stale and bail.
+	const questionsReqIdRef = useRef(0);
+	const emailReqIdRef = useRef(0);
+	// Floor on questions-loader visibility so a fast success doesn't flash.
+	const [minQuestionsLoaderElapsed, setMinQuestionsLoaderElapsed] = useState(true);
+	const minQuestionsTimerRef = useRef<number | null>(null);
+
+	const formRef = useRef(form);
+	formRef.current = form;
+	const folderNameRef = useRef(selectedFolderName);
+	folderNameRef.current = selectedFolderName;
+
+	function clearMinQuestionsTimer() {
+		if (minQuestionsTimerRef.current !== null) {
+			window.clearTimeout(minQuestionsTimerRef.current);
+			minQuestionsTimerRef.current = null;
+		}
+	}
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: unmount-only cleanup; resetForm covers the in-session path
+	useEffect(() => {
+		return () => {
+			if (minQuestionsTimerRef.current !== null) window.clearTimeout(minQuestionsTimerRef.current);
+		};
+	}, []);
+
+	function startMinQuestionsLoaderTimer() {
+		setMinQuestionsLoaderElapsed(false);
+		clearMinQuestionsTimer();
+		minQuestionsTimerRef.current = window.setTimeout(() => {
+			setMinQuestionsLoaderElapsed(true);
+			minQuestionsTimerRef.current = null;
+		}, PREVIEW_LOADER_MIN_MS);
+	}
+
+	function runQuestionsPreview() {
+		questionsReqIdRef.current += 1;
+		const seq = questionsReqIdRef.current;
+		startMinQuestionsLoaderTimer();
+		questionsPreview.reset();
+		questionsPreview.mutate(buildPreviewInput(formRef.current.step1), {
+			onSuccess: (data) => {
+				if (seq !== questionsReqIdRef.current) return;
+				formRef.current.setGeneratedQuestions(
+					data.questions.map((q) => ({ questionText: q.questionText, suggests: q.suggests, answer: "" })),
+				);
+				// Mock never returns 0; a future LLM might. Auto-advance so the
+				// wizard doesn't strand the user on an empty Step 2.
+				if (data.questions.length === 0 && formRef.current.step === 2) {
+					formRef.current.advance();
+					runEmailPreviewIfNeeded();
+				}
+			},
+		});
+	}
+
+	function runEmailPreview(nextIndex: number) {
+		emailReqIdRef.current += 1;
+		const seq = emailReqIdRef.current;
+		emailPreview.reset();
+		emailPreview.mutate(
+			buildEmailPreviewInput(formRef.current.step1, formRef.current.step2, folderNameRef.current, nextIndex),
+			{
+				onSuccess: (data) => {
+					if (seq !== emailReqIdRef.current) return;
+					// Persist the index that produced this response so a failed
+					// regenerate (which never reaches onSuccess) can't skip a
+					// variant the user never saw.
+					formRef.current.applyGeneratedEmail({ subject: data.subject, body: data.body, regenerateIndex: nextIndex });
+				},
+				onError: () => {
+					if (seq !== emailReqIdRef.current) return;
+					// First-mount errors render inline below; only the
+					// regenerate-after-success path needs a toast, since the
+					// editor keeps rendering with prior content and the user
+					// would otherwise get no feedback.
+					if (formRef.current.step3.generated) {
+						toast.error("Не удалось перегенерировать письмо");
+					}
+				},
+			},
+		);
+	}
+
+	function runQuestionsPreviewIfNeeded() {
+		if (formRef.current.step2.generatedQuestions.length > 0) return;
+		if (questionsPreview.isPending) return;
+		runQuestionsPreview();
+	}
+
+	function runEmailPreviewIfNeeded() {
+		if (formRef.current.step3.generated) return;
+		if (emailPreview.isPending) return;
+		runEmailPreview(formRef.current.step3.regenerateIndex);
+	}
+
 	function handleCreateFolder(name: string, color: string) {
 		createFolderMutation.mutate(
 			{ name, color },
@@ -221,19 +323,36 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 					companyTriggerRef.current?.focus();
 					if (hasNoCompanies) toast.error("Для создания запроса необходимо создать компанию");
 				} else if (result.focus === "name") nameInputRefs.current[result.positionIndex ?? 0]?.focus();
+				return;
 			}
+			runQuestionsPreviewIfNeeded();
 			return;
 		}
 		if (step === 2) {
 			form.advance();
+			runEmailPreviewIfNeeded();
 			return;
 		}
 		handleSubmit();
 	}
 
+	function handleQuestionsSkip() {
+		formRef.current.setGeneratedQuestions([]);
+		formRef.current.advance();
+		runEmailPreviewIfNeeded();
+	}
+
 	function resetForm() {
 		form.reset();
 		nameInputRefs.current = [];
+		questionsPreview.reset();
+		emailPreview.reset();
+		// Bump the sequence counters so any in-flight Promise's onSuccess
+		// sees itself as stale and skips writing to the freshly-reset form.
+		questionsReqIdRef.current += 1;
+		emailReqIdRef.current += 1;
+		clearMinQuestionsTimer();
+		setMinQuestionsLoaderElapsed(true);
 	}
 
 	function handleSubmit() {
@@ -267,6 +386,12 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 	}
 
 	const progressPercent = STEP_PROGRESS[step];
+	// Disable advance while the underlying request is in flight. The Step 2
+	// `minLoaderElapsed` floor exists only to prevent visual flash; it
+	// shouldn't block clicks once the data is back.
+	const step2Generating = step === 2 && questionsPreview.isPending;
+	const step3InitialLoading = step === 3 && emailPreview.isPending && !form.step3.generated;
+	const advanceDisabled = step2Generating || step3InitialLoading;
 
 	return (
 		<>
@@ -321,8 +446,23 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 								/>
 							</TooltipProvider>
 						)}
-						{step === 2 && <Step2Body form={form} onSkip={() => form.advance()} />}
-						{step === 3 && <Step3Body form={form} folderName={selectedFolderName} />}
+						{step === 2 && (
+							<Step2Body
+								form={form}
+								preview={questionsPreview}
+								minLoaderElapsed={minQuestionsLoaderElapsed}
+								onRetry={runQuestionsPreview}
+								onSkip={handleQuestionsSkip}
+							/>
+						)}
+						{step === 3 && (
+							<Step3Body
+								form={form}
+								preview={emailPreview}
+								onRetry={() => runEmailPreview(form.step3.regenerateIndex)}
+								onRegenerate={() => runEmailPreview(form.step3.regenerateIndex + 1)}
+							/>
+						)}
 					</div>
 
 					<SheetFooter className={cn("sticky bottom-0 flex-row justify-between border-t", SURFACE_TINT)}>
@@ -338,7 +478,7 @@ export function CreateProcurementInquiryDrawer({ open, onOpenChange, onSubmit }:
 								</Button>
 							)}
 						</div>
-						<Button type="button" onClick={handleAdvance}>
+						<Button type="button" onClick={handleAdvance} disabled={advanceDisabled}>
 							{step === 3 ? "Создать" : "Далее"}
 						</Button>
 					</SheetFooter>
@@ -405,91 +545,16 @@ function buildPreviewPosition(p: PositionDraft): GenerateQuestionsPreviewPositio
 	return position;
 }
 
-function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurementInquiryForm>; onSkip: () => void }) {
-	const { step1, step2, setGeneratedQuestions, updateGeneratedAnswer } = form;
-	const preview = useGeneratePreview();
-	// Cache hit at mount → user previously visited Step 2 in this flow and we
-	// already have questions. Skip both the loader and the network call so
-	// answers entered before Назад survive the round trip.
-	const [hasCachedAtMount] = useState(() => step2.generatedQuestions.length > 0);
-	const [minLoaderElapsed, setMinLoaderElapsed] = useState(hasCachedAtMount);
-	const minLoaderTimerRef = useRef<number | null>(null);
-	const startTimerRef = useRef<number | null>(null);
-	// Late preview responses can land after the user has left Step 2 (Back, or
-	// advance-while-loading). Ignore them so a stale success can't repopulate
-	// `generatedQuestions` or call `onSkip` against a wizard that has moved on.
-	const aliveRef = useRef(true);
+interface Step2BodyProps {
+	form: ReturnType<typeof useCreateProcurementInquiryForm>;
+	preview: ReturnType<typeof useGeneratePreview>;
+	minLoaderElapsed: boolean;
+	onRetry: () => void;
+	onSkip: () => void;
+}
 
-	const step1Ref = useRef(step1);
-	step1Ref.current = step1;
-	const setQsRef = useRef(setGeneratedQuestions);
-	setQsRef.current = setGeneratedQuestions;
-	const onSkipRef = useRef(onSkip);
-	onSkipRef.current = onSkip;
-	const previewRef = useRef(preview);
-	previewRef.current = preview;
-
-	function runPreview() {
-		setMinLoaderElapsed(false);
-		if (minLoaderTimerRef.current !== null) window.clearTimeout(minLoaderTimerRef.current);
-		minLoaderTimerRef.current = window.setTimeout(() => setMinLoaderElapsed(true), PREVIEW_LOADER_MIN_MS);
-		previewRef.current.reset();
-		previewRef.current.mutate(buildPreviewInput(step1Ref.current), {
-			onSuccess: (data) => {
-				if (!aliveRef.current) return;
-				if (data.questions.length === 0) {
-					// Mock never returns 0; a future LLM might. Persist nothing and
-					// auto-advance so the wizard doesn't get stuck on an empty Step 2.
-					setQsRef.current([]);
-					onSkipRef.current();
-					return;
-				}
-				setQsRef.current(
-					data.questions.map((q) => ({ questionText: q.questionText, suggests: q.suggests, answer: "" })),
-				);
-			},
-		});
-	}
-
-	// Defer the call via setTimeout(0) so StrictMode's dev mount→unmount→mount
-	// cancels the first scheduled fire before it reaches the network.
-	useMountEffect(() => {
-		aliveRef.current = true;
-		if (hasCachedAtMount) {
-			return () => {
-				aliveRef.current = false;
-			};
-		}
-		const startTimerId = window.setTimeout(() => {
-			startTimerRef.current = null;
-			runPreview();
-		}, 0);
-		startTimerRef.current = startTimerId;
-		return () => {
-			aliveRef.current = false;
-			if (startTimerRef.current !== null) {
-				window.clearTimeout(startTimerRef.current);
-				startTimerRef.current = null;
-			}
-			if (minLoaderTimerRef.current !== null) {
-				window.clearTimeout(minLoaderTimerRef.current);
-				minLoaderTimerRef.current = null;
-			}
-		};
-	});
-
-	if (preview.isPending || !minLoaderElapsed) {
-		return (
-			<div
-				role="status"
-				aria-live="polite"
-				className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground"
-			>
-				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary motion-reduce:animate-none" />
-				<p className="text-sm">Генерируем уточняющие вопросы…</p>
-			</div>
-		);
-	}
+function Step2Body({ form, preview, minLoaderElapsed, onRetry, onSkip }: Step2BodyProps) {
+	const { step2, updateGeneratedAnswer } = form;
 
 	if (preview.isError) {
 		return (
@@ -500,24 +565,28 @@ function Step2Body({ form, onSkip }: { form: ReturnType<typeof useCreateProcurem
 				<TriangleAlert aria-hidden="true" className="size-6 text-destructive" />
 				<p className="text-sm text-foreground">Не удалось загрузить вопросы</p>
 				<div className="flex gap-2">
-					<Button type="button" variant="outline" size="sm" onClick={runPreview}>
+					<Button type="button" variant="outline" size="sm" onClick={onRetry}>
 						Повторить
 					</Button>
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						onClick={() => {
-							// Clear any questions from a previous successful visit so
-							// they don't leak into the submit payload — mirrors the
-							// auto-skip path in `runPreview`.
-							setGeneratedQuestions([]);
-							onSkip();
-						}}
-					>
+					<Button type="button" variant="ghost" size="sm" onClick={onSkip}>
 						Пропустить
 					</Button>
 				</div>
+			</div>
+		);
+	}
+
+	if (preview.isPending || !minLoaderElapsed || step2.generatedQuestions.length === 0) {
+		return (
+			<div
+				role="status"
+				aria-live="polite"
+				className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground"
+			>
+				{/* Loader keeps spinning even with prefers-reduced-motion: an indeterminate
+				    spinner is informational — without rotation it reads as static junk. */}
+				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary" />
+				<p className="text-sm animate-pulse motion-reduce:animate-none">Генерируем уточняющие вопросы…</p>
 			</div>
 		);
 	}
@@ -600,98 +669,20 @@ function buildEmailPreviewInput(
 	return email;
 }
 
-function Step3Body({
-	form,
-	folderName,
-}: {
+interface Step3BodyProps {
 	form: ReturnType<typeof useCreateProcurementInquiryForm>;
-	folderName: string | null;
-}) {
-	const { step1, step2, step3, update3, applyGeneratedEmail } = form;
+	preview: ReturnType<typeof useGenerateEmailPreview>;
+	onRetry: () => void;
+	onRegenerate: () => void;
+}
+
+function Step3Body({ form, preview, onRetry, onRegenerate }: Step3BodyProps) {
+	const { step3, update3 } = form;
 	const bodyId = "procurement-inquiry-email-body";
-	const preview = useGenerateEmailPreview();
-	// Hide-on-first-mount loader: stays true until the initial preview lands.
-	// Subsequent «Перегенерировать» clicks use the inline button spinner instead.
-	const [hasGenerated, setHasGenerated] = useState(step3.generated);
-	// Late preview responses can land after the user has left Step 3
-	// (Назад, or another regenerate in flight). Ignore them so a stale
-	// success can't overwrite fresher state.
-	const aliveRef = useRef(true);
 
-	const step1Ref = useRef(step1);
-	step1Ref.current = step1;
-	const step2Ref = useRef(step2);
-	step2Ref.current = step2;
-	const step3Ref = useRef(step3);
-	step3Ref.current = step3;
-	const folderNameRef = useRef(folderName);
-	folderNameRef.current = folderName;
-	const applyRef = useRef(applyGeneratedEmail);
-	applyRef.current = applyGeneratedEmail;
-	const previewRef = useRef(preview);
-	previewRef.current = preview;
+	const regenerating = preview.isPending && step3.generated;
 
-	function runPreview(nextIndex: number) {
-		previewRef.current.reset();
-		previewRef.current.mutate(
-			buildEmailPreviewInput(step1Ref.current, step2Ref.current, folderNameRef.current, nextIndex),
-			{
-				onSuccess: (data) => {
-					if (!aliveRef.current) return;
-					// Persist the index that produced this response so a
-					// failed regenerate (which never reaches onSuccess) can't
-					// skip a variant the user never saw.
-					applyRef.current({ subject: data.subject, body: data.body, regenerateIndex: nextIndex });
-					setHasGenerated(true);
-				},
-				onError: () => {
-					if (!aliveRef.current) return;
-					// First-mount errors render inline below; only the
-					// regenerate-after-success path needs a toast, since the
-					// editor keeps rendering with the prior content and the
-					// user would otherwise get no feedback.
-					if (step3Ref.current.generated) {
-						toast.error("Не удалось перегенерировать письмо");
-					}
-				},
-			},
-		);
-	}
-
-	// Defer the initial call via setTimeout(0) so StrictMode's dev
-	// mount→unmount→mount cancels the first scheduled fire before it reaches
-	// the network — mirrors the Step 2 preview pattern.
-	useMountEffect(() => {
-		aliveRef.current = true;
-		if (step3.generated) {
-			return () => {
-				aliveRef.current = false;
-			};
-		}
-		const id = window.setTimeout(() => runPreview(0), 0);
-		return () => {
-			aliveRef.current = false;
-			window.clearTimeout(id);
-		};
-	});
-
-	const regenerating = preview.isPending && hasGenerated;
-	const initialLoading = preview.isPending && !hasGenerated;
-
-	if (initialLoading) {
-		return (
-			<div
-				role="status"
-				aria-live="polite"
-				className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground"
-			>
-				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary motion-reduce:animate-none" />
-				<p className="text-sm">Генерируем письмо…</p>
-			</div>
-		);
-	}
-
-	if (preview.isError && !hasGenerated) {
+	if (preview.isError && !step3.generated) {
 		return (
 			<div
 				role="alert"
@@ -699,9 +690,24 @@ function Step3Body({
 			>
 				<TriangleAlert aria-hidden="true" className="size-6 text-destructive" />
 				<p className="text-sm text-foreground">Не удалось сгенерировать письмо</p>
-				<Button type="button" variant="outline" size="sm" onClick={() => runPreview(step3.regenerateIndex)}>
+				<Button type="button" variant="outline" size="sm" onClick={onRetry}>
 					Повторить
 				</Button>
+			</div>
+		);
+	}
+
+	if (!step3.generated) {
+		return (
+			<div
+				role="status"
+				aria-live="polite"
+				className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground"
+			>
+				{/* Loader keeps spinning even with prefers-reduced-motion: an indeterminate
+				    spinner is informational — without rotation it reads as static junk. */}
+				<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary" />
+				<p className="text-sm animate-pulse motion-reduce:animate-none">Генерируем письмо…</p>
 			</div>
 		);
 	}
@@ -719,7 +725,7 @@ function Step3Body({
 							type="button"
 							variant="ghost"
 							size="sm"
-							onClick={() => runPreview(step3.regenerateIndex + 1)}
+							onClick={onRegenerate}
 							disabled={regenerating}
 							aria-label="Перегенерировать письмо"
 						>

@@ -508,6 +508,57 @@ describe("CreateProcurementInquiryDrawer — Step 3 supplier email", () => {
 		expect(checkbox).toBeChecked();
 	});
 
+	test("Создать is disabled while initial email is being generated", async () => {
+		let resolve!: (v: EmailPreviewResponse) => void;
+		const emailPreviewFn = () =>
+			new Promise<EmailPreviewResponse>((r) => {
+				resolve = r;
+			});
+		renderDrawer({ emailPreviewFn });
+		const user = userEvent.setup();
+
+		await fillFirstPositionName(user, "Арматура");
+		await advance(user);
+		await advance(user);
+
+		expect(await screen.findByText("Генерируем письмо…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Создать" })).toBeDisabled();
+
+		resolve({ subject: "S", body: "Здравствуйте, Арматура" });
+
+		await screen.findByLabelText("Текст письма");
+		expect(screen.getByRole("button", { name: "Создать" })).not.toBeDisabled();
+	});
+
+	test("Назад while email preview is in-flight, then Далее, does not refetch", async () => {
+		let resolve!: (v: EmailPreviewResponse) => void;
+		const emailPreviewFn = vi.fn(
+			() =>
+				new Promise<EmailPreviewResponse>((r) => {
+					resolve = r;
+				}),
+		);
+		renderDrawer({ emailPreviewFn });
+		const user = userEvent.setup();
+
+		await fillFirstPositionName(user, "Арматура");
+		await advance(user);
+		await advance(user);
+
+		expect(await screen.findByText("Генерируем письмо…")).toBeInTheDocument();
+		expect(emailPreviewFn).toHaveBeenCalledTimes(1);
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		expect(screen.getByText("Генерируем письмо…")).toBeInTheDocument();
+		expect(emailPreviewFn).toHaveBeenCalledTimes(1);
+
+		resolve({ subject: "S", body: "Здравствуйте, Арматура" });
+		await screen.findByLabelText("Текст письма");
+		expect(emailPreviewFn).toHaveBeenCalledTimes(1);
+	});
+
 	test("Перегенерировать swaps the body to a different variant", async () => {
 		renderDrawer();
 		const user = userEvent.setup();
@@ -593,6 +644,55 @@ describe("CreateProcurementInquiryDrawer — Step 2 clarifying questions", () =>
 
 		const [payload] = onSubmit.mock.calls[0] as [CreateProcurementInquiryPayload];
 		expect(payload.procurementInquiry.generatedQuestions).toBeUndefined();
+	});
+
+	test("Далее is disabled while questions are being generated", async () => {
+		let resolve!: (v: PreviewResponse) => void;
+		const previewFn = () =>
+			new Promise<PreviewResponse>((r) => {
+				resolve = r;
+			});
+		renderDrawer({ previewFn });
+		const user = userEvent.setup();
+
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		expect(await screen.findByText("Генерируем уточняющие вопросы…")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
+
+		resolve({ questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] });
+
+		await screen.findByText("Marka?");
+		expect(screen.getByRole("button", { name: "Далее" })).not.toBeDisabled();
+	});
+
+	test("Назад while preview is in-flight, then Далее, does not refetch", async () => {
+		let resolve!: (v: PreviewResponse) => void;
+		const previewFn = vi.fn(
+			() =>
+				new Promise<PreviewResponse>((r) => {
+					resolve = r;
+				}),
+		);
+		renderDrawer({ previewFn });
+		const user = userEvent.setup();
+
+		await fillFirstPositionName(user);
+		await advance(user);
+
+		expect(await screen.findByText("Генерируем уточняющие вопросы…")).toBeInTheDocument();
+		expect(previewFn).toHaveBeenCalledTimes(1);
+
+		await user.click(screen.getByRole("button", { name: "Назад" }));
+		await advance(user);
+
+		expect(screen.getByText("Генерируем уточняющие вопросы…")).toBeInTheDocument();
+		expect(previewFn).toHaveBeenCalledTimes(1);
+
+		resolve({ questions: [{ questionText: "Marka?", suggests: ["A", "B"] }] });
+		expect(await screen.findByText("Marka?")).toBeInTheDocument();
+		expect(previewFn).toHaveBeenCalledTimes(1);
 	});
 
 	test("Назад → Далее reuses cached questions without re-fetching", async () => {
