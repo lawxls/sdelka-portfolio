@@ -8,11 +8,27 @@ import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memor
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in-memory";
+import type { Subscription } from "@/data/domains/subscription";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
-import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
+import {
+	fakeGeneratedEmailClient,
+	fakeGeneratedQuestionsClient,
+	TestClientsProvider,
+	testFoldersClient,
+} from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry } from "@/data/types";
 import { makeCompanyDetail, makeProcurementInquiry } from "@/test-utils";
 import { ProcurementInquiriesPage } from "./procurement-inquiries-page";
+
+const toastErrorSpy = vi.fn();
+vi.mock("sonner", () => ({
+	toast: {
+		error: (msg: string) => toastErrorSpy(msg),
+		success: vi.fn(),
+		info: vi.fn(),
+	},
+}));
 
 const FOLDERS: Folder[] = [
 	{ id: "folder-packaging", name: "Упаковка", color: "blue" },
@@ -37,6 +53,7 @@ const PROCUREMENT_INQUIRIES: ProcurementInquiry[] = [
 function renderPage(
 	initialEntries: string[] = ["/inquiries"],
 	procurementInquiries: ProcurementInquiry[] = PROCUREMENT_INQUIRIES,
+	subscription?: Subscription,
 ) {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -50,6 +67,9 @@ function renderPage(
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
 				folders: testFoldersClient(FOLDERS),
 				profile: createInMemoryProfileClient(),
+				generatedQuestions: fakeGeneratedQuestionsClient(),
+				generatedEmail: fakeGeneratedEmailClient(),
+				subscription: createInMemorySubscriptionClient(subscription ? { subscription } : undefined),
 			}}
 		>
 			<TooltipProvider>
@@ -65,6 +85,7 @@ function renderPage(
 
 beforeEach(() => {
 	_setMockDelay(0, 0);
+	toastErrorSpy.mockClear();
 });
 
 afterEach(() => {
@@ -174,5 +195,29 @@ describe("ProcurementInquiriesPage", () => {
 		});
 		expect(screen.queryByTestId("procurement-inquiry-row-T-001")).not.toBeInTheDocument();
 		expect(screen.queryByTestId("procurement-inquiry-row-T-002")).not.toBeInTheDocument();
+	});
+
+	test("«Создать запрос» does not open the drawer and shows a limit toast when the monthly limit is reached", async () => {
+		renderPage(["/inquiries"], PROCUREMENT_INQUIRIES, {
+			tariff_id: "start",
+			tariff_name: "Старт",
+			requests_used: 15,
+			requests_limit: 15,
+			employees_used: 1,
+			employees_limit: 5,
+			emails_sent: 0,
+			emails_limit: 500,
+		});
+		await screen.findByTestId("procurement-inquiry-row-T-001");
+
+		const user = userEvent.setup();
+		await user.click(screen.getByRole("button", { name: /Создать запрос/ }));
+
+		expect(screen.queryByRole("heading", { name: "Создать запрос" })).not.toBeInTheDocument();
+		await waitFor(() => {
+			expect(toastErrorSpy).toHaveBeenCalledWith(
+				"Достигнут лимит запросов. Перейдите на другой тариф или докупите запросы отдельно",
+			);
+		});
 	});
 });

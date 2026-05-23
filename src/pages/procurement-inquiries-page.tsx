@@ -58,6 +58,7 @@ import {
 	useProcurementInquiries,
 	useUpdateProcurementInquiry,
 } from "@/data/use-procurement-inquiries";
+import { useSubscription } from "@/data/use-subscription";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useMenuEditGuard } from "@/hooks/use-menu-edit-guard";
 import { useModuleGuard } from "@/hooks/use-module-guard";
@@ -374,6 +375,11 @@ export function ProcurementInquiriesPage() {
 	const deleteProcurementInquiryMutation = useDeleteProcurementInquiry();
 	const createProcurementInquiryMutation = useCreateProcurementInquiryWithItems();
 	const { guard: inquiriesGuard } = useModuleGuard("procurementInquiries");
+	const { data: subscription } = useSubscription();
+	const inquiriesLimitReached =
+		subscription !== undefined &&
+		subscription.requests_limit > 0 &&
+		subscription.requests_used >= subscription.requests_limit;
 	const [drawerOpen, setDrawerOpen] = useState(false);
 	const [editingProcurementInquiryId, setEditingProcurementInquiryId] = useState<string | null>(null);
 	const [deletingProcurementInquiry, setDeletingProcurementInquiry] = useState<ProcurementInquiry | null>(null);
@@ -514,7 +520,13 @@ export function ProcurementInquiriesPage() {
 			showCompanies={isMultiCompany}
 			isArchiveView={isArchiveView}
 			onArchiveToggle={handleArchiveToggle}
-			onCreateProcurementInquiry={inquiriesGuard(() => setDrawerOpen(true))}
+			onCreateProcurementInquiry={inquiriesGuard(() => {
+				if (inquiriesLimitReached) {
+					toast.error("Достигнут лимит запросов. Перейдите на другой тариф или докупите запросы отдельно");
+					return;
+				}
+				setDrawerOpen(true);
+			})}
 		/>
 	);
 
