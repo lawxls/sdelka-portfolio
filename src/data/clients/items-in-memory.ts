@@ -18,12 +18,12 @@ import { _addYourSupplier } from "../supplier-mock-data";
 import { getAnnualCost, getDeviation, getDisplayStatus, getOverpayment, type ProcurementStatus } from "../types";
 import type { ItemsClient } from "./items-client";
 
-function procurementInquiryFolderId(item: ProcurementItem): string | null {
-	return _inquiryState(item.procurementInquiryId)?.folderId ?? null;
+function effectiveFolderId(item: ProcurementItem): string | null {
+	return item.folderId ?? _inquiryState(item.procurementInquiryId)?.folderId ?? null;
 }
 
-function procurementInquiryCompanyId(item: ProcurementItem): string | null {
-	return _inquiryState(item.procurementInquiryId)?.companyId ?? null;
+function effectiveCompanyId(item: ProcurementItem): string | null {
+	return item.companyId ?? _inquiryState(item.procurementInquiryId)?.companyId ?? null;
 }
 
 function isEffectivelyArchived(item: ProcurementItem, itemArchived: boolean): boolean {
@@ -35,10 +35,8 @@ function matchesFolder(item: ProcurementItem, folder: string | undefined, archiv
 	if (folder === "archive") return archived;
 	if (archived) return false;
 	if (folder === undefined || folder === "all") return true;
-	// Item's own folder wins; inquiry-level folder is the fallback so legacy
-	// inquiry-grouped items keep filtering correctly. Mirrors the backend
-	// Coalesce semantics in `ProcurementItemFilter.filter_folder`.
-	const folderId = item.folderId ?? procurementInquiryFolderId(item);
+	// Mirrors the backend Coalesce semantics in `ProcurementItemFilter.filter_folder`.
+	const folderId = effectiveFolderId(item);
 	if (folder === "none") return folderId === null;
 	return folderId === folder;
 }
@@ -61,7 +59,7 @@ function applyFilters(items: ProcurementItem[], params: ListItemsParams): Procur
 	return items.filter((item) => {
 		const archived = isEffectivelyArchived(item, _isArchived(item.id));
 		if (!matchesFolder(item, params.folder, archived)) return false;
-		if (params.company && procurementInquiryCompanyId(item) !== params.company) return false;
+		if (params.company && effectiveCompanyId(item) !== params.company) return false;
 		if (!matchesStatus(item, params.status)) return false;
 		if (!matchesDeviation(item, params.deviation)) return false;
 		if (q && !item.name.toLowerCase().includes(q)) return false;
@@ -187,6 +185,7 @@ export function createInMemoryItemsClient(options?: InMemoryItemsOptions): Items
 				deliveryCostType: input.deliveryCostType,
 				deliveryCost: input.deliveryCost,
 				procurementInquiryId: input.procurementInquiryId,
+				companyId: input.procurementInquiryId ? undefined : input.companyId,
 				folderId: input.folderId ?? undefined,
 			}));
 			const current = _getAllItems();

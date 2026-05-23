@@ -34,7 +34,7 @@ function initInfoForm(item: ProcurementItem, procurementInquiry: ProcurementInqu
 		unit: item.unit ?? "",
 		quantityPerDelivery: item.quantityPerDelivery != null ? String(item.quantityPerDelivery) : "",
 		annualQuantity: String(item.annualQuantity),
-		folderId: procurementInquiry?.folderId ?? null,
+		folderId: item.folderId ?? procurementInquiry?.folderId ?? null,
 	};
 }
 
@@ -44,9 +44,12 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	// ProcurementInquiry-level meta (company, category, address, payment method, current
 	// supplier, requirements) lives on the parent inquiry after the schema
 	// migration. Read-only here in the item drawer; edits are deferred to the
-	// inquiry detail page in a later slice.
+	// inquiry detail page in a later slice. Manual-add items skip the inquiry
+	// and stamp company/category onto the item itself — fall back to those.
 	const { data: procurementInquiry } = useProcurementInquiry(item?.procurementInquiryId ?? null);
-	const { data: company } = useCompanyDetail(procurementInquiry?.companyId ?? null);
+	const effectiveCompanyId = item?.companyId ?? procurementInquiry?.companyId ?? null;
+	const effectiveFolderId = item?.folderId ?? procurementInquiry?.folderId ?? null;
+	const { data: company } = useCompanyDetail(effectiveCompanyId);
 	const updateMutation = useUpdateItemDetail();
 	const updateInquiryMutation = useUpdateProcurementInquiry();
 	const createFolderMutation = useCreateFolder();
@@ -55,10 +58,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	const [editingInfo, setEditingInfo] = useState(false);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
 
-	const folder = useMemo(
-		() => folders.find((f) => f.id === procurementInquiry?.folderId),
-		[folders, procurementInquiry?.folderId],
-	);
+	const folder = useMemo(() => folders.find((f) => f.id === effectiveFolderId), [folders, effectiveFolderId]);
 
 	const addressText = useMemo(() => {
 		if (!procurementInquiry?.deliveryAddressId || !company?.addresses) return "";
@@ -156,7 +156,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			infoForm.unit !== (currentItem.unit ?? "") ||
 			toNumberOrUndefined(infoForm.quantityPerDelivery) !== currentItem.quantityPerDelivery ||
 			(aq !== undefined && aq !== currentItem.annualQuantity) ||
-			infoForm.folderId !== (procurementInquiry?.folderId ?? null)
+			infoForm.folderId !== effectiveFolderId
 		);
 	}
 

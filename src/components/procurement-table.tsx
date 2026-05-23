@@ -184,11 +184,13 @@ export function ProcurementTable({
 		return map;
 	}, [folders]);
 	const hasContextMenu = !!(onDeleteItem || onRenameItem || onArchiveItem);
-	function procurementInquiryFolderId(item: ProcurementItem): string | null {
+	function effectiveFolderId(item: ProcurementItem): string | null {
+		if (item.folderId !== undefined) return item.folderId;
 		if (!item.procurementInquiryId) return null;
 		return procurementInquiryMap?.[item.procurementInquiryId]?.folderId ?? null;
 	}
-	function procurementInquiryCompanyId(item: ProcurementItem): string | undefined {
+	function effectiveCompanyId(item: ProcurementItem): string | undefined {
+		if (item.companyId) return item.companyId;
 		if (!item.procurementInquiryId) return undefined;
 		return procurementInquiryMap?.[item.procurementInquiryId]?.companyId;
 	}
@@ -237,8 +239,8 @@ export function ProcurementTable({
 					{!isLoading && !error && items.length > 0 && (
 						<div className="flex flex-col gap-3 p-4">
 							{items.map((item, index) => {
-								const folderId = procurementInquiryFolderId(item);
-								const companyId = procurementInquiryCompanyId(item);
+								const folderId = effectiveFolderId(item);
+								const companyId = effectiveCompanyId(item);
 								return (
 									<ProcurementCard
 										key={item.id}
@@ -332,9 +334,9 @@ export function ProcurementTable({
 								const dev = formatDeviation(deviation);
 								const displayStatus = getDisplayStatus(item);
 								const status = STATUS_CONFIG[displayStatus];
-								const folderId = procurementInquiryFolderId(item);
+								const folderId = effectiveFolderId(item);
 								const folder = folderId ? folderMap[folderId] : undefined;
-								const companyId = procurementInquiryCompanyId(item);
+								const companyId = effectiveCompanyId(item);
 								const companyName = companyId ? companyMap?.[companyId] : undefined;
 								const isEditing = editingItemId === item.id;
 								const rowCls = onRowClick && !isEditing ? "cursor-pointer group" : "group";

@@ -32,6 +32,7 @@ export interface ProcurementItemWire {
 	bestPrice: number | string | null;
 	averagePrice: number | string | null;
 	inquiryId?: string | null;
+	companyId?: string | null;
 	folderId?: string | null;
 	description?: string | null;
 	unit?: Unit | null;
@@ -78,6 +79,7 @@ export function itemFromApi(wire: ProcurementItemWire): ProcurementItem {
 		averagePrice: parseDecimal(wire.averagePrice, null),
 	};
 	if (wire.inquiryId) item.procurementInquiryId = wire.inquiryId;
+	if (wire.companyId) item.companyId = wire.companyId;
 	if (wire.folderId !== undefined) item.folderId = wire.folderId;
 	if (wire.description) item.description = wire.description;
 	if (wire.unit) item.unit = wire.unit;

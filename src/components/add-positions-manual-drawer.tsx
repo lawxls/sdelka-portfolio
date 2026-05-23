@@ -96,11 +96,13 @@ export function AddPositionsManualDrawer({
 		activeSupplierPositionIndex !== null ? positions[activeSupplierPositionIndex]?.currentSupplier : undefined;
 	const nameInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const companyTriggerRef = useRef<HTMLButtonElement>(null);
+	const lockedCompany = companies.length === 1 ? companies[0] : undefined;
+	const companyDisabled = !!lockedCompany;
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: re-seed only on open transitions; keeping `initialCompanyId`/`initialFolderId` out of deps avoids snapping the user's choices back to URL state mid-edit
 	useEffect(() => {
 		if (!open) return;
-		setCompanyId(initialCompanyId ?? "");
+		setCompanyId(lockedCompany?.id ?? initialCompanyId ?? "");
 		setFolderId(initialFolderId ?? null);
 		setGeneralInfoErrors({});
 	}, [open]);
@@ -227,7 +229,7 @@ export function AddPositionsManualDrawer({
 							<div className="flex flex-col gap-3">
 								<SectionGroupHeader title="Общая информация" className="mt-2" />
 								<Field label="Компания" required htmlFor="add-positions-company">
-									<Select value={companyId || undefined} onValueChange={handleCompanyChange}>
+									<Select value={companyId || undefined} onValueChange={handleCompanyChange} disabled={companyDisabled}>
 										<SelectTrigger
 											id="add-positions-company"
 											ref={companyTriggerRef}
@@ -235,7 +237,11 @@ export function AddPositionsManualDrawer({
 											aria-required="true"
 											aria-invalid={generalInfoErrors.companyId ? true : undefined}
 											aria-describedby={generalInfoErrors.companyId ? "add-positions-company-error" : undefined}
-											className={cn("w-full", generalInfoErrors.companyId && "border-destructive")}
+											className={cn(
+												"w-full",
+												generalInfoErrors.companyId && "border-destructive",
+												companyDisabled && "opacity-70",
+											)}
 										>
 											<SelectValue placeholder="— выберите —" />
 										</SelectTrigger>

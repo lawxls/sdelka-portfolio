@@ -116,6 +116,9 @@ export interface ProcurementItem {
 	averagePrice: number | null;
 	/** Parent inquiry slug. Items belong to exactly one inquiry. */
 	procurementInquiryId?: string;
+	/** Owning company. Set directly on the item by the manual-add flow on
+	 * /positions; for inquiry-grouped items the company lives on the inquiry. */
+	companyId?: string;
 	/** Optional category. Set directly on the item by the manual-add flow on
 	 * /positions; for inquiry-grouped items the category lives on the inquiry. */
 	folderId?: string | null;
