@@ -105,22 +105,30 @@ export function useDeleteAddress(companyId: string) {
 	});
 }
 
-export function useUploadCompanyCard(companyId: string) {
-	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
+const INN_LEGAL_ENTITY_LEN = 10;
+const INN_INDIVIDUAL_LEN = 12;
 
-	return useMutation({
-		mutationFn: (file: File) => client.uploadCard(companyId, file),
-		onSuccess: (company) => queryClient.setQueryData(keys.companies.detail(companyId), company),
-	});
+/** True for either INN-10 (legal entity) or INN-12 (sole proprietor). The
+ * lookup hook only fires when this returns `true`, so we don't pester
+ * DaData on partial input. */
+export function isValidCompanyInnLength(inn: string): boolean {
+	return inn.length === INN_LEGAL_ENTITY_LEN || inn.length === INN_INDIVIDUAL_LEN;
 }
 
-export function useDeleteCompanyCard(companyId: string) {
+/** Lookup company identity by INN via DaData. Returns `null` on miss (404),
+ * throws on upstream errors so the drawer can render its retry banner. */
+export function useCompanyLookupByInn(inn: string, options?: { enabled?: boolean }) {
 	const client = useCompaniesClient();
-	const queryClient = useQueryClient();
-
-	return useMutation({
-		mutationFn: () => client.deleteCard(companyId),
-		onSuccess: (company) => queryClient.setQueryData(keys.companies.detail(companyId), company),
+	const enabled = (options?.enabled ?? true) && isValidCompanyInnLength(inn);
+	return useQuery({
+		queryKey: ["company-lookup", inn],
+		queryFn: () => client.lookupByInn(inn),
+		enabled,
+		// Cached for a minute so backtracking the INN doesn't re-fetch.
+		staleTime: 60_000,
+		// 404 ("не найдено") is data, not an error; retrying it is pointless.
+		// Upstream errors (502) propagate but should NOT be retried automatically —
+		// the drawer surfaces a manual retry button for that case.
+		retry: false,
 	});
 }

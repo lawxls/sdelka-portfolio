@@ -124,7 +124,12 @@ describe("useCreateCompany", () => {
 		const { result } = renderHook(() => useCreateCompany(), { wrapper: wrapperFactory(client) });
 		const payload = {
 			name: "Новая",
-			address: { name: "Офис", address: "г. Москва", phone: "+71234567890" },
+			shortName: "Новая",
+			inn: "7700000001",
+			kpp: "",
+			ogrn: "",
+			directorName: "",
+			addresses: [{ name: "Офис", address: "г. Москва", phone: "+71234567890" }],
 		};
 		result.current.mutate(payload);
 

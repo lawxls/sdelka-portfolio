@@ -3,7 +3,6 @@ import type {
 	Supplier,
 	SupplierChatMessage,
 	SupplierFilterParams,
-	SupplierIdentity,
 	SupplierQuote,
 	SuppliersList,
 	SuppliersPage,
@@ -29,9 +28,6 @@ export interface SuppliersClient {
 	getById(supplierId: string): Promise<Supplier | null>;
 	/** Cross-item received-КП offers for the matching INN, sorted with `contextItemId` first. */
 	quotesByInn(inn: string, contextItemId: string): Promise<SupplierQuote[]>;
-	/** Looks up public-facing identity (name, website, address) by INN — used for the
-	 * «Добавить текущего поставщика» modal so the user can prefill from an existing supplier. */
-	identityByInn(inn: string): Promise<SupplierIdentity | null>;
 
 	/** Creates an inquiry-scoped candidate supplier (status="new", no itemId).
 	 * Backs the «Добавить поставщика» modal in the consolidated suppliers tab. */

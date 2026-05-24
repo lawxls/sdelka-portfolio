@@ -67,27 +67,6 @@ export function useSupplierQuotes(inn: string | null, contextItemId: string) {
 	});
 }
 
-const INN_LEGAL_ENTITY_LEN = 10;
-export const INN_INDIVIDUAL_LEN = 12;
-
-export function isValidInnLength(inn: string): boolean {
-	return inn.length === INN_LEGAL_ENTITY_LEN || inn.length === INN_INDIVIDUAL_LEN;
-}
-
-/** Mock lookup of supplier identity (name/website/address) by INN. Only fetches
- * for full-length INNs (10 for legal entities, 12 for individual entrepreneurs)
- * so the UI doesn't fire on partial input. */
-export function useSupplierIdentity(inn: string, options?: { enabled?: boolean }) {
-	const client = useSuppliersClient();
-	const enabled = (options?.enabled ?? true) && isValidInnLength(inn);
-	return useQuery({
-		queryKey: ["supplier-identity", inn],
-		queryFn: () => client.identityByInn(inn),
-		enabled,
-		staleTime: 60_000,
-	});
-}
-
 export function useCreateSupplier() {
 	const client = useSuppliersClient();
 	const queryClient = useQueryClient();

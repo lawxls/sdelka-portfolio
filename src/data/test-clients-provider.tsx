@@ -57,8 +57,7 @@ export function fakeCompaniesClient(overrides: Partial<CompaniesClient> = {}): C
 		createAddress: notImplemented("createAddress"),
 		updateAddress: notImplemented("updateAddress"),
 		deleteAddress: notImplemented("deleteAddress"),
-		uploadCard: notImplemented("uploadCard"),
-		deleteCard: notImplemented("deleteCard"),
+		lookupByInn: notImplemented("lookupByInn"),
 		...overrides,
 	};
 }
@@ -96,7 +95,6 @@ export function fakeSuppliersClient(overrides: Partial<SuppliersClient> = {}): S
 		get: notImplemented("get"),
 		getById: notImplemented("getById"),
 		quotesByInn: notImplemented("quotesByInn"),
-		identityByInn: notImplemented("identityByInn"),
 		create: notImplemented("create"),
 		archive: notImplemented("archive"),
 		unarchive: notImplemented("unarchive"),

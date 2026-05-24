@@ -2,7 +2,6 @@ import type {
 	CreateSupplierInput,
 	Supplier,
 	SupplierChatMessage,
-	SupplierIdentity,
 	SupplierQuote,
 	SuppliersList,
 	SuppliersPage,
@@ -41,8 +40,6 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 
 		quotesByInn: (inn, contextItemId) =>
 			http.get<SupplierQuote[]>(`/suppliers/quotes${buildQuery({ inn, contextItemId })}`),
-
-		identityByInn: (inn) => http.get<SupplierIdentity | null>(`/suppliers/identity${buildQuery({ inn })}`),
 
 		create: (input: CreateSupplierInput) =>
 			http.post<Supplier>(`/procurement-inquiries/${enc(input.procurementInquiryId)}/suppliers`, {

@@ -22,15 +22,18 @@ import { createInMemoryCompaniesClient } from "./companies-in-memory";
  */
 
 function makeStored(id: string, overrides: Partial<Company> = {}): Company {
+	const digits = id.replace(/\D/g, "") || "0";
 	return {
 		id,
 		name: `Company ${id}`,
-		inn: "",
+		shortName: "",
+		inn: `770000000${digits}`.slice(-10),
+		kpp: "",
+		ogrn: "",
+		directorName: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
-		cardFile: null,
-		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: 1,
@@ -130,17 +133,22 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 			respond: ({ init }) => {
 				const data = JSON.parse(init?.body as string);
 				if (!data.name) return { status: 400, body: { fieldErrors: { name: ["required"] } } };
+				if (!data.inn) return { status: 400, body: { fieldErrors: { inn: ["required"] } } };
+				const dup = Array.from(store.values()).find((c) => c.inn === data.inn);
+				if (dup) return { status: 400, body: { fieldErrors: { inn: ["duplicate"] } } };
 				const id = `company-${store.size + 1}`;
 				const now = "2026-05-18T10:00:00+03:00";
 				const company: Company = {
 					id,
 					name: data.name,
-					inn: data.inn ?? "",
+					shortName: data.shortName ?? "",
+					inn: data.inn,
+					kpp: data.kpp ?? "",
+					ogrn: data.ogrn ?? "",
+					directorName: data.directorName ?? "",
 					website: data.website ?? "",
 					additionalComments: data.additionalComments ?? "",
 					isMain: false,
-					cardFile: null,
-					cardFileName: "",
 					employeeCount: 0,
 					procurementItemCount: 0,
 					addressesCount: 0,
@@ -253,30 +261,28 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 			},
 		},
 		{
-			method: "POST",
-			path: /^\/companies\/([^/]+)\/card\/$/,
-			respond: ({ url, init }) => {
-				const id = idFromPath(url, /^\/companies\/([^/]+)\/card\/$/);
-				const c = store.get(id);
-				if (!c) return { status: 404 };
-				const form = init?.body as FormData;
-				const file = form.get("cardFile") as File | null;
-				if (!file) return { status: 400, body: { fieldErrors: { cardFile: ["required"] } } };
-				c.cardFile = `mock://companies/cards/${encodeURIComponent(file.name)}`;
-				c.cardFileName = file.name;
-				return { status: 200, body: c };
-			},
-		},
-		{
-			method: "DELETE",
-			path: /^\/companies\/([^/]+)\/card\/$/,
+			method: "GET",
+			path: /^\/companies\/lookup-by-inn\//,
 			respond: ({ url }) => {
-				const id = idFromPath(url, /^\/companies\/([^/]+)\/card\/$/);
-				const c = store.get(id);
-				if (!c) return { status: 404 };
-				c.cardFile = null;
-				c.cardFileName = "";
-				return { status: 200, body: c };
+				const u = new URL(url, "http://test");
+				const inn = u.searchParams.get("inn") ?? "";
+				if (inn === "0000000000") return { status: 404, body: { detail: "miss" } };
+				if (inn === "9999999999") return { status: 502, body: { detail: "DaData upstream error." } };
+				const existing = Array.from(store.values()).find((c) => c.inn === inn);
+				return {
+					status: 200,
+					body: {
+						inn,
+						shortName: `ООО «Тест-${inn.slice(-4)}»`,
+						fullName: `ОБЩЕСТВО «ТЕСТ-${inn.slice(-4)}»`,
+						kpp: inn.length === 10 ? `${inn.slice(0, 4)}01001` : "",
+						ogrn: `1${inn}`.slice(0, 13),
+						directorName: "Иванов И.И.",
+						address: "г Москва, ул Тестовая, 1",
+						status: "ACTIVE",
+						existing: existing ? { id: existing.id, name: existing.name } : null,
+					},
+				};
 			},
 		},
 	];
@@ -362,13 +368,40 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 	it("create + get roundtrip persists the company and its address", async () => {
 		const created = await client.create({
 			name: "Новая",
-			address: { name: "Офис", address: "г. Москва", phone: "+71234567890" },
+			shortName: "Новая",
+			inn: "7700000077",
+			kpp: "770001001",
+			ogrn: "1027700000077",
+			directorName: "Иванов И.И.",
+			addresses: [{ name: "Офис", address: "г. Москва", phone: "+71234567890" }],
 		});
 		expect(created.id).toBeTruthy();
 		expect(created.addresses.map((a) => a.address)).toEqual(["г. Москва"]);
 		const fetched = await client.get(created.id);
 		expect(fetched.name).toBe("Новая");
 		expect(fetched.addresses).toHaveLength(1);
+	});
+
+	it("lookupByInn returns identity payload for valid INN", async () => {
+		const result = await client.lookupByInn("7707083893");
+		expect(result).not.toBeNull();
+		expect(result?.shortName).toContain("Тест");
+		expect(result?.existing).toBeNull();
+	});
+
+	it("lookupByInn surfaces existing workspace company", async () => {
+		const c1 = await client.get("c1");
+		const dup = await client.lookupByInn(c1.inn);
+		expect(dup?.existing).toEqual({ id: "c1", name: "Альфа" });
+	});
+
+	it("lookupByInn returns null for the reserved miss INN", async () => {
+		const result = await client.lookupByInn("0000000000");
+		expect(result).toBeNull();
+	});
+
+	it("lookupByInn throws on the reserved upstream-down INN", async () => {
+		await expect(client.lookupByInn("9999999999")).rejects.toBeTruthy();
 	});
 
 	it("update patches fields", async () => {
@@ -421,21 +454,6 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 		const all = await client.listAll();
 		expect(all.map((c) => c.name).sort()).toEqual(["Альфа", "Бета"]);
 	});
-
-	it("uploadCard sets cardFile + cardFileName on the company", async () => {
-		const file = new File(["%PDF-1.4 stub"], "card.pdf", { type: "application/pdf" });
-		const updated = await client.uploadCard("c1", file);
-		expect(updated.cardFile).toBeTruthy();
-		expect(updated.cardFileName).toBe("card.pdf");
-	});
-
-	it("deleteCard clears the card fields", async () => {
-		const file = new File(["data"], "card.pdf", { type: "application/pdf" });
-		await client.uploadCard("c1", file);
-		const cleared = await client.deleteCard("c1");
-		expect(cleared.cardFile).toBeNull();
-		expect(cleared.cardFileName).toBe("");
-	});
 });
 
 /**
@@ -451,12 +469,38 @@ describe("HTTP-only error branches", () => {
 		try {
 			await client.create({
 				name: "",
-				address: { name: "Офис", address: "г. Москва", phone: "+71234567890" },
+				shortName: "",
+				inn: "7700000077",
+				kpp: "",
+				ogrn: "",
+				directorName: "",
+				addresses: [{ name: "Офис", address: "г. Москва", phone: "+71234567890" }],
 			});
 			throw new Error("expected throw");
 		} catch (err) {
 			expect(err).toBeInstanceOf(ValidationError);
 			expect((err as ValidationError).fieldErrors).toEqual({ name: ["required"] });
+		}
+	});
+
+	it("create with duplicate INN throws ValidationError on `inn` field", async () => {
+		const harness = httpAdapter(SEED);
+		const client = harness.build();
+		const c1 = await client.get("c1");
+		try {
+			await client.create({
+				name: "Dup",
+				shortName: "Dup",
+				inn: c1.inn,
+				kpp: "",
+				ogrn: "",
+				directorName: "",
+				addresses: [{ name: "Офис", address: "г. Москва", phone: "" }],
+			});
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(err).toBeInstanceOf(ValidationError);
+			expect((err as ValidationError).fieldErrors).toEqual({ inn: ["duplicate"] });
 		}
 	});
 
@@ -478,7 +522,12 @@ describe("HTTP-only error branches", () => {
 		const client = harness.build();
 		await client.create({
 			name: "Новая",
-			address: { name: "Офис", address: "г. Москва", phone: "+71234567890" },
+			shortName: "Новая",
+			inn: "7700000088",
+			kpp: "770001001",
+			ogrn: "1027700000088",
+			directorName: "Иванов И.И.",
+			addresses: [{ name: "Офис", address: "г. Москва", phone: "+71234567890" }],
 		});
 		const writes = harness.calls.filter((c) => c.method === "POST");
 		expect(writes[0].url).toBe("/companies/");
@@ -500,7 +549,12 @@ describe("HTTP-only error branches", () => {
 		await expect(
 			client.create({
 				name: "Новая",
-				address: { name: "Офис", address: "г. Москва", phone: "" },
+				shortName: "Новая",
+				inn: "7700000099",
+				kpp: "",
+				ogrn: "",
+				directorName: "",
+				addresses: [{ name: "Офис", address: "г. Москва", phone: "" }],
 			}),
 		).rejects.toBeInstanceOf(ValidationError);
 		const writes = harness.calls.filter((c) => c.method === "POST");

@@ -334,12 +334,16 @@ export interface Employee {
 export interface Company {
 	id: string;
 	name: string;
+	/** DaData's «short_with_opf» — e.g. «ПАО СБЕРБАНК». Empty when never looked up. */
+	shortName: string;
 	inn: string;
+	kpp: string;
+	ogrn: string;
+	/** Full name of the general director from DaData's `management.name`. */
+	directorName: string;
 	website: string;
 	additionalComments: string;
 	isMain: boolean;
-	cardFile: string | null;
-	cardFileName: string;
 	employeeCount: number;
 	procurementItemCount: number;
 	addressesCount: number;

@@ -1,6 +1,7 @@
 import type {
 	Address,
 	Company,
+	CompanyLookup,
 	CompanySortField,
 	CompanySummary,
 	CreateAddressData,
@@ -10,7 +11,7 @@ import type {
 	UpdateAddressData,
 	UpdateCompanyData,
 } from "../domains/companies";
-import { NotFoundError } from "../errors";
+import { NotFoundError, ValidationError } from "../errors";
 import { delay, nextId, paginate } from "../mock-utils";
 import type { CompaniesClient } from "./companies-client";
 
@@ -46,6 +47,12 @@ function sortCompanies(items: Company[], field: CompanySortField, dir: "asc" | "
  * unconditionally wires the HTTP adapter; this factory survives as a
  * closure-isolated test fake (default seed: empty) so component tests don't
  * need to stub `fetch`.
+ *
+ * The `lookupByInn` adapter is synthesised: any 10/12-digit INN resolves to a
+ * deterministic synthetic record (so the test flow doesn't dead-end on a
+ * miss). Two reserved INNs drive miss/error branches:
+ *   - `0000000000` → returns `null` (miss / 404)
+ *   - `9999999999` → throws (mimics 502)
  */
 export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesClient {
 	let store: Company[] = seed.map(cloneCompany);
@@ -88,30 +95,38 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 
 		async create(data: CreateCompanyPayload): Promise<Company> {
 			await delay();
+			// In-memory dupe check mirrors the backend's per-workspace unique
+			// constraint on inn — surfaces as a ValidationError on the `inn` field
+			// so the drawer can render its duplicate notice without hitting the wire.
+			if (data.inn && store.some((c) => c.inn === data.inn)) {
+				throw new ValidationError({
+					inn: ["A company with this INN already exists in this workspace."],
+				});
+			}
 			const now = new Date().toISOString();
 			const company: Company = {
 				id: nextId("company"),
 				name: data.name,
-				inn: data.inn ?? "",
+				shortName: data.shortName,
+				inn: data.inn,
+				kpp: data.kpp,
+				ogrn: data.ogrn,
+				directorName: data.directorName,
 				website: data.website ?? "",
 				additionalComments: data.additionalComments ?? "",
 				isMain: false,
-				cardFile: null,
-				cardFileName: "",
 				employeeCount: 0,
 				procurementItemCount: 0,
-				addressesCount: 1,
+				addressesCount: data.addresses.length,
 				createdAt: now,
 				updatedAt: now,
-				addresses: [
-					{
-						id: nextId("addr"),
-						name: data.address.name,
-						address: data.address.address,
-						phone: data.address.phone,
-						isMain: data.address.isMain ?? true,
-					},
-				],
+				addresses: data.addresses.map((a, i) => ({
+					id: nextId("addr"),
+					name: a.name,
+					address: a.address,
+					phone: a.phone,
+					isMain: a.isMain ?? i === 0,
+				})),
 			};
 			store.push(company);
 			return cloneCompany(company);
@@ -171,22 +186,25 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 			company.addressesCount = company.addresses.length;
 		},
 
-		async uploadCard(companyId: string, file: File): Promise<Company> {
+		async lookupByInn(inn: string): Promise<CompanyLookup | null> {
 			await delay();
-			const company = requireCompany(companyId);
-			company.cardFile = `mock://companies/cards/${encodeURIComponent(file.name)}`;
-			company.cardFileName = file.name;
-			company.updatedAt = new Date().toISOString();
-			return cloneCompany(company);
-		},
-
-		async deleteCard(companyId: string): Promise<Company> {
-			await delay();
-			const company = requireCompany(companyId);
-			company.cardFile = null;
-			company.cardFileName = "";
-			company.updatedAt = new Date().toISOString();
-			return cloneCompany(company);
+			const trimmed = inn.trim();
+			if (trimmed === "0000000000" || trimmed === "000000000000") return null;
+			if (trimmed === "9999999999" || trimmed === "999999999999") {
+				throw new Error("DaData upstream error");
+			}
+			const existing = store.find((c) => c.inn === trimmed) ?? null;
+			return {
+				inn: trimmed,
+				shortName: `ООО «Тест-${trimmed.slice(-4)}»`,
+				fullName: `ОБЩЕСТВО С ОГРАНИЧЕННОЙ ОТВЕТСТВЕННОСТЬЮ «ТЕСТ-${trimmed.slice(-4)}»`,
+				kpp: trimmed.length === 10 ? `${trimmed.slice(0, 4)}01001` : "",
+				ogrn: `1${trimmed}${"0".repeat(15 - 1 - trimmed.length)}`.slice(0, 13),
+				directorName: "Иванов Иван Иванович",
+				address: "г Москва, ул Тестовая, д 1",
+				status: "ACTIVE",
+				existing: existing ? { id: existing.id, name: existing.name } : null,
+			};
 		},
 	};
 }

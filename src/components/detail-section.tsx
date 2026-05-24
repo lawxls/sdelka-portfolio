@@ -75,7 +75,10 @@ export function FieldCard({
 	);
 }
 
-export function ValueText({ value }: { value: string }) {
+export function ValueText({ value, numeric }: { value: string; numeric?: boolean }) {
 	const hasValue = value.length > 0;
-	return <span className={`text-sm ${hasValue ? "" : "text-muted-foreground/50"}`}>{hasValue ? value : "—"}</span>;
+	const base = "text-sm";
+	const tone = hasValue ? "" : "text-muted-foreground/50";
+	const digits = numeric ? "tabular-nums" : "";
+	return <span className={`${base} ${tone} ${digits}`.trim()}>{hasValue ? value : "—"}</span>;
 }

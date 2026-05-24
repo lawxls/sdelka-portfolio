@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -26,12 +26,14 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 	return {
 		id,
 		name,
-		inn: "",
+		shortName: "",
+		inn: `770000000${id.replace(/\D/g, "") || "0"}`.slice(-10),
+		kpp: "",
+		ogrn: "",
+		directorName: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
-		cardFile: null,
-		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: addresses.length,
@@ -236,9 +238,11 @@ describe("CreateProcurementInquiryDrawer — zero companies", () => {
 		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
 		await user.click(cta);
 
-		await user.type(screen.getByLabelText("Название компании"), "Новая ООО");
-		await user.type(screen.getByLabelText("Название адреса"), "Офис");
-		await user.type(screen.getByLabelText("Адрес"), "г. Москва");
+		// New flow: INN lookup populates the company; address is prefilled from DaData.
+		// The in-memory adapter's `lookupByInn` returns a deterministic match for any
+		// valid 10/12-digit INN.
+		await user.type(screen.getByLabelText("ИНН"), "7700001234");
+		await screen.findByTestId("lookup-matched");
 		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
 
 		await screen.findByRole("combobox", { name: "Компания" });
@@ -403,6 +407,10 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 
 		const innInput = await screen.findByLabelText("ИНН");
 		await user.type(innInput, "1234567890");
+		// Wait for the DaData match to land — Email becomes editable only once
+		// the company is resolved.
+		await waitFor(() => expect(screen.getByLabelText("Email")).not.toBeDisabled());
+		await user.type(screen.getByLabelText("Email"), "supplier@example.com");
 		await user.type(screen.getByLabelText("Текущая цена/ед. без НДС"), "1250");
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));
 

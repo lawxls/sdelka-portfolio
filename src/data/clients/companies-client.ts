@@ -1,6 +1,7 @@
 import type {
 	Address,
 	Company,
+	CompanyLookup,
 	CompanySummary,
 	CreateAddressData,
 	CreateCompanyPayload,
@@ -34,9 +35,7 @@ export interface CompaniesClient {
 	updateAddress(companyId: string, addressId: string, data: UpdateAddressData): Promise<Address>;
 	deleteAddress(companyId: string, addressId: string): Promise<void>;
 
-	/** Multipart upload (POST) to `/companies/{id}/card/`. Replaces any
-	 * existing card file on the company. Returns the refreshed company. */
-	uploadCard(companyId: string, file: File): Promise<Company>;
-	/** Removes the card file. Idempotent: deleting an empty card is a no-op. */
-	deleteCard(companyId: string): Promise<Company>;
+	/** GET `/companies/lookup-by-inn/?inn=<inn>`. Resolves to `null` when DaData
+	 * returns no result (404). Throws on upstream errors (502, network). */
+	lookupByInn(inn: string): Promise<CompanyLookup | null>;
 }

@@ -1,5 +1,4 @@
 import { batchCost } from "../../lib/math";
-import type { SupplierIdentity } from "../domains/suppliers";
 import { _getItem } from "../items-mock-data";
 import type {
 	Supplier,
@@ -8,7 +7,6 @@ import type {
 	SupplierSortField,
 	SupplierStatus,
 } from "../supplier-types";
-import { synthesizeSupplierIdentity } from "./enrichment";
 import {
 	ALL_ITEM_IDS,
 	getSuppliersForInquiry,
@@ -173,20 +171,6 @@ export async function getSuppliers(
 	const nextCursor = start + limit < filtered.length ? filtered[start + limit].id : null;
 
 	return { suppliers: page, nextCursor, total: filtered.length };
-}
-
-/** Sentinel INN reserved for exercising the manual-entry branch of the
- * «Добавить текущего поставщика» modal — always returns null. */
-const UNRESOLVABLE_INN = "0000000000";
-
-/** Returns a public-facing identity for an arbitrary INN. Every valid INN
- * resolves to a deterministic synthetic company so the demo flow never dead-ends
- * on a "supplier not found" error — except `UNRESOLVABLE_INN`. */
-export async function getSupplierIdentityByInn(inn: string): Promise<SupplierIdentity | null> {
-	const trimmed = inn.trim();
-	if (!trimmed || trimmed === UNRESOLVABLE_INN) return null;
-	await simulateDelay();
-	return synthesizeSupplierIdentity(trimmed);
 }
 
 /** Returns the supplier's `quote_received` quotes across all items, keyed by item.

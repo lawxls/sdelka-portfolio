@@ -1,19 +1,15 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import {
-	FieldLabel,
-	type SupplierCardState,
-	SupplierEmptyCard,
-	SupplierLoadingCard,
-	SupplierMatchedCard,
-} from "@/components/supplier-identity-card";
+import { FieldLabel } from "@/components/supplier-identity-card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { INN_INDIVIDUAL_LEN, isValidInnLength, useSupplierIdentity } from "@/data/use-suppliers";
+import { isValidCompanyInnLength, useCompanyLookupByInn } from "@/data/use-company-detail";
 import { digitsOnly } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const INN_MAX_LEN = 12;
 
 export interface AddSupplierDraft {
 	inn: string;
@@ -38,43 +34,43 @@ const MODE_LABELS: Record<Mode, string> = {
 export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDialogProps) {
 	const [mode, setMode] = useState<Mode>("inn");
 	const [inn, setInn] = useState("");
+	const [matchedWebsite, setMatchedWebsite] = useState("");
+	const [matchedEmail, setMatchedEmail] = useState("");
 	const [manualName, setManualName] = useState("");
 	const [manualWebsite, setManualWebsite] = useState("");
 	const [manualEmail, setManualEmail] = useState("");
 	const [showErrors, setShowErrors] = useState(false);
 
-	const lookupEnabled = mode === "inn" && isValidInnLength(inn);
-	const lookup = useSupplierIdentity(inn, { enabled: lookupEnabled });
+	const innFilled = isValidCompanyInnLength(inn);
+	const lookupEnabled = mode === "inn" && innFilled;
+	const lookup = useCompanyLookupByInn(inn, { enabled: lookupEnabled });
 
-	const innFilled = isValidInnLength(inn);
-	const matchedIdentity = lookup.data ?? null;
+	const matched = lookup.data ?? null;
 	const isFetching = lookupEnabled && lookup.isFetching;
 	const isMiss = lookupEnabled && lookup.isFetched && lookup.data === null;
-	const cardState: SupplierCardState = !innFilled
-		? "empty"
-		: isFetching
-			? "loading"
-			: matchedIdentity
-				? "matched"
-				: isMiss
-					? "miss"
-					: "empty";
+	// Name + address are filled from DaData; the user can't edit them. The
+	// downstream fields (Сайт/Email) become editable once a match lands —
+	// DaData doesn't carry website/email so the user fills them in.
+	const matchedName = matched ? matched.shortName || matched.fullName : "";
+	const matchedAddress = matched?.address ?? "";
+	const fieldsEnabled = matched != null;
 
-	const innValid = mode !== "inn" || (innFilled && matchedIdentity != null);
+	const innValid = mode !== "inn" || (innFilled && matched != null);
 	const nameValid = mode !== "manual" || manualName.trim() !== "";
-	const canSave = innValid && nameValid;
+	const emailValid = mode === "inn" ? matchedEmail.trim() !== "" : manualEmail.trim() !== "";
+	const canSave = innValid && nameValid && emailValid;
 
 	function handleSave() {
 		if (!canSave) {
 			setShowErrors(true);
 			return;
 		}
-		if (mode === "inn" && matchedIdentity) {
+		if (mode === "inn" && matched) {
 			onSave({
 				inn: inn.trim(),
-				companyName: matchedIdentity.companyName,
-				website: matchedIdentity.website,
-				email: matchedIdentity.email,
+				companyName: matchedName,
+				website: matchedWebsite.trim(),
+				email: matchedEmail.trim(),
 			});
 		} else {
 			onSave({
@@ -88,8 +84,14 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 
 	const innErrorId = "add-supplier-inn-error";
 	const nameErrorId = "add-supplier-name-error";
+	const emailErrorId = "add-supplier-email-error";
 	const showInnError = showErrors && mode === "inn" && !innFilled;
 	const showNameError = showErrors && mode === "manual" && manualName.trim() === "";
+	// In INN mode, email validation only kicks in once the match lands (the field
+	// is disabled before that — flagging it as missing before the user can type
+	// anything would be confusing).
+	const showEmailError =
+		showErrors && (mode === "inn" ? matched != null && matchedEmail.trim() === "" : manualEmail.trim() === "");
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,7 +112,7 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 								<Input
 									id="add-supplier-inn"
 									value={inn}
-									onChange={(e) => setInn(digitsOnly(e.target.value).slice(0, INN_INDIVIDUAL_LEN))}
+									onChange={(e) => setInn(digitsOnly(e.target.value).slice(0, INN_MAX_LEN))}
 									inputMode="numeric"
 									autoComplete="off"
 									spellCheck={false}
@@ -127,10 +129,84 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 								)}
 							</div>
 
-							{cardState === "empty" && <SupplierEmptyCard innFilled={innFilled} />}
-							{cardState === "loading" && <SupplierLoadingCard />}
-							{cardState === "matched" && matchedIdentity && <SupplierMatchedCard identity={matchedIdentity} />}
-							{cardState === "miss" && (
+							{isFetching && (
+								<div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-muted-foreground">
+									<LoaderCircle
+										aria-hidden="true"
+										className="size-4 animate-spin text-primary motion-reduce:animate-none"
+									/>
+									<span>Ищем поставщика по ИНН…</span>
+								</div>
+							)}
+
+							<div className="flex flex-col gap-1.5">
+								<FieldLabel htmlFor="add-supplier-name" disabled={!fieldsEnabled}>
+									Название
+								</FieldLabel>
+								<Input
+									id="add-supplier-name"
+									value={matchedName}
+									readOnly
+									disabled={!fieldsEnabled}
+									placeholder="ООО «Ромашка»"
+								/>
+							</div>
+
+							<div className="flex flex-col gap-1.5">
+								<FieldLabel htmlFor="add-supplier-address" disabled={!fieldsEnabled}>
+									Адрес
+								</FieldLabel>
+								<Input
+									id="add-supplier-address"
+									value={matchedAddress}
+									readOnly
+									disabled={!fieldsEnabled}
+									placeholder="г Москва, ул Ленина, д 1"
+								/>
+							</div>
+
+							<div className="flex flex-col gap-1.5">
+								<FieldLabel htmlFor="add-supplier-website" disabled={!fieldsEnabled}>
+									Сайт
+								</FieldLabel>
+								<Input
+									id="add-supplier-website"
+									value={matchedWebsite}
+									onChange={(e) => setMatchedWebsite(e.target.value)}
+									autoComplete="url"
+									inputMode="url"
+									spellCheck={false}
+									disabled={!fieldsEnabled}
+									placeholder="romashka.ru"
+								/>
+							</div>
+
+							<div className="flex flex-col gap-1.5">
+								<FieldLabel htmlFor="add-supplier-email" required disabled={!fieldsEnabled}>
+									Email
+								</FieldLabel>
+								<Input
+									id="add-supplier-email"
+									type="email"
+									value={matchedEmail}
+									onChange={(e) => setMatchedEmail(e.target.value)}
+									autoComplete="email"
+									spellCheck={false}
+									disabled={!fieldsEnabled}
+									aria-required="true"
+									aria-invalid={showEmailError || undefined}
+									aria-describedby={showEmailError ? emailErrorId : undefined}
+									className={showEmailError ? "border-destructive" : undefined}
+									placeholder="info@romashka.ru"
+								/>
+								{showEmailError && (
+									<p id={emailErrorId} className="text-sm text-destructive">
+										Укажите email
+									</p>
+								)}
+							</div>
+
+							{isMiss && (
 								<div
 									role="note"
 									className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
@@ -147,11 +223,11 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 					{mode === "manual" && (
 						<div className="flex flex-col gap-3 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none">
 							<div className="flex flex-col gap-1.5">
-								<FieldLabel htmlFor="add-supplier-name" required>
+								<FieldLabel htmlFor="add-supplier-manual-name" required>
 									Название
 								</FieldLabel>
 								<Input
-									id="add-supplier-name"
+									id="add-supplier-manual-name"
 									value={manualName}
 									onChange={(e) => setManualName(e.target.value)}
 									autoComplete="organization"
@@ -170,9 +246,9 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 							</div>
 
 							<div className="flex flex-col gap-1.5">
-								<FieldLabel htmlFor="add-supplier-website">Сайт</FieldLabel>
+								<FieldLabel htmlFor="add-supplier-manual-website">Сайт</FieldLabel>
 								<Input
-									id="add-supplier-website"
+									id="add-supplier-manual-website"
 									value={manualWebsite}
 									onChange={(e) => setManualWebsite(e.target.value)}
 									autoComplete="url"
@@ -182,16 +258,27 @@ export function AddSupplierDialog({ open, onOpenChange, onSave }: AddSupplierDia
 							</div>
 
 							<div className="flex flex-col gap-1.5">
-								<FieldLabel htmlFor="add-supplier-email">Email</FieldLabel>
+								<FieldLabel htmlFor="add-supplier-manual-email" required>
+									Email
+								</FieldLabel>
 								<Input
-									id="add-supplier-email"
+									id="add-supplier-manual-email"
 									type="email"
 									value={manualEmail}
 									onChange={(e) => setManualEmail(e.target.value)}
 									autoComplete="email"
 									spellCheck={false}
+									aria-required="true"
+									aria-invalid={showEmailError || undefined}
+									aria-describedby={showEmailError ? emailErrorId : undefined}
+									className={showEmailError ? "border-destructive" : undefined}
 									placeholder="info@romashka.ru"
 								/>
+								{showEmailError && (
+									<p id={emailErrorId} className="text-sm text-destructive">
+										Укажите email
+									</p>
+								)}
 							</div>
 						</div>
 					)}

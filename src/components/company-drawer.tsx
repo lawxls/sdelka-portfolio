@@ -1,8 +1,7 @@
-import { ChevronDown, FileText, LoaderCircle, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { ChevronDown, LoaderCircle, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
-import { FileDropzone } from "@/components/file-dropzone";
 import { InviteEmployeesDrawer } from "@/components/invite-employees-drawer";
 import { PermissionsMatrix } from "@/components/permissions-matrix";
 import { PhoneInput } from "@/components/phone-input";
@@ -26,10 +25,8 @@ import {
 	useCompanyDetail,
 	useCreateAddress,
 	useDeleteAddress,
-	useDeleteCompanyCard,
 	useUpdateAddress,
 	useUpdateCompany,
-	useUploadCompanyCard,
 } from "@/data/use-company-detail";
 import { useMe } from "@/data/use-me";
 import {
@@ -186,7 +183,7 @@ function CompanyDrawerContent({
 	);
 }
 
-type InfoFormState = { name: string; inn: string; website: string };
+type InfoFormState = { name: string; website: string };
 type CommentsFormState = { additionalComments: string };
 type GeneralSection = "info" | "comments" | null;
 
@@ -194,7 +191,6 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	const [editing, setEditing] = useState<GeneralSection>(null);
 	const [info, setInfo] = useState<InfoFormState>({
 		name: company.name,
-		inn: company.inn,
 		website: company.website,
 	});
 	const [comments, setComments] = useState<CommentsFormState>({ additionalComments: company.additionalComments });
@@ -202,7 +198,7 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	const updateMutation = useUpdateCompany(companyId);
 
 	function handleEditInfo() {
-		setInfo({ name: company.name, inn: company.inn, website: company.website });
+		setInfo({ name: company.name, website: company.website });
 		setEditing("info");
 	}
 
@@ -212,7 +208,7 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	}
 
 	function infoDirty(): boolean {
-		return info.name !== company.name || info.inn !== company.inn || info.website !== company.website;
+		return info.name !== company.name || info.website !== company.website;
 	}
 
 	function commentsDirty(): boolean {
@@ -222,7 +218,6 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	function handleSaveInfo() {
 		const data: UpdateCompanyData = {};
 		if (info.name !== company.name) data.name = info.name;
-		if (info.inn !== company.inn) data.inn = info.inn;
 		if (info.website !== company.website) data.website = info.website;
 		if (Object.keys(data).length === 0) {
 			setEditing(null);
@@ -273,22 +268,6 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 						)}
 					</FieldCard>
 
-					<FieldCard label="ИНН" span="full">
-						{isEditingInfo ? (
-							<Input
-								aria-label="ИНН"
-								value={info.inn}
-								onChange={(e) => setInfo((p) => ({ ...p, inn: e.target.value }))}
-								inputMode="numeric"
-								maxLength={12}
-								spellCheck={false}
-								autoComplete="off"
-							/>
-						) : (
-							<ValueText value={company.inn} />
-						)}
-					</FieldCard>
-
 					<FieldCard label="Сайт" span="full">
 						{isEditingInfo ? (
 							<Input
@@ -301,6 +280,30 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 						) : (
 							<ValueText value={company.website} />
 						)}
+					</FieldCard>
+				</CardGrid>
+			</Section>
+
+			{/* DaData-sourced identity fields. Locked once persisted — the source
+			    of truth is the federal registry and we don't want users mutating
+			    these from the drawer. Re-running the INN lookup is out of scope
+			    for the company drawer; rare changes go through the admin. */}
+			<Section title="Реквизиты (из DaData)">
+				<CardGrid>
+					<FieldCard label="ИНН" span="full">
+						<ValueText value={company.inn} numeric />
+					</FieldCard>
+					<FieldCard label="Наименование (сокращённое)" span="full">
+						<ValueText value={company.shortName} />
+					</FieldCard>
+					<FieldCard label="ОГРН" span="full">
+						<ValueText value={company.ogrn} numeric />
+					</FieldCard>
+					<FieldCard label="КПП" span="full">
+						<ValueText value={company.kpp} numeric />
+					</FieldCard>
+					<FieldCard label="Генеральный директор" span="full">
+						<ValueText value={company.directorName} />
 					</FieldCard>
 				</CardGrid>
 			</Section>
@@ -330,75 +333,7 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 					</FieldCard>
 				</CardGrid>
 			</Section>
-
-			<Section title="Карточка компании">
-				<CompanyCardField company={company} companyId={companyId} />
-			</Section>
 		</div>
-	);
-}
-
-const CARD_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
-
-function CompanyCardField({ company, companyId }: { company: Company; companyId: string }) {
-	const uploadMutation = useUploadCompanyCard(companyId);
-	const deleteMutation = useDeleteCompanyCard(companyId);
-	const busy = uploadMutation.isPending || deleteMutation.isPending;
-
-	function handleFile(file: File) {
-		uploadMutation.mutate(file, {
-			onError: () => toast.error("Не удалось загрузить карточку компании"),
-		});
-	}
-
-	function handleDelete() {
-		deleteMutation.mutate(undefined, {
-			onError: () => toast.error("Не удалось удалить карточку компании"),
-		});
-	}
-
-	if (company.cardFile) {
-		return (
-			<div
-				data-testid="company-card-current"
-				className="flex flex-wrap items-center gap-3 rounded-md border border-border/60 bg-muted/30 p-3"
-			>
-				<FileText className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-				<a
-					href={company.cardFile}
-					target="_blank"
-					rel="noopener noreferrer"
-					download={company.cardFileName || undefined}
-					className="min-w-0 flex-1 truncate text-sm font-medium text-foreground underline-offset-4 hover:underline"
-				>
-					{company.cardFileName || "Карточка компании"}
-				</a>
-				<Button
-					type="button"
-					variant="ghost"
-					size="sm"
-					className="shrink-0 text-destructive hover:text-destructive"
-					onClick={handleDelete}
-					disabled={busy}
-					aria-label="Удалить карточку компании"
-				>
-					{deleteMutation.isPending ? (
-						<LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-					) : (
-						<Trash2 className="size-4" aria-hidden="true" />
-					)}
-				</Button>
-			</div>
-		);
-	}
-
-	return (
-		<FileDropzone
-			onFile={handleFile}
-			accept={CARD_ACCEPT}
-			hint="Перетащите карточку компании сюда или нажмите для выбора (PDF, DOC, DOCX, JPG, PNG)"
-			disabled={busy}
-		/>
 	);
 }
 

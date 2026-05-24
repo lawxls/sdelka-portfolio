@@ -15,12 +15,14 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 	return {
 		id,
 		name: `Company ${id}`,
-		inn: "",
+		shortName: "",
+		inn: `770000000${id.replace(/\D/g, "") || "0"}`.slice(-10),
+		kpp: "",
+		ogrn: "",
+		directorName: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
-		cardFile: null,
-		cardFileName: "",
 		employeeCount: 0,
 		procurementItemCount: 0,
 		addressesCount: 1,
@@ -115,5 +117,47 @@ describe("CompanyDrawer — Основная информация", () => {
 
 		expect(updateSpy).not.toHaveBeenCalled();
 		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+	});
+
+	test("renders read-only Реквизиты with INN/КПП/ОГРН/директор and no edit button", async () => {
+		companiesClient = createInMemoryCompaniesClient([
+			makeStored("c1", {
+				name: "Сделка",
+				inn: "7707083893",
+				kpp: "773601001",
+				ogrn: "1027700132195",
+				directorName: "Греф Г.О.",
+				shortName: "ПАО СБЕРБАНК",
+			}),
+		]);
+		renderDrawer();
+		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
+
+		// Identity fields are visible inside the "Реквизиты (из DaData)" section.
+		expect(screen.getByText("7707083893")).toBeInTheDocument();
+		expect(screen.getByText("773601001")).toBeInTheDocument();
+		expect(screen.getByText("1027700132195")).toBeInTheDocument();
+		expect(screen.getByText("Греф Г.О.")).toBeInTheDocument();
+		expect(screen.getByText("ПАО СБЕРБАНК")).toBeInTheDocument();
+
+		// No edit affordance — the DaData section is intentionally locked.
+		expect(screen.queryByRole("button", { name: /Редактировать реквизиты/ })).not.toBeInTheDocument();
+	});
+
+	test("Карточка компании section is gone", async () => {
+		renderDrawer();
+		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
+		expect(screen.queryByText("Карточка компании")).not.toBeInTheDocument();
+		expect(screen.queryByTestId("company-card-current")).not.toBeInTheDocument();
+	});
+
+	test("Редактировать основную информацию edits name + website only — no INN field", async () => {
+		renderDrawer();
+		const user = userEvent.setup();
+		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
+		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
+		expect(screen.getByLabelText("Название")).toBeInTheDocument();
+		expect(screen.getByLabelText("Сайт")).toBeInTheDocument();
+		expect(screen.queryByLabelText("ИНН")).not.toBeInTheDocument();
 	});
 });

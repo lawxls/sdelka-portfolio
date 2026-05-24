@@ -1,12 +1,14 @@
 import type {
 	Address,
 	Company,
+	CompanyLookup,
 	CompanySummary,
 	CreateAddressData,
 	CreateCompanyPayload,
 	CursorPage,
 	ListCompaniesParams,
 } from "../domains/companies";
+import { NotFoundError } from "../errors";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import type { CompaniesClient } from "./companies-client";
 import { type DrfCursorPage, toCursorPage } from "./drf";
@@ -94,24 +96,36 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 		get: (id) => http.get<Company>(`/companies/${enc(id)}/`),
 
 		async create(data: CreateCompanyPayload): Promise<Company> {
-			const body: Record<string, unknown> = { name: data.name };
-			if (data.inn !== undefined) body.inn = data.inn;
-			if (data.website !== undefined) body.website = data.website;
-			if (data.additionalComments !== undefined) body.additionalComments = data.additionalComments;
-			const created = await http.post<Company>(`/companies/`, { body });
-			const address = await http.post<DrfAddress>(`/companies/addresses/`, {
+			// Single POST for the company; addresses are then created one by one
+			// against the flat `/companies/addresses/` resource. Partial failure
+			// (company persisted, address failed) bubbles the address error as-is.
+			const created = await http.post<Company>(`/companies/`, {
 				body: {
-					companyId: created.id,
-					name: data.address.name,
-					address: data.address.address,
-					phone: data.address.phone,
-					isMain: data.address.isMain ?? true,
+					name: data.name,
+					shortName: data.shortName,
+					inn: data.inn,
+					kpp: data.kpp,
+					ogrn: data.ogrn,
+					directorName: data.directorName,
+					website: data.website ?? "",
+					additionalComments: data.additionalComments ?? "",
 				},
 			});
-			// Partial-failure mode (address POST fails after the company persists)
-			// bubbles the address error as-is; the company sticks server-side and
-			// the user retries from the Addresses tab.
-			return { ...created, addresses: [toAddress(address)], addressesCount: 1 };
+			const addresses: Address[] = [];
+			for (let i = 0; i < data.addresses.length; i += 1) {
+				const a = data.addresses[i];
+				const written = await http.post<DrfAddress>(`/companies/addresses/`, {
+					body: {
+						companyId: created.id,
+						name: a.name,
+						address: a.address,
+						phone: a.phone,
+						isMain: a.isMain ?? i === 0,
+					},
+				});
+				addresses.push(toAddress(written));
+			}
+			return { ...created, addresses, addressesCount: addresses.length };
 		},
 
 		update: (id, data) => http.patch<Company>(`/companies/${enc(id)}/`, { body: data }),
@@ -138,12 +152,15 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 
 		deleteAddress: (_companyId, addressId) => http.delete<void>(`/companies/addresses/${enc(addressId)}/`),
 
-		uploadCard(companyId: string, file: File): Promise<Company> {
-			const form = new FormData();
-			form.append("cardFile", file);
-			return http.postMultipart<Company>(`/companies/${enc(companyId)}/card/`, { body: form });
+		async lookupByInn(inn: string): Promise<CompanyLookup | null> {
+			try {
+				return await http.get<CompanyLookup>(`/companies/lookup-by-inn/?inn=${enc(inn)}`);
+			} catch (err) {
+				// 404 ⇒ miss: the lookup card switches to the "не найдено" state.
+				// 502/network/etc bubble up so the UI can render the upstream-down banner.
+				if (err instanceof NotFoundError) return null;
+				throw err;
+			}
 		},
-
-		deleteCard: (companyId) => http.delete<Company>(`/companies/${enc(companyId)}/card/`),
 	};
 }

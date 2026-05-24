@@ -31,16 +31,22 @@ export interface CreateAddressData {
 }
 
 export interface CreateCompanyPayload {
+	/** Display name. The drawer threads DaData's full_name here. */
 	name: string;
-	inn?: string;
+	/** Short canonical name from DaData (`short_with_opf`). */
+	shortName: string;
+	/** INN — required, 10 or 12 digits, unique per workspace. */
+	inn: string;
+	kpp: string;
+	ogrn: string;
+	directorName: string;
 	website?: string;
 	additionalComments?: string;
-	address: CreateAddressData;
+	addresses: CreateAddressData[];
 }
 
 export interface UpdateCompanyData {
 	name?: string;
-	inn?: string;
 	website?: string;
 	additionalComments?: string;
 }
@@ -50,4 +56,20 @@ export interface UpdateAddressData {
 	address?: string;
 	phone?: string;
 	isMain?: boolean;
+}
+
+/** DaData-backed identity payload returned by `/companies/lookup-by-inn/`.
+ * `existing` is set when the workspace already has a company with this INN —
+ * the drawer turns that into a duplicate notice with a link to the existing
+ * company instead of allowing creation. */
+export interface CompanyLookup {
+	inn: string;
+	shortName: string;
+	fullName: string;
+	kpp: string;
+	ogrn: string;
+	directorName: string;
+	address: string;
+	status: string;
+	existing: { id: string; name: string } | null;
 }
