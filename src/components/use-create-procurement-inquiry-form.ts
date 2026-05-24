@@ -4,7 +4,7 @@ import type {
 	CreateProcurementInquiryInput,
 } from "@/data/domains/procurement-inquiries";
 import type { CurrentSupplier, NewItemInput, PaymentType, Unit, UnloadingType } from "@/data/types";
-import { formatShortDate, isoDateInDays, toNumberOrUndefined } from "@/lib/format";
+import { isoDateInDays, toNumberOrUndefined } from "@/lib/format";
 
 export type WizardStep = 1 | 2 | 3;
 
@@ -219,21 +219,10 @@ function buildNewItemInput(position: PositionDraft, step1: Step1State): NewItemI
 	return payload;
 }
 
-function generateProcurementInquiryName(step1: Step1State): string {
-	const firstNamed = step1.positions.find((p) => p.name.trim() !== "");
-	if (firstNamed) {
-		const base = firstNamed.name.trim();
-		const extra = step1.positions.filter((p) => p.name.trim() !== "").length - 1;
-		return extra > 0 ? `${base} +${extra}` : base;
-	}
-	return `Новый запрос ${formatShortDate(new Date().toISOString())}`;
-}
-
 type InquiryWithoutItems = Omit<CreateProcurementInquiryInput, "items">;
 
 function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): InquiryWithoutItems {
 	const procurementInquiry: InquiryWithoutItems = {
-		name: generateProcurementInquiryName(step1),
 		companyId: step1.companyId,
 		folderId: step1.folderId,
 		deadline: step1.deadline || null,

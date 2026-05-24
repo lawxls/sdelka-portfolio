@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeProcurementInquiry } from "@/test-utils";
 import type { ProcurementInquiry } from "../domains/procurement-inquiries";
-import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { NotFoundError } from "../errors";
 import { createHttpClient } from "../http-client";
 import { _resetMockDelay, _setMockDelay } from "../mock-utils";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
 import { createHttpProcurementInquiriesClient } from "./procurement-inquiries-http";
-import { createInMemoryProcurementInquiriesClient } from "./procurement-inquiries-in-memory";
+import { createInMemoryProcurementInquiriesClient, mockGeneratedInquiryName } from "./procurement-inquiries-in-memory";
 
 /**
  * Layer B — adapter contract tests. The same scenarios run against the
@@ -107,12 +107,17 @@ function httpAdapter(seed: ProcurementInquiry[]): Adapter & { track: HttpAdapter
 			method: "POST",
 			path: /^\/procurement\/inquiries\/$/,
 			respond: ({ init }) => {
-				const data = JSON.parse(init?.body as string) as Partial<ProcurementInquiry>;
-				if (data.name === "") return { status: 400, body: { fieldErrors: { name: ["required"] } } };
-				if (data.name === "__conflict__") return { status: 409, body: { detail: "name taken" } };
+				const data = JSON.parse(init?.body as string) as Partial<ProcurementInquiry> & {
+					items?: Array<{ name?: string }>;
+				};
 				counter += 1;
 				const id = `T-${String(counter).padStart(3, "0")}`;
-				const inquiry = makeProcurementInquiry(id, { companyId: data.companyId ?? "company-1", ...data });
+				// Mirror the BE: `name` is server-generated; any client value is ignored.
+				const inquiry = makeProcurementInquiry(id, {
+					companyId: data.companyId ?? "company-1",
+					...data,
+					name: mockGeneratedInquiryName(data.items ?? []),
+				});
 				store.set(inquiry.id, inquiry);
 				return { status: 201, body: inquiry };
 			},
@@ -259,15 +264,16 @@ describe.each(
 
 	it("create + get roundtrip", async () => {
 		const created = await client.create({
-			name: "Дельта",
 			companyId: "company-1",
 			deadline: "2026-06-01",
 			items: [{ name: "Pos A" }],
 		});
-		expect(created.name).toBe("Дельта");
+		// `name` is server-generated from the items; both adapters mimic the
+		// BE's `MockInquiryNameGenerator` so the roundtrip is deterministic.
+		expect(created.name).toBe("Запрос: Pos A");
 		expect(created.id).toBeTruthy();
 		const fetched = await client.get(created.id);
-		expect(fetched.name).toBe("Дельта");
+		expect(fetched.name).toBe("Запрос: Pos A");
 	});
 
 	it("update patches fields", async () => {
@@ -406,7 +412,6 @@ describe("HTTP adapter — wire translations", () => {
 	it("create forwards inquiry-level generatedQuestions in the POST body", async () => {
 		const adapter = httpAdapter(SEED);
 		await adapter.build().create({
-			name: "Новый",
 			companyId: "c1",
 			items: [{ name: "P1" }],
 			generatedQuestions: [
@@ -500,28 +505,11 @@ function httpAdapterWithGeneratedQuestions() {
 }
 
 /**
- * HTTP-only error branches: validation, conflict, network. Same coverage as
- * the previous suite — the in-memory adapter doesn't surface these.
+ * HTTP-only error branches: network. ``name``-validation/conflict branches were
+ * dropped when the inquiry name became server-generated (no client-supplied
+ * name to validate or collide on).
  */
 describe("HTTP-only error branches", () => {
-	it("create with empty name throws ValidationError with fieldErrors", async () => {
-		const client = httpAdapter(SEED).build();
-		try {
-			await client.create({ name: "", companyId: "c1", deadline: "2026-06-01", items: [{ name: "P1" }] });
-			throw new Error("expected throw");
-		} catch (err) {
-			expect(err).toBeInstanceOf(ValidationError);
-			expect((err as ValidationError).fieldErrors).toEqual({ name: ["required"] });
-		}
-	});
-
-	it("create with conflicting name throws ConflictError", async () => {
-		const client = httpAdapter(SEED).build();
-		await expect(
-			client.create({ name: "__conflict__", companyId: "c1", deadline: "2026-06-01", items: [{ name: "P1" }] }),
-		).rejects.toBeInstanceOf(ConflictError);
-	});
-
 	it("network failures bubble up as NetworkError", async () => {
 		const fetchStub = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => null });

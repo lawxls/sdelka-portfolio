@@ -232,7 +232,6 @@ export function ProcurementPage() {
 			groups.map((group) =>
 				createProcurementInquiryWithItemsMutation.mutateAsync({
 					procurementInquiry: {
-						name: group.name,
 						companyId: targetCompanyId,
 						folderId,
 						deadline,

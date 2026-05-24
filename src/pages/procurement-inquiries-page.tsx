@@ -558,7 +558,7 @@ export function ProcurementInquiriesPage() {
 	const handleConfirmDelete = inquiriesGuard(() => {
 		if (!deletingProcurementInquiry) return;
 		deleteProcurementInquiryMutation.mutate(deletingProcurementInquiry.id, {
-			onSuccess: () => toast.success(`Запрос ${deletingProcurementInquiry.id} удалён`),
+			onSuccess: () => toast.success(`Запрос «${deletingProcurementInquiry.name}» удалён`),
 		});
 		setDeletingProcurementInquiry(null);
 	});
@@ -723,7 +723,7 @@ export function ProcurementInquiriesPage() {
 				onSubmit={(payload) => {
 					createProcurementInquiryMutation.mutate(payload, {
 						onSuccess: ({ procurementInquiry }) => {
-							toast.success(`Запрос ${procurementInquiry.id} создан`);
+							toast.success(`Запрос «${procurementInquiry.name}» создан`);
 						},
 					});
 				}}

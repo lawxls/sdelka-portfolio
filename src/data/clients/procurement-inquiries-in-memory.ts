@@ -69,6 +69,14 @@ function toListShape(t: ProcurementInquiry): ProcurementInquiry {
 	return out;
 }
 
+/** Mirror of the backend's `MockInquiryNameGenerator`. Exported so the
+ * contract test's fake HTTP handler matches the in-memory adapter exactly —
+ * keeping `create + get` roundtrips deterministic across both adapters. */
+export function mockGeneratedInquiryName(items: CreateProcurementInquiryInput["items"]): string {
+	const first = items[0]?.name?.trim() ?? "";
+	return first ? `Запрос: ${first}` : "Новый запрос";
+}
+
 function materializeGeneratedQuestions(
 	inquiryId: string,
 	input: CreateProcurementInquiryGeneratedQuestionInput[] | undefined,
@@ -207,11 +215,12 @@ export function createInMemoryProcurementInquiriesClient(
 		async create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry> {
 			await delay();
 			const now = new Date().toISOString();
-			const { items: _items, generatedQuestions: gqInput, ...rest } = input;
+			const { items, generatedQuestions: gqInput, ...rest } = input;
 			const id = nextId("inquiry");
 			const inquiry = fillDefaults({
 				...rest,
 				id,
+				name: mockGeneratedInquiryName(items),
 				createdAt: now,
 				updatedAt: now,
 				generatedQuestions: materializeGeneratedQuestions(id, gqInput),
