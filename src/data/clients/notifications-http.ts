@@ -1,15 +1,15 @@
 import type { NotificationsResponse } from "../domains/notifications";
-import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
+import type { HttpClient } from "../http-client";
 import type { NotificationsClient } from "./notifications-client";
 
-const enc = encodeURIComponent;
+const EMPTY_RESPONSE: NotificationsResponse = { notifications: [], readIds: [] };
 
-export function createHttpNotificationsClient(http: HttpClient = defaultHttpClient): NotificationsClient {
+// Backend has no /notifications endpoint yet — keep the seam in place but skip
+// the HTTP fetch so the bell renders an empty state instead of paging on 404s.
+export function createHttpNotificationsClient(_http?: HttpClient): NotificationsClient {
 	return {
-		list: () => http.get<NotificationsResponse>(`/notifications`),
-
-		markAsRead: (id: string) => http.post<void>(`/notifications/${enc(id)}/read`),
-
-		markAllAsRead: () => http.post<void>(`/notifications/read-all`),
+		list: () => Promise.resolve(EMPTY_RESPONSE),
+		markAsRead: () => Promise.resolve(),
+		markAllAsRead: () => Promise.resolve(),
 	};
 }
