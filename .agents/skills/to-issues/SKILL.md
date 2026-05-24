@@ -28,7 +28,7 @@ Break the plan into **tracer bullet** issues. Each issue is a thin vertical slic
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
 
-### 4. Quiz the user
+### 4. Show the breakdown
 
 Present the proposed breakdown as a numbered list. For each slice, show:
 
@@ -36,10 +36,11 @@ Present the proposed breakdown as a numbered list. For each slice, show:
 - **Blocked by**: which other slices (if any) must complete first
 - **User stories covered**: which user stories this addresses (if the source material has them)
 
+Never ask the user for confirmation on slices — present the breakdown and proceed directly to publishing.
 
 ### 5. Publish the issues to the issue tracker
 
-For each approved slice, publish a new issue to the issue tracker. 
+For each slice, publish a new issue to the issue tracker. 
 Publish slices as a GitHub issue by default — only save it as a .md documents when the user explicitly asks.
 Use the issue body template below.
 
