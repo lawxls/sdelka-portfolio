@@ -36,6 +36,7 @@ export function useCreateProcurementInquiryWithItems() {
 			createProcurementInquiryWithItems(input, { procurementInquiries }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: keys.procurementInquiries.all() });
+			queryClient.invalidateQueries({ queryKey: keys.subscription.current() });
 			invalidateAfterItemListChange(queryClient);
 		},
 		onError: () => {

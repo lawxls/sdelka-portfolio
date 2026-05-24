@@ -119,6 +119,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 		queryClient.setQueryData(["items"], []);
 		queryClient.setQueryData(["totals"], { itemCount: 0 });
 		queryClient.setQueryData(["folderStats"], {});
+		queryClient.setQueryData(["subscription"], { requests_used: 0, requests_limit: 10 });
 
 		const { result } = renderHook(() => useCreateProcurementInquiryWithItems(), {
 			wrapper: ({ children }) => (
@@ -140,6 +141,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 		expect(queryClient.getQueryState(["items"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["totals"])?.isInvalidated).toBe(true);
 		expect(queryClient.getQueryState(["folderStats"])?.isInvalidated).toBe(true);
+		expect(queryClient.getQueryState(["subscription"])?.isInvalidated).toBe(true);
 	});
 });
 
