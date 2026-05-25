@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { type Supplier, type SupplierSortField, type SupplierSortState, supplierIdentity } from "@/data/supplier-types";
+import {
+	buildCurrentSupplierRow,
+	type Supplier,
+	type SupplierSortField,
+	type SupplierSortState,
+	supplierIdentity,
+} from "@/data/supplier-types";
 import type { CurrentSupplier, PaymentType, ProcurementItem } from "@/data/types";
 import { formatQuotePaymentType, PAYMENT_TYPE_LABELS, PAYMENT_TYPES } from "@/data/types";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
@@ -95,39 +101,6 @@ interface OffersTableProps {
 const FILTER_BTN =
 	"rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FILTER_BTN_ACTIVE = "font-medium text-highlight-foreground";
-
-function buildPinnedSupplier(currentSupplier: CurrentSupplier, rowId: string): Supplier {
-	return {
-		id: rowId,
-		itemId: "",
-		procurementInquiryId: "",
-		companyName: currentSupplier.companyName,
-		status: "quote_received",
-		archived: false,
-		inn: currentSupplier.inn ?? "",
-		companyType: "manufacturer",
-		region: "",
-		foundedYear: 0,
-		revenue: 0,
-		employeeCount: 0,
-		email: "",
-		website: "",
-		address: "",
-		postalCode: "",
-		pricePerUnit: currentSupplier.pricePerUnit,
-		// «Ваш поставщик» has no real TCO — surface the buyer's per-unit price in that
-		// column so the row is comparable against quotes.
-		tco: currentSupplier.pricePerUnit,
-		deliveryCost: null,
-		paymentType: currentSupplier.paymentType ?? "prepayment",
-		deferralDays: currentSupplier.deferralDays,
-		prepaymentPercent: currentSupplier.prepaymentPercent,
-		leadTimeDays: null,
-		agentComment: "",
-		documents: [],
-		chatHistory: [],
-	};
-}
 
 export function OffersTable({
 	suppliers,
@@ -374,16 +347,14 @@ export function OffersTable({
 		{
 			id: "deliveryCost",
 			header: "ДОСТАВКА",
-			cell: (s, { isPinned }) =>
-				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : <DeliveryValue cost={s.deliveryCost} />,
+			cell: (s) => <DeliveryValue cost={s.deliveryCost} />,
 		},
 		{
 			id: "leadTimeDays",
 			header: "СРОК ПОСТАВКИ",
 			sortable: true,
 			align: "right",
-			cell: (s, { isPinned }) =>
-				isPinned ? <span className="text-muted-foreground">{"\u2014"}</span> : formatLeadTime(s.leadTimeDays),
+			cell: (s) => formatLeadTime(s.leadTimeDays),
 		},
 		{
 			id: "batchCost",
@@ -458,7 +429,9 @@ export function OffersTable({
 	//   2. `extraPinnedSuppliers` — the multi-pin set passed by the inquiry-level tab.
 	// Item-drawer callers leave (2) empty; inquiry-level callers leave (1) empty.
 	const singlePin =
-		currentSupplier && currentSupplierRowId ? [buildPinnedSupplier(currentSupplier, currentSupplierRowId)] : [];
+		currentSupplier && currentSupplierRowId
+			? [buildCurrentSupplierRow(currentSupplier, { rowId: currentSupplierRowId })]
+			: [];
 	const pinnedRows =
 		singlePin.length + (extraPinnedSuppliers?.length ?? 0) > 0
 			? [...singlePin, ...(extraPinnedSuppliers ?? [])]
@@ -513,11 +486,11 @@ export function OffersTable({
 					</div>
 					<div>
 						<div className="text-muted-foreground">Доставка</div>
-						{ctx.isPinned ? <div>{"\u2014"}</div> : <DeliveryValue cost={s.deliveryCost} />}
+						<DeliveryValue cost={s.deliveryCost} />
 					</div>
 					<div>
 						<div className="text-muted-foreground">Срок поставки</div>
-						<div className="tabular-nums">{ctx.isPinned ? "\u2014" : formatLeadTime(s.leadTimeDays)}</div>
+						<div className="tabular-nums">{formatLeadTime(s.leadTimeDays)}</div>
 					</div>
 					<div>
 						<div className="text-muted-foreground">Стоимость</div>

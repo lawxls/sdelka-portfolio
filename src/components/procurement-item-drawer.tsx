@@ -47,7 +47,6 @@ import {
 	type SupplierSortField,
 	type SupplierSortState,
 	type SupplierStatus,
-	supplierIdentity,
 } from "@/data/supplier-types";
 import type { PaymentType, ProcurementItem } from "@/data/types";
 import { getDisplayStatus } from "@/data/types";
@@ -317,8 +316,6 @@ function SuppliersTabPanel({
 	const { data: itemDetail } = useItemDetail(itemId);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
 	const currentSupplier = itemDetail?.currentSupplier;
-	const updateSupplierMutation = useUpdateItemCurrentSupplier();
-	const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -326,20 +323,6 @@ function SuppliersTabPanel({
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 	const [showArchived, setShowArchived] = useState(false);
 
-	const placeholderPinnedRows: DataTablePlaceholderRow[] = currentSupplier
-		? []
-		: [
-				{
-					id: `add-supplier-${itemId}`,
-					onClick: () => setSupplierDialogOpen(true),
-					content: <AddSupplierPlaceholderCell />,
-				},
-			];
-
-	function handleSaveSupplier(draft: CurrentSupplierDraft) {
-		updateSupplierMutation.mutate({ id: itemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
-		setSupplierDialogOpen(false);
-	}
 	const [confirmingRequestAll, setConfirmingRequestAll] = useState(false);
 
 	// Pipeline = all statuses except quote_received. If the user has picked a subset via filter,
@@ -365,21 +348,9 @@ function SuppliersTabPanel({
 	const archiveMutation = useArchiveSuppliers();
 	const unarchiveMutation = useUnarchiveSuppliers();
 	const sendRequestMutation = useSendSupplierRequest();
-	const loadedSuppliers = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
+	const suppliers = useMemo(() => query.data?.pages.flatMap((p) => p.suppliers) ?? [], [query.data]);
 	const { data: allSuppliersData } = useSuppliers(itemId);
-	// Scope to the active archived view so the pin doesn't bleed across the «Архив» toggle.
-	const currentSupplierMatch = useMemo(() => {
-		if (!currentSupplier) return null;
-		const identity = supplierIdentity({ inn: currentSupplier.inn ?? "", companyName: currentSupplier.companyName });
-		return (
-			allSuppliersData?.suppliers.find((s) => s.archived === showArchived && supplierIdentity(s) === identity) ?? null
-		);
-	}, [currentSupplier, allSuppliersData?.suppliers, showArchived]);
-	const suppliers = useMemo(
-		() => (currentSupplierMatch ? loadedSuppliers.filter((s) => s.id !== currentSupplierMatch.id) : loadedSuppliers),
-		[loadedSuppliers, currentSupplierMatch],
-	);
-	const totalCount = query.data?.pages[0]?.total ?? loadedSuppliers.length;
+	const totalCount = query.data?.pages[0]?.total ?? suppliers.length;
 	const statusCounts = useMemo(() => {
 		const counts: Partial<Record<SupplierStatus, number>> = {};
 		for (const s of allSuppliersData?.suppliers ?? []) {
@@ -514,8 +485,6 @@ function SuppliersTabPanel({
 				kpRequestEnabled={kpRequestEnabled}
 				currentSupplierInn={currentSupplier?.inn}
 				currentSupplierName={currentSupplier?.companyName}
-				pinnedSuppliers={currentSupplierMatch ? [currentSupplierMatch] : undefined}
-				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
 				statusCounts={statusCounts}
 				search={search}
 				onSearchChange={setSearch}
@@ -563,16 +532,6 @@ function SuppliersTabPanel({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			{supplierDialogOpen && (
-				<CurrentSupplierDialog
-					open
-					onOpenChange={(o) => {
-						if (!o) setSupplierDialogOpen(false);
-					}}
-					initial={currentSupplier ? buildCurrentSupplierDraft(currentSupplier) : undefined}
-					onSave={handleSaveSupplier}
-				/>
-			)}
 		</div>
 	);
 }

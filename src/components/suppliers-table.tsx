@@ -85,6 +85,10 @@ interface SuppliersTableProps {
 	pinnedSuppliers?: Supplier[];
 	/** Empty placeholder rows rendered in the pinned area for positions awaiting a supplier. */
 	placeholderPinnedRows?: DataTablePlaceholderRow[];
+	/** Row ids whose profile fields (companyType/foundedYear/revenue) are placeholders,
+	 * not real data — those cells render «—» instead of their column value. Used for rows
+	 * synthesized from `item.currentSupplier`, which carries pricing/terms but no profile. */
+	syntheticSupplierIds?: ReadonlySet<string>;
 }
 
 const SEARCH_IN_PROGRESS_TOOLTIP = "Дождитесь завершения поиска поставщиков чтобы отправить запрос";
@@ -98,8 +102,11 @@ const SUPPLIER_COMPANY_TYPE_ICONS: Record<SupplierCompanyType, LucideIcon> = {
 	distributor: Truck,
 };
 
-function CompanyTypeBadge({ type }: { type: SupplierCompanyType }) {
-	const Icon = SUPPLIER_COMPANY_TYPE_ICONS[type];
+function CompanyTypeBadge({ type }: { type: SupplierCompanyType | null | undefined }) {
+	// Backend may omit companyType for new/partial supplier records — render «—»
+	// instead of crashing on an undefined Icon component.
+	const Icon = type ? SUPPLIER_COMPANY_TYPE_ICONS[type] : undefined;
+	if (!Icon || !type) return <>—</>;
 	return (
 		<span className="inline-flex items-center gap-1.5">
 			<Icon className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -144,7 +151,9 @@ export function SuppliersTable({
 	currentSupplierIdentities,
 	pinnedSuppliers,
 	placeholderPinnedRows,
+	syntheticSupplierIds,
 }: SuppliersTableProps) {
+	const isSynthetic = (s: Supplier) => syntheticSupplierIds?.has(s.id) ?? false;
 	const isYourSupplier = (s: Supplier) => {
 		if (currentSupplierIdentities && currentSupplierIdentities.length > 0) {
 			return currentSupplierIdentities.some((id) => (id.inn ? s.inn === id.inn : s.companyName === id.companyName));
@@ -365,7 +374,7 @@ export function SuppliersTable({
 			header: "ТИП",
 			headerClassName: "w-[140px]",
 			cellClassName: "w-[140px] whitespace-nowrap",
-			cell: (s) => <CompanyTypeBadge type={s.companyType} />,
+			cell: (s) => (isSynthetic(s) ? "—" : <CompanyTypeBadge type={s.companyType} />),
 		},
 		{
 			id: "region",
@@ -381,7 +390,7 @@ export function SuppliersTable({
 			align: "right",
 			headerClassName: "w-[110px]",
 			cellClassName: "w-[110px] whitespace-nowrap",
-			cell: (s) => formatCompactRuble(s.revenue),
+			cell: (s) => (isSynthetic(s) ? "—" : formatCompactRuble(s.revenue)),
 		},
 		{
 			id: "foundedYear",
@@ -390,7 +399,7 @@ export function SuppliersTable({
 			align: "right",
 			headerClassName: "w-[100px]",
 			cellClassName: "w-[100px] whitespace-nowrap",
-			cell: (s) => formatCompanyAge(s.foundedYear),
+			cell: (s) => (isSynthetic(s) ? "—" : formatCompanyAge(s.foundedYear)),
 		},
 		{
 			id: "state",
@@ -459,9 +468,7 @@ export function SuppliersTable({
 				<div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
 					<div>
 						<div className="text-xs text-muted-foreground">Тип</div>
-						<div>
-							<CompanyTypeBadge type={s.companyType} />
-						</div>
+						<div>{isSynthetic(s) ? "—" : <CompanyTypeBadge type={s.companyType} />}</div>
 					</div>
 					<div>
 						<div className="text-xs text-muted-foreground">Регион</div>
@@ -469,11 +476,11 @@ export function SuppliersTable({
 					</div>
 					<div>
 						<div className="text-xs text-muted-foreground">Возраст</div>
-						<div className="tabular-nums">{formatCompanyAge(s.foundedYear)}</div>
+						<div className="tabular-nums">{isSynthetic(s) ? "—" : formatCompanyAge(s.foundedYear)}</div>
 					</div>
 					<div>
 						<div className="text-xs text-muted-foreground">Выручка</div>
-						<div className="tabular-nums">{formatCompactRuble(s.revenue)}</div>
+						<div className="tabular-nums">{isSynthetic(s) ? "—" : formatCompactRuble(s.revenue)}</div>
 					</div>
 				</div>
 			</div>

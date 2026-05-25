@@ -219,15 +219,13 @@ describe("ProcurementItemDrawer — Поставщики (pipeline) tab", () => 
 		expect(screen.queryAllByRole("button", { name: "Запросить КП" })).toHaveLength(0);
 	});
 
-	test("pins the «Ваш поставщик» row at the top, matching the Предложения tab", async () => {
+	test("does NOT pin the «Ваш поставщик» row above the body", async () => {
 		renderDrawer(["/positions?item=item-1"]);
 		const panel = await screen.findByTestId("tab-panel-suppliers");
 		await waitFor(() => {
-			expect(within(panel).getByTestId("data-table-pinned-row")).toBeInTheDocument();
+			expect(within(panel).getByText("КОМПАНИЯ")).toBeInTheDocument();
 		});
-		const pinned = within(panel).getByTestId("data-table-pinned-row");
-		expect(within(pinned).getByText("ПолимерПром")).toBeInTheDocument();
-		expect(within(pinned).getByText("Ваш поставщик")).toBeInTheDocument();
+		expect(within(panel).queryByTestId("data-table-pinned-row")).not.toBeInTheDocument();
 	});
 });
 

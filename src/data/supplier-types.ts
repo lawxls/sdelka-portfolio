@@ -1,4 +1,4 @@
-import type { PaymentType } from "./types";
+import type { CurrentSupplier, PaymentType } from "./types";
 
 export type SupplierStatus = "new" | "quote_requested" | "negotiating" | "quote_received" | "refused" | "error";
 
@@ -112,6 +112,68 @@ export interface SupplierFilterParams {
  * when present; companyName is the fallback for legacy/seed rows. */
 export function supplierIdentity(s: { inn: string; companyName: string }): string {
 	return s.inn || s.companyName;
+}
+
+/** Synthetic-row id prefix for `Supplier` rows materialized from `item.currentSupplier`.
+ * The prefix lets callers route clicks to the edit-current-supplier dialog instead of
+ * the supplier-detail drawer, and lets mutations skip the synthetic rows (no backend
+ * record exists yet). */
+export const CURRENT_SUPPLIER_ROW_ID_PREFIX = "current-supplier:";
+
+export function isCurrentSupplierRowId(id: string): boolean {
+	return id.startsWith(CURRENT_SUPPLIER_ROW_ID_PREFIX);
+}
+
+export function currentSupplierRowItemId(rowId: string): string | null {
+	if (!isCurrentSupplierRowId(rowId)) return null;
+	return rowId.slice(CURRENT_SUPPLIER_ROW_ID_PREFIX.length);
+}
+
+/** Materialize an `item.currentSupplier` snapshot into the `Supplier` shape the
+ * suppliers/offers tables render. Caller supplies a row id (synthetic via
+ * `${CURRENT_SUPPLIER_ROW_ID_PREFIX}${itemId}` for consolidated views, or the
+ * matched real supplier's id for single-item views). Profile fields the snapshot
+ * doesn't carry (region, foundedYear, revenue, …) fall back to neutral
+ * placeholders — render-side helpers display «—» for them. */
+export function buildCurrentSupplierRow(
+	cs: CurrentSupplier,
+	opts: { rowId: string; itemId?: string; procurementInquiryId?: string },
+): Supplier {
+	return {
+		id: opts.rowId,
+		procurementInquiryId: opts.procurementInquiryId ?? "",
+		itemId: opts.itemId,
+		companyName: cs.companyName,
+		// «Ваш поставщик» already has agreed price/terms — represent that as a
+		// received quote so the status column shows «Получено КП» rather than
+		// the «Запросить КП» CTA (which renderStateCell shows only for «new»).
+		status: "quote_received",
+		archived: false,
+		inn: cs.inn ?? "",
+		companyType: "manufacturer",
+		region: "",
+		foundedYear: 0,
+		revenue: 0,
+		employeeCount: 0,
+		email: cs.email ?? "",
+		website: cs.website ?? "",
+		address: cs.address ?? "",
+		postalCode: "",
+		pricePerUnit: cs.pricePerUnit,
+		// «Ваш поставщик» has no quoted TCO — surface the buyer's per-unit price so the
+		// ТСО/ЕД. cell is comparable against real quotes instead of rendering «—».
+		tco: cs.pricePerUnit,
+		// CurrentSupplier.deliveryCost === null encodes «Включена» (rolled into price);
+		// Supplier.deliveryCost === 0 renders the same way, so normalize on synthesis.
+		deliveryCost: cs.deliveryCost === null ? 0 : (cs.deliveryCost ?? null),
+		paymentType: cs.paymentType ?? "prepayment",
+		deferralDays: cs.deferralDays,
+		prepaymentPercent: cs.prepaymentPercent,
+		leadTimeDays: cs.leadTimeDays ?? null,
+		agentComment: "",
+		documents: [],
+		chatHistory: [],
+	};
 }
 
 export interface Supplier {

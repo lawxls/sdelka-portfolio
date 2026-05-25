@@ -453,15 +453,16 @@ export function PlusTile({ size = "sm" }: { size?: "sm" | "md" }) {
 	);
 }
 
-/** «Добавить текущего поставщика» pinned-row content for supplier tables when a position
- * has no `currentSupplier`. Renders centered across the full row via `DataTablePlaceholderRow`.
- * Row-level `.group` brightens the `PlusTile` on hover so the placeholder reads as a button
+/** Pinned-row placeholder used by the «Предложения» tab to invite the buyer
+ * to record a quote from the position's current supplier. Renders centered
+ * across the full row via `DataTablePlaceholderRow`; row-level `.group`
+ * brightens the `PlusTile` on hover so the placeholder reads as a button
  * without competing with sibling pinned rows. */
 export function AddSupplierPlaceholderCell() {
 	return (
 		<div className="flex min-h-9 items-center justify-center gap-2.5 text-sm">
 			<PlusTile />
-			<span className="font-medium text-foreground">Добавить текущего поставщика</span>
+			<span className="font-medium text-foreground">Добавить предложение от текущего поставщика</span>
 		</div>
 	);
 }

@@ -1,5 +1,5 @@
 import { Archive, Ban, Check, ChevronRight, Mail, Pencil, Plus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { AddSupplierDialog, type AddSupplierDraft } from "@/components/add-supplier-dialog";
@@ -40,6 +40,10 @@ import {
 	type CurrentSupplierDraft,
 } from "@/components/use-create-procurement-inquiry-form";
 import {
+	buildCurrentSupplierRow,
+	CURRENT_SUPPLIER_ROW_ID_PREFIX,
+	currentSupplierRowItemId,
+	isCurrentSupplierRowId,
 	SUPPLIER_STATUSES,
 	type Supplier,
 	type SupplierCompanyType,
@@ -106,13 +110,18 @@ function parseSupplierTab(param: string | null): SupplierDrawerTab {
 
 const CONSOLIDATED_PAGE_SIZE = 30;
 
-/** Build pinned `Supplier` rows + a single consolidated «Добавить текущего поставщика»
- * placeholder when any item lacks a supplier. `pinnedIds` is the set of real rows
- * lifted out — callers filter the body list by it to avoid double-rendering. */
+/** Build pinned `Supplier` rows from each item's `currentSupplier`. When a
+ * matching real `Supplier` exists (joined by INN/name identity), the real
+ * row wins — otherwise a synthetic row is built inline so the table reflects
+ * the inquiry's current-supplier state even before any backend supplier
+ * record exists. When `onAddSupplier` is provided, a single «Добавить»
+ * placeholder row is appended for positions that don't yet have a current
+ * supplier. */
 function usePinnedAndPlaceholderRows(
+	procurementInquiryId: string,
 	items: readonly ProcurementItem[],
 	dedupedSuppliers: readonly Supplier[],
-	onAddSupplier: () => void,
+	onAddSupplier?: () => void,
 ) {
 	return useMemo(() => {
 		const byIdentity = new Map<string, Supplier>();
@@ -127,26 +136,35 @@ function usePinnedAndPlaceholderRows(
 				hasItemWithoutSupplier = true;
 				continue;
 			}
-			const identityKey = cs.inn ?? cs.companyName;
+			const identityKey = cs.inn || cs.companyName;
 			if (!identityKey || seenIdentity.has(identityKey)) continue;
+			seenIdentity.add(identityKey);
 			const match = byIdentity.get(identityKey);
 			if (match) {
 				pinnedList.push(match);
 				pinned.add(match.id);
-				seenIdentity.add(identityKey);
+			} else {
+				pinnedList.push(
+					buildCurrentSupplierRow(cs, {
+						rowId: `${CURRENT_SUPPLIER_ROW_ID_PREFIX}${it.id}`,
+						itemId: it.id,
+						procurementInquiryId,
+					}),
+				);
 			}
 		}
-		const placeholders: DataTablePlaceholderRow[] = hasItemWithoutSupplier
-			? [
-					{
-						id: "add-current-supplier",
-						onClick: onAddSupplier,
-						content: <AddSupplierPlaceholderCell />,
-					},
-				]
-			: [];
+		const placeholders: DataTablePlaceholderRow[] =
+			onAddSupplier && hasItemWithoutSupplier
+				? [
+						{
+							id: "add-current-supplier",
+							onClick: onAddSupplier,
+							content: <AddSupplierPlaceholderCell />,
+						},
+					]
+				: [];
 		return { pinnedSuppliers: pinnedList, placeholderPinnedRows: placeholders, pinnedIds: pinned };
-	}, [dedupedSuppliers, items, onAddSupplier]);
+	}, [dedupedSuppliers, items, onAddSupplier, procurementInquiryId]);
 }
 
 /** Modal listing positions without a current supplier so the user can pick which
@@ -441,13 +459,13 @@ function ProcurementInquiryDrawerBody({
 		setIsEditingName(false);
 	}
 
-	function handleAddSupplier() {
+	const handleAddSupplier = useCallback(() => {
 		if (itemsWithoutSupplier.length === 1) {
 			setDialogItemId(itemsWithoutSupplier[0].id);
 			return;
 		}
 		setPickerOpen(true);
-	}
+	}, [itemsWithoutSupplier]);
 
 	function handlePickItem(itemId: string) {
 		setPickerOpen(false);
@@ -615,15 +633,28 @@ function ProcurementInquiryDrawerBody({
 					<ProcurementInquirySuppliersTab
 						procurementInquiryId={procurementInquiry.id}
 						items={items}
-						onSupplierClick={(id) => onSupplierOpen(id, "info")}
-						onAddSupplier={handleAddSupplier}
+						onSupplierClick={(id) => {
+							const itemId = currentSupplierRowItemId(id);
+							if (itemId) {
+								setDialogItemId(itemId);
+								return;
+							}
+							onSupplierOpen(id, "info");
+						}}
 					/>
 				)}
 				{activeTab === "offers" && (
 					<ProcurementInquiryOffersTab
 						procurementInquiryId={procurementInquiry.id}
 						items={items}
-						onSupplierClick={(id) => onSupplierOpen(id, "offers")}
+						onSupplierClick={(id) => {
+							const itemId = currentSupplierRowItemId(id);
+							if (itemId) {
+								setDialogItemId(itemId);
+								return;
+							}
+							onSupplierOpen(id, "offers");
+						}}
 						onAddSupplier={handleAddSupplier}
 					/>
 				)}
@@ -758,12 +789,10 @@ function ProcurementInquirySuppliersTab({
 	procurementInquiryId,
 	items,
 	onSupplierClick,
-	onAddSupplier,
 }: {
 	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplier: () => void;
 }) {
 	if (items.length === 0) return <NoItemsHint tab="suppliers" />;
 	return (
@@ -771,7 +800,6 @@ function ProcurementInquirySuppliersTab({
 			procurementInquiryId={procurementInquiryId}
 			items={items}
 			onSupplierClick={onSupplierClick}
-			onAddSupplier={onAddSupplier}
 		/>
 	);
 }
@@ -780,12 +808,10 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	procurementInquiryId,
 	items,
 	onSupplierClick,
-	onAddSupplier,
 }: {
 	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
-	onAddSupplier: () => void;
 }) {
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
@@ -832,12 +858,6 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 		return counts;
 	}, [dedupedSuppliers]);
 
-	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
-		items,
-		dedupedSuppliers,
-		onAddSupplier,
-	);
-
 	const currentSupplierIdentities = useMemo(
 		() =>
 			items
@@ -845,6 +865,16 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 				.filter((cs): cs is NonNullable<typeof cs> => cs != null)
 				.map((cs) => ({ inn: cs.inn, companyName: cs.companyName })),
 		[items],
+	);
+
+	// Suppliers tab pins current-supplier rows but doesn't render the
+	// «Добавить предложение от текущего поставщика» placeholder row — that CTA
+	// only belongs on the Offers tab. The toolbar's «Добавить поставщика» button
+	// covers add-supplier intent here, so we pass a noop add handler.
+	const { pinnedSuppliers, pinnedIds } = usePinnedAndPlaceholderRows(procurementInquiryId, items, dedupedSuppliers);
+	const syntheticSupplierIds = useMemo(
+		() => new Set(pinnedSuppliers.filter((s) => isCurrentSupplierRowId(s.id)).map((s) => s.id)),
+		[pinnedSuppliers],
 	);
 
 	const filteredSuppliers = useMemo(() => {
@@ -898,7 +928,10 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	}
 
 	function dispatchByItem(ids: string[], action: (itemId: string, supplierIds: string[]) => void) {
-		const byItem = groupSupplierIdsByItem(sortedSuppliers, ids);
+		// Synthesized current-supplier rows have no backend record, so
+		// archive/send-request mutations would 404 against their fake ids.
+		const realIds = ids.filter((id) => !isCurrentSupplierRowId(id));
+		const byItem = groupSupplierIdsByItem(sortedSuppliers, realIds);
 		for (const [itemId, supplierIds] of byItem) action(itemId, supplierIds);
 	}
 
@@ -944,7 +977,9 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	}
 
 	function handleSendRequestAll() {
-		const candidateIds = sortedSuppliers.filter((s) => s.status === "new" && !s.archived).map((s) => s.id);
+		const candidateIds = sortedSuppliers
+			.filter((s) => s.status === "new" && !s.archived && !isCurrentSupplierRowId(s.id))
+			.map((s) => s.id);
 		if (candidateIds.length === 0) {
 			toast.info("Нет поставщиков со статусом «Кандидат»");
 			return;
@@ -979,7 +1014,7 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 				suppliers={visibleSuppliers}
 				totalCount={sortedSuppliers.length + pinnedSuppliers.length}
 				pinnedSuppliers={pinnedSuppliers.length > 0 ? pinnedSuppliers : undefined}
-				placeholderPinnedRows={placeholderPinnedRows.length > 0 ? placeholderPinnedRows : undefined}
+				syntheticSupplierIds={syntheticSupplierIds.size > 0 ? syntheticSupplierIds : undefined}
 				currentSupplierIdentities={currentSupplierIdentities}
 				isLoading={isLoading}
 				onRowClick={onSupplierClick}
@@ -1017,7 +1052,7 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 }
 
 function ProcurementInquiryOffersTab({
-	procurementInquiryId: _procurementInquiryId,
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 	onAddSupplier,
@@ -1030,6 +1065,7 @@ function ProcurementInquiryOffersTab({
 	if (items.length === 0) return <NoItemsHint tab="offers" />;
 	return (
 		<ProcurementInquiryConsolidatedOffersPanel
+			procurementInquiryId={procurementInquiryId}
 			items={items}
 			onSupplierClick={onSupplierClick}
 			onAddSupplier={onAddSupplier}
@@ -1038,10 +1074,12 @@ function ProcurementInquiryOffersTab({
 }
 
 function ProcurementInquiryConsolidatedOffersPanel({
+	procurementInquiryId,
 	items,
 	onSupplierClick,
 	onAddSupplier,
 }: {
+	procurementInquiryId: string;
 	items: readonly ProcurementItem[];
 	onSupplierClick: (id: string) => void;
 	onAddSupplier: () => void;
@@ -1099,6 +1137,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 	}, [allSuppliers, itemIds, showArchived, activeItemIdsSet]);
 
 	const { pinnedSuppliers, placeholderPinnedRows, pinnedIds } = usePinnedAndPlaceholderRows(
+		procurementInquiryId,
 		items,
 		dedupedSuppliers,
 		onAddSupplier,
@@ -1163,7 +1202,8 @@ function ProcurementInquiryConsolidatedOffersPanel({
 	}
 
 	function archiveByIds(ids: string[]) {
-		const byItem = groupSupplierIdsByItem(sortedSuppliers, ids);
+		const realIds = ids.filter((id) => !isCurrentSupplierRowId(id));
+		const byItem = groupSupplierIdsByItem(sortedSuppliers, realIds);
 		for (const [itemId, supplierIds] of byItem) {
 			archiveMutation.mutate({ itemId, supplierIds });
 		}

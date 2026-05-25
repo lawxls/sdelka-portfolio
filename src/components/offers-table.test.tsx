@@ -221,12 +221,29 @@ describe("OffersTable pinned current supplier", () => {
 		expect(status.className).toMatch(/text-highlight-foreground/);
 	});
 
-	test("pinned supplier's Экономия is em-dash", () => {
+	test("pinned supplier's Экономия is em-dash (current vs self is meaningless)", () => {
 		renderTable({ currentSupplier });
 		const pinned = screen.getByTestId("data-table-pinned-row");
 		const dashes = within(pinned).getAllByText("\u2014");
-		// Доставка, Экономия, Срок поставки → at least 3 dashes (ТСО/ед. is also null on pinned)
-		expect(dashes.length).toBeGreaterThanOrEqual(2);
+		// Экономия (current vs self) + Срок поставки (test fixture omits it) → 2 dashes.
+		// Доставка/ТСО/ед. now surface real currentSupplier data — see tests below.
+		expect(dashes.length).toBeGreaterThanOrEqual(1);
+	});
+
+	test("pinned supplier surfaces Доставка and Срок поставки from currentSupplier", () => {
+		renderTable({
+			currentSupplier: { ...currentSupplier, deliveryCost: 1500, leadTimeDays: 5 },
+		});
+		const pinned = screen.getByTestId("data-table-pinned-row");
+		expect(within(pinned).getByText(/1[ \s]?500/)).toBeInTheDocument();
+		expect(within(pinned).getByText(/5\s*дней/)).toBeInTheDocument();
+	});
+
+	test("pinned supplier's ТСО/ед. falls back to pricePerUnit", () => {
+		renderTable({ currentSupplier });
+		const pinned = screen.getByTestId("data-table-pinned-row");
+		// pricePerUnit = 800 → ТСО/ед. should render «800 ₽» rather than «—».
+		expect(within(pinned).getAllByText(/^800/).length).toBeGreaterThan(0);
 	});
 
 	test("pinned supplier shows its Стоимость from pricePerUnit × quantityPerDelivery", () => {

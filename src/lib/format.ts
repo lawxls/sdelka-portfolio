@@ -219,7 +219,8 @@ export function formatRussianPlural(count: number, forms: [one: string, few: str
 }
 
 /** Produces «16 лет» / «1 год» / «2 года» from a founding year; em-dash for future years. */
-export function formatCompanyAge(foundedYear: number): string {
+export function formatCompanyAge(foundedYear: number | null | undefined): string {
+	if (!foundedYear || !Number.isFinite(foundedYear)) return "\u2014";
 	const age = new Date().getFullYear() - foundedYear;
 	if (age < 0) return "\u2014";
 	return formatRussianPlural(age, ["год", "года", "лет"]);
