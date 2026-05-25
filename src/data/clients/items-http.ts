@@ -9,17 +9,26 @@ import type {
 	TotalsParams,
 	UpdateItemData,
 } from "../domains/items";
+import { FOLDER_FILTER_ARCHIVE } from "../domains/procurement-inquiries";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
 import { buildQueryString, type DrfCursorPage, toCursorPage } from "./drf";
 import type { ItemsClient } from "./items-client";
 import { itemFromApi, itemToApiPatch, newItemToApi, type ProcurementItemWire } from "./items-wire";
 
+/** Mirrors the folder→isArchived translation in `procurement-inquiries-http.ts`. */
+function translateFolder(folder: string | undefined): { folder?: string; isArchived: boolean } {
+	if (folder === FOLDER_FILTER_ARCHIVE) return { isArchived: true };
+	return { folder, isArchived: false };
+}
+
 function listQuery(params: ListItemsParams): string {
+	const { folder, isArchived } = translateFolder(params.folder);
 	return buildQueryString({
 		q: params.q,
 		status: params.status,
 		deviation: params.deviation,
-		folder: params.folder,
+		folder,
+		isArchived,
 		company: params.company,
 		procurementInquiry: params.procurementInquiry,
 		sort: params.sort,
@@ -30,22 +39,26 @@ function listQuery(params: ListItemsParams): string {
 }
 
 function totalsQuery(params: TotalsParams): string {
+	const { folder, isArchived } = translateFolder(params.folder);
 	return buildQueryString({
 		q: params.q,
 		status: params.status,
 		deviation: params.deviation,
-		folder: params.folder,
+		folder,
+		isArchived,
 		company: params.company,
 		procurementInquiry: params.procurementInquiry,
 	});
 }
 
 function exportQuery(params: ExportItemsParams): string {
+	const { folder, isArchived } = translateFolder(params.folder);
 	return buildQueryString({
 		q: params.q,
 		status: params.status,
 		deviation: params.deviation,
-		folder: params.folder,
+		folder,
+		isArchived,
 		company: params.company,
 		procurementInquiry: params.procurementInquiry,
 		sort: params.sort,

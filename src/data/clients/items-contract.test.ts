@@ -99,9 +99,9 @@ function httpAdapter(seed: ProcurementItem[]): Adapter {
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
-				const folder = u.searchParams.get("folder") ?? undefined;
+				const isArchived = u.searchParams.get("isArchived");
 				let items = Array.from(store.values());
-				if (folder === "archive") items = items.filter((i) => archived.has(i.id));
+				if (isArchived === "true") items = items.filter((i) => archived.has(i.id));
 				else items = items.filter((i) => !archived.has(i.id));
 				if (q) items = items.filter((i) => i.name.toLowerCase().includes(q));
 				return { status: 200, body: { next: null, previous: null, results: items.map(toWire) } };

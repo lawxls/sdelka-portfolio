@@ -28,21 +28,29 @@ const enc = encodeURIComponent;
 
 export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient): SuppliersClient {
 	return {
-		list: (itemId, params) => http.get<SuppliersPage>(`/items/${enc(itemId)}/suppliers${buildQuery(params ?? {})}`),
+		list: (itemId, params) =>
+			http.get<SuppliersPage>(`/procurement/items/${enc(itemId)}/suppliers/${buildQuery(params ?? {})}`),
 
 		listForItem: (itemId) => http.get<SuppliersList>(`/items/${enc(itemId)}/suppliers/all`),
 
-		listAll: () => http.get<Supplier[]>(`/suppliers`),
+		// Phase 1: backed by `GET /api/v1/suppliers/` (`SupplierViewSet`).
+		// Returns one row per InquiryOffer in the workspace, both archived and
+		// active — the FE toggles between them client-side.
+		listAll: () => http.get<Supplier[]>(`/suppliers/`),
 
 		get: (itemId, supplierId) => http.get<Supplier | null>(`/items/${enc(itemId)}/suppliers/${enc(supplierId)}`),
 
-		getById: (supplierId) => http.get<Supplier | null>(`/suppliers/${enc(supplierId)}`),
+		getById: (supplierId) => http.get<Supplier | null>(`/suppliers/${enc(supplierId)}/`),
 
 		quotesByInn: (inn, contextItemId) =>
 			http.get<SupplierQuote[]>(`/suppliers/quotes${buildQuery({ inn, contextItemId })}`),
 
+		// Phase 1: backed by the `@action create_supplier` on
+		// `ProcurementInquiryViewSet`. Sub-resource path is router-derived,
+		// so the prefix must match the rest of the procurement surface
+		// (`/procurement/inquiries/…`, not `/procurement-inquiries/…`).
 		create: (input: CreateSupplierInput) =>
-			http.post<Supplier>(`/procurement-inquiries/${enc(input.procurementInquiryId)}/suppliers`, {
+			http.post<Supplier>(`/procurement/inquiries/${enc(input.procurementInquiryId)}/suppliers/`, {
 				body: { inn: input.inn, companyName: input.companyName, website: input.website, email: input.email },
 			}),
 
@@ -53,12 +61,12 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 			http.post<void>(`/items/${enc(itemId)}/suppliers/unarchive`, { body: { supplierIds } }),
 
 		archiveInquiry: (procurementInquiryId, supplierIds) =>
-			http.post<void>(`/procurement-inquiries/${enc(procurementInquiryId)}/suppliers/archive`, {
+			http.post<void>(`/procurement/inquiries/${enc(procurementInquiryId)}/suppliers/archive`, {
 				body: { supplierIds },
 			}),
 
 		unarchiveInquiry: (procurementInquiryId, supplierIds) =>
-			http.post<void>(`/procurement-inquiries/${enc(procurementInquiryId)}/suppliers/unarchive`, {
+			http.post<void>(`/procurement/inquiries/${enc(procurementInquiryId)}/suppliers/unarchive`, {
 				body: { supplierIds },
 			}),
 

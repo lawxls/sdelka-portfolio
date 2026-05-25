@@ -17,6 +17,8 @@ interface ItemQueryParams {
 	procurementInquiry?: string;
 }
 
+const ITEMS_PAGE_SIZE = 25;
+
 export function buildFilterParams({
 	search,
 	filters,
@@ -43,7 +45,7 @@ export function useItems(params: ItemQueryParams) {
 
 	const query = useInfiniteQuery({
 		queryKey: keys.items.list(filterParams),
-		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
+		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam, limit: ITEMS_PAGE_SIZE }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 	});

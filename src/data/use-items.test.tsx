@@ -108,9 +108,11 @@ describe("useItems", () => {
 			deviation: "overpaying",
 			folder: "f1",
 			company: "c1",
+			procurementInquiry: undefined,
 			sort: "currentPrice",
 			dir: "desc",
 			cursor: undefined,
+			limit: 25,
 		});
 	});
 

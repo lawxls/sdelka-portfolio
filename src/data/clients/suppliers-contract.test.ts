@@ -96,7 +96,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "GET",
-			path: /^\/suppliers$/,
+			path: /^\/suppliers\/$/,
 			respond: () => ({ status: 200, body: listAll() }),
 		},
 		{
@@ -111,7 +111,7 @@ function httpAdapter(): Adapter {
 		},
 		{
 			method: "GET",
-			path: new RegExp(`^/items/${ITEM_ID}/suppliers(\\?|$)`),
+			path: new RegExp(`^/procurement/items/${ITEM_ID}/suppliers/(\\?|$)`),
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const search = u.searchParams.get("search")?.toLowerCase();
