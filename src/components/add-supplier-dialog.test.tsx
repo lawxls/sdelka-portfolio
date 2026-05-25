@@ -19,7 +19,7 @@ function renderDialog(onSave: (draft: AddSupplierDraft) => void, lookupByInn?: C
 	return render(<AddSupplierDialog open onOpenChange={() => {}} onSave={onSave} />, { wrapper });
 }
 
-function makeLookup(overrides: Partial<CompanyLookup> = {}): CompanyLookup {
+function makeLookup(): CompanyLookup {
 	return {
 		inn: "7703123456",
 		shortName: "ООО «Ромашка»",
@@ -30,69 +30,29 @@ function makeLookup(overrides: Partial<CompanyLookup> = {}): CompanyLookup {
 		address: "г Москва, ул Ленина, д 1",
 		status: "ACTIVE",
 		existing: null,
-		...overrides,
 	};
 }
 
 describe("AddSupplierDialog", () => {
-	test("renders title and INN mode by default", () => {
+	test("renders title and INN-only form", () => {
 		renderDialog(() => {});
 		expect(screen.getByRole("dialog", { name: "Добавить поставщика" })).toBeInTheDocument();
 		expect(screen.getByLabelText(/ИНН/)).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "По ИНН" })).toHaveAttribute("aria-pressed", "true");
+		expect(screen.queryByRole("button", { name: "По ИНН" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Вручную" })).not.toBeInTheDocument();
 	});
 
-	test("switching to manual mode reveals name/website/email fields and hides INN", async () => {
-		const user = userEvent.setup();
-		renderDialog(() => {});
-		await user.click(screen.getByRole("button", { name: "Вручную" }));
-		expect(screen.queryByLabelText(/ИНН/)).not.toBeInTheDocument();
-		expect(screen.getByLabelText(/Название/)).toBeInTheDocument();
-		expect(screen.getByLabelText(/Сайт/)).toBeInTheDocument();
-		expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
-	});
-
-	test("saves manual entry with trimmed values", async () => {
+	test("saves matched name + user-typed website/email when lookup succeeds", async () => {
 		const onSave = vi.fn();
 		const user = userEvent.setup();
-		renderDialog(onSave);
-		await user.click(screen.getByRole("button", { name: "Вручную" }));
-		await user.type(screen.getByLabelText(/Название/), "  ООО «Ромашка»  ");
-		await user.type(screen.getByLabelText(/Сайт/), "romashka.ru");
-		await user.type(screen.getByLabelText(/Email/), "info@romashka.ru");
-		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
-		expect(onSave).toHaveBeenCalledWith({
-			inn: "",
-			companyName: "ООО «Ромашка»",
-			website: "romashka.ru",
-			email: "info@romashka.ru",
-		});
-	});
-
-	test("manual mode shows name error when empty", async () => {
-		const onSave = vi.fn();
-		const user = userEvent.setup();
-		renderDialog(onSave);
-		await user.click(screen.getByRole("button", { name: "Вручную" }));
-		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
-		expect(screen.getByText("Укажите название компании")).toBeInTheDocument();
-		expect(onSave).not.toHaveBeenCalled();
-	});
-
-	test("INN mode saves matched name + user-typed website/email when lookup succeeds", async () => {
-		const onSave = vi.fn();
-		const user = userEvent.setup();
-		const lookupByInn = vi.fn(async () => makeLookup());
-		renderDialog(onSave, lookupByInn);
+		renderDialog(onSave, async () => makeLookup());
 
 		await user.type(screen.getByLabelText(/ИНН/), "7703123456");
-		// Name + address are surfaced as readonly inputs prefilled from DaData;
-		// website + email start disabled and become editable once a match lands.
 		await waitFor(() => expect(screen.getByLabelText("Название")).toHaveValue("ООО «Ромашка»"));
 		expect(screen.getByLabelText("Адрес")).toHaveValue("г Москва, ул Ленина, д 1");
 
-		await user.type(screen.getByLabelText("Сайт"), "https://romashka.ru");
-		await user.type(screen.getByLabelText("Email"), "info@romashka.ru");
+		await user.type(screen.getByLabelText(/Сайт/), "https://romashka.ru");
+		await user.type(screen.getByLabelText(/Email/), "info@romashka.ru");
 		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
 
 		expect(onSave).toHaveBeenCalledWith({
@@ -103,19 +63,19 @@ describe("AddSupplierDialog", () => {
 		});
 	});
 
-	test("INN mode keeps Сайт/Email disabled until lookup matches", async () => {
+	test("keeps Сайт/Email/Название/Адрес disabled until lookup matches", async () => {
 		const user = userEvent.setup();
 		renderDialog(() => {});
-		expect(screen.getByLabelText("Сайт")).toBeDisabled();
-		expect(screen.getByLabelText("Email")).toBeDisabled();
+		expect(screen.getByLabelText(/Сайт/)).toBeDisabled();
+		expect(screen.getByLabelText(/Email/)).toBeDisabled();
 		expect(screen.getByLabelText("Название")).toBeDisabled();
 		expect(screen.getByLabelText("Адрес")).toBeDisabled();
 		// Partial INN keeps everything disabled.
 		await user.type(screen.getByLabelText(/ИНН/), "770");
-		expect(screen.getByLabelText("Сайт")).toBeDisabled();
+		expect(screen.getByLabelText(/Сайт/)).toBeDisabled();
 	});
 
-	test("INN mode shows hint to switch to manual when lookup misses", async () => {
+	test("shows miss hint when lookup returns no match", async () => {
 		const user = userEvent.setup();
 		renderDialog(
 			() => {},
@@ -125,7 +85,7 @@ describe("AddSupplierDialog", () => {
 		await waitFor(() => expect(screen.getByText(/Поставщик не/)).toBeInTheDocument());
 	});
 
-	test("INN mode rejects save when INN is too short", async () => {
+	test("rejects save when INN is too short", async () => {
 		const onSave = vi.fn();
 		const user = userEvent.setup();
 		renderDialog(onSave);
@@ -135,24 +95,27 @@ describe("AddSupplierDialog", () => {
 		expect(onSave).not.toHaveBeenCalled();
 	});
 
-	test("manual mode requires email", async () => {
-		const onSave = vi.fn();
-		const user = userEvent.setup();
-		renderDialog(onSave);
-		await user.click(screen.getByRole("button", { name: "Вручную" }));
-		await user.type(screen.getByLabelText(/Название/), "ООО «Ромашка»");
-		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
-		expect(screen.getByText("Укажите email")).toBeInTheDocument();
-		expect(onSave).not.toHaveBeenCalled();
-	});
-
-	test("INN mode requires email after match", async () => {
+	test("requires Сайт after match", async () => {
 		const onSave = vi.fn();
 		const user = userEvent.setup();
 		renderDialog(onSave, async () => makeLookup());
 
 		await user.type(screen.getByLabelText(/ИНН/), "7703123456");
 		await waitFor(() => expect(screen.getByLabelText("Название")).toHaveValue("ООО «Ромашка»"));
+		await user.type(screen.getByLabelText(/Email/), "info@romashka.ru");
+		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
+		expect(screen.getByText("Укажите сайт")).toBeInTheDocument();
+		expect(onSave).not.toHaveBeenCalled();
+	});
+
+	test("requires Email after match", async () => {
+		const onSave = vi.fn();
+		const user = userEvent.setup();
+		renderDialog(onSave, async () => makeLookup());
+
+		await user.type(screen.getByLabelText(/ИНН/), "7703123456");
+		await waitFor(() => expect(screen.getByLabelText("Название")).toHaveValue("ООО «Ромашка»"));
+		await user.type(screen.getByLabelText(/Сайт/), "romashka.ru");
 		await user.click(screen.getByRole("button", { name: /Сохранить/ }));
 		expect(screen.getByText("Укажите email")).toBeInTheDocument();
 		expect(onSave).not.toHaveBeenCalled();

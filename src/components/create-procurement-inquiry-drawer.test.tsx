@@ -410,6 +410,7 @@ describe("CreateProcurementInquiryDrawer — Position-level supplier modal", () 
 		// Wait for the DaData match to land — Email becomes editable only once
 		// the company is resolved.
 		await waitFor(() => expect(screen.getByLabelText("Email")).not.toBeDisabled());
+		await user.type(screen.getByLabelText("Сайт"), "supplier.example.com");
 		await user.type(screen.getByLabelText("Email"), "supplier@example.com");
 		await user.type(screen.getByLabelText("Текущая цена/ед. без НДС"), "1250");
 		await user.click(screen.getByRole("button", { name: "Сохранить" }));

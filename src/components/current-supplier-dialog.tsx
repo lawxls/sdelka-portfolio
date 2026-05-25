@@ -20,13 +20,6 @@ interface CurrentSupplierDialogProps {
 	onSave: (supplier: CurrentSupplierDraft) => void;
 }
 
-type Mode = "inn" | "manual";
-const MODE_OPTIONS = ["inn", "manual"] as const satisfies readonly Mode[];
-const MODE_LABELS: Record<Mode, string> = {
-	inn: "По ИНН",
-	manual: "Вручную",
-};
-
 const PAYMENT_OPTIONS = ["prepayment", "deferred"] as const satisfies readonly PaymentType[];
 const PAYMENT_LABELS: Record<PaymentType, string> = {
 	prepayment: "Предоплата",
@@ -44,14 +37,8 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 	return <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</h3>;
 }
 
-function initialMode(initial: CurrentSupplierDraft | undefined): Mode {
-	if (!initial) return "inn";
-	return initial.inn ? "inn" : "manual";
-}
-
 export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: CurrentSupplierDialogProps) {
 	const editing = !!initial;
-	const [mode, setMode] = useState<Mode>(() => initialMode(initial));
 	const [innLocked, setInnLocked] = useState(editing && !!initial?.inn);
 	const [inn, setInn] = useState(initial?.inn ?? "");
 	const [pricePerUnit, setPricePerUnit] = useState(initial?.pricePerUnit ?? "");
@@ -63,19 +50,15 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 	);
 	const [deliveryCost, setDeliveryCost] = useState(initial?.deliveryCost ?? "");
 	const [leadTimeDays, setLeadTimeDays] = useState(initial?.leadTimeDays ?? "");
-	const [manualName, setManualName] = useState(initial?.companyName ?? "");
-	const [manualWebsite, setManualWebsite] = useState(initial?.website ?? "");
-	const [manualAddress, setManualAddress] = useState(initial?.address ?? "");
-	const [manualEmail, setManualEmail] = useState(initial?.email ?? "");
 	// Inputs paired with the matched-INN fields. DaData doesn't carry website/email,
 	// so the user fills them in. Seeded from `initial` so edit mode preserves
 	// whatever was previously saved.
-	const [matchedWebsite, setMatchedWebsite] = useState(initial?.website ?? "");
-	const [matchedEmail, setMatchedEmail] = useState(initial?.email ?? "");
+	const [website, setWebsite] = useState(initial?.website ?? "");
+	const [email, setEmail] = useState(initial?.email ?? "");
 	const [showErrors, setShowErrors] = useState(false);
 
 	const innFilled = isValidCompanyInnLength(inn);
-	const lookupEnabled = mode === "inn" && !innLocked && innFilled;
+	const lookupEnabled = !innLocked && innFilled;
 	const lookup = useCompanyLookupByInn(inn, { enabled: lookupEnabled });
 
 	// In edit mode, the saved supplier data hydrates the matched-INN fields
@@ -96,47 +79,30 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 	function handleResetInn() {
 		setInnLocked(false);
 		setInn("");
-		setMatchedWebsite("");
-		setMatchedEmail("");
+		setWebsite("");
+		setEmail("");
 	}
 
-	const innValid = mode !== "inn" || (innFilled && (matched != null || isMiss));
-	// In INN mode: matched provides the name (no manual entry needed). On miss
-	// we steer the user to the Manual tab, so name validity still passes.
-	// In manual mode: name is required.
-	const innModeReady = mode === "inn" && matched != null;
-	const manualModeReady = mode === "manual" && manualName.trim() !== "";
-	const companyReady = innModeReady || manualModeReady;
-	const nameValid = mode !== "manual" || manualName.trim() !== "";
-	const emailValid = mode === "inn" ? matchedEmail.trim() !== "" : manualEmail.trim() !== "";
+	const innValid = innFilled && matched != null;
+	const companyReady = matched != null;
+	const websiteValid = website.trim() !== "";
+	const emailValid = email.trim() !== "";
 	const priceValid = pricePerUnit.trim() !== "";
 	const deferralValid = paymentType !== "deferred" || deferralDays.trim() !== "";
 	const deliveryValid = deliveryMode !== "paid" || deliveryCost.trim() !== "";
-	const canSave = innValid && nameValid && emailValid && priceValid && deferralValid && deliveryValid;
+	const canSave = innValid && websiteValid && emailValid && priceValid && deferralValid && deliveryValid;
 
 	function handleSave() {
-		if (!canSave) {
+		if (!canSave || !matched) {
 			setShowErrors(true);
 			return;
 		}
-		const payload =
-			mode === "inn" && matched
-				? {
-						inn: inn.trim(),
-						companyName: matched.companyName,
-						address: matched.address,
-						website: matchedWebsite.trim(),
-						email: matchedEmail.trim(),
-					}
-				: {
-						inn: "",
-						companyName: manualName.trim(),
-						address: manualAddress.trim(),
-						website: manualWebsite.trim(),
-						email: manualEmail.trim(),
-					};
 		onSave({
-			...payload,
+			inn: inn.trim(),
+			companyName: matched.companyName,
+			address: matched.address,
+			website: website.trim(),
+			email: email.trim(),
 			pricePerUnit: pricePerUnit.trim(),
 			paymentType,
 			deferralDays: paymentType === "deferred" ? deferralDays.trim() : "",
@@ -149,22 +115,21 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 
 	const innErrorId = "current-supplier-inn-error";
 	const priceErrorId = "current-supplier-price-error";
-	const nameErrorId = "current-supplier-name-error";
+	const websiteErrorId = "current-supplier-website-error";
 	const emailErrorId = "current-supplier-email-error";
 	const deferralErrorId = "current-supplier-deferral-error";
 	const deliveryErrorId = "current-supplier-delivery-error";
 
-	const showInnError = showErrors && mode === "inn" && !innFilled;
+	const showInnError = showErrors && !innFilled;
 	const showPriceError = showErrors && !priceValid;
-	const showNameError = showErrors && mode === "manual" && !nameValid;
-	// Email error suppressed in INN mode until the match lands — the field is
-	// disabled before that, so flagging a missing value would be confusing.
-	const showEmailError =
-		showErrors && (mode === "inn" ? matched != null && matchedEmail.trim() === "" : manualEmail.trim() === "");
+	// Website/email errors only surface once the match lands — the fields are
+	// disabled before that, so flagging missing values would be confusing.
+	const showWebsiteError = showErrors && matched != null && !websiteValid;
+	const showEmailError = showErrors && matched != null && !emailValid;
 	const showDeferralError = showErrors && !deferralValid;
 	const showDeliveryError = showErrors && !deliveryValid;
 
-	const innModeFieldsEnabled = matched != null;
+	const fieldsEnabled = matched != null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -179,216 +144,138 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 					<section className="flex flex-col gap-3">
 						<SectionHeader>Поставщик</SectionHeader>
 
-						<SegmentedControl options={MODE_OPTIONS} labels={MODE_LABELS} value={mode} onChange={setMode} />
-
-						{mode === "inn" && (
-							<div className="flex flex-col gap-3 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none">
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-inn" required>
-										ИНН
-									</FieldLabel>
-									<div className="flex items-stretch gap-2">
-										<Input
-											id="current-supplier-inn"
-											value={inn}
-											onChange={(e) => setInn(digitsOnly(e.target.value).slice(0, INN_MAX_LEN))}
-											inputMode="numeric"
-											autoComplete="off"
-											spellCheck={false}
-											disabled={innLocked}
-											aria-required="true"
-											aria-invalid={showInnError || undefined}
-											aria-describedby={showInnError ? innErrorId : undefined}
-											className={cn("tabular-nums", showInnError && "border-destructive")}
-											placeholder="7703123456"
-										/>
-										{innLocked && (
-											<Button
-												type="button"
-												variant="outline"
-												onClick={handleResetInn}
-												aria-label="Сбросить ИНН"
-												className="shrink-0"
-											>
-												<RotateCcw aria-hidden="true" className="size-4" />
-												Сбросить
-											</Button>
-										)}
-									</div>
-									{showInnError && (
-										<p id={innErrorId} className="text-sm text-destructive">
-											ИНН должен состоять из 10 или 12 цифр
-										</p>
-									)}
-								</div>
-
-								{isFetching && (
-									<div
-										role="status"
-										aria-live="polite"
-										className="flex items-center gap-2 text-sm text-muted-foreground"
+						<div className="flex flex-col gap-1.5">
+							<FieldLabel htmlFor="current-supplier-inn" required>
+								ИНН
+							</FieldLabel>
+							<div className="flex items-stretch gap-2">
+								<Input
+									id="current-supplier-inn"
+									value={inn}
+									onChange={(e) => setInn(digitsOnly(e.target.value).slice(0, INN_MAX_LEN))}
+									inputMode="numeric"
+									autoComplete="off"
+									spellCheck={false}
+									disabled={innLocked}
+									aria-required="true"
+									aria-invalid={showInnError || undefined}
+									aria-describedby={showInnError ? innErrorId : undefined}
+									className={cn("tabular-nums", showInnError && "border-destructive")}
+									placeholder="7703123456"
+								/>
+								{innLocked && (
+									<Button
+										type="button"
+										variant="outline"
+										onClick={handleResetInn}
+										aria-label="Сбросить ИНН"
+										className="shrink-0"
 									>
-										<LoaderCircle
-											aria-hidden="true"
-											className="size-4 animate-spin text-primary motion-reduce:animate-none"
-										/>
-										<span>Ищем поставщика по ИНН…</span>
-									</div>
+										<RotateCcw aria-hidden="true" className="size-4" />
+										Сбросить
+									</Button>
 								)}
+							</div>
+							{showInnError && (
+								<p id={innErrorId} className="text-sm text-destructive">
+									ИНН должен состоять из 10 или 12 цифр
+								</p>
+							)}
+						</div>
 
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-matched-name" disabled={!innModeFieldsEnabled}>
-										Название
-									</FieldLabel>
-									<Input
-										id="current-supplier-matched-name"
-										value={matched?.companyName ?? ""}
-										readOnly
-										disabled={!innModeFieldsEnabled}
-										placeholder="ООО «Ромашка»"
-									/>
-								</div>
-
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-matched-address" disabled={!innModeFieldsEnabled}>
-										Адрес
-									</FieldLabel>
-									<Input
-										id="current-supplier-matched-address"
-										value={matched?.address ?? ""}
-										readOnly
-										disabled={!innModeFieldsEnabled}
-										placeholder="г Москва, ул Ленина, д 1"
-									/>
-								</div>
-
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-matched-website" disabled={!innModeFieldsEnabled}>
-										Сайт
-									</FieldLabel>
-									<Input
-										id="current-supplier-matched-website"
-										value={matchedWebsite}
-										onChange={(e) => setMatchedWebsite(e.target.value)}
-										autoComplete="url"
-										inputMode="url"
-										spellCheck={false}
-										disabled={!innModeFieldsEnabled || innLocked}
-										placeholder="romashka.ru"
-									/>
-								</div>
-
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-matched-email" required disabled={!innModeFieldsEnabled}>
-										Email
-									</FieldLabel>
-									<Input
-										id="current-supplier-matched-email"
-										type="email"
-										value={matchedEmail}
-										onChange={(e) => setMatchedEmail(e.target.value)}
-										autoComplete="email"
-										spellCheck={false}
-										disabled={!innModeFieldsEnabled || innLocked}
-										aria-required="true"
-										aria-invalid={showEmailError || undefined}
-										aria-describedby={showEmailError ? emailErrorId : undefined}
-										className={showEmailError ? "border-destructive" : undefined}
-										placeholder="info@romashka.ru"
-									/>
-									{showEmailError && (
-										<p id={emailErrorId} className="text-sm text-destructive">
-											Укажите email
-										</p>
-									)}
-								</div>
-
-								{isMiss && (
-									<div
-										role="note"
-										className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-									>
-										<AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-										<p className="text-pretty">
-											Поставщик не&nbsp;найден. Переключитесь на «Вручную», чтобы ввести данные.
-										</p>
-									</div>
-								)}
+						{isFetching && (
+							<div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-muted-foreground">
+								<LoaderCircle
+									aria-hidden="true"
+									className="size-4 animate-spin text-primary motion-reduce:animate-none"
+								/>
+								<span>Ищем поставщика по ИНН…</span>
 							</div>
 						)}
 
-						{mode === "manual" && (
-							<div className="flex flex-col gap-3 animate-in fade-in-0 slide-in-from-top-1 duration-200 motion-reduce:animate-none">
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-name" required>
-										Название
-									</FieldLabel>
-									<Input
-										id="current-supplier-name"
-										value={manualName}
-										onChange={(e) => setManualName(e.target.value)}
-										autoComplete="organization"
-										spellCheck={false}
-										aria-required="true"
-										aria-invalid={showNameError || undefined}
-										aria-describedby={showNameError ? nameErrorId : undefined}
-										className={showNameError ? "border-destructive" : undefined}
-										placeholder="ООО «Ромашка»"
-									/>
-									{showNameError && (
-										<p id={nameErrorId} className="text-sm text-destructive">
-											Укажите название компании
-										</p>
-									)}
-								</div>
+						<div className="flex flex-col gap-1.5">
+							<FieldLabel htmlFor="current-supplier-matched-name" disabled={!fieldsEnabled}>
+								Название
+							</FieldLabel>
+							<Input
+								id="current-supplier-matched-name"
+								value={matched?.companyName ?? ""}
+								readOnly
+								disabled={!fieldsEnabled}
+								placeholder="ООО «Ромашка»"
+							/>
+						</div>
 
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-address">Адрес</FieldLabel>
-									<Input
-										id="current-supplier-address"
-										value={manualAddress}
-										onChange={(e) => setManualAddress(e.target.value)}
-										autoComplete="street-address"
-										spellCheck={false}
-										placeholder="Москва, ул. Ленина, 1"
-									/>
-								</div>
+						<div className="flex flex-col gap-1.5">
+							<FieldLabel htmlFor="current-supplier-matched-address" disabled={!fieldsEnabled}>
+								Адрес
+							</FieldLabel>
+							<Input
+								id="current-supplier-matched-address"
+								value={matched?.address ?? ""}
+								readOnly
+								disabled={!fieldsEnabled}
+								placeholder="г Москва, ул Ленина, д 1"
+							/>
+						</div>
 
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-website">Сайт</FieldLabel>
-									<Input
-										id="current-supplier-website"
-										value={manualWebsite}
-										onChange={(e) => setManualWebsite(e.target.value)}
-										autoComplete="url"
-										spellCheck={false}
-										placeholder="romashka.ru"
-									/>
-								</div>
+						<div className="flex flex-col gap-1.5">
+							<FieldLabel htmlFor="current-supplier-website" required disabled={!fieldsEnabled}>
+								Сайт
+							</FieldLabel>
+							<Input
+								id="current-supplier-website"
+								value={website}
+								onChange={(e) => setWebsite(e.target.value)}
+								autoComplete="url"
+								inputMode="url"
+								spellCheck={false}
+								disabled={!fieldsEnabled || innLocked}
+								aria-required="true"
+								aria-invalid={showWebsiteError || undefined}
+								aria-describedby={showWebsiteError ? websiteErrorId : undefined}
+								className={showWebsiteError ? "border-destructive" : undefined}
+								placeholder="romashka.ru"
+							/>
+							{showWebsiteError && (
+								<p id={websiteErrorId} className="text-sm text-destructive">
+									Укажите сайт
+								</p>
+							)}
+						</div>
 
-								<div className="flex flex-col gap-1.5">
-									<FieldLabel htmlFor="current-supplier-email" required>
-										Email
-									</FieldLabel>
-									<Input
-										id="current-supplier-email"
-										type="email"
-										value={manualEmail}
-										onChange={(e) => setManualEmail(e.target.value)}
-										autoComplete="email"
-										spellCheck={false}
-										aria-required="true"
-										aria-invalid={showEmailError || undefined}
-										aria-describedby={showEmailError ? emailErrorId : undefined}
-										className={showEmailError ? "border-destructive" : undefined}
-										placeholder="info@romashka.ru"
-									/>
-									{showEmailError && (
-										<p id={emailErrorId} className="text-sm text-destructive">
-											Укажите email
-										</p>
-									)}
-								</div>
+						<div className="flex flex-col gap-1.5">
+							<FieldLabel htmlFor="current-supplier-email" required disabled={!fieldsEnabled}>
+								Email
+							</FieldLabel>
+							<Input
+								id="current-supplier-email"
+								type="email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								autoComplete="email"
+								spellCheck={false}
+								disabled={!fieldsEnabled || innLocked}
+								aria-required="true"
+								aria-invalid={showEmailError || undefined}
+								aria-describedby={showEmailError ? emailErrorId : undefined}
+								className={showEmailError ? "border-destructive" : undefined}
+								placeholder="info@romashka.ru"
+							/>
+							{showEmailError && (
+								<p id={emailErrorId} className="text-sm text-destructive">
+									Укажите email
+								</p>
+							)}
+						</div>
+
+						{isMiss && (
+							<div
+								role="note"
+								className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+							>
+								<AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+								<p className="text-pretty">Поставщик не&nbsp;найден. Проверьте ИНН и&nbsp;попробуйте снова.</p>
 							</div>
 						)}
 					</section>

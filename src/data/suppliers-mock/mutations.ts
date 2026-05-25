@@ -1,9 +1,8 @@
-import { hash } from "@/lib/hash";
 import type { CreateSupplierInput } from "../domains/suppliers";
 import { _getItem, _patchItem } from "../items-mock-data";
 import type { Supplier, SupplierChatMessage } from "../supplier-types";
 import { AGENT_EMAIL, filesToAttachments } from "../supplier-types";
-import { inferCompanyType, makeIdentityProfile, synthesizeSupplierIdentity } from "./enrichment";
+import { inferCompanyType, synthesizeSupplierIdentity } from "./enrichment";
 import {
 	appendInquirySupplier,
 	getSendShouldFail,
@@ -14,15 +13,15 @@ import {
 	writeSuppliersForItem,
 } from "./store";
 
-/** Identity profile (region, postal, founding year, etc.) is derived deterministically
- * from INN when supplied, or from the company name otherwise. */
+/** User-supplied identity only (INN + company name + website + email). Profile
+ * fields the user didn't enter (region, founding year, revenue, …) stay empty
+ * so the UI renders «—» rather than a fabricated number — the real backend
+ * doesn't know them either until enrichment runs server-side. */
 export async function createInquirySupplier(input: CreateSupplierInput): Promise<Supplier> {
 	await simulateDelay();
 	const existing = getSuppliersForInquiry(input.procurementInquiryId);
 	const seq = existing.length + 1;
 	const id = `user-supplier-${input.procurementInquiryId}-${seq}`;
-	const identityHash = hash(input.inn || input.companyName || id);
-	const profile = makeIdentityProfile(identityHash);
 	const synthesized = input.inn ? synthesizeSupplierIdentity(input.inn) : null;
 	const companyName = input.companyName || synthesized?.companyName || "Без названия";
 	const supplier: Supplier = {
@@ -31,12 +30,16 @@ export async function createInquirySupplier(input: CreateSupplierInput): Promise
 		companyName,
 		status: "new",
 		archived: false,
-		...profile,
 		inn: input.inn,
 		companyType: inferCompanyType(companyName),
+		region: "",
+		foundedYear: 0,
+		revenue: 0,
+		employeeCount: 0,
+		postalCode: "",
 		email: input.email || synthesized?.email || "",
 		website: input.website || synthesized?.website || "",
-		address: synthesized?.address ?? profile.address,
+		address: synthesized?.address ?? "",
 		pricePerUnit: null,
 		tco: null,
 		deliveryCost: null,
