@@ -20,6 +20,7 @@ import type {
 	SortState,
 	StatusFilter,
 } from "@/data/types";
+import { STATUS_LABELS } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import {
 	nextUnusedColor,
@@ -67,7 +68,7 @@ function parseDeviation(params: URLSearchParams): DeviationFilter {
 
 function parseStatus(params: URLSearchParams): StatusFilter {
 	const v = params.get("status");
-	return v === "searching" || v === "searching_completed" || v === "negotiating" || v === "completed" ? v : "all";
+	return v && v in STATUS_LABELS ? (v as StatusFilter) : "all";
 }
 
 const DEFAULT_IMPORT_DEADLINE_DAYS = 14;
