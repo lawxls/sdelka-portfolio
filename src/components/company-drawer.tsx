@@ -254,10 +254,10 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 				isPending={updateMutation.isPending}
 			>
 				<CardGrid>
-					<FieldCard label="Название" span="full">
+					<FieldCard label="Наименование" span="full">
 						{isEditingInfo ? (
 							<Input
-								aria-label="Название"
+								aria-label="Наименование"
 								value={info.name}
 								onChange={(e) => setInfo((p) => ({ ...p, name: e.target.value }))}
 								spellCheck={false}
@@ -288,13 +288,10 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 			    of truth is the federal registry and we don't want users mutating
 			    these from the drawer. Re-running the INN lookup is out of scope
 			    for the company drawer; rare changes go through the admin. */}
-			<Section title="Реквизиты (из DaData)">
+			<Section title="Реквизиты">
 				<CardGrid>
 					<FieldCard label="ИНН" span="full">
 						<ValueText value={company.inn} numeric />
-					</FieldCard>
-					<FieldCard label="Наименование (сокращённое)" span="full">
-						<ValueText value={company.shortName} />
 					</FieldCard>
 					<FieldCard label="ОГРН" span="full">
 						<ValueText value={company.ogrn} numeric />
@@ -367,19 +364,6 @@ function AddressesTab({ company, companyId }: { company: Company; companyId: str
 		if (Object.keys(changed).length === 0) {
 			setEditingId(null);
 			return;
-		}
-		if (changed.isMain === true) {
-			const prevMain = company.addresses.find((a) => a.isMain && a.id !== addressId);
-			if (prevMain) {
-				updateMutation.mutate(
-					{ addressId: prevMain.id, data: { isMain: false } },
-					{
-						onSuccess: () =>
-							updateMutation.mutate({ addressId, data: changed }, { onSuccess: () => setEditingId(null) }),
-					},
-				);
-				return;
-			}
 		}
 		updateMutation.mutate({ addressId, data: changed }, { onSuccess: () => setEditingId(null) });
 	}

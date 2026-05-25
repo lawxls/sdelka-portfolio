@@ -390,7 +390,7 @@ function IdentityCard({
 function IdentityPlaceholders() {
 	return (
 		<ul className="flex flex-col gap-1.5">
-			<PlaceholderRow icon={Building2} hint="Наименование (сокращённое)" />
+			<PlaceholderRow icon={Building2} hint="Наименование" />
 			<PlaceholderRow icon={User} hint="Генеральный директор" />
 			<PlaceholderRow icon={Mail} hint="ОГРН" />
 			<PlaceholderRow icon={MapPin} hint="КПП" />

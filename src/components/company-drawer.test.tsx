@@ -73,7 +73,7 @@ describe("CompanyDrawer — Основная информация", () => {
 
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
-		const nameInput = screen.getByLabelText("Название");
+		const nameInput = screen.getByLabelText("Наименование");
 		await user.clear(nameInput);
 		await user.type(nameInput, "Сделка 2");
 
@@ -84,7 +84,7 @@ describe("CompanyDrawer — Основная информация", () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+			expect(screen.queryByLabelText("Наименование")).not.toBeInTheDocument();
 		});
 
 		const updated = await companiesClient.get("c1");
@@ -110,13 +110,13 @@ describe("CompanyDrawer — Основная информация", () => {
 		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
 
-		const nameInput = screen.getByLabelText("Название");
+		const nameInput = screen.getByLabelText("Наименование");
 		await user.clear(nameInput);
 		await user.type(nameInput, "Зачёркнуто");
 		await user.click(screen.getByRole("button", { name: "Отмена" }));
 
 		expect(updateSpy).not.toHaveBeenCalled();
-		expect(screen.queryByLabelText("Название")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Наименование")).not.toBeInTheDocument();
 	});
 
 	test("renders read-only Реквизиты with INN/КПП/ОГРН/директор and no edit button", async () => {
@@ -133,12 +133,11 @@ describe("CompanyDrawer — Основная информация", () => {
 		renderDrawer();
 		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
 
-		// Identity fields are visible inside the "Реквизиты (из DaData)" section.
+		// Identity fields are visible inside the "Реквизиты" section.
 		expect(screen.getByText("7707083893")).toBeInTheDocument();
 		expect(screen.getByText("773601001")).toBeInTheDocument();
 		expect(screen.getByText("1027700132195")).toBeInTheDocument();
 		expect(screen.getByText("Греф Г.О.")).toBeInTheDocument();
-		expect(screen.getByText("ПАО СБЕРБАНК")).toBeInTheDocument();
 
 		// No edit affordance — the DaData section is intentionally locked.
 		expect(screen.queryByRole("button", { name: /Редактировать реквизиты/ })).not.toBeInTheDocument();
@@ -156,7 +155,7 @@ describe("CompanyDrawer — Основная информация", () => {
 		const user = userEvent.setup();
 		await waitFor(() => expect(screen.getByTestId("drawer-title")).toHaveTextContent("Сделка"));
 		await user.click(screen.getByRole("button", { name: "Редактировать основную информацию" }));
-		expect(screen.getByLabelText("Название")).toBeInTheDocument();
+		expect(screen.getByLabelText("Наименование")).toBeInTheDocument();
 		expect(screen.getByLabelText("Сайт")).toBeInTheDocument();
 		expect(screen.queryByLabelText("ИНН")).not.toBeInTheDocument();
 	});
