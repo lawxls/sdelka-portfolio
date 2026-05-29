@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ import { Toolbar } from "@/components/toolbar";
 import { TotalCount } from "@/components/total-count";
 import { useCreateProcurementInquiryWithItems } from "@/data/operations/use-procurement-operations";
 import { groupItemsIntoProcurementInquiries } from "@/data/procurement-inquiries/group-items-into-procurement-inquiries";
+import { keys } from "@/data/query-keys";
 import type {
 	DeviationFilter,
 	FilterState,
@@ -86,6 +88,7 @@ export function ProcurementPage() {
 	const company = searchParams.get("company") ?? undefined;
 	const procurementInquiry = searchParams.get("procurementInquiry") ?? undefined;
 	const isArchiveView = folder === "archive";
+	const queryClient = useQueryClient();
 
 	const { data: companies = [] } = useProcurementCompanies();
 	const isMultiCompany = companies.length > 1;
@@ -309,6 +312,8 @@ export function ProcurementPage() {
 			else next.set("folder", "archive");
 			return next;
 		});
+		// Force a fresh fetch on every «Архив» click (beats the 30s staleTime).
+		queryClient.invalidateQueries({ queryKey: keys.items.all() });
 	}
 
 	function handleProcurementInquirySelect(procurementInquiryId: string | undefined) {

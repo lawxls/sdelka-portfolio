@@ -9,7 +9,7 @@ import type {
 } from "./domains/workspace-employees";
 import { toastModulePermissionDenied, toastPermissionsMatrixError } from "./permission-toasts";
 
-const WORKSPACE_EMPLOYEES_KEY = ["workspace-employees"] as const;
+export const WORKSPACE_EMPLOYEES_KEY = ["workspace-employees"] as const;
 
 const employeeKeys = {
 	all: () => WORKSPACE_EMPLOYEES_KEY,
@@ -28,8 +28,14 @@ export interface UseWorkspaceEmployeesOptions {
 
 export function useWorkspaceEmployees(options: UseWorkspaceEmployeesOptions = {}) {
 	const client = useWorkspaceEmployeesClient();
-	const { enabled, ...rest } = options;
-	const filter = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined && v !== "" && v !== false));
+	const { enabled, archived, ...rest } = options;
+	// `archived` is always part of the filter/key (even when false) so the
+	// active and archived views are distinct cache entries and toggling «Архив»
+	// switches queries. Other params are dropped when empty.
+	const filter: Record<string, unknown> = Object.fromEntries(
+		Object.entries(rest).filter(([, v]) => v !== undefined && v !== ""),
+	);
+	filter.archived = archived ?? false;
 	const query = useQuery({
 		queryKey: employeeKeys.list(filter),
 		queryFn: () => client.list(Object.keys(filter).length > 0 ? filter : undefined),

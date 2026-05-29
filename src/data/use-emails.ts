@@ -3,7 +3,7 @@ import type { EmailsClient, ListEmailsFilter } from "./clients/emails-client";
 import { useEmailsClient } from "./clients-context";
 import type { AddEmailPayload } from "./domains/emails";
 
-const EMAILS_KEY = ["workspace-emails"] as const;
+export const EMAILS_KEY = ["workspace-emails"] as const;
 
 export interface UseEmailsOptions extends ListEmailsFilter {
 	enabled?: boolean;

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	Archive,
 	ArchiveRestore,
@@ -50,6 +51,7 @@ import {
 	useArchiveProcurementInquiryCascade,
 	useCreateProcurementInquiryWithItems,
 } from "@/data/operations/use-procurement-operations";
+import { keys } from "@/data/query-keys";
 import type { Folder, ProcurementInquiryStatus } from "@/data/types";
 import { useProcurementCompanies } from "@/data/use-companies";
 import { useCreateFolder, useDeleteFolder, useFolderStats, useFolders, useUpdateFolder } from "@/data/use-folders";
@@ -347,6 +349,7 @@ export function ProcurementInquiriesPage() {
 	const folder = searchParams.get("folder") ?? undefined;
 	const company = searchParams.get("company") ?? undefined;
 	const isArchiveView = folder === "archive";
+	const queryClient = useQueryClient();
 
 	const { data: companies = [] } = useProcurementCompanies();
 	const isMultiCompany = companies.length > 1;
@@ -469,6 +472,8 @@ export function ProcurementInquiriesPage() {
 			else next.set("folder", "archive");
 			return next;
 		});
+		// Force a fresh fetch on every «Архив» click (beats the 30s staleTime).
+		queryClient.invalidateQueries({ queryKey: keys.procurementInquiries.all() });
 	}
 
 	function handleClearCompanyFilter() {

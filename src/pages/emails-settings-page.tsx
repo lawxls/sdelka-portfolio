@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore, Power, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import {
 	type WorkspaceEmail,
 } from "@/data/emails-mock-data";
 import {
+	EMAILS_KEY,
 	useAddEmails,
 	useArchiveEmails,
 	useDeleteEmails,
@@ -52,6 +54,7 @@ export function EmailsSettingsPage() {
 	const [archiveActive, setArchiveActive] = useState(false);
 	const [statusFilter, setStatusFilter] = useState<EmailStatus | null>(null);
 	const [typeFilter, setTypeFilter] = useState<EmailType | null>(null);
+	const queryClient = useQueryClient();
 
 	const { emails, isLoading } = useEmails({
 		archived: archiveActive,
@@ -229,6 +232,8 @@ export function EmailsSettingsPage() {
 					onToggleArchive={() => {
 						clearSelection();
 						setArchiveActive((v) => !v);
+						// Force a fresh fetch on every «Архив» click (beats the 30s staleTime).
+						queryClient.invalidateQueries({ queryKey: EMAILS_KEY });
 					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}
