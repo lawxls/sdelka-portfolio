@@ -133,14 +133,14 @@ export function CurrentSupplierDialog({ open, onOpenChange, initial, onSave }: C
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[30rem]">
-				<DialogHeader className="gap-1 pr-8">
+			<DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto] gap-0 max-h-[90dvh] sm:max-w-[30rem]">
+				<DialogHeader className="-mx-4 -mt-4 gap-1 rounded-t-xl border-b bg-muted/50 px-4 py-3 pr-10">
 					<DialogTitle className="text-balance">
 						{editing ? "Текущий поставщик" : "Добавить текущего поставщика"}
 					</DialogTitle>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-4">
+				<div className="-mx-4 flex flex-col gap-4 overflow-y-auto px-4 py-4">
 					<section className="flex flex-col gap-3">
 						<SectionHeader>Поставщик</SectionHeader>
 
