@@ -3,7 +3,6 @@ import type {
 	Supplier,
 	SupplierChatMessage,
 	SupplierQuote,
-	SuppliersList,
 	SuppliersPage,
 } from "../domains/suppliers";
 import { httpClient as defaultHttpClient, type HttpClient } from "../http-client";
@@ -31,7 +30,27 @@ export function createHttpSuppliersClient(http: HttpClient = defaultHttpClient):
 		list: (itemId, params) =>
 			http.get<SuppliersPage>(`/procurement/items/${enc(itemId)}/suppliers/${buildQuery(params ?? {})}`),
 
-		listForItem: (itemId) => http.get<SuppliersList>(`/items/${enc(itemId)}/suppliers/all`),
+		// No dedicated "all" route exists on the backend — page through the
+		// canonical cursor-paginated item-suppliers endpoint, including archived
+		// rows, so callers get the full set (counts filter archived client-side).
+		// Guard against a non-advancing/repeated cursor so a degenerate backend
+		// response can never spin this into an infinite request loop.
+		listForItem: async (itemId) => {
+			const suppliers: Supplier[] = [];
+			const seenCursors = new Set<string>();
+			let cursor: string | undefined;
+			do {
+				const page = await http.get<SuppliersPage>(
+					`/procurement/items/${enc(itemId)}/suppliers/${buildQuery({ showArchived: true, cursor })}`,
+				);
+				suppliers.push(...page.suppliers);
+				const next = page.nextCursor ?? undefined;
+				if (next !== undefined && seenCursors.has(next)) break;
+				if (next !== undefined) seenCursors.add(next);
+				cursor = next;
+			} while (cursor);
+			return { suppliers };
+		},
 
 		// Phase 1: backed by `GET /api/v1/suppliers/` (`SupplierViewSet`).
 		// Returns one row per InquiryOffer in the workspace, both archived and

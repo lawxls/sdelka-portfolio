@@ -91,11 +91,6 @@ function httpAdapter(): Adapter {
 	const routes: HttpRoute[] = [
 		{
 			method: "GET",
-			path: new RegExp(`^/items/${ITEM_ID}/suppliers/all$`),
-			respond: () => ({ status: 200, body: { suppliers: Array.from(store.values()) } }),
-		},
-		{
-			method: "GET",
 			path: /^\/suppliers\/$/,
 			respond: () => ({ status: 200, body: listAll() }),
 		},
@@ -115,7 +110,8 @@ function httpAdapter(): Adapter {
 			respond: ({ url }) => {
 				const u = new URL(url, "http://test");
 				const search = u.searchParams.get("search")?.toLowerCase();
-				let suppliers = Array.from(store.values()).filter((s) => !s.archived);
+				const showArchived = u.searchParams.get("showArchived") === "true";
+				let suppliers = Array.from(store.values()).filter((s) => showArchived || !s.archived);
 				if (search) suppliers = suppliers.filter((s) => s.companyName.toLowerCase().includes(search));
 				return { status: 200, body: { suppliers, nextCursor: null, total: suppliers.length } };
 			},
@@ -232,6 +228,14 @@ describe.each(adapters.map((make) => [make().name, make]))("SuppliersClient cont
 		const { suppliers } = await client.listForItem(ITEM_ID);
 		const ids = suppliers.map((s) => s.id);
 		expect(ids).toEqual(expect.arrayContaining(["supplier-x-1", "supplier-x-2", "supplier-x-3"]));
+	});
+
+	it("listForItem includes archived suppliers (full set) while list hides them", async () => {
+		await client.archive(ITEM_ID, ["supplier-x-1"]);
+		const { suppliers: all } = await client.listForItem(ITEM_ID);
+		expect(all.find((s) => s.id === "supplier-x-1")).toBeDefined();
+		const { suppliers: active } = await client.list(ITEM_ID, {});
+		expect(active.find((s) => s.id === "supplier-x-1")).toBeUndefined();
 	});
 
 	it("list with filter narrows by search term", async () => {
