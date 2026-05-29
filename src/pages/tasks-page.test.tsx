@@ -1,16 +1,18 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { ProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-client";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
+import type { TasksClient } from "@/data/clients/tasks-client";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { TestClientsProvider } from "@/data/test-clients-provider";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { createTestQueryClient, makeTask, mockHostname } from "@/test-utils";
+import { createTestQueryClient, makeProcurementInquiry, makeTask, mockHostname } from "@/test-utils";
 import { TasksPage } from "./tasks-page";
 
 vi.mock("sonner", () => ({
@@ -48,14 +50,20 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-function renderPage(initialEntries?: string[]) {
+function renderPage(
+	initialEntries?: string[],
+	clients?: {
+		tasks?: TasksClient;
+		procurementInquiries?: ProcurementInquiriesClient;
+	},
+) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
 				suppliers: createInMemorySuppliersClient(),
-				tasks: createInMemoryTasksClient({ seed: allTasks }),
-				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: [] }),
+				tasks: clients?.tasks ?? createInMemoryTasksClient({ seed: allTasks }),
+				procurementInquiries: clients?.procurementInquiries ?? createInMemoryProcurementInquiriesClient({ seed: [] }),
 				profile: createInMemoryProfileClient(),
 			}}
 		>
@@ -143,6 +151,37 @@ describe("TasksPage", () => {
 		});
 	});
 
+	it("clicking Завершённые refetches only the target task list once per toggle", async () => {
+		queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		const tasksClient = createInMemoryTasksClient({ seed: allTasks });
+		const listSpy = vi.spyOn(tasksClient, "list");
+		renderPage(undefined, { tasks: tasksClient });
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		listSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+
+		await waitFor(() => expect(screen.getByText("Completed 1")).toBeInTheDocument());
+		expect(listSpy).toHaveBeenCalledTimes(1);
+		expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ page_size: 25, statuses: ["completed"] }));
+
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+
+		await waitFor(() => expect(listSpy).toHaveBeenCalledTimes(2));
+		expect(listSpy).toHaveBeenLastCalledWith(
+			expect.objectContaining({ page_size: 25, statuses: ["assigned", "in_progress"] }),
+		);
+
+		await user.click(screen.getByRole("button", { name: "Завершённые" }));
+
+		await waitFor(() => expect(listSpy).toHaveBeenCalledTimes(3));
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ page_size: 25, statuses: ["completed"] }));
+	});
+
 	it("clicking Архив toggle switches the view", async () => {
 		renderPage();
 		const user = userEvent.setup();
@@ -154,6 +193,78 @@ describe("TasksPage", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Archived 1")).toBeInTheDocument();
 		});
+	});
+
+	it("clicking Архив refetches only the target task list once per toggle", async () => {
+		queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		const tasksClient = createInMemoryTasksClient({ seed: allTasks });
+		const listSpy = vi.spyOn(tasksClient, "list");
+		renderPage(undefined, { tasks: tasksClient });
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		listSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Архив" }));
+
+		await waitFor(() => expect(screen.getByText("Archived 1")).toBeInTheDocument());
+		expect(listSpy).toHaveBeenCalledTimes(1);
+		expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ page_size: 25, statuses: ["archived"] }));
+
+		await user.click(screen.getByRole("button", { name: "Архив" }));
+
+		await waitFor(() => expect(listSpy).toHaveBeenCalledTimes(2));
+		expect(listSpy).toHaveBeenLastCalledWith(
+			expect.objectContaining({ page_size: 25, statuses: ["assigned", "in_progress"] }),
+		);
+
+		await user.click(screen.getByRole("button", { name: "Архив" }));
+
+		await waitFor(() => expect(listSpy).toHaveBeenCalledTimes(3));
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ page_size: 25, statuses: ["archived"] }));
+	});
+
+	it("searching fetches only the filtered task list", async () => {
+		const tasksClient = createInMemoryTasksClient({ seed: allTasks });
+		const listSpy = vi.spyOn(tasksClient, "list");
+		renderPage(undefined, { tasks: tasksClient });
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		listSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Поиск вопросов" }));
+		await user.type(screen.getByLabelText("Поиск вопросов"), "Assigned 1");
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ q: "Assigned 1", page_size: 25 }));
+		});
+		const filteredCalls = listSpy.mock.calls.filter(([params]) => params?.q === "Assigned 1");
+		expect(filteredCalls).toHaveLength(1);
+	});
+
+	it("filtering by inquiry fetches only the filtered task list", async () => {
+		const tasksClient = createInMemoryTasksClient({ seed: allTasks });
+		const listSpy = vi.spyOn(tasksClient, "list");
+		const procurementInquiries = createInMemoryProcurementInquiriesClient({
+			seed: [makeProcurementInquiry("T-001", { name: "Запрос арматуры" })],
+		});
+		renderPage(undefined, { tasks: tasksClient, procurementInquiries });
+		const user = userEvent.setup();
+
+		await waitFor(() => expect(screen.getByText("Assigned 1")).toBeInTheDocument());
+		listSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Фильтр по запросу" }));
+		await user.click(await screen.findByRole("button", { name: "Запрос арматуры" }));
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ procurementInquiry: "T-001", page_size: 25 }));
+		});
+		const filteredCalls = listSpy.mock.calls.filter(([params]) => params?.procurementInquiry === "T-001");
+		expect(filteredCalls).toHaveLength(1);
 	});
 
 	it("shows selection bar after selecting rows", async () => {

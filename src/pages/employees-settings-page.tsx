@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -18,7 +17,6 @@ import {
 	useDeleteWorkspaceEmployees,
 	useUnarchiveWorkspaceEmployees,
 	useWorkspaceEmployees,
-	WORKSPACE_EMPLOYEES_KEY,
 } from "@/data/use-workspace-employees";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useModuleGuard } from "@/hooks/use-module-guard";
@@ -37,7 +35,6 @@ export function EmployeesSettingsPage() {
 	const [searchExpanded, setSearchExpanded] = useState(false);
 	const [archiveActive, setArchiveActive] = useState(false);
 	const [roleFilter, setRoleFilter] = useState<EmployeeRole | null>(null);
-	const queryClient = useQueryClient();
 
 	const { employees } = useWorkspaceEmployees({
 		q: search || undefined,
@@ -197,8 +194,6 @@ export function EmployeesSettingsPage() {
 					onToggleArchive={() => {
 						clearSelection();
 						setArchiveActive((v) => !v);
-						// Force a fresh fetch on every «Архив» click (beats the 30s staleTime).
-						queryClient.invalidateQueries({ queryKey: WORKSPACE_EMPLOYEES_KEY });
 					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}

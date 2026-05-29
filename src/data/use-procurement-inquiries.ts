@@ -6,7 +6,7 @@ import { keys } from "./query-keys";
 
 export function useProcurementInquiries(
 	params: ListProcurementInquiriesParams = {},
-	options: { enabled?: boolean } = {},
+	options: { enabled?: boolean; staleTime?: number } = {},
 ) {
 	const client = useProcurementInquiriesClient();
 	const query = useInfiniteQuery({
@@ -15,6 +15,7 @@ export function useProcurementInquiries(
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
 		enabled: options.enabled ?? true,
+		...(options.staleTime !== undefined && { staleTime: options.staleTime }),
 	});
 
 	const items = query.data?.pages.flatMap((page) => page.items) ?? [];

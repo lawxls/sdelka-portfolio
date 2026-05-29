@@ -108,6 +108,8 @@ export interface TasksListParams extends TaskFilterParams {
 	statuses?: TaskStatus[];
 }
 
+const INTERACTIVE_LIST_STALE_TIME = 0;
+
 export function useTasksList(params?: TasksListParams) {
 	const queryParams = params ?? {};
 	const tasks = useTasksClient();
@@ -126,6 +128,7 @@ export function useTasksList(params?: TasksListParams) {
 			}),
 		initialPageParam: null as string | null,
 		getNextPageParam: (lastPage) => lastPage.next ?? undefined,
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 
 	return {

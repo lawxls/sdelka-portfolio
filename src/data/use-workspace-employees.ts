@@ -9,7 +9,8 @@ import type {
 } from "./domains/workspace-employees";
 import { toastModulePermissionDenied, toastPermissionsMatrixError } from "./permission-toasts";
 
-export const WORKSPACE_EMPLOYEES_KEY = ["workspace-employees"] as const;
+const WORKSPACE_EMPLOYEES_KEY = ["workspace-employees"] as const;
+const INTERACTIVE_LIST_STALE_TIME = 0;
 
 const employeeKeys = {
 	all: () => WORKSPACE_EMPLOYEES_KEY,
@@ -40,6 +41,7 @@ export function useWorkspaceEmployees(options: UseWorkspaceEmployeesOptions = {}
 		queryKey: employeeKeys.list(filter),
 		queryFn: () => client.list(Object.keys(filter).length > 0 ? filter : undefined),
 		enabled: enabled ?? true,
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 
 	return {

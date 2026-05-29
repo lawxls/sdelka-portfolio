@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
+import type { ProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-client";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySubscriptionClient } from "@/data/clients/subscription-in-memory";
@@ -54,17 +55,21 @@ function renderPage(
 	initialEntries: string[] = ["/inquiries"],
 	procurementInquiries: ProcurementInquiry[] = PROCUREMENT_INQUIRIES,
 	subscription?: Subscription,
+	clients?: { procurementInquiries?: ProcurementInquiriesClient; queryClient?: QueryClient },
 ) {
-	const queryClient = new QueryClient({
-		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-	});
+	const queryClient =
+		clients?.queryClient ??
+		new QueryClient({
+			defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+		});
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient([makeCompanyDetail("company-1", { name: "Альфа", isMain: true })]),
 				items: createInMemoryItemsClient({ seed: [] }),
-				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
+				procurementInquiries:
+					clients?.procurementInquiries ?? createInMemoryProcurementInquiriesClient({ seed: procurementInquiries }),
 				folders: testFoldersClient(FOLDERS),
 				profile: createInMemoryProfileClient(),
 				generatedQuestions: fakeGeneratedQuestionsClient(),
@@ -170,6 +175,40 @@ describe("ProcurementInquiriesPage", () => {
 		await waitFor(() => {
 			expect(screen.getByRole("button", { name: "Архив" })).toHaveAttribute("aria-pressed", "true");
 		});
+	});
+
+	test("archive toggle refetches the inquiries list once per toggle", async () => {
+		const procurementInquiries = createInMemoryProcurementInquiriesClient({ seed: PROCUREMENT_INQUIRIES });
+		const listSpy = vi.spyOn(procurementInquiries, "list");
+		const queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		renderPage(["/inquiries"], PROCUREMENT_INQUIRIES, undefined, { procurementInquiries, queryClient });
+		await screen.findByTestId("procurement-inquiry-row-T-001");
+		listSpy.mockClear();
+
+		const user = userEvent.setup();
+		const archive = screen.getByRole("button", { name: "Архив" });
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ folder: "archive" }));
+		});
+		expect(listSpy).toHaveBeenCalledTimes(1);
+
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(2);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: undefined }));
+
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(3);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: "archive" }));
 	});
 
 	test("archive view shows only archived procurementInquiries; active view excludes them", async () => {

@@ -3,6 +3,8 @@ import { useCompaniesClient } from "./clients-context";
 import { keys } from "./query-keys";
 import type { CompanySortState } from "./types";
 
+const INTERACTIVE_LIST_STALE_TIME = 0;
+
 interface CompanyQueryParams {
 	search: string;
 	sort: CompanySortState | null;
@@ -29,6 +31,7 @@ export function useCompanies(params: CompanyQueryParams) {
 		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 
 	const companies = query.data?.pages.flatMap((page) => page.items) ?? [];

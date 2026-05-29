@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Archive, ArrowDown, ArrowUp, ArrowUpDown, Download, Inbox, ListFilter, LoaderCircle } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -410,7 +409,6 @@ export function TasksPage() {
 	const [searchUserExpanded, setSearchUserExpanded] = useState(false);
 	const searchExpanded = search.length > 0 || searchUserExpanded;
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-	const queryClient = useQueryClient();
 	const updateStatus = useUpdateTaskStatus();
 	const { guard: tasksGuard } = useModuleGuard("tasks");
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -434,8 +432,6 @@ export function TasksPage() {
 	function setStatusFilter(next: StatusFilter) {
 		updateParams((p) => (next === "active" ? p.delete("status") : p.set("status", next)));
 		setSelectedIds(new Set());
-		// Force a fresh fetch on every status/«Архив» toggle (beats the 30s staleTime).
-		queryClient.invalidateQueries({ queryKey: ["tasks"] });
 	}
 
 	function setProcurementInquiryFilter(procurementInquiry: string | undefined) {
@@ -495,13 +491,9 @@ export function TasksPage() {
 	const sentinelRef = useIntersectionObserver(query.loadMore, { root: scrollContainerRef.current });
 
 	const completedCount = useTasksCount({
-		q: listParams.q,
-		procurementInquiry: listParams.procurementInquiry,
 		statuses: ["completed"],
 	});
 	const archivedCount = useTasksCount({
-		q: listParams.q,
-		procurementInquiry: listParams.procurementInquiry,
 		statuses: ["archived"],
 	});
 

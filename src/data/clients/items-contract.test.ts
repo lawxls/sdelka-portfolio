@@ -315,6 +315,46 @@ describe.each(adapters.map((make) => [make().name, make]))("ItemsClient contract
  * CRUD) so they're tested only against the HTTP adapter.
  */
 describe("HTTP-only error branches", () => {
+	it("translates folder='none' to folder__isnull=true for list, totals, and export", async () => {
+		const fetchStub = vi.fn(async (input: string) => {
+			const path = new URL(input, "http://test").pathname;
+			if (path === "/procurement/items/totals/") {
+				return new Response(JSON.stringify({ itemCount: 0, totalOverpayment: 0, totalSavings: 0, totalDeviation: 0 }), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				});
+			}
+			if (path === "/procurement/items/export/") {
+				return new Response("xlsx-bytes", {
+					status: 200,
+					headers: {
+						"content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+						"content-disposition": 'attachment; filename="items.xlsx"',
+					},
+				});
+			}
+			return new Response(JSON.stringify({ next: null, previous: null, results: [] }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		});
+		const http = createHttpClient({ baseUrl: "", fetch: fetchStub, getToken: () => "test-token" });
+		const client = createHttpItemsClient(http);
+
+		await client.list({ folder: "none" });
+		await client.totals({ folder: "none" });
+		await client.export({ folder: "none" });
+
+		const urls = fetchStub.mock.calls.map(([url]) => String(url));
+		expect(urls).toHaveLength(3);
+		for (const url of urls) {
+			const params = new URL(url, "http://test").searchParams;
+			expect(params.get("folder__isnull")).toBe("true");
+			expect(params.get("folder")).toBeNull();
+			expect(params.get("isArchived")).toBe("false");
+		}
+	});
+
 	it("update with empty name throws ValidationError with fieldErrors", async () => {
 		const harness = httpAdapter(SEED);
 		const client = harness.build();

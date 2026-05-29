@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
@@ -13,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/companies";
 import { TariffLimitExceededError } from "@/data/errors";
-import { keys } from "@/data/query-keys";
 import { useCompanies } from "@/data/use-companies";
 import { useArchiveCompany, useCreateCompany, useDeleteCompany, useUnarchiveCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -34,7 +32,6 @@ export function CompaniesSettingsPage() {
 	const [searchExpanded, setSearchExpanded] = useState(false);
 	const [archiveActive, setArchiveActive] = useState(false);
 
-	const queryClient = useQueryClient();
 	const { companies, hasNextPage, loadMore, isFetchingNextPage } = useCompanies({
 		search,
 		sort: null,
@@ -193,8 +190,6 @@ export function CompaniesSettingsPage() {
 					onToggleArchive={() => {
 						setArchiveActive((v) => !v);
 						setSelected(new Set());
-						// Force a fresh request on every «Архив» click (beats the 30s staleTime).
-						queryClient.invalidateQueries({ queryKey: keys.companies.all() });
 					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}

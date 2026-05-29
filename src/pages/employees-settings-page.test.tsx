@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
@@ -8,6 +8,7 @@ import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
+import type { WorkspaceEmployeesClient } from "@/data/clients/workspace-employees-client";
 import { createInMemoryWorkspaceEmployeesClient } from "@/data/clients/workspace-employees-in-memory";
 import type { WorkspaceEmployeeDetail } from "@/data/domains/workspace-employees";
 import { TestClientsProvider } from "@/data/test-clients-provider";
@@ -80,13 +81,13 @@ const MOCK_EMPLOYEES: WorkspaceEmployeeDetail[] = [
 
 let queryClient: QueryClient;
 
-function renderPage(initialPath = "/settings/employees", me = makeMe()) {
+function renderPage(initialPath = "/settings/employees", me = makeMe(), client?: WorkspaceEmployeesClient) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
 				profile: createInMemoryProfileClient({ me }),
-				workspaceEmployees: createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
+				workspaceEmployees: client ?? createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES }),
 				session: createInMemorySessionClient(),
 			}}
 		>
@@ -245,6 +246,42 @@ describe("EmployeesSettingsPage toolbar", () => {
 	test("renders Добавить сотрудника button in the toolbar", async () => {
 		renderPage();
 		expect(screen.getByRole("button", { name: /Добавить сотрудника/i })).toBeInTheDocument();
+	});
+
+	test("clicking archive refetches the employees list once per toggle", async () => {
+		queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		const client = createInMemoryWorkspaceEmployeesClient({ seed: MOCK_EMPLOYEES });
+		const listSpy = vi.spyOn(client, "list");
+		renderPage("/settings/employees", makeMe(), client);
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByText("Иванов Иван Иванович")).toBeInTheDocument();
+		});
+		listSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Показать архив" }));
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ archived: true }));
+		});
+		expect(listSpy).toHaveBeenCalledTimes(1);
+
+		await user.click(screen.getByRole("button", { name: "Скрыть архив" }));
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(2);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ archived: false }));
+
+		await user.click(screen.getByRole("button", { name: "Показать архив" }));
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(3);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ archived: true }));
 	});
 });
 

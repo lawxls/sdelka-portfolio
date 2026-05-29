@@ -3,7 +3,8 @@ import type { EmailsClient, ListEmailsFilter } from "./clients/emails-client";
 import { useEmailsClient } from "./clients-context";
 import type { AddEmailPayload } from "./domains/emails";
 
-export const EMAILS_KEY = ["workspace-emails"] as const;
+const EMAILS_KEY = ["workspace-emails"] as const;
+const INTERACTIVE_LIST_STALE_TIME = 0;
 
 export interface UseEmailsOptions extends ListEmailsFilter {
 	enabled?: boolean;
@@ -22,6 +23,7 @@ export function useEmails(options: UseEmailsOptions = {}) {
 		queryKey: [...EMAILS_KEY, filter],
 		queryFn: () => client.list(filter),
 		enabled: enabled ?? true,
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 
 	return {

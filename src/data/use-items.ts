@@ -18,6 +18,7 @@ interface ItemQueryParams {
 }
 
 const ITEMS_PAGE_SIZE = 25;
+const INTERACTIVE_LIST_STALE_TIME = 0;
 
 export function buildFilterParams({
 	search,
@@ -48,6 +49,7 @@ export function useItems(params: ItemQueryParams) {
 		queryFn: ({ pageParam }) => client.list({ ...filterParams, cursor: pageParam, limit: ITEMS_PAGE_SIZE }),
 		initialPageParam: undefined as string | undefined,
 		getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 
 	const items = query.data?.pages.flatMap((page) => page.items) ?? [];
@@ -79,6 +81,7 @@ export function useTotals(params: Omit<ItemQueryParams, "sort">) {
 	return useQuery({
 		queryKey: keys.items.totals(filterParams),
 		queryFn: () => client.totals(filterParams),
+		staleTime: INTERACTIVE_LIST_STALE_TIME,
 	});
 }
 

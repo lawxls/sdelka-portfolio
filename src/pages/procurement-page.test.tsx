@@ -12,6 +12,7 @@ vi.mock("sonner", () => ({
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setTokens } from "@/data/auth";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
+import type { ItemsClient } from "@/data/clients/items-client";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
@@ -68,13 +69,13 @@ function setupHandlers(companyList: Company[]) {
 	companies = companyList;
 }
 
-function renderPage(initialEntries?: string[]) {
+function renderPage(initialEntries?: string[], clients?: { items?: ItemsClient }) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
 			clients={{
 				companies: createInMemoryCompaniesClient(companies),
-				items: createInMemoryItemsClient({ seed: ALL_ITEMS }),
+				items: clients?.items ?? createInMemoryItemsClient({ seed: ALL_ITEMS }),
 				suppliers: createInMemorySuppliersClient(),
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_PROCUREMENT_INQUIRIES }),
@@ -202,6 +203,52 @@ describe("ProcurementPage — archive toggle", () => {
 		await waitForToolbar();
 
 		expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
+	});
+
+	test("clicking archive refetches items and totals once per toggle", async () => {
+		setupHandlers(SINGLE_COMPANY);
+		queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		const itemsClient = createInMemoryItemsClient({ seed: ALL_ITEMS });
+		const listSpy = vi.spyOn(itemsClient, "list");
+		const totalsSpy = vi.spyOn(itemsClient, "totals");
+		renderPage(undefined, { items: itemsClient });
+		const user = userEvent.setup();
+
+		await waitFor(() => {
+			expect(screen.getByText("Труба стальная")).toBeInTheDocument();
+		});
+		listSpy.mockClear();
+		totalsSpy.mockClear();
+
+		const archive = screen.getByRole("button", { name: "Архив" });
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledWith(expect.objectContaining({ folder: "archive" }));
+		});
+		expect(listSpy).toHaveBeenCalledTimes(1);
+		expect(totalsSpy).toHaveBeenCalledWith(expect.objectContaining({ folder: "archive" }));
+		expect(totalsSpy).toHaveBeenCalledTimes(1);
+
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(2);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: undefined }));
+		expect(totalsSpy).toHaveBeenCalledTimes(2);
+		expect(totalsSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: undefined }));
+
+		await user.click(archive);
+
+		await waitFor(() => {
+			expect(listSpy).toHaveBeenCalledTimes(3);
+		});
+		expect(listSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: "archive" }));
+		expect(totalsSpy).toHaveBeenCalledTimes(3);
+		expect(totalsSpy).toHaveBeenLastCalledWith(expect.objectContaining({ folder: "archive" }));
 	});
 });
 

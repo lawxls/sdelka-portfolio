@@ -1,10 +1,11 @@
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useSearchParams } from "react-router";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SettingsLayout } from "@/components/settings-layout";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { CompaniesClient } from "@/data/clients/companies-client";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySessionClient } from "@/data/clients/session-in-memory";
@@ -63,8 +64,8 @@ let queryClient: QueryClient;
 let companies: Company[];
 let companiesClient: ReturnType<typeof createInMemoryCompaniesClient>;
 
-function renderPage(initialPath = "/settings/companies") {
-	companiesClient = createInMemoryCompaniesClient(companies);
+function renderPage(initialPath = "/settings/companies", client?: CompaniesClient) {
+	companiesClient = client ?? createInMemoryCompaniesClient(companies);
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -241,6 +242,44 @@ describe("CompaniesSettingsPage pagination", () => {
 		await waitFor(() => {
 			expect(screen.getByText("ТретьяКомпания")).toBeInTheDocument();
 		});
+	});
+});
+
+describe("CompaniesSettingsPage archive view", () => {
+	test("clicking archive refetches the companies list once per toggle", async () => {
+		queryClient = new QueryClient({
+			defaultOptions: { queries: { retry: false, staleTime: 30_000 }, mutations: { retry: false } },
+		});
+		const client = createInMemoryCompaniesClient(companies);
+		const user = userEvent.setup();
+		const clientListSpy = vi.spyOn(client, "list");
+		renderPage("/settings/companies", client);
+
+		await waitFor(() => {
+			expect(screen.getByText("Сделка")).toBeInTheDocument();
+		});
+		clientListSpy.mockClear();
+
+		await user.click(screen.getByRole("button", { name: "Показать архив" }));
+
+		await waitFor(() => {
+			expect(clientListSpy).toHaveBeenCalledWith(expect.objectContaining({ isArchived: true }));
+		});
+		expect(clientListSpy).toHaveBeenCalledTimes(1);
+
+		await user.click(screen.getByRole("button", { name: "Скрыть архив" }));
+
+		await waitFor(() => {
+			expect(clientListSpy).toHaveBeenCalledTimes(2);
+		});
+		expect(clientListSpy).toHaveBeenLastCalledWith(expect.objectContaining({ isArchived: false }));
+
+		await user.click(screen.getByRole("button", { name: "Показать архив" }));
+
+		await waitFor(() => {
+			expect(clientListSpy).toHaveBeenCalledTimes(3);
+		});
+		expect(clientListSpy).toHaveBeenLastCalledWith(expect.objectContaining({ isArchived: true }));
 	});
 });
 
