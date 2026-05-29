@@ -106,7 +106,6 @@ describe("GeneratedQuestionsClient HTTP contract", () => {
 			additionalInfo: "Срочно",
 			deliveryAddressId: "addr-1",
 			unloading: "supplier",
-			cashAllowed: true,
 			analoguesNotAllowed: false,
 		});
 		const last = adapter.track.requests.at(-1);
@@ -135,7 +134,6 @@ describe("GeneratedQuestionsClient HTTP contract", () => {
 			additionalInfo: "Срочно",
 			deliveryAddressId: "addr-1",
 			unloading: "supplier",
-			cashAllowed: true,
 			analoguesNotAllowed: false,
 		});
 	});

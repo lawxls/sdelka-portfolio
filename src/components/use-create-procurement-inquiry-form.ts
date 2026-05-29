@@ -99,7 +99,6 @@ interface Step1State {
 	positions: PositionDraft[];
 	deliveryAddressId: string | null;
 	unloading: UnloadingType | null;
-	cashAllowed: boolean;
 	analoguesNotAllowed: boolean;
 	additionalInfo: string;
 	copySuppliersFromInquiryId: string | null;
@@ -170,7 +169,6 @@ function defaultStep1(initialDeadline: string): Step1State {
 		positions: [defaultPosition()],
 		deliveryAddressId: null,
 		unloading: null,
-		cashAllowed: false,
 		analoguesNotAllowed: false,
 		additionalInfo: "",
 		copySuppliersFromInquiryId: null,
@@ -232,7 +230,6 @@ function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): Inq
 		deadline: step1.deadline || null,
 		deliveryAddressId: step1.deliveryAddressId,
 		copySuppliersFromInquiryId: step1.copySuppliersFromInquiryId,
-		cashAllowed: step1.cashAllowed,
 		analoguesNotAllowed: step1.analoguesNotAllowed,
 		sendRequestsAutomatically: step3.autoSend,
 	};

@@ -102,7 +102,6 @@ export interface CreateProcurementInquiryInput {
 	deliveryAddressId?: string | null;
 	unloading?: UnloadingType | "";
 	analoguesNotAllowed?: boolean;
-	cashAllowed?: boolean;
 	emailSubject?: string;
 	emailBody?: string;
 	sendRequestsAutomatically?: boolean;

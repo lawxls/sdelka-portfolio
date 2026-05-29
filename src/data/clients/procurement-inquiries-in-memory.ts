@@ -41,7 +41,6 @@ function fillDefaults(partial: Partial<ProcurementInquiry> & { id: string; compa
 		deliveryAddressId: partial.deliveryAddressId ?? null,
 		unloading: partial.unloading ?? "",
 		analoguesNotAllowed: partial.analoguesNotAllowed ?? false,
-		cashAllowed: partial.cashAllowed ?? false,
 		emailSubject: partial.emailSubject ?? "",
 		emailBody: partial.emailBody ?? "",
 		sendRequestsAutomatically: partial.sendRequestsAutomatically ?? false,

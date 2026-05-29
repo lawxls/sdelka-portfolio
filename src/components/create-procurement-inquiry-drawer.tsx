@@ -512,7 +512,6 @@ function buildPreviewInput(
 	const input: GenerateQuestionsPreviewInput = {
 		positions: step1.positions.filter((p) => p.name.trim() !== "").map(buildPreviewPosition),
 		folderId: step1.folderId,
-		cashAllowed: step1.cashAllowed,
 		analoguesNotAllowed: step1.analoguesNotAllowed,
 	};
 	const info = step1.additionalInfo.trim();
@@ -1044,14 +1043,6 @@ function Step1Body({
 			<SectionGroupHeader title="Дополнительно" />
 			<div className="flex flex-col gap-4 border-t border-border py-4">
 				<div className="flex flex-wrap gap-2">
-					<CheckboxBadge
-						id="cash-payment-allowed"
-						checked={step1.cashAllowed}
-						onChange={(v) => update1("cashAllowed", v)}
-						ariaLabel="Допускается оплата наличными"
-					>
-						Допускается оплата наличными
-					</CheckboxBadge>
 					<CheckboxBadge
 						id="analogues-not-allowed"
 						checked={step1.analoguesNotAllowed}

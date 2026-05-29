@@ -379,16 +379,6 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(result.current.toPayload().procurementInquiry.analoguesNotAllowed).toBe(true);
 	});
 
-	test("toPayload cashAllowed reflects the cash payment checkbox", () => {
-		const { result } = setup();
-		fillStep1Required(result);
-
-		expect(result.current.toPayload().procurementInquiry.cashAllowed).toBe(false);
-
-		act(() => result.current.update1("cashAllowed", true));
-		expect(result.current.toPayload().procurementInquiry.cashAllowed).toBe(true);
-	});
-
 	// --- Step 3 — supplier email ---
 
 	test("applyGeneratedEmail stores subject + body and marks generated=true", () => {

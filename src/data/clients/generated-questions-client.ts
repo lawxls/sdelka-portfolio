@@ -42,7 +42,6 @@ export interface GenerateQuestionsPreviewInput {
 	deliveryAddressId?: string | null;
 	unloading?: UnloadingType | null;
 	/** «Дополнительно» */
-	cashAllowed?: boolean;
 	analoguesNotAllowed?: boolean;
 }
 

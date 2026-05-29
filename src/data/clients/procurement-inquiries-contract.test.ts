@@ -480,7 +480,6 @@ function httpAdapterWithGeneratedQuestions() {
 				deliveryAddressId: null,
 				unloading: "",
 				analoguesNotAllowed: false,
-				cashAllowed: false,
 				emailSubject: "",
 				emailBody: "",
 				sendRequestsAutomatically: false,

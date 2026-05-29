@@ -1788,14 +1788,12 @@ function ProcurementInquiryAdditionalSection({
 }) {
 	const updateMutation = useUpdateProcurementInquiry();
 	const [editing, setEditing] = useState(false);
-	const [cashDraft, setCashDraft] = useState(false);
 	const [analoguesDraft, setAnaloguesDraft] = useState(false);
 	const [commentDraft, setCommentDraft] = useState("");
 
 	const yesNo = (v: boolean | undefined) => (v ? "Да" : "Нет");
 
 	function handleEdit() {
-		setCashDraft(procurementInquiry.cashAllowed);
 		// `analoguesDraft` mirrors the user-facing «Аналоги допускаются» — invert
 		// `analoguesNotAllowed` so the checkbox label matches.
 		setAnaloguesDraft(!procurementInquiry.analoguesNotAllowed);
@@ -1812,7 +1810,6 @@ function ProcurementInquiryAdditionalSection({
 			{
 				id: procurementInquiry.id,
 				patch: {
-					cashAllowed: cashDraft,
 					analoguesNotAllowed: !analoguesDraft,
 					additionalInfo: commentDraft.trim(),
 				},
@@ -1822,7 +1819,6 @@ function ProcurementInquiryAdditionalSection({
 	}
 
 	const dirty =
-		cashDraft !== procurementInquiry.cashAllowed ||
 		analoguesDraft !== !procurementInquiry.analoguesNotAllowed ||
 		commentDraft.trim() !== (procurementInquiry.additionalInfo ?? "").trim();
 
@@ -1842,14 +1838,6 @@ function ProcurementInquiryAdditionalSection({
 					{editing ? (
 						<div className="flex flex-col gap-2">
 							<CheckboxBadge
-								id="procurement-inquiry-cash"
-								checked={cashDraft}
-								onChange={setCashDraft}
-								ariaLabel="Допускается оплата наличными"
-							>
-								Допускается оплата наличными
-							</CheckboxBadge>
-							<CheckboxBadge
 								id="procurement-inquiry-analogues"
 								checked={analoguesDraft}
 								onChange={setAnaloguesDraft}
@@ -1860,10 +1848,6 @@ function ProcurementInquiryAdditionalSection({
 						</div>
 					) : (
 						<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-							<li>
-								<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-								{yesNo(procurementInquiry.cashAllowed)}
-							</li>
 							<li>
 								<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
 								{yesNo(!procurementInquiry.analoguesNotAllowed)}

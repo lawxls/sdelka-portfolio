@@ -44,7 +44,6 @@ export function makeProcurementInquiry(id: string, overrides: Partial<Procuremen
 		deliveryAddressId: null,
 		unloading: "",
 		analoguesNotAllowed: false,
-		cashAllowed: false,
 		emailSubject: "",
 		emailBody: "",
 		sendRequestsAutomatically: false,
