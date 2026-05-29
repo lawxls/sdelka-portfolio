@@ -745,14 +745,28 @@ function Step3Body({ form, preview, onRetry, onRegenerate }: Step3BodyProps) {
 							Перегенерировать
 						</Button>
 					</div>
-					<Textarea
-						id={bodyId}
-						value={step3.body}
-						onChange={(e) => update3("body", e.target.value)}
-						spellCheck={false}
-						rows={10}
-						className="font-normal"
-					/>
+					<div className="relative">
+						<Textarea
+							id={bodyId}
+							value={step3.body}
+							onChange={(e) => update3("body", e.target.value)}
+							spellCheck={false}
+							rows={10}
+							disabled={regenerating}
+							aria-busy={regenerating || undefined}
+							className="font-normal"
+						/>
+						{regenerating && (
+							<div
+								role="status"
+								aria-live="polite"
+								className="absolute inset-0 flex items-center justify-center rounded-md bg-muted/70"
+							>
+								<LoaderCircle aria-hidden="true" className="size-6 animate-spin text-primary" />
+								<span className="sr-only">Перегенерируем письмо…</span>
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
