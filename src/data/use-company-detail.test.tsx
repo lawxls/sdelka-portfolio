@@ -125,6 +125,7 @@ describe("useCreateCompany", () => {
 		const payload = {
 			name: "Новая",
 			shortName: "Новая",
+			fullName: "ООО «Новая»",
 			inn: "7700000001",
 			kpp: "",
 			ogrn: "",

@@ -27,10 +27,13 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		id,
 		name: `Company ${id}`,
 		shortName: "",
+		fullName: "",
 		inn: `770000000${digits}`.slice(-10),
 		kpp: "",
 		ogrn: "",
 		directorName: "",
+		phoneNumber: "",
+		email: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
@@ -97,7 +100,9 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 				const u = new URL(url, "http://test");
 				const q = u.searchParams.get("q")?.toLowerCase();
 				const ordering = u.searchParams.get("ordering");
-				let items = Array.from(store.values());
+				// Default-active: only ?isArchived=true surfaces archived rows.
+				const wantArchived = u.searchParams.get("isArchived") === "true";
+				let items = Array.from(store.values()).filter((c) => Boolean(c.isArchived) === wantArchived);
 				if (q) items = items.filter((c) => c.name.toLowerCase().includes(q));
 				if (ordering) {
 					const desc = ordering.startsWith("-");
@@ -142,10 +147,13 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 					id,
 					name: data.name,
 					shortName: data.shortName ?? "",
+					fullName: data.fullName ?? "",
 					inn: data.inn,
 					kpp: data.kpp ?? "",
 					ogrn: data.ogrn ?? "",
 					directorName: data.directorName ?? "",
+					phoneNumber: data.phoneNumber ?? "",
+					email: data.email ?? "",
 					website: data.website ?? "",
 					additionalComments: data.additionalComments ?? "",
 					isMain: false,
@@ -188,10 +196,26 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 			path: /^\/companies\/([^/]+)\/archive\/$/,
 			respond: ({ url }) => {
 				const id = idFromPath(url, /^\/companies\/([^/]+)\/archive\/$/);
-				if (!store.has(id)) return { status: 404 };
-				if (store.size <= 1) return { status: 409, body: { detail: "cannot archive the only company" } };
-				store.delete(id);
-				return { status: 204 };
+				const c = store.get(id);
+				if (!c) return { status: 404 };
+				if (!c.isArchived) {
+					if (c.isMain) return { status: 400, body: { detail: "cannot archive the main company" } };
+					const activeCount = Array.from(store.values()).filter((x) => !x.isArchived).length;
+					if (activeCount <= 1) return { status: 400, body: { detail: "cannot archive the only active company" } };
+					c.isArchived = true;
+				}
+				return { status: 200, body: c };
+			},
+		},
+		{
+			method: "POST",
+			path: /^\/companies\/([^/]+)\/unarchive\/$/,
+			respond: ({ url }) => {
+				const id = idFromPath(url, /^\/companies\/([^/]+)\/unarchive\/$/);
+				const c = store.get(id);
+				if (!c) return { status: 404 };
+				c.isArchived = false;
+				return { status: 200, body: c };
 			},
 		},
 		{
@@ -278,6 +302,8 @@ function httpAdapter(seed: Company[], opts: HarnessOptions = {}): HttpHarness {
 						kpp: inn.length === 10 ? `${inn.slice(0, 4)}01001` : "",
 						ogrn: `1${inn}`.slice(0, 13),
 						directorName: "Иванов И.И.",
+						phoneNumber: "+7 495 123-45-67",
+						email: `info@test-${inn.slice(-4)}.ru`,
 						address: "г Москва, ул Тестовая, 1",
 						status: "ACTIVE",
 						existing: existing ? { id: existing.id, name: existing.name } : null,
@@ -369,6 +395,7 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 		const created = await client.create({
 			name: "Новая",
 			shortName: "Новая",
+			fullName: "ООО «Новая»",
 			inn: "7700000077",
 			kpp: "770001001",
 			ogrn: "1027700000077",
@@ -416,14 +443,21 @@ describe.each(adapters.map((make) => [make().name, make]))("CompaniesClient cont
 		await expect(client.get("c1")).rejects.toBeInstanceOf(NotFoundError);
 	});
 
-	it("archive moves the company out of the active list", async () => {
+	it("archive soft-archives: out of the active list, still retrievable + restorable", async () => {
 		await client.archive("c1");
-		await expect(client.get("c1")).rejects.toBeInstanceOf(NotFoundError);
-		const all = await client.listAll();
-		expect(all.map((c) => c.id)).toEqual(["c2"]);
+		// Soft-archive — the row still exists and is retrievable…
+		expect((await client.get("c1")).id).toBe("c1");
+		// …but drops out of the active list / dropdowns…
+		expect((await client.listAll()).map((c) => c.id)).toEqual(["c2"]);
+		expect((await client.list({})).items.map((c) => c.id)).toEqual(["c2"]);
+		// …and surfaces in the archive view.
+		expect((await client.list({ isArchived: true })).items.map((c) => c.id)).toEqual(["c1"]);
+		// Unarchive restores it to the active list.
+		await client.unarchive("c1");
+		expect((await client.list({})).items.map((c) => c.id).sort((a, b) => a.localeCompare(b))).toEqual(["c1", "c2"]);
 	});
 
-	it("archive of the only remaining company is rejected", async () => {
+	it("archive of the only remaining active company is rejected", async () => {
 		await client.archive("c1");
 		await expect(client.archive("c2")).rejects.toBeTruthy();
 	});
@@ -470,6 +504,7 @@ describe("HTTP-only error branches", () => {
 			await client.create({
 				name: "",
 				shortName: "",
+				fullName: "",
 				inn: "7700000077",
 				kpp: "",
 				ogrn: "",
@@ -491,6 +526,7 @@ describe("HTTP-only error branches", () => {
 			await client.create({
 				name: "Dup",
 				shortName: "Dup",
+				fullName: "",
 				inn: c1.inn,
 				kpp: "",
 				ogrn: "",
@@ -523,6 +559,7 @@ describe("HTTP-only error branches", () => {
 		await client.create({
 			name: "Новая",
 			shortName: "Новая",
+			fullName: "ООО «Новая»",
 			inn: "7700000088",
 			kpp: "770001001",
 			ogrn: "1027700000088",
@@ -550,6 +587,7 @@ describe("HTTP-only error branches", () => {
 			client.create({
 				name: "Новая",
 				shortName: "Новая",
+				fullName: "",
 				inn: "7700000099",
 				kpp: "",
 				ogrn: "",
@@ -572,6 +610,14 @@ describe("HTTP-only error branches", () => {
 		await client.list({ sort: "employeeCount", dir: "desc" });
 		const call = harness.calls.find((c) => c.method === "GET" && c.url.startsWith("/companies/"));
 		expect(call?.url).toContain("ordering=-employee_count");
+	});
+
+	it("list sends isArchived so the «Архив» toggle fires a real request", async () => {
+		const harness = httpAdapter(SEED);
+		const client = harness.build();
+		await client.list({ isArchived: true });
+		const call = harness.calls.find((c) => c.method === "GET" && c.url.startsWith("/companies/"));
+		expect(call?.url).toContain("isArchived=true");
 	});
 
 	it("listAll auto-paginates via cursor and concatenates pages", async () => {

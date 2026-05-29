@@ -16,10 +16,13 @@ function makeStored(id: string, overrides: Partial<Company> = {}): Company {
 		id,
 		name: `Company ${id}`,
 		shortName: "",
+		fullName: "",
 		inn: `770000000${id.replace(/\D/g, "") || "0"}`.slice(-10),
 		kpp: "",
 		ogrn: "",
 		directorName: "",
+		phoneNumber: "",
+		email: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
@@ -119,7 +122,7 @@ describe("CompanyDrawer — Основная информация", () => {
 		expect(screen.queryByLabelText("Наименование")).not.toBeInTheDocument();
 	});
 
-	test("renders read-only Реквизиты with INN/КПП/ОГРН/директор and no edit button", async () => {
+	test("renders Реквизиты with INN/КПП/ОГРН/директор read-only and edit button for contacts", async () => {
 		companiesClient = createInMemoryCompaniesClient([
 			makeStored("c1", {
 				name: "Сделка",
@@ -139,8 +142,9 @@ describe("CompanyDrawer — Основная информация", () => {
 		expect(screen.getByText("1027700132195")).toBeInTheDocument();
 		expect(screen.getByText("Греф Г.О.")).toBeInTheDocument();
 
-		// No edit affordance — the DaData section is intentionally locked.
-		expect(screen.queryByRole("button", { name: /Редактировать реквизиты/ })).not.toBeInTheDocument();
+		// Section has an edit affordance — Полное наименование / Контактный номер /
+		// Электронная почта are user-editable. ИНН/ОГРН/КПП/director stay read-only.
+		expect(screen.getByRole("button", { name: /Редактировать реквизиты/ })).toBeInTheDocument();
 	});
 
 	test("Карточка компании section is gone", async () => {

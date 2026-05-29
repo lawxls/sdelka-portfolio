@@ -875,13 +875,12 @@ function Step1Body({
 								variant="outline"
 								className={cn("w-full justify-center", step1Errors.company && "border-destructive")}
 								onClick={() => setCreateCompanyOpen(true)}
-								aria-label="Создать компанию"
+								aria-label="Добавить компанию"
 								aria-invalid={step1Errors.company ? true : undefined}
 								aria-describedby={step1Errors.company ? "company-error" : undefined}
 								data-testid="create-company-cta"
 							>
-								<Plus className="size-4" aria-hidden="true" />
-								Создать компанию
+								Добавить компанию
 							</Button>
 						) : (
 							<Select

@@ -184,14 +184,20 @@ function CompanyDrawerContent({
 }
 
 type InfoFormState = { name: string; website: string };
+type RequisitesFormState = { fullName: string; phoneNumber: string; email: string };
 type CommentsFormState = { additionalComments: string };
-type GeneralSection = "info" | "comments" | null;
+type GeneralSection = "info" | "requisites" | "comments" | null;
 
 function GeneralTab({ company, companyId }: { company: Company; companyId: string }) {
 	const [editing, setEditing] = useState<GeneralSection>(null);
 	const [info, setInfo] = useState<InfoFormState>({
 		name: company.name,
 		website: company.website,
+	});
+	const [requisites, setRequisites] = useState<RequisitesFormState>({
+		fullName: company.fullName,
+		phoneNumber: company.phoneNumber,
+		email: company.email,
 	});
 	const [comments, setComments] = useState<CommentsFormState>({ additionalComments: company.additionalComments });
 
@@ -200,6 +206,15 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	function handleEditInfo() {
 		setInfo({ name: company.name, website: company.website });
 		setEditing("info");
+	}
+
+	function handleEditRequisites() {
+		setRequisites({
+			fullName: company.fullName,
+			phoneNumber: company.phoneNumber,
+			email: company.email,
+		});
+		setEditing("requisites");
 	}
 
 	function handleEditComments() {
@@ -211,6 +226,14 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 		return info.name !== company.name || info.website !== company.website;
 	}
 
+	function requisitesDirty(): boolean {
+		return (
+			requisites.fullName !== company.fullName ||
+			requisites.phoneNumber !== company.phoneNumber ||
+			requisites.email !== company.email
+		);
+	}
+
 	function commentsDirty(): boolean {
 		return comments.additionalComments !== company.additionalComments;
 	}
@@ -219,6 +242,18 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 		const data: UpdateCompanyData = {};
 		if (info.name !== company.name) data.name = info.name;
 		if (info.website !== company.website) data.website = info.website;
+		if (Object.keys(data).length === 0) {
+			setEditing(null);
+			return;
+		}
+		updateMutation.mutate(data, { onSuccess: () => setEditing(null) });
+	}
+
+	function handleSaveRequisites() {
+		const data: UpdateCompanyData = {};
+		if (requisites.fullName !== company.fullName) data.fullName = requisites.fullName;
+		if (requisites.phoneNumber !== company.phoneNumber) data.phoneNumber = requisites.phoneNumber;
+		if (requisites.email !== company.email) data.email = requisites.email;
 		if (Object.keys(data).length === 0) {
 			setEditing(null);
 			return;
@@ -239,6 +274,7 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 	}
 
 	const isEditingInfo = editing === "info";
+	const isEditingRequisites = editing === "requisites";
 	const isEditingComments = editing === "comments";
 
 	return (
@@ -284,12 +320,35 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 				</CardGrid>
 			</Section>
 
-			{/* DaData-sourced identity fields. Locked once persisted — the source
-			    of truth is the federal registry and we don't want users mutating
-			    these from the drawer. Re-running the INN lookup is out of scope
-			    for the company drawer; rare changes go through the admin. */}
-			<Section title="Реквизиты">
+			{/* DaData-sourced identity fields. ИНН/ОГРН/КПП/director come from the
+			    federal registry and stay read-only — re-running the INN lookup is
+			    out of scope for the drawer. Полное наименование / контактный
+			    номер / email are user-editable because DaData populates them
+			    only for a subset of parties. */}
+			<Section
+				title="Реквизиты"
+				editLabel="Редактировать реквизиты"
+				editing={isEditingRequisites}
+				onEdit={handleEditRequisites}
+				onCancel={() => setEditing(null)}
+				onSave={handleSaveRequisites}
+				saveDisabled={!requisitesDirty() || updateMutation.isPending}
+				isPending={updateMutation.isPending}
+			>
 				<CardGrid>
+					<FieldCard label="Полное наименование" span="full">
+						{isEditingRequisites ? (
+							<Input
+								aria-label="Полное наименование"
+								value={requisites.fullName}
+								onChange={(e) => setRequisites((p) => ({ ...p, fullName: e.target.value }))}
+								spellCheck={false}
+								autoComplete="off"
+							/>
+						) : (
+							<ValueText value={company.fullName} />
+						)}
+					</FieldCard>
 					<FieldCard label="ИНН" span="full">
 						<ValueText value={company.inn} numeric />
 					</FieldCard>
@@ -301,6 +360,31 @@ function GeneralTab({ company, companyId }: { company: Company; companyId: strin
 					</FieldCard>
 					<FieldCard label="Генеральный директор" span="full">
 						<ValueText value={company.directorName} />
+					</FieldCard>
+					<FieldCard label="Контактный номер" span="full">
+						{isEditingRequisites ? (
+							<PhoneInput
+								value={requisites.phoneNumber}
+								onChange={(v) => setRequisites((p) => ({ ...p, phoneNumber: v }))}
+								aria-label="Контактный номер"
+							/>
+						) : (
+							<ValueText value={formatPhone(company.phoneNumber)} numeric />
+						)}
+					</FieldCard>
+					<FieldCard label="Электронная почта" span="full">
+						{isEditingRequisites ? (
+							<Input
+								aria-label="Электронная почта"
+								type="email"
+								value={requisites.email}
+								onChange={(e) => setRequisites((p) => ({ ...p, email: e.target.value }))}
+								spellCheck={false}
+								autoComplete="email"
+							/>
+						) : (
+							<ValueText value={company.email} />
+						)}
 					</FieldCard>
 				</CardGrid>
 			</Section>

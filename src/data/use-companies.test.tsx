@@ -54,7 +54,13 @@ describe("useCompanies", () => {
 
 		await waitFor(() => expect(result.current.companies).toHaveLength(2));
 		expect(result.current.hasNextPage).toBe(true);
-		expect(list).toHaveBeenCalledWith({ q: undefined, sort: undefined, dir: undefined, cursor: undefined });
+		expect(list).toHaveBeenCalledWith({
+			q: undefined,
+			sort: undefined,
+			dir: undefined,
+			isArchived: false,
+			cursor: undefined,
+		});
 	});
 
 	it("returns loading state initially", () => {
@@ -85,7 +91,13 @@ describe("useCompanies", () => {
 		await waitFor(() => expect(result.current.companies).toHaveLength(2));
 		result.current.loadMore();
 		await waitFor(() => expect(result.current.companies).toHaveLength(3));
-		expect(list).toHaveBeenLastCalledWith({ q: undefined, sort: undefined, dir: undefined, cursor: "c3" });
+		expect(list).toHaveBeenLastCalledWith({
+			q: undefined,
+			sort: undefined,
+			dir: undefined,
+			isArchived: false,
+			cursor: "c3",
+		});
 	});
 
 	it("threads search and sort params into the client", async () => {
@@ -97,7 +109,7 @@ describe("useCompanies", () => {
 		});
 
 		await waitFor(() => expect(list).toHaveBeenCalled());
-		expect(list).toHaveBeenCalledWith({ q: "альф", sort: "name", dir: "desc", cursor: undefined });
+		expect(list).toHaveBeenCalledWith({ q: "альф", sort: "name", dir: "desc", isArchived: false, cursor: undefined });
 	});
 
 	it("surfaces errors from the client", async () => {

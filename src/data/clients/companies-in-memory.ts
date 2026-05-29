@@ -56,6 +56,10 @@ function sortCompanies(items: Company[], field: CompanySortField, dir: "asc" | "
  */
 export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesClient {
 	let store: Company[] = seed.map(cloneCompany);
+	// Soft-archive marker — mirrors the backend's `is_archived` column. Archived
+	// companies stay in the store (retrievable, restorable), just filtered out of
+	// the active list. Seed entries flagged `isArchived` start archived.
+	const archivedIds = new Set<string>(seed.filter((c) => c.isArchived).map((c) => c.id));
 
 	function findIndex(id: string): number {
 		return store.findIndex((c) => c.id === id);
@@ -70,7 +74,10 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 	return {
 		async list(params: ListCompaniesParams): Promise<CursorPage<CompanySummary>> {
 			await delay();
-			let filtered = store;
+			// Default (no param) shows active companies — only `isArchived=true`
+			// surfaces the archive view, mirroring the backend's default-active list.
+			const wantArchived = params.isArchived === true;
+			let filtered = store.filter((c) => archivedIds.has(c.id) === wantArchived);
 			const q = params.q?.trim().toLowerCase();
 			if (q) filtered = filtered.filter((c) => c.name.toLowerCase().includes(q));
 			if (params.sort) filtered = sortCompanies(filtered, params.sort, params.dir ?? "asc");
@@ -85,7 +92,8 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 
 		async listAll(): Promise<CompanySummary[]> {
 			await delay();
-			return store.map(toSummary);
+			// Active companies only — pickers/dropdowns must not surface archived rows.
+			return store.filter((c) => !archivedIds.has(c.id)).map(toSummary);
 		},
 
 		async get(id: string): Promise<Company> {
@@ -108,10 +116,13 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 				id: nextId("company"),
 				name: data.name,
 				shortName: data.shortName,
+				fullName: data.fullName,
 				inn: data.inn,
 				kpp: data.kpp,
 				ogrn: data.ogrn,
 				directorName: data.directorName,
+				phoneNumber: data.phoneNumber ?? "",
+				email: data.email ?? "",
 				website: data.website ?? "",
 				additionalComments: data.additionalComments ?? "",
 				isMain: false,
@@ -142,12 +153,26 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 
 		async archive(id: string): Promise<void> {
 			await delay();
-			// Mirror the server-side guard: never leave the workspace with zero
-			// active companies. Test fakes raise NotFoundError when the id is
-			// unknown so the mutation surfaces an error the UI can toast.
-			if (store.length <= 1) throw new Error("cannot archive the only company");
+			const company = requireCompany(id);
+			if (archivedIds.has(id)) return;
+			// Mirror the server-side guards: the main company stays active, and the
+			// workspace must keep at least one active company.
+			if (company.isMain) {
+				throw new ValidationError({ detail: ["Нельзя архивировать основную компанию рабочего пространства."] });
+			}
+			const activeCount = store.filter((c) => !archivedIds.has(c.id)).length;
+			if (activeCount <= 1) {
+				throw new ValidationError({
+					detail: ["Нельзя архивировать единственную активную компанию рабочего пространства."],
+				});
+			}
+			archivedIds.add(id);
+		},
+
+		async unarchive(id: string): Promise<void> {
+			await delay();
 			requireCompany(id);
-			store = store.filter((c) => c.id !== id);
+			archivedIds.delete(id);
 		},
 
 		async delete(id: string): Promise<void> {
@@ -201,6 +226,8 @@ export function createInMemoryCompaniesClient(seed: Company[] = []): CompaniesCl
 				kpp: trimmed.length === 10 ? `${trimmed.slice(0, 4)}01001` : "",
 				ogrn: `1${trimmed}${"0".repeat(15 - 1 - trimmed.length)}`.slice(0, 13),
 				directorName: "Иванов Иван Иванович",
+				phoneNumber: "+7 495 123-45-67",
+				email: `info@test-${trimmed.slice(-4)}.ru`,
 				address: "г Москва, ул Тестовая, д 1",
 				status: "ACTIVE",
 				existing: existing ? { id: existing.id, name: existing.name } : null,

@@ -336,14 +336,23 @@ export interface Company {
 	name: string;
 	/** DaData's «short_with_opf» — e.g. «ПАО СБЕРБАНК». Empty when never looked up. */
 	shortName: string;
+	/** DaData's «full_with_opf» — e.g. «ПУБЛИЧНОЕ АКЦИОНЕРНОЕ ОБЩЕСТВО СБЕРБАНК». */
+	fullName: string;
 	inn: string;
 	kpp: string;
 	ogrn: string;
 	/** Full name of the general director from DaData's `management.name`. */
 	directorName: string;
+	/** Contact phone (DaData `data.phones[0].value` when present; user-editable). */
+	phoneNumber: string;
+	/** Contact email (DaData `data.emails[0].value` when present; user-editable). */
+	email: string;
 	website: string;
 	additionalComments: string;
 	isMain: boolean;
+	/** Soft-archive flag (backend `is_archived`). Optional so fixtures/creators
+	 * that predate archiving still satisfy the type; defaults to active. */
+	isArchived?: boolean;
 	employeeCount: number;
 	procurementItemCount: number;
 	addressesCount: number;

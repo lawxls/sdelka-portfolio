@@ -27,6 +27,8 @@ function makeLookup(): CompanyLookup {
 		kpp: "770301001",
 		ogrn: "1027700000001",
 		directorName: "Иванов И.И.",
+		phoneNumber: "",
+		email: "",
 		address: "г Москва, ул Ленина, д 1",
 		status: "ACTIVE",
 		existing: null,

@@ -1,4 +1,16 @@
-import { AlertCircle, Building2, LoaderCircle, Mail, MapPin, Plus, RotateCw, Trash2, User } from "lucide-react";
+import {
+	AlertCircle,
+	Building2,
+	Hash,
+	Landmark,
+	LoaderCircle,
+	Mail,
+	Phone,
+	Plus,
+	RotateCw,
+	Trash2,
+	User,
+} from "lucide-react";
 import { useState } from "react";
 import { PhoneInput } from "@/components/phone-input";
 import { Button } from "@/components/ui/button";
@@ -130,7 +142,7 @@ function CreationForm({
 				    no form to associate with — render as inert button. */}
 				<Button type="submit" form="company-creation-form" disabled={!showMatchedForm || isPending}>
 					{isPending && <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />}
-					Создать компанию
+					Добавить компанию
 				</Button>
 			</SheetFooter>
 		</>
@@ -179,10 +191,13 @@ function MatchedForm({
 		onSubmitAttempt({
 			name: matched.shortName || matched.fullName,
 			shortName: matched.shortName,
+			fullName: matched.fullName,
 			inn: matched.inn,
 			kpp: matched.kpp,
 			ogrn: matched.ogrn,
 			directorName: matched.directorName,
+			phoneNumber: matched.phoneNumber.trim(),
+			email: matched.email.trim(),
 			website: website.trim(),
 			additionalComments: additionalComments.trim() || undefined,
 			addresses: payloadAddresses,
@@ -192,7 +207,7 @@ function MatchedForm({
 	return (
 		<form id="company-creation-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
 			<section className="flex flex-col gap-3">
-				<SectionHeader>Дополнительно</SectionHeader>
+				<SectionHeader>Контакты</SectionHeader>
 				<FieldRow label="Сайт" htmlFor="creation-website">
 					<Input
 						id="creation-website"
@@ -205,6 +220,10 @@ function MatchedForm({
 						inputMode="url"
 					/>
 				</FieldRow>
+			</section>
+
+			<section className="flex flex-col gap-3">
+				<SectionHeader>Дополнительно</SectionHeader>
 				<FieldRow label="Дополнительные комментарии для агента" htmlFor="creation-comments">
 					<Textarea
 						id="creation-comments"
@@ -351,8 +370,10 @@ function IdentityCard({
 				</div>
 				<ul className="flex flex-col gap-1.5">
 					<IdentityRow icon={User} label="Генеральный директор" value={matched.directorName} />
-					<IdentityRow icon={Mail} label="ОГРН" value={matched.ogrn} numeric />
-					<IdentityRow icon={MapPin} label="КПП" value={matched.kpp} numeric />
+					<IdentityRow icon={Landmark} label="ОГРН" value={matched.ogrn} numeric />
+					<IdentityRow icon={Hash} label="КПП" value={matched.kpp} numeric />
+					<IdentityRow icon={Phone} label="Контактный номер" value={matched.phoneNumber} />
+					<IdentityRow icon={Mail} label="Электронная почта" value={matched.email} />
 				</ul>
 			</section>
 		);
@@ -392,8 +413,8 @@ function IdentityPlaceholders() {
 		<ul className="flex flex-col gap-1.5">
 			<PlaceholderRow icon={Building2} hint="Наименование" />
 			<PlaceholderRow icon={User} hint="Генеральный директор" />
-			<PlaceholderRow icon={Mail} hint="ОГРН" />
-			<PlaceholderRow icon={MapPin} hint="КПП" />
+			<PlaceholderRow icon={Landmark} hint="ОГРН" />
+			<PlaceholderRow icon={Hash} hint="КПП" />
 		</ul>
 	);
 }

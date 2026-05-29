@@ -1,4 +1,5 @@
-import { Archive, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -12,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { CompanySummary, CreateCompanyPayload } from "@/data/domains/companies";
 import { TariffLimitExceededError } from "@/data/errors";
+import { keys } from "@/data/query-keys";
 import { useCompanies } from "@/data/use-companies";
-import { useArchiveCompany, useCreateCompany, useDeleteCompany } from "@/data/use-company-detail";
+import { useArchiveCompany, useCreateCompany, useDeleteCompany, useUnarchiveCompany } from "@/data/use-company-detail";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatRussianPlural } from "@/lib/format";
@@ -32,9 +34,11 @@ export function CompaniesSettingsPage() {
 	const [searchExpanded, setSearchExpanded] = useState(false);
 	const [archiveActive, setArchiveActive] = useState(false);
 
+	const queryClient = useQueryClient();
 	const { companies, hasNextPage, loadMore, isFetchingNextPage } = useCompanies({
 		search,
 		sort: null,
+		archived: archiveActive,
 	});
 
 	if (hasNextPage && !isFetchingNextPage) {
@@ -43,9 +47,12 @@ export function CompaniesSettingsPage() {
 	const createCompanyMutation = useCreateCompany();
 	const deleteCompanyMutation = useDeleteCompany();
 	const archiveCompanyMutation = useArchiveCompany();
+	const unarchiveCompanyMutation = useUnarchiveCompany();
 	const { guard } = useModuleGuard("companies");
 
-	const visibleCompanies = archiveActive ? [] : companies;
+	// The query is archived-aware (`archived: archiveActive`), so the fetched
+	// list already reflects the active/archive view — no client-side blanking.
+	const visibleCompanies = companies;
 	const allSelected = visibleCompanies.length > 0 && visibleCompanies.every((c) => selected.has(c.id));
 
 	function toggleRow(id: string) {
@@ -183,7 +190,12 @@ export function CompaniesSettingsPage() {
 						placeholder: "Название компании…",
 					}}
 					archiveActive={archiveActive}
-					onToggleArchive={() => setArchiveActive((v) => !v)}
+					onToggleArchive={() => {
+						setArchiveActive((v) => !v);
+						setSelected(new Set());
+						// Force a fresh request on every «Архив» click (beats the 30s staleTime).
+						queryClient.invalidateQueries({ queryKey: keys.companies.all() });
+					}}
 					selectedCount={selected.size}
 					onClearSelection={clearSelection}
 					bulkForms={["компания", "компании", "компаний"]}
@@ -206,7 +218,27 @@ export function CompaniesSettingsPage() {
 					]}
 				/>
 				{archiveActive ? (
-					<TableEmptyState message="В архиве пусто" />
+					visibleCompanies.length === 0 ? (
+						<TableEmptyState message="В архиве пусто" />
+					) : (
+						<ul className="flex flex-col divide-y divide-border">
+							{visibleCompanies.map((company) => (
+								<li key={company.id} className="flex items-center justify-between gap-3 px-4 py-3">
+									<TruncatedName name={company.name} className="text-sm font-medium" />
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={guard(() => unarchiveCompanyMutation.mutate(company.id))}
+										aria-label={`Восстановить ${company.name}`}
+									>
+										<ArchiveRestore aria-hidden="true" className="size-4" />
+										Восстановить
+									</Button>
+								</li>
+							))}
+						</ul>
+					)
 				) : isMobile ? (
 					<div className="flex flex-col gap-3 p-4">
 						{visibleCompanies.map((company, index) => {

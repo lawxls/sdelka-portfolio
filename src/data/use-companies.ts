@@ -6,13 +6,17 @@ import type { CompanySortState } from "./types";
 interface CompanyQueryParams {
 	search: string;
 	sort: CompanySortState | null;
+	archived?: boolean;
 }
 
-function buildCompanyFilterParams({ search, sort }: CompanyQueryParams) {
+function buildCompanyFilterParams({ search, sort, archived }: CompanyQueryParams) {
 	return {
 		q: search || undefined,
 		sort: sort?.field,
 		dir: sort?.direction,
+		// Always present so the active/archived views are distinct cache keys —
+		// toggling «Архив» switches queries and triggers a fetch.
+		isArchived: archived ?? false,
 	};
 }
 

@@ -59,6 +59,16 @@ export function useArchiveCompany() {
 	});
 }
 
+export function useUnarchiveCompany() {
+	const client = useCompaniesClient();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (id: string) => client.unarchive(id),
+		onSettled: () => invalidateAfterCompanyChange(queryClient),
+	});
+}
+
 export function useCreateCompany() {
 	const client = useCompaniesClient();
 	const queryClient = useQueryClient();

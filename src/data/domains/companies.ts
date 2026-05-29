@@ -19,6 +19,9 @@ export interface ListCompaniesParams {
 	q?: string;
 	sort?: CompanySortState["field"];
 	dir?: CompanySortState["direction"];
+	/** Archive view toggle, sent to the backend's `isArchived` filter. Absent or
+	 * `false` ⇒ active companies; `true` ⇒ the archive view. */
+	isArchived?: boolean;
 	cursor?: string;
 	limit?: number;
 }
@@ -35,11 +38,17 @@ export interface CreateCompanyPayload {
 	name: string;
 	/** Short canonical name from DaData (`short_with_opf`). */
 	shortName: string;
+	/** Full canonical name from DaData (`full_with_opf`). */
+	fullName: string;
 	/** INN — required, 10 or 12 digits, unique per workspace. */
 	inn: string;
 	kpp: string;
 	ogrn: string;
 	directorName: string;
+	/** Contact phone — pre-filled from DaData when present, user-editable. */
+	phoneNumber?: string;
+	/** Contact email — pre-filled from DaData when present, user-editable. */
+	email?: string;
 	website?: string;
 	additionalComments?: string;
 	addresses: CreateAddressData[];
@@ -47,6 +56,9 @@ export interface CreateCompanyPayload {
 
 export interface UpdateCompanyData {
 	name?: string;
+	fullName?: string;
+	phoneNumber?: string;
+	email?: string;
 	website?: string;
 	additionalComments?: string;
 }
@@ -69,6 +81,10 @@ export interface CompanyLookup {
 	kpp: string;
 	ogrn: string;
 	directorName: string;
+	/** DaData `data.phones[0].value` — empty string when not provided. */
+	phoneNumber: string;
+	/** DaData `data.emails[0].value` — empty string when not provided. */
+	email: string;
 	address: string;
 	status: string;
 	existing: { id: string; name: string } | null;

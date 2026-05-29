@@ -27,10 +27,13 @@ function makeCompanyDoc(id: string, name: string, addresses: Address[]): Company
 		id,
 		name,
 		shortName: "",
+		fullName: "",
 		inn: `770000000${id.replace(/\D/g, "") || "0"}`.slice(-10),
 		kpp: "",
 		ogrn: "",
 		directorName: "",
+		phoneNumber: "",
+		email: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
@@ -215,18 +218,18 @@ describe("CreateProcurementInquiryDrawer — wizard chrome", () => {
 });
 
 describe("CreateProcurementInquiryDrawer — zero companies", () => {
-	test("«Компания» field renders «Создать компанию» CTA when companies list is empty", async () => {
+	test("«Компания» field renders «Добавить компанию» CTA when companies list is empty", async () => {
 		companies = NO_COMPANIES;
 		renderDrawer();
-		await screen.findByRole("button", { name: /Создать компанию/i });
+		await screen.findByRole("button", { name: /Добавить компанию/i });
 		expect(screen.queryByRole("combobox", { name: "Компания" })).not.toBeInTheDocument();
 	});
 
-	test("clicking «Создать компанию» opens the nested CompanyCreationSheet", async () => {
+	test("clicking «Добавить компанию» opens the nested CompanyCreationSheet", async () => {
 		companies = NO_COMPANIES;
 		renderDrawer();
 		const user = userEvent.setup();
-		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		const cta = await screen.findByRole("button", { name: /Добавить компанию/i });
 		await user.click(cta);
 		expect(await screen.findByText("Новая компания")).toBeInTheDocument();
 	});
@@ -235,7 +238,7 @@ describe("CreateProcurementInquiryDrawer — zero companies", () => {
 		companies = NO_COMPANIES;
 		renderDrawer();
 		const user = userEvent.setup();
-		const cta = await screen.findByRole("button", { name: /Создать компанию/i });
+		const cta = await screen.findByRole("button", { name: /Добавить компанию/i });
 		await user.click(cta);
 
 		// New flow: INN lookup populates the company; address is prefilled from DaData.
@@ -243,7 +246,7 @@ describe("CreateProcurementInquiryDrawer — zero companies", () => {
 		// valid 10/12-digit INN.
 		await user.type(screen.getByLabelText("ИНН"), "7700001234");
 		await screen.findByTestId("lookup-matched");
-		await user.click(screen.getByRole("button", { name: "Создать компанию" }));
+		await user.click(screen.getByRole("button", { name: "Добавить компанию" }));
 
 		await screen.findByRole("combobox", { name: "Компания" });
 	});

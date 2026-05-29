@@ -15,10 +15,13 @@ function makeSeed(id: string, name: string, inn: string): Company {
 		id,
 		name,
 		shortName: name,
+		fullName: name,
 		inn,
 		kpp: "",
 		ogrn: "",
 		directorName: "",
+		phoneNumber: "",
+		email: "",
 		website: "",
 		additionalComments: "",
 		isMain: false,
@@ -60,7 +63,7 @@ describe("CompanyCreationSheet", () => {
 
 	test("submit button is disabled while no match", () => {
 		renderSheet();
-		const submit = screen.getByRole("button", { name: /Создать компанию/ });
+		const submit = screen.getByRole("button", { name: /Добавить компанию/ });
 		expect(submit).toBeDisabled();
 	});
 
@@ -105,7 +108,7 @@ describe("CompanyCreationSheet", () => {
 		const dup = await screen.findByTestId("lookup-duplicate");
 		expect(dup).toHaveTextContent("Существующая");
 		expect(screen.queryByLabelText("Дополнительные комментарии для агента")).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /Создать компанию/ })).toBeDisabled();
+		expect(screen.getByRole("button", { name: /Добавить компанию/ })).toBeDisabled();
 	});
 
 	test("renders the error state for the reserved upstream-down INN", async () => {
@@ -123,7 +126,7 @@ describe("CompanyCreationSheet", () => {
 		await user.type(screen.getByLabelText("ИНН"), "7700001234");
 		await screen.findByTestId("lookup-matched");
 
-		await user.click(screen.getByRole("button", { name: /Создать компанию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
 
 		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
 		const payload = onSubmit.mock.calls[0][0] as CreateCompanyPayload;
@@ -151,10 +154,30 @@ describe("CompanyCreationSheet", () => {
 		expect(matched).not.toHaveTextContent("Сайт");
 
 		await user.type(screen.getByLabelText("Сайт"), "example.ru");
-		await user.click(screen.getByRole("button", { name: /Создать компанию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
 
 		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
 		expect((onSubmit.mock.calls[0][0] as CreateCompanyPayload).website).toBe("example.ru");
+	});
+
+	test("phone/email come from DaData: shown in the card, no editable inputs, threaded through submit", async () => {
+		renderSheet();
+		const user = userEvent.setup();
+		await user.type(screen.getByLabelText("ИНН"), "7700001234");
+		const matched = await screen.findByTestId("lookup-matched");
+
+		// DaData phone/email surface in the identity card next to ОГРН/КПП…
+		expect(matched).toHaveTextContent("+7 495 123-45-67");
+		expect(matched).toHaveTextContent("info@test-1234.ru");
+		// …and are no longer editable inputs in the form.
+		expect(screen.queryByLabelText("Контактный номер")).not.toBeInTheDocument();
+		expect(screen.queryByLabelText("Электронная почта")).not.toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+		const payload = onSubmit.mock.calls[0][0] as CreateCompanyPayload;
+		expect(payload.phoneNumber).toBe("+7 495 123-45-67");
+		expect(payload.email).toBe("info@test-1234.ru");
 	});
 
 	test("submit is blocked when the legal address has been cleared and no other address is given", async () => {
@@ -165,7 +188,7 @@ describe("CompanyCreationSheet", () => {
 
 		const addressInput = screen.getByLabelText("Адрес");
 		await user.clear(addressInput);
-		await user.click(screen.getByRole("button", { name: /Создать компанию/ }));
+		await user.click(screen.getByRole("button", { name: /Добавить компанию/ }));
 
 		expect(onSubmit).not.toHaveBeenCalled();
 		expect(screen.getByRole("alert")).toHaveTextContent(/Укажите хотя/);

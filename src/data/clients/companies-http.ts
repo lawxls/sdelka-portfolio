@@ -47,6 +47,8 @@ function buildListQuery(params: ListCompaniesParams): string {
 		const field = ORDERING_BY_SORT[params.sort];
 		sp.set("ordering", params.dir === "desc" ? `-${field}` : field);
 	}
+	// camelCase to match the API's camelCase wire convention (mirrors AddressFilter.isMain).
+	if (params.isArchived !== undefined) sp.set("isArchived", String(params.isArchived));
 	if (params.cursor) sp.set("cursor", params.cursor);
 	if (params.limit !== undefined) sp.set("pageSize", String(params.limit));
 	const qs = sp.toString();
@@ -103,10 +105,13 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 				body: {
 					name: data.name,
 					shortName: data.shortName,
+					fullName: data.fullName,
 					inn: data.inn,
 					kpp: data.kpp,
 					ogrn: data.ogrn,
 					directorName: data.directorName,
+					phoneNumber: data.phoneNumber ?? "",
+					email: data.email ?? "",
 					website: data.website ?? "",
 					additionalComments: data.additionalComments ?? "",
 				},
@@ -130,6 +135,8 @@ export function createHttpCompaniesClient(http: HttpClient = defaultHttpClient):
 
 		update: (id, data) => http.patch<Company>(`/companies/${enc(id)}/`, { body: data }),
 		archive: (id) => http.post<void>(`/companies/${enc(id)}/archive/`),
+
+		unarchive: (id) => http.post<void>(`/companies/${enc(id)}/unarchive/`),
 		delete: (id) => http.delete<void>(`/companies/${enc(id)}/`),
 
 		async createAddress(companyId: string, data: CreateAddressData): Promise<Address> {
