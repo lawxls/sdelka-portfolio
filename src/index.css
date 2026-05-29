@@ -363,6 +363,9 @@ tbody tr.negotiating-stripe:hover {
 	}
 	html {
 		@apply font-sans;
+		/* Default UI scale. Everything is rem-based, so this lifts text,
+		   spacing, sizing, and radii by 10% in one place. */
+		font-size: 110%;
 		height: 100%;
 		letter-spacing: -0.02em;
 		-webkit-font-smoothing: antialiased;
