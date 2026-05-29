@@ -12,13 +12,43 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
+import type { CurrentEmployee } from "@/data/domains/profile";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import { _setSupplierMockDelay } from "@/data/supplier-mock-data";
 import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
 import type { Folder, ProcurementInquiry, ProcurementItem } from "@/data/types";
 import { makeItem, makeProcurementInquiry as makeProcurementInquiryFixture, makeTask } from "@/test-utils";
+
+const VIEW_ONLY_ME: CurrentEmployee = {
+	id: 2,
+	email: "viewer@example.ru",
+	firstName: "В",
+	lastName: "Зритель",
+	patronymic: "",
+	phone: "",
+	position: "",
+	avatarIcon: "blue",
+	mailingAllowed: true,
+	emailSignature: "",
+	dateJoined: "2024-01-15T10:00:00Z",
+	role: "user",
+	isWorkspaceOwner: false,
+	permissions: {
+		id: "perm-2",
+		employeeId: "2",
+		procurementInquiries: "view",
+		positions: "view",
+		tasks: "view",
+		workspaceSettings: "view",
+		companies: "view",
+		employees: "view",
+		emails: "view",
+	},
+};
+
 import { ProcurementInquiryDetailPage } from "./procurement-inquiry-detail-page";
 
 const FOLDERS: Folder[] = [{ id: "folder-packaging", name: "Упаковка", color: "blue" }];
@@ -31,9 +61,10 @@ interface RenderOpts {
 	procurementInquiries?: ProcurementInquiry[];
 	items?: ProcurementItem[];
 	slug: string;
+	me?: CurrentEmployee;
 }
 
-function renderPage({ procurementInquiries = [], items = [], slug }: RenderOpts) {
+function renderPage({ procurementInquiries = [], items = [], slug, me }: RenderOpts) {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
 	});
@@ -54,6 +85,7 @@ function renderPage({ procurementInquiries = [], items = [], slug }: RenderOpts)
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: inquiriesWithItems }),
 				folders: testFoldersClient(FOLDERS),
+				profile: createInMemoryProfileClient(me ? { me } : undefined),
 			}}
 		>
 			<TooltipProvider>
@@ -118,6 +150,25 @@ describe("ProcurementInquiryDetailPage", () => {
 		expect(screen.getByTestId("procurement-inquiry-item-item-2")).toBeInTheDocument();
 	});
 
+	test("view-only user (no inquiries-edit) gets no Информация pens nor «Добавить текущего поставщика»", async () => {
+		renderPage({
+			procurementInquiries: [makeProcurementInquiry("T-001")],
+			items: [
+				makeItem("item-1", { procurementInquiryId: "T-001", name: "Позиция 1", currentPrice: 100, annualQuantity: 50 }),
+			],
+			slug: "T-001",
+			me: VIEW_ONLY_ME,
+		});
+
+		await screen.findByRole("heading", { name: "Запрос T-001" });
+		fireEvent.click(screen.getByRole("tab", { name: "Информация" }));
+		await waitFor(() => expect(screen.getByTestId("procurement-inquiry-tab-details")).toBeInTheDocument());
+
+		expect(screen.queryByRole("button", { name: "Редактировать основное" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Добавить текущего поставщика" })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Редактировать дополнительные вопросы" })).not.toBeInTheDocument();
+	});
+
 	test("Вопросы tab renders tasks for the procurementInquiry; clicking a row opens the task drawer", async () => {
 		const queryClient = new QueryClient({
 			defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -140,6 +191,7 @@ describe("ProcurementInquiryDetailPage", () => {
 					tasks: createInMemoryTasksClient({ seed: [taskForT1, taskForOther] }),
 					procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: [makeProcurementInquiry("T-001")] }),
 					folders: testFoldersClient(FOLDERS),
+					profile: createInMemoryProfileClient(),
 				}}
 			>
 				<TooltipProvider>

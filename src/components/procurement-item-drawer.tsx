@@ -40,6 +40,7 @@ import {
 	type CurrentSupplierDraft,
 } from "@/components/use-create-procurement-inquiry-form";
 import { useSelectSupplierForItem, useSetCurrentSupplierFromQuote } from "@/data/operations/use-procurement-operations";
+import { moduleForItem } from "@/data/permissions";
 import {
 	SUPPLIER_STATUSES,
 	type SupplierCompanyType,
@@ -61,6 +62,7 @@ import {
 	useUnarchiveSuppliers,
 } from "@/data/use-suppliers";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatRussianPlural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -316,6 +318,8 @@ function SuppliersTabPanel({
 	const { data: itemDetail } = useItemDetail(itemId);
 	const searchBlocked = itemDetail != null && getDisplayStatus(itemDetail) === "searching";
 	const currentSupplier = itemDetail?.currentSupplier;
+	// Inquiry-backed items gate on the inquiries module; standalone on positions.
+	const { guard: guardItem } = useModuleGuard(moduleForItem(itemDetail));
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "companyName", direction: "asc" });
 	const [activeCompanyTypes, setActiveCompanyTypes] = useState<SupplierCompanyType[]>([]);
@@ -496,13 +500,13 @@ function SuppliersTabPanel({
 				onStatusFilter={handleStatusFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={handleArchiveBatch}
+				onArchive={guardItem(handleArchiveBatch)}
 				isArchiving={archiveMutation.isPending}
-				onArchiveSupplier={handleArchiveSupplier}
-				onUnarchiveSupplier={handleUnarchiveSupplier}
-				onSendRequest={handleSendRequest}
-				onSendRequestBatch={handleSendRequestBatch}
-				onSendRequestAll={handleSendRequestAll}
+				onArchiveSupplier={guardItem(handleArchiveSupplier)}
+				onUnarchiveSupplier={guardItem(handleUnarchiveSupplier)}
+				onSendRequest={guardItem(handleSendRequest)}
+				onSendRequestBatch={guardItem(handleSendRequestBatch)}
+				onSendRequestAll={guardItem(handleSendRequestAll)}
 				showArchived={showArchived}
 				onToggleArchived={handleToggleArchived}
 				hasNextPage={query.hasNextPage}
@@ -578,16 +582,20 @@ function OffersTabPanel({
 	const currentSupplier = itemDetail?.currentSupplier;
 	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+	// Items inside an inquiry are gated by the inquiries module; standalone
+	// positions by the positions module — mirrors the backend.
+	const { canEdit: canEditItem, guard: guardItem } = useModuleGuard(moduleForItem(itemDetail));
 
-	const placeholderPinnedRows: DataTablePlaceholderRow[] = currentSupplier
-		? []
-		: [
-				{
-					id: `add-supplier-${itemId}`,
-					onClick: () => setSupplierDialogOpen(true),
-					content: <AddSupplierPlaceholderCell />,
-				},
-			];
+	const placeholderPinnedRows: DataTablePlaceholderRow[] =
+		currentSupplier || !canEditItem
+			? []
+			: [
+					{
+						id: `add-supplier-${itemId}`,
+						onClick: () => setSupplierDialogOpen(true),
+						content: <AddSupplierPlaceholderCell />,
+					},
+				];
 
 	function handleSaveSupplier(draft: CurrentSupplierDraft) {
 		updateSupplierMutation.mutate({ id: itemId, currentSupplier: buildCurrentSupplierFromDraft(draft) });
@@ -685,9 +693,9 @@ function OffersTabPanel({
 				onDeliveryFilter={handleDeliveryFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={() => handleArchive()}
+				onArchive={guardItem(() => handleArchive())}
 				isArchiving={archiveMutation.isPending}
-				onArchiveSupplier={(id) => handleArchive([id])}
+				onArchiveSupplier={guardItem((id: string) => handleArchive([id]))}
 				onSelectSupplier={onSelectSupplier}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}

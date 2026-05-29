@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
 import { createInMemorySuppliersClient } from "@/data/clients/suppliers-in-memory";
 import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import { _setMockDelay } from "@/data/mock-utils";
@@ -80,6 +81,7 @@ function renderDrawer(initialEntries: string[] = ["/positions?item=item-1"]) {
 				tasks: createInMemoryTasksClient({ seed: [] }),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
 				folders: testFoldersClient(),
+				profile: createInMemoryProfileClient(),
 			}}
 		>
 			<TooltipProvider>

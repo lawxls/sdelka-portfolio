@@ -46,6 +46,16 @@ export function canEdit(me: CurrentEmployee | null | undefined, module: Permissi
 }
 
 /**
+ * Which permission module gates editing a given procurement item: items that
+ * belong to an inquiry are gated by the inquiries module, standalone positions
+ * by the positions module. Single source of truth mirroring the backend's
+ * `ProcurementItemViewSet.get_permission_module`.
+ */
+export function moduleForItem(item: { procurementInquiryId?: string | null } | null | undefined): PermissionModuleKey {
+	return item?.procurementInquiryId ? "procurementInquiries" : "positions";
+}
+
+/**
  * Walks the fixed nav order and returns the first module path the user can view.
  * Falls back to `/settings/profile` when no module is viewable — the profile
  * page isn't gated, so it's always reachable.

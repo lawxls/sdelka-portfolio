@@ -1,17 +1,25 @@
 import { useMemo, useState } from "react";
+import { CurrentSupplierDialog } from "@/components/current-supplier-dialog";
 import { CardGrid, FieldCard, DetailSection as Section, ValueText } from "@/components/detail-section";
 import { FolderSelect } from "@/components/ui/folder-select";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	buildCurrentSupplierDraft,
+	buildCurrentSupplierFromDraft,
+} from "@/components/use-create-procurement-inquiry-form";
 import type { ProcurementInquiry } from "@/data/domains/procurement-inquiries";
-import type { ProcurementItem, Unit, UnloadingType } from "@/data/types";
-import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS, UNLOADING_LABELS } from "@/data/types";
+import { moduleForItem } from "@/data/permissions";
+import type { ProcurementItem, Unit } from "@/data/types";
+import { DELIVERY_COST_TYPE_LABELS, formatPaymentType, UNITS } from "@/data/types";
 import { useCompanyDetail } from "@/data/use-company-detail";
 import { nextUnusedColor, useCreateFolder, useFolders } from "@/data/use-folders";
 import { useItemDetail, useUpdateItemDetail } from "@/data/use-item-detail";
+import { useUpdateItemCurrentSupplier } from "@/data/use-items";
 import { useProcurementInquiry, useUpdateProcurementInquiry } from "@/data/use-procurement-inquiries";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import { formatCurrency, toNumberOrUndefined } from "@/lib/format";
 
 interface DetailsTabPanelProps {
@@ -47,23 +55,23 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 	// inquiry detail page in a later slice. Manual-add items skip the inquiry
 	// and stamp company/category onto the item itself — fall back to those.
 	const { data: procurementInquiry } = useProcurementInquiry(item?.procurementInquiryId ?? null);
+	// Editing an item inside an inquiry is gated by the inquiries module; a
+	// standalone position is gated by the positions module — mirrors the backend.
+	const { canEdit } = useModuleGuard(moduleForItem(item));
 	const effectiveCompanyId = item?.companyId ?? procurementInquiry?.companyId ?? null;
 	const effectiveFolderId = item?.folderId ?? procurementInquiry?.folderId ?? null;
 	const { data: company } = useCompanyDetail(effectiveCompanyId);
 	const updateMutation = useUpdateItemDetail();
 	const updateInquiryMutation = useUpdateProcurementInquiry();
+	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const createFolderMutation = useCreateFolder();
 	const nextFolderColor = useMemo(() => nextUnusedColor(folders), [folders]);
 
 	const [editingInfo, setEditingInfo] = useState(false);
 	const [infoForm, setInfoForm] = useState<InfoFormState | null>(null);
+	const [editingSupplier, setEditingSupplier] = useState(false);
 
 	const folder = useMemo(() => folders.find((f) => f.id === effectiveFolderId), [folders, effectiveFolderId]);
-
-	const addressText = useMemo(() => {
-		if (!procurementInquiry?.deliveryAddressId || !company?.addresses) return "";
-		return company.addresses.find((a) => a.id === procurementInquiry.deliveryAddressId)?.address ?? "";
-	}, [procurementInquiry?.deliveryAddressId, company?.addresses]);
 
 	if (isLoading) {
 		return (
@@ -112,6 +120,13 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		);
 	}
 
+	function handleSaveSupplier(draft: Parameters<typeof buildCurrentSupplierFromDraft>[0]) {
+		updateSupplierMutation.mutate(
+			{ id: itemId, currentSupplier: buildCurrentSupplierFromDraft(draft) },
+			{ onSuccess: () => setEditingSupplier(false) },
+		);
+	}
+
 	function handleSaveInfo() {
 		if (!infoForm) return;
 		const data: Record<string, unknown> = {};
@@ -123,14 +138,25 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 		const aq = toNumberOrUndefined(infoForm.annualQuantity);
 		if (aq !== undefined && aq !== currentItem.annualQuantity) data.annualQuantity = aq;
 
-		const folderChanged = procurementInquiry && infoForm.folderId !== (procurementInquiry.folderId ?? null);
+		// «Категория»: persist only when the user actually changed it — compare
+		// against the value shown on open (`effectiveFolderId`), not the inquiry's,
+		// so saving an unrelated field never rewrites the folder. A standalone
+		// item — or an inquiry-backed item that carries its own folder (e.g. one
+		// attached from /positions) — owns its folderId; a pure inquiry item
+		// inherits the parent inquiry's folder.
+		const folderChanged = infoForm.folderId !== effectiveFolderId;
+		const itemOwnsFolder = !procurementInquiry || currentItem.folderId != null;
+		if (folderChanged && itemOwnsFolder) {
+			data.folderId = infoForm.folderId;
+		}
+		const inquiryFolderChanged = folderChanged && !itemOwnsFolder && procurementInquiry != null;
 		const hasItemChanges = Object.keys(data).length > 0;
 
 		const pending: Promise<unknown>[] = [];
 		if (hasItemChanges) {
 			pending.push(updateMutation.mutateAsync({ id: itemId, ...data } as Parameters<typeof updateMutation.mutate>[0]));
 		}
-		if (folderChanged && procurementInquiry) {
+		if (inquiryFolderChanged && procurementInquiry) {
 			pending.push(
 				updateInquiryMutation.mutateAsync({ id: procurementInquiry.id, patch: { folderId: infoForm.folderId } }),
 			);
@@ -171,9 +197,9 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 			{/* --- Основное --- */}
 			<Section
 				title="Основное"
-				editLabel="Редактировать основную информацию"
+				editLabel={canEdit ? "Редактировать основную информацию" : undefined}
 				editing={isEditingInfo}
-				onEdit={handleEditInfo}
+				onEdit={canEdit ? handleEditInfo : undefined}
 				onCancel={handleCancel}
 				onSave={handleSaveInfo}
 				saveDisabled={!isInfoDirty() || (infoForm?.name.trim() ?? "") === "" || isSavingInfo}
@@ -185,7 +211,7 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 
 					<FieldCard label="Категория">
-						{isEditingInfo && procurementInquiry ? (
+						{isEditingInfo ? (
 							<FolderSelect
 								folders={folders}
 								value={infoForm.folderId}
@@ -278,33 +304,12 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</CardGrid>
 			</Section>
 
-			{/* --- Логистика (read-only, owned by parent inquiry) --- */}
-			<Section title="Логистика" editing={false}>
-				<CardGrid>
-					<FieldCard label="Разгрузка">
-						<ValueText
-							value={
-								procurementInquiry?.unloading ? UNLOADING_LABELS[procurementInquiry.unloading as UnloadingType] : ""
-							}
-						/>
-					</FieldCard>
-
-					<FieldCard label="Адрес доставки" span="full">
-						<ValueText value={addressText} />
-					</FieldCard>
-				</CardGrid>
-			</Section>
-
 			{/* --- Дополнительно (read-only, owned by parent inquiry) --- */}
 			{procurementInquiry && (
 				<Section title="Дополнительно" editing={false}>
 					<CardGrid>
 						<FieldCard label="Условия" span="half">
 							<ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-								<li>
-									<span className="text-muted-foreground">Допускается оплата наличными:</span>{" "}
-									{yesNo(procurementInquiry.cashAllowed)}
-								</li>
 								<li>
 									<span className="text-muted-foreground">Аналоги допускаются:</span>{" "}
 									{yesNo(!procurementInquiry.analoguesNotAllowed)}
@@ -319,8 +324,13 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 				</Section>
 			)}
 
-			{/* --- Ваш поставщик (read-only, owned by parent inquiry) --- */}
-			<Section title="Ваш поставщик" editing={false}>
+			{/* --- Ваш поставщик (edited via the current-supplier dialog) --- */}
+			<Section
+				title="Ваш поставщик"
+				editLabel={canEdit ? "Редактировать текущего поставщика" : undefined}
+				editing={false}
+				onEdit={canEdit ? () => setEditingSupplier(true) : undefined}
+			>
 				<CardGrid>
 					<FieldCard label="Название">
 						<ValueText value={currentSupplier?.companyName ?? ""} />
@@ -362,6 +372,15 @@ export function DetailsTabPanel({ itemId }: DetailsTabPanelProps) {
 					</FieldCard>
 				</CardGrid>
 			</Section>
+
+			{editingSupplier && (
+				<CurrentSupplierDialog
+					open
+					onOpenChange={setEditingSupplier}
+					initial={currentSupplier ? buildCurrentSupplierDraft(currentSupplier) : undefined}
+					onSave={handleSaveSupplier}
+				/>
+			)}
 		</div>
 	);
 }

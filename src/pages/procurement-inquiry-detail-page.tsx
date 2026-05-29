@@ -78,6 +78,7 @@ import {
 import { useTaskColumns, useUpdateTaskStatus } from "@/data/use-tasks";
 import { useClientPagination } from "@/hooks/use-client-pagination";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useModuleGuard } from "@/hooks/use-module-guard";
 import {
 	formatCurrency,
 	formatDayMonthShort,
@@ -459,13 +460,16 @@ function ProcurementInquiryDrawerBody({
 		setIsEditingName(false);
 	}
 
+	const { guard: guardInquiry } = useModuleGuard("procurementInquiries");
 	const handleAddSupplier = useCallback(() => {
-		if (itemsWithoutSupplier.length === 1) {
-			setDialogItemId(itemsWithoutSupplier[0].id);
-			return;
-		}
-		setPickerOpen(true);
-	}, [itemsWithoutSupplier]);
+		guardInquiry(() => {
+			if (itemsWithoutSupplier.length === 1) {
+				setDialogItemId(itemsWithoutSupplier[0].id);
+				return;
+			}
+			setPickerOpen(true);
+		})();
+	}, [guardInquiry, itemsWithoutSupplier]);
 
 	function handlePickItem(itemId: string) {
 		setPickerOpen(false);
@@ -819,6 +823,7 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 	const unarchiveMutation = useUnarchiveSuppliers();
 	const sendRequestMutation = useSendSupplierRequest();
 	const createSupplierMutation = useCreateSupplier();
+	const { guard: guardInquiry } = useModuleGuard("procurementInquiries");
 	const [addDialogOpen, setAddDialogOpen] = useState(false);
 
 	const [search, setSearch] = useState("");
@@ -1032,14 +1037,14 @@ function ProcurementInquiryConsolidatedSuppliersPanel({
 				statusCounts={statusCounts}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={handleArchiveBatch}
+				onArchive={guardInquiry(handleArchiveBatch)}
 				isArchiving={archiveMutation.isPending}
-				onArchiveSupplier={handleArchiveSupplier}
-				onUnarchiveSupplier={handleUnarchiveSupplier}
-				onSendRequest={handleSendRequest}
-				onSendRequestBatch={handleSendRequestBatch}
-				onSendRequestAll={handleSendRequestAll}
-				onAddSupplier={() => setAddDialogOpen(true)}
+				onArchiveSupplier={guardInquiry(handleArchiveSupplier)}
+				onUnarchiveSupplier={guardInquiry(handleUnarchiveSupplier)}
+				onSendRequest={guardInquiry(handleSendRequest)}
+				onSendRequestBatch={guardInquiry(handleSendRequestBatch)}
+				onSendRequestAll={guardInquiry(handleSendRequestAll)}
+				onAddSupplier={guardInquiry(() => setAddDialogOpen(true))}
 				showArchived={showArchived}
 				onToggleArchived={() => {
 					setShowArchived((v) => !v);
@@ -1087,6 +1092,7 @@ function ProcurementInquiryConsolidatedOffersPanel({
 	const itemIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 	const { data: allSuppliers = [], isLoading } = useAllSuppliers();
 	const archiveMutation = useArchiveSuppliers();
+	const { guard: guardInquiry } = useModuleGuard("procurementInquiries");
 
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SupplierSortState>({ field: "tco", direction: "asc" });
@@ -1244,9 +1250,9 @@ function ProcurementInquiryConsolidatedOffersPanel({
 				onDeliveryFilter={handleDeliveryFilter}
 				selectedIds={selectedIds}
 				onSelectionChange={handleSelectionChange}
-				onArchive={handleArchive}
+				onArchive={guardInquiry(handleArchive)}
 				isArchiving={archiveMutation.isPending}
-				onArchiveSupplier={handleArchiveSupplier}
+				onArchiveSupplier={guardInquiry(handleArchiveSupplier)}
 				showArchived={showArchived}
 				onToggleArchived={() => setShowArchived((v) => !v)}
 				procurementInquiryItems={items}
@@ -1486,7 +1492,10 @@ function ProcurementInquiryDetailsTab({
 	status: ProcurementInquiryStatus;
 }) {
 	const { data: company } = useCompanyDetail(procurementInquiry.companyId ?? null);
-	const inquiryEditable = RFQ_EDITABLE_STATUSES.has(status);
+	// Editing inquiry meta / positions requires both an editable status AND the
+	// inquiries-edit permission. View-only users see read-only sections (no pens).
+	const { canEdit: canEditInquiry } = useModuleGuard("procurementInquiries");
+	const inquiryEditable = canEditInquiry && RFQ_EDITABLE_STATUSES.has(status);
 
 	const updateSupplierMutation = useUpdateItemCurrentSupplier();
 	const [activeSupplierItemId, setActiveSupplierItemId] = useState<string | null>(null);
@@ -1521,7 +1530,7 @@ function ProcurementInquiryDetailsTab({
 								key={item.id}
 								item={item}
 								index={index}
-								editable={inquiryEditable || item.status === "ready_for_analytics"}
+								editable={canEditInquiry && (inquiryEditable || item.status === "ready_for_analytics")}
 								onEditSupplier={() => setActiveSupplierItemId(item.id)}
 								onRemoveSupplier={() => handleRemoveSupplier(item.id)}
 							/>
@@ -1538,7 +1547,7 @@ function ProcurementInquiryDetailsTab({
 
 			<ProcurementInquiryRfqSection procurementInquiry={procurementInquiry} editable={inquiryEditable} />
 
-			<ProcurementInquiryGeneratedQuestionsSection procurementInquiry={procurementInquiry} />
+			<ProcurementInquiryGeneratedQuestionsSection procurementInquiry={procurementInquiry} editable={canEditInquiry} />
 
 			<ProcurementInquiryAdditionalSection procurementInquiry={procurementInquiry} editable={inquiryEditable} />
 
@@ -1972,8 +1981,10 @@ function ProcurementInquiryRfqSection({
 
 function ProcurementInquiryGeneratedQuestionsSection({
 	procurementInquiry,
+	editable,
 }: {
 	procurementInquiry: ProcurementInquiry;
+	editable: boolean;
 }) {
 	const updateMutation = useUpdateProcurementInquiry();
 	const questions = procurementInquiry.generatedQuestions;
@@ -2012,9 +2023,9 @@ function ProcurementInquiryGeneratedQuestionsSection({
 	return (
 		<Section
 			title="Дополнительные вопросы"
-			editLabel="Редактировать дополнительные вопросы"
+			editLabel={editable ? "Редактировать дополнительные вопросы" : undefined}
 			editing={editing}
-			onEdit={handleEdit}
+			onEdit={editable ? handleEdit : undefined}
 			onCancel={handleCancel}
 			onSave={handleSave}
 			saveDisabled={!dirty || updateMutation.isPending}
@@ -2198,8 +2209,12 @@ function ProcurementInquiryPositionCard({
 				</>
 			)}
 			{supplier ? (
-				<CurrentSupplierInlineSummary supplier={supplier} onEdit={onEditSupplier} onRemove={onRemoveSupplier} />
-			) : (
+				<CurrentSupplierInlineSummary
+					supplier={supplier}
+					onEdit={editable ? onEditSupplier : undefined}
+					onRemove={editable ? onRemoveSupplier : undefined}
+				/>
+			) : editable ? (
 				<Button
 					type="button"
 					variant="outline"
@@ -2210,7 +2225,7 @@ function ProcurementInquiryPositionCard({
 					<Plus aria-hidden="true" className="size-4" />
 					Добавить текущего поставщика
 				</Button>
-			)}
+			) : null}
 			{editing && (
 				<div className="flex justify-end gap-2">
 					<Button type="button" variant="outline" size="sm" onClick={handleCancel}>
@@ -2245,8 +2260,9 @@ function CurrentSupplierInlineSummary({
 	onRemove,
 }: {
 	supplier: NonNullable<ProcurementItem["currentSupplier"]>;
-	onEdit: () => void;
-	onRemove: () => void;
+	/** Omitted for view-only users — the edit/remove controls hide. */
+	onEdit?: () => void;
+	onRemove?: () => void;
 }) {
 	return (
 		<div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/60 p-3 dark:bg-input/20">
@@ -2262,21 +2278,27 @@ function CurrentSupplierInlineSummary({
 						<span className="text-xs text-muted-foreground tabular-nums">ИНН {supplier.inn}</span>
 					)}
 				</div>
-				<div className="flex shrink-0 items-center gap-1">
-					<Button type="button" variant="ghost" size="sm" onClick={onEdit}>
-						Изменить
-					</Button>
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon-sm"
-						onClick={onRemove}
-						aria-label="Удалить текущего поставщика"
-						className="relative text-muted-foreground hover:text-foreground before:absolute before:-inset-1.5 before:content-['']"
-					>
-						<X aria-hidden="true" className="size-4" />
-					</Button>
-				</div>
+				{(onEdit || onRemove) && (
+					<div className="flex shrink-0 items-center gap-1">
+						{onEdit && (
+							<Button type="button" variant="ghost" size="sm" onClick={onEdit}>
+								Изменить
+							</Button>
+						)}
+						{onRemove && (
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon-sm"
+								onClick={onRemove}
+								aria-label="Удалить текущего поставщика"
+								className="relative text-muted-foreground hover:text-foreground before:absolute before:-inset-1.5 before:content-['']"
+							>
+								<X aria-hidden="true" className="size-4" />
+							</Button>
+						)}
+					</div>
+				)}
 			</div>
 			<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
 				<span className="text-muted-foreground">

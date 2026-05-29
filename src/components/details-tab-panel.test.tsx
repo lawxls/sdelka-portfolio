@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { createInMemoryCompaniesClient } from "@/data/clients/companies-in-memory";
 import { createInMemoryItemsClient } from "@/data/clients/items-in-memory";
 import { createInMemoryProcurementInquiriesClient } from "@/data/clients/procurement-inquiries-in-memory";
+import { createInMemoryProfileClient } from "@/data/clients/profile-in-memory";
+import type { CurrentEmployee } from "@/data/domains/profile";
 import { _setMockDelay } from "@/data/mock-utils";
 import { SEED_ITEMS } from "@/data/seeds/items";
 import { TestClientsProvider, testFoldersClient } from "@/data/test-clients-provider";
@@ -23,7 +25,7 @@ const TEST_INQUIRIES = [
 
 let queryClient: QueryClient;
 
-function renderPanel(itemId = "item-1") {
+function renderPanel(itemId = "item-1", me?: CurrentEmployee) {
 	return render(
 		<TestClientsProvider
 			queryClient={queryClient}
@@ -32,6 +34,7 @@ function renderPanel(itemId = "item-1") {
 				items: createInMemoryItemsClient({ seed: SEED_ITEMS }),
 				folders: testFoldersClient(),
 				procurementInquiries: createInMemoryProcurementInquiriesClient({ seed: TEST_INQUIRIES }),
+				profile: createInMemoryProfileClient(me ? { me } : undefined),
 			}}
 		>
 			<DetailsTabPanel itemId={itemId} />
@@ -47,7 +50,7 @@ beforeEach(() => {
 });
 
 describe("DetailsTabPanel", () => {
-	test("renders the four item-drawer sections in order (no per-item Ответы — those moved to the inquiry detail)", async () => {
+	test("renders the item-drawer sections in order (Логистика removed; no per-item Ответы)", async () => {
 		renderPanel();
 
 		// Wait for the parent inquiry to load — Дополнительно gates on inquiry data.
@@ -56,7 +59,8 @@ describe("DetailsTabPanel", () => {
 		});
 
 		const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-		expect(headings).toEqual(["Основное", "Логистика", "Дополнительно", "Ваш поставщик"]);
+		expect(headings).toEqual(["Основное", "Дополнительно", "Ваш поставщик"]);
+		expect(screen.queryByText("Логистика")).not.toBeInTheDocument();
 		expect(screen.queryByText("Ответы на уточнения")).not.toBeInTheDocument();
 	});
 
@@ -71,18 +75,54 @@ describe("DetailsTabPanel", () => {
 		expect(screen.getByText("Полотно ПВД 2600 мм")).toBeInTheDocument();
 	});
 
-	test("shows section-level edit button only for the item-level Основное section", async () => {
+	test("shows edit buttons for the editable Основное and Ваш поставщик sections (with edit rights)", async () => {
 		renderPanel();
 
 		await waitFor(() => {
 			expect(screen.getByText("Основное")).toBeInTheDocument();
 		});
 
-		// Inquiry-level sections are read-only here; clarifications moved off the item.
 		expect(screen.getByRole("button", { name: "Редактировать основную информацию" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Редактировать текущего поставщика" })).toBeInTheDocument();
+		// Дополнительно stays read-only; clarifications moved off the item.
 		expect(screen.queryByRole("button", { name: "Редактировать ответы на уточнения" })).not.toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: "Редактировать логистику и финансы" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Редактировать дополнительно" })).not.toBeInTheDocument();
+	});
+
+	test("hides edit pens when the user lacks edit rights for the module", async () => {
+		const viewOnly: CurrentEmployee = {
+			id: 2,
+			email: "viewer@example.ru",
+			firstName: "В",
+			lastName: "Зритель",
+			patronymic: "",
+			phone: "",
+			position: "",
+			avatarIcon: "blue",
+			mailingAllowed: true,
+			emailSignature: "",
+			dateJoined: "2024-01-15T10:00:00Z",
+			role: "user",
+			isWorkspaceOwner: false,
+			permissions: {
+				id: "perm-2",
+				employeeId: "2",
+				procurementInquiries: "view",
+				positions: "view",
+				tasks: "view",
+				workspaceSettings: "view",
+				companies: "view",
+				employees: "view",
+				emails: "view",
+			},
+		};
+		renderPanel("item-1", viewOnly);
+
+		await waitFor(() => {
+			expect(screen.getByText("Основное")).toBeInTheDocument();
+		});
+
+		expect(screen.queryByRole("button", { name: "Редактировать основную информацию" })).not.toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: "Редактировать текущего поставщика" })).not.toBeInTheDocument();
 	});
 
