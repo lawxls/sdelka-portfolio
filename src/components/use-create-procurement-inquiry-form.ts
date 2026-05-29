@@ -86,6 +86,10 @@ export interface PositionDraft {
 	annualQuantity: string;
 	currentSupplier?: CurrentSupplierDraft;
 	attachments: File[];
+	/** Set when the draft came from «Выбрать позиции» — an EXISTING standalone
+	 * item. On submit it's attached to the inquiry (status → «Ищем
+	 * поставщиков») instead of recreated, and the card renders read-only. */
+	existingItemId?: string;
 }
 
 interface Step1State {
@@ -248,6 +252,8 @@ function buildProcurementInquiryInput(step1: Step1State, step3: Step3State): Inq
 export interface CreateProcurementInquiryPayload {
 	procurementInquiry: InquiryWithoutItems;
 	items: NewItemInput[];
+	/** Existing standalone positions to attach (vs. the recreated `items`). */
+	attachItemIds: string[];
 }
 
 type SharedStep1Key = Exclude<keyof Step1State, "positions">;
@@ -347,12 +353,23 @@ export function useCreateProcurementInquiryForm() {
 		invalidateGeneratedArtifacts();
 	}
 
-	/** Bulk-set positions — used when importing items from /positions.
-	 * Always leaves at least one position so cards never render empty. */
-	function setPositions(positions: PositionDraft[]) {
-		const next = positions.length > 0 ? positions : [defaultPosition()];
-		setStep1((prev) => ({ ...prev, positions: next }));
-		setStep1Errors((prev) => ({ ...prev, positions: next.map(() => ({})) }));
+	/** Append positions picked from «Выбрать позиции» (each carrying an
+	 * `existingItemId`). De-duped against already-attached ids; pristine empty
+	 * starter cards are dropped so a picked-only inquiry has no blank required
+	 * position. Typed-but-dirty cards are preserved (mixing is allowed). */
+	function appendAttachedPositions(attached: PositionDraft[]) {
+		let nextPositions: PositionDraft[] | null = null;
+		setStep1((prev) => {
+			const seen = new Set(prev.positions.map((p) => p.existingItemId).filter((id): id is string => Boolean(id)));
+			const additions = attached.filter((p) => p.existingItemId && !seen.has(p.existingItemId));
+			if (additions.length === 0) return prev;
+			const kept = prev.positions.filter((p) => p.existingItemId || isPositionDraftDirty(p));
+			nextPositions = [...kept, ...additions];
+			return { ...prev, positions: nextPositions };
+		});
+		if (!nextPositions) return;
+		const synced: PositionDraft[] = nextPositions;
+		setStep1Errors((prev) => ({ ...prev, positions: synced.map(() => ({})) }));
 		setTouched(true);
 		invalidateGeneratedArtifacts();
 	}
@@ -462,8 +479,11 @@ export function useCreateProcurementInquiryForm() {
 			answer: q.answer,
 		}));
 		if (generatedQuestions.length > 0) procurementInquiry.generatedQuestions = generatedQuestions;
-		const items = step1.positions.map((p) => buildNewItemInput(p, step1));
-		return { procurementInquiry, items };
+		// Picked existing positions are attached (by id); only typed-from-scratch
+		// positions are recreated as new items.
+		const items = step1.positions.filter((p) => !p.existingItemId).map((p) => buildNewItemInput(p, step1));
+		const attachItemIds = step1.positions.map((p) => p.existingItemId).filter((id): id is string => Boolean(id));
+		return { procurementInquiry, items, attachItemIds };
 	}
 
 	return {
@@ -477,7 +497,7 @@ export function useCreateProcurementInquiryForm() {
 		updatePosition,
 		addPosition,
 		removePosition,
-		setPositions,
+		appendAttachedPositions,
 		setGeneratedQuestions,
 		updateGeneratedAnswer,
 		update3,

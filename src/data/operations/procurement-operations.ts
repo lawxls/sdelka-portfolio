@@ -87,6 +87,10 @@ export async function setCurrentSupplierFromQuote(
 export interface CreateProcurementInquiryWithItemsInput {
 	procurementInquiry: Omit<CreateProcurementInquiryInput, "items">;
 	items: NewItemInput[];
+	/** Ids of existing standalone positions to ATTACH to the new inquiry
+	 * (reassign their inquiry FK + flip status to «Ищем поставщиков») rather
+	 * than recreating them. Picked via the «Выбрать позиции» dialog. */
+	attachItemIds?: string[];
 }
 
 export interface CreateProcurementInquiryWithItemsResult {
@@ -106,25 +110,30 @@ function toInquiryItemInput(item: NewItemInput): CreateProcurementInquiryItemInp
 
 /**
  * Atomic inquiry + items create. The backend `POST /procurement/inquiries/`
- * accepts items in the same request and creates both in one transaction —
- * an inquiry can never land in the "empty positions" state. Items inherit
- * the inquiry's `companyId`, so callers don't repeat it per item.
+ * recreates the typed `items` AND attaches the picked existing positions
+ * (`attachItemIds`) in one transaction — so the create is atomic, gated by
+ * the inquiries module, and an inquiry never lands in the "empty positions"
+ * state. Attached items inherit nothing; the backend validates they belong to
+ * the inquiry's company and flips them to «Ищем поставщиков».
  *
- * The `items` array must be non-empty; an empty submission is a UI bug
- * (the create drawer requires at least one named position).
+ * At least one of `items` / `attachItemIds` must be non-empty; a fully empty
+ * submission is a UI bug (the create drawer requires at least one position).
  */
 export async function createProcurementInquiryWithItems(
 	input: CreateProcurementInquiryWithItemsInput,
 	{ procurementInquiries }: Pick<ProcurementOperationsContext, "procurementInquiries">,
 ): Promise<CreateProcurementInquiryWithItemsResult> {
-	if (input.items.length === 0) {
+	const attachItemIds = input.attachItemIds ?? [];
+	if (input.items.length === 0 && attachItemIds.length === 0) {
 		throw new ValidationError({ items: ["Запрос должен содержать хотя бы одну позицию."] });
 	}
 	const procurementInquiry = await procurementInquiries.create({
 		...input.procurementInquiry,
 		items: input.items.map(toInquiryItemInput),
+		...(attachItemIds.length > 0 ? { attachItemIds } : {}),
 	});
-	return { procurementInquiry, items: [] };
+	const attached = (procurementInquiry.items ?? []).filter((it) => attachItemIds.includes(it.id));
+	return { procurementInquiry, items: attached };
 }
 
 /**

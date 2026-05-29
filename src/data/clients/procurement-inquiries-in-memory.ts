@@ -11,7 +11,9 @@ import {
 	type UpdateProcurementInquiryInput,
 } from "../domains/procurement-inquiries";
 import { NotFoundError } from "../errors";
+import { _patchItem } from "../items-mock-data";
 import { delay, nextId, paginate } from "../mock-utils";
+import type { ProcurementItem, ProcurementStatus } from "../types";
 import type { ProcurementInquiriesClient } from "./procurement-inquiries-client";
 
 /** Minimal fields a test fixture must provide; everything else is filled with
@@ -215,14 +217,28 @@ export function createInMemoryProcurementInquiriesClient(
 		async create(input: CreateProcurementInquiryInput): Promise<ProcurementInquiry> {
 			await delay();
 			const now = new Date().toISOString();
-			const { items, generatedQuestions: gqInput, ...rest } = input;
+			const { items, generatedQuestions: gqInput, attachItemIds = [], ...rest } = input;
 			const id = nextId("inquiry");
+			// Attach picked standalone positions: reassign their inquiry FK + flip
+			// status to «Ищем поставщиков» in the shared items store (mirrors the
+			// backend's atomic attach-at-create). Surface them inline so callers can
+			// read the attached items off the created inquiry.
+			const attached: ProcurementItem[] = [];
+			for (const itemId of attachItemIds) {
+				const patched = _patchItem(itemId, {
+					procurementInquiryId: id,
+					status: "searching" as ProcurementStatus,
+				});
+				if (patched) attached.push(patched);
+			}
 			const inquiry = fillDefaults({
 				...rest,
 				id,
-				name: mockGeneratedInquiryName(items),
+				name: mockGeneratedInquiryName(items.length > 0 ? items : attached.map((a) => ({ name: a.name }))),
 				createdAt: now,
 				updatedAt: now,
+				positionsCount: items.length + attached.length,
+				items: attached.length > 0 ? attached : undefined,
 				generatedQuestions: materializeGeneratedQuestions(id, gqInput),
 			});
 			store.unshift(inquiry);

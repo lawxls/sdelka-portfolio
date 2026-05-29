@@ -91,6 +91,9 @@ export type UpdateProcurementInquiryInput = Partial<Omit<ProcurementInquiry, "ge
 export interface CreateProcurementInquiryInput {
 	companyId: string;
 	items: CreateProcurementInquiryItemInput[];
+	/** Ids of EXISTING standalone positions to attach to the inquiry (reassigned
+	 * + flipped to «Ищем поставщиков» server-side) instead of recreated. */
+	attachItemIds?: string[];
 	folderId?: string | null;
 	copySuppliersFromInquiryId?: string | null;
 	status?: ProcurementInquiryStatus;

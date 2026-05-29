@@ -285,10 +285,12 @@ describe("createProcurementInquiryWithItems", () => {
 		// Item entries are stripped of FE-only fields (`paymentType` etc.) — the
 		// backend nested serializer accepts only the model's writable fields.
 		expect(payload.items[0]).not.toHaveProperty("paymentType");
+		// No picked positions → no attachItemIds in the payload.
+		expect(payload).not.toHaveProperty("attachItemIds");
 		expect(result.procurementInquiry.id).toBe("T-001");
 	});
 
-	it("rejects empty items with ValidationError — the BE refuses but the FE fails fast", async () => {
+	it("rejects a fully empty submission (no typed items and no attached positions)", async () => {
 		const procurementInquiriesCreate = vi.fn();
 
 		await expect(
@@ -303,24 +305,45 @@ describe("createProcurementInquiryWithItems", () => {
 		expect(procurementInquiriesCreate).not.toHaveBeenCalled();
 	});
 
-	it("end-to-end: inquiry lands in the in-memory store, items payload is forwarded", async () => {
+	it("forwards attachItemIds in the create payload and returns the attached items", async () => {
+		const created = makeProcurementInquiryFixture("T-002", { companyId: "company-1" });
+		created.items = [makeItem("item-a"), makeItem("item-b")];
+		const procurementInquiriesCreate = vi.fn().mockResolvedValue(created);
+
+		const result = await createProcurementInquiryWithItems(
+			{
+				procurementInquiry: { companyId: "company-1", folderId: null, deadline: "2026-05-01" },
+				items: [{ name: "New Pos", companyId: "company-1", paymentType: "prepayment" }],
+				attachItemIds: ["item-a", "item-b"],
+			},
+			{ procurementInquiries: fakeProcurementInquiriesClient({ create: procurementInquiriesCreate }) },
+		);
+
+		const [payload] = procurementInquiriesCreate.mock.calls[0];
+		expect(payload.attachItemIds).toEqual(["item-a", "item-b"]);
+		expect(result.items.map((i) => i.id)).toEqual(["item-a", "item-b"]);
+	});
+
+	it("attach-at-create end-to-end: a picked standalone item is reassigned + flipped to searching", async () => {
+		// Shared items mock store: seed one standalone ready_for_analytics position.
+		const items = createInMemoryItemsClient({
+			seed: [makeItem("item-x", { status: "ready_for_analytics", companyId: "company-1" })],
+		});
 		const procurementInquiries = createInMemoryProcurementInquiriesClient({ seed: [] });
 
 		const result = await createProcurementInquiryWithItems(
 			{
-				procurementInquiry: {
-					companyId: "company-1",
-					folderId: "folder-1",
-					deadline: "2026-06-15",
-				},
-				items: [
-					{ name: "Арматура", companyId: "company-1", paymentType: "prepayment" },
-					{ name: "Цемент", companyId: "company-1", paymentType: "prepayment" },
-				],
+				procurementInquiry: { companyId: "company-1", folderId: null, deadline: "2026-06-15" },
+				items: [],
+				attachItemIds: ["item-x"],
 			},
 			{ procurementInquiries },
 		);
 
+		expect(result.items.map((i) => i.id)).toEqual(["item-x"]);
+		const attached = await items.get("item-x");
+		expect(attached.procurementInquiryId).toBe(result.procurementInquiry.id);
+		expect(attached.status).toBe("searching");
 		const stored = await procurementInquiries.list({});
 		expect(stored.items.find((t) => t.id === result.procurementInquiry.id)).toBeDefined();
 	});

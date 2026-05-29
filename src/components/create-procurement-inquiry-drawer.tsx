@@ -807,8 +807,16 @@ function Step1Body({
 	companyTriggerRef,
 	onAddPosition,
 }: Step1BodyProps) {
-	const { step1, step1Errors, update1, setInitial, updatePosition, removePosition, setPositions, canAddPosition } =
-		form;
+	const {
+		step1,
+		step1Errors,
+		update1,
+		setInitial,
+		updatePosition,
+		removePosition,
+		appendAttachedPositions,
+		canAddPosition,
+	} = form;
 	const companyDisabled = !!lockedCompany;
 	const showRemove = step1.positions.length > 1;
 	const [pickerOpen, setPickerOpen] = useState(false);
@@ -952,26 +960,37 @@ function Step1Body({
 				<PickPositionsDialog
 					open={pickerOpen}
 					onOpenChange={setPickerOpen}
+					companyId={step1.companyId || null}
 					onApply={(items) => {
-						setPositions(items.map(itemToPositionDraft));
+						// Attach existing positions (carry their id) instead of recreating them.
+						appendAttachedPositions(items.map((it) => ({ ...itemToPositionDraft(it), existingItemId: it.id })));
 						setPickerOpen(false);
 					}}
 				/>
-				{step1.positions.map((position, index) => (
-					<PositionCard
-						// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
-						key={index}
-						index={index}
-						position={position}
-						error={step1Errors.positions[index]}
-						onChange={(key, value) => updatePosition(index, key, value)}
-						onRemove={showRemove ? () => removePosition(index) : undefined}
-						nameInputRef={(el) => {
-							nameInputRefs.current[index] = el;
-						}}
-						onOpenSupplier={() => setActiveSupplierPositionIndex(index)}
-					/>
-				))}
+				{step1.positions.map((position, index) =>
+					position.existingItemId ? (
+						<AttachedPositionCard
+							// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
+							key={index}
+							name={position.name}
+							onRemove={showRemove ? () => removePosition(index) : undefined}
+						/>
+					) : (
+						<PositionCard
+							// biome-ignore lint/suspicious/noArrayIndexKey: positions are identified by index — no stable id available
+							key={index}
+							index={index}
+							position={position}
+							error={step1Errors.positions[index]}
+							onChange={(key, value) => updatePosition(index, key, value)}
+							onRemove={showRemove ? () => removePosition(index) : undefined}
+							nameInputRef={(el) => {
+								nameInputRefs.current[index] = el;
+							}}
+							onOpenSupplier={() => setActiveSupplierPositionIndex(index)}
+						/>
+					),
+				)}
 				{activeSupplierPositionIndex !== null && (
 					<CurrentSupplierDialog
 						open
@@ -1509,6 +1528,32 @@ function CopySuppliersRow({
 	);
 }
 
+/** Read-only card for a position picked from «Выбрать позиции» — it's an
+ * existing standalone item that will be attached (not recreated), so its
+ * fields aren't editable here. The detach control removes it from the draft. */
+function AttachedPositionCard({ name, onRemove }: { name: string; onRemove?: () => void }) {
+	return (
+		<div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
+			<div className="flex min-w-0 flex-col gap-0.5">
+				<span className="truncate text-sm font-medium text-foreground">{name}</span>
+				<span className="text-xs text-muted-foreground">Из списка позиций</span>
+			</div>
+			{onRemove && (
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon-sm"
+					onClick={onRemove}
+					aria-label={`Открепить позицию «${name}»`}
+					className="shrink-0"
+				>
+					<X aria-hidden="true" className="size-4" />
+				</Button>
+			)}
+		</div>
+	);
+}
+
 function itemToPositionDraft(item: ProcurementItem): PositionDraft {
 	return {
 		name: item.name,
@@ -1523,10 +1568,13 @@ function itemToPositionDraft(item: ProcurementItem): PositionDraft {
 interface PickPositionsDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	/** The inquiry's selected company — attachable positions are scoped to it
+	 * (the backend rejects cross-company attaches). */
+	companyId: string | null;
 	onApply: (items: ProcurementItem[]) => void;
 }
 
-function PickPositionsDialog({ open, onOpenChange, onApply }: PickPositionsDialogProps) {
+function PickPositionsDialog({ open, onOpenChange, companyId, onApply }: PickPositionsDialogProps) {
 	const { data: allItems, isLoading } = useAllItems({ enabled: open });
 	const [query, setQuery] = useState("");
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -1538,11 +1586,19 @@ function PickPositionsDialog({ open, onOpenChange, onApply }: PickPositionsDialo
 	}, [open]);
 
 	const candidates = useMemo(() => {
-		const pickable = (allItems ?? []).filter((item) => PICKABLE_ITEM_STATUSES.has(item.status));
+		// Only standalone positions (not already in an inquiry) of the selected
+		// company can be attached — attaching reassigns the inquiry FK, and the
+		// backend rejects cross-company attaches. Standalone ⇒ ready_for_analytics.
+		const pickable = (allItems ?? []).filter(
+			(item) =>
+				!item.procurementInquiryId &&
+				PICKABLE_ITEM_STATUSES.has(item.status) &&
+				(companyId == null || item.companyId === companyId),
+		);
 		const trimmed = query.trim().toLowerCase();
 		if (!trimmed) return pickable;
 		return pickable.filter((item) => item.name.toLowerCase().includes(trimmed));
-	}, [allItems, query]);
+	}, [allItems, query, companyId]);
 
 	function toggle(id: string) {
 		setSelectedIds((prev) => {

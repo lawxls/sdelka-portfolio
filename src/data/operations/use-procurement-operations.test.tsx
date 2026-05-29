@@ -123,7 +123,7 @@ describe("useCreateProcurementInquiryWithItems", () => {
 
 		const { result } = renderHook(() => useCreateProcurementInquiryWithItems(), {
 			wrapper: ({ children }) => (
-				<TestClientsProvider queryClient={queryClient} clients={{ procurementInquiries }}>
+				<TestClientsProvider queryClient={queryClient} clients={{ procurementInquiries, items: fakeItemsClient() }}>
 					{children}
 				</TestClientsProvider>
 			),

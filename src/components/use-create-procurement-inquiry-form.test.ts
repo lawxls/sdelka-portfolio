@@ -236,6 +236,53 @@ describe("useCreateProcurementInquiryForm", () => {
 		expect(payload.items[0]).toMatchObject({ name: "Арматура", currentPrice: 100 });
 	});
 
+	test("toPayload splits picked positions into attachItemIds; only typed positions are recreated", () => {
+		const { result } = setup();
+		fillStep1Required(result); // typed position «Арматура»
+		act(() => {
+			result.current.appendAttachedPositions([
+				{
+					name: "Болт М6",
+					description: "",
+					unit: "",
+					quantityPerDelivery: "",
+					annualQuantity: "",
+					attachments: [],
+					existingItemId: "item-42",
+				},
+			]);
+		});
+
+		const payload = result.current.toPayload();
+		expect(payload.attachItemIds).toEqual(["item-42"]);
+		expect(payload.items.map((i) => i.name)).toEqual(["Арматура"]);
+	});
+
+	test("appendAttachedPositions drops the pristine starter for a picked-only inquiry", () => {
+		const { result } = setup();
+		act(() => {
+			result.current.update1("deadline", "2026-06-01");
+			result.current.update1("companyId", "c1");
+			result.current.appendAttachedPositions([
+				{
+					name: "Болт М6",
+					description: "",
+					unit: "",
+					quantityPerDelivery: "",
+					annualQuantity: "",
+					attachments: [],
+					existingItemId: "item-7",
+				},
+			]);
+		});
+
+		expect(result.current.step1.positions).toHaveLength(1);
+		expect(result.current.step1.positions[0]?.existingItemId).toBe("item-7");
+		const payload = result.current.toPayload();
+		expect(payload.items).toHaveLength(0);
+		expect(payload.attachItemIds).toEqual(["item-7"]);
+	});
+
 	test("toPayload omits item currentSupplier when no draft supplier is set", () => {
 		const { result } = setup();
 		fillStep1Required(result);
