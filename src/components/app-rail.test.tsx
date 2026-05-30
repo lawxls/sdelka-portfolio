@@ -7,7 +7,7 @@ import { createInMemoryTasksClient } from "@/data/clients/tasks-in-memory";
 import type { CurrentEmployee } from "@/data/domains/profile";
 import { _resetMockDelay, _setMockDelay } from "@/data/mock-utils";
 import type { Task } from "@/data/task-types";
-import { TestClientsProvider } from "@/data/test-clients-provider";
+import { fakeSupportClient, TestClientsProvider } from "@/data/test-clients-provider";
 import { createTestQueryClient, makeMe, makeTask, TooltipWrapper } from "@/test-utils";
 import { AppRail } from "./app-rail";
 
@@ -19,6 +19,7 @@ function renderRail(initialPath = "/positions", tasksSeed: Task[] = [], me: Curr
 			clients={{
 				profile: createInMemoryProfileClient({ me }),
 				tasks: createInMemoryTasksClient({ seed: tasksSeed }),
+				support: fakeSupportClient(),
 			}}
 		>
 			<TooltipWrapper>

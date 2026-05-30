@@ -14,6 +14,7 @@ import type { ProfileClient } from "./clients/profile-client";
 import type { SessionClient } from "./clients/session-client";
 import type { SubscriptionClient } from "./clients/subscription-client";
 import type { SuppliersClient } from "./clients/suppliers-client";
+import type { SupportClient } from "./clients/support-client";
 import type { TariffsClient } from "./clients/tariffs-client";
 import type { TasksClient } from "./clients/tasks-client";
 import type { WorkspaceEmployeesClient } from "./clients/workspace-employees-client";
@@ -347,6 +348,18 @@ export function fakeTariffsClient(overrides: Partial<TariffsClient> = {}): Tarif
 	};
 	return {
 		list: notImplemented("list"),
+		...overrides,
+	};
+}
+
+/** Build a fake `SupportClient` for hook tests — methods default to throwing
+ * "not implemented" so a test that forgets to stub a call fails loudly. */
+export function fakeSupportClient(overrides: Partial<SupportClient> = {}): SupportClient {
+	const notImplemented = (method: string) => () => {
+		throw new Error(`fakeSupportClient.${method} not stubbed`);
+	};
+	return {
+		send: notImplemented("send"),
 		...overrides,
 	};
 }

@@ -1,13 +1,12 @@
 import { ArrowUp, Loader2, Paperclip, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatFileSize } from "@/lib/format";
 
-const ALLOWED_EXTENSIONS = new Set([".pdf", ".xlsx", ".xls", ".doc", ".docx", ".csv"]);
+const DEFAULT_EXTENSIONS = [".pdf", ".xlsx", ".xls", ".doc", ".docx", ".csv"] as const;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_FILE_COUNT = 5;
-const ACCEPT = ".pdf,.xlsx,.xls,.doc,.docx,.csv";
 
 function getExtension(name: string): string {
 	const dot = name.lastIndexOf(".");
@@ -26,6 +25,13 @@ interface ChatComposerProps {
 	disabled?: boolean;
 	error?: string | null;
 	placeholder?: string;
+	/** Require a non-empty message — files alone can't be sent. Defaults to
+	 * false so attachments-only messages stay valid (e.g. supplier threads). */
+	requireBody?: boolean;
+	/** Accepted file extensions (lowercase, leading dot). Drives both the
+	 * picker's `accept` attribute and post-selection validation. Defaults to
+	 * document types; the support form widens this to include images. */
+	allowedExtensions?: readonly string[];
 }
 
 export function ChatComposer({
@@ -34,6 +40,8 @@ export function ChatComposer({
 	disabled,
 	error,
 	placeholder = "Написать сообщение…",
+	requireBody = false,
+	allowedExtensions = DEFAULT_EXTENSIONS,
 }: ChatComposerProps) {
 	const [body, setBody] = useState("");
 	const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -43,7 +51,11 @@ export function ChatComposer({
 
 	const isInactive = !!(isPending || disabled);
 	const trimmed = body.trim();
-	const canSend = (trimmed.length > 0 || entries.length > 0) && !isInactive;
+	const hasContent = trimmed.length > 0 || (!requireBody && entries.length > 0);
+	const canSend = hasContent && !isInactive;
+
+	const acceptAttr = useMemo(() => allowedExtensions.join(","), [allowedExtensions]);
+	const allowedSet = useMemo(() => new Set(allowedExtensions), [allowedExtensions]);
 
 	function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
 		const selected = Array.from(e.target.files ?? []);
@@ -52,7 +64,7 @@ export function ChatComposer({
 		if (selected.length === 0) return;
 
 		// Validate types
-		const invalidType = selected.find((f) => !ALLOWED_EXTENSIONS.has(getExtension(f.name)));
+		const invalidType = selected.find((f) => !allowedSet.has(getExtension(f.name)));
 		if (invalidType) {
 			setFileError(`Недопустимый формат файла: ${invalidType.name}`);
 			return;
@@ -133,7 +145,7 @@ export function ChatComposer({
 					<input
 						ref={fileInputRef}
 						type="file"
-						accept={ACCEPT}
+						accept={acceptAttr}
 						multiple
 						className="hidden"
 						onChange={handleFileChange}

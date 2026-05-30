@@ -11,6 +11,7 @@ import { createHttpProfileClient } from "./clients/profile-http";
 import { createHttpSessionClient } from "./clients/session-http";
 import { createHttpSubscriptionClient } from "./clients/subscription-http";
 import { createHttpSuppliersClient } from "./clients/suppliers-http";
+import { createHttpSupportClient } from "./clients/support-http";
 import { createHttpTariffsClient } from "./clients/tariffs-http";
 import { createHttpTasksClient } from "./clients/tasks-http";
 import { createHttpWorkspaceEmployeesClient } from "./clients/workspace-employees-http";
@@ -41,5 +42,6 @@ export function buildDataClients(): DataClients {
 		session: createHttpSessionClient(),
 		subscription: createHttpSubscriptionClient(),
 		tariffs: createHttpTariffsClient(),
+		support: createHttpSupportClient(),
 	};
 }

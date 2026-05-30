@@ -1,12 +1,31 @@
-import { useState } from "react";
 import { toast } from "sonner";
 import { ChatComposer } from "@/components/chat-composer";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TooManyRequestsError } from "@/data/errors";
+import { useSendSupportMessage } from "@/data/use-support";
+import { pluralizeRu } from "@/lib/format";
 
 const MESSENGERS = [
-	{ name: "MAX", url: "https://max.ru/supdex", icon: "/messenger-max.png" },
-	{ name: "WhatsApp", url: "https://wa.me/79999999999", icon: "/messenger-whatsapp.png" },
-	{ name: "Telegram", url: "https://t.me/supdex", icon: "/messenger-telegram.png" },
+	{ name: "WhatsApp", url: "https://wa.me/message/K6I2YVKDY4XGH1", icon: "/messenger-whatsapp.png" },
+	{ name: "Telegram", url: "https://t.me/SdelkaAI", icon: "/messenger-telegram.png" },
+] as const;
+
+// Support tickets commonly carry a screenshot, so allow images alongside the
+// document types the composer accepts by default.
+const SUPPORT_EXTENSIONS = [
+	".pdf",
+	".xlsx",
+	".xls",
+	".doc",
+	".docx",
+	".csv",
+	".png",
+	".jpg",
+	".jpeg",
+	".gif",
+	".webp",
+	".heic",
+	".heif",
 ] as const;
 
 interface SupportDialogProps {
@@ -14,31 +33,52 @@ interface SupportDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
-export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
-	const [pending, setPending] = useState(false);
+function supportErrorMessage(err: unknown): string {
+	if (err instanceof TooManyRequestsError) {
+		const seconds = err.retryAfter;
+		const suffix =
+			seconds && seconds > 0
+				? ` Повторите попытку через ${pluralizeRu(seconds, "секунду", "секунды", "секунд")}.`
+				: " Попробуйте позже.";
+		return `Слишком много обращений в поддержку.${suffix}`;
+	}
+	return "Не удалось отправить сообщение. Попробуйте ещё раз.";
+}
 
-	async function handleSend() {
-		setPending(true);
-		try {
-			await new Promise<void>((resolve) => setTimeout(resolve, 400));
-			toast.success("Сообщение отправлено");
-			onOpenChange(false);
-		} finally {
-			setPending(false);
-		}
+/** Mounted only while the dialog is open (radix unmounts `DialogContent` on
+ * close), so the mutation state resets between sessions without an effect. */
+function SupportForm({ onSent }: { onSent: () => void }) {
+	const sendMessage = useSendSupportMessage();
+
+	async function handleSend(message: string, files: File[]) {
+		await sendMessage.mutateAsync({ message, attachments: files });
+		toast.success("Сообщение отправлено");
+		onSent();
 	}
 
+	return (
+		<ChatComposer
+			onSend={handleSend}
+			isPending={sendMessage.isPending}
+			error={sendMessage.error ? supportErrorMessage(sendMessage.error) : null}
+			requireBody
+			allowedExtensions={SUPPORT_EXTENSIONS}
+		/>
+	);
+}
+
+export function SupportDialog({ open, onOpenChange }: SupportDialogProps) {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="sm:max-w-[28rem]">
 				<DialogHeader className="gap-3 pr-8">
 					<DialogTitle>Поддержка</DialogTitle>
-					<DialogDescription>
+					<DialogDescription className="text-pretty">
 						Опишите вопрос или проблему&nbsp;— мы&nbsp;свяжемся с&nbsp;вами в&nbsp;ближайшее время.
 					</DialogDescription>
 				</DialogHeader>
 
-				<ChatComposer onSend={handleSend} isPending={pending} />
+				<SupportForm onSent={() => onOpenChange(false)} />
 
 				<div className="flex flex-col gap-3 border-t border-border pt-4">
 					<p className="text-xs text-muted-foreground text-pretty">

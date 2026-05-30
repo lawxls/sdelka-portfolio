@@ -221,6 +221,43 @@ describe("ChatComposer", () => {
 			expect(screen.getByRole("button", { name: "Прикрепить файл" })).toBeDisabled();
 		});
 
+		test("with requireBody, send stays disabled when only files are attached", async () => {
+			const user = userEvent.setup();
+			render(<ChatComposer onSend={vi.fn()} requireBody />);
+
+			const input = document.querySelector("input[type='file']") as HTMLInputElement;
+			await user.upload(input, makeFile("offer.pdf", 50_000));
+
+			expect(screen.getByText("offer.pdf")).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Отправить" })).toBeDisabled();
+		});
+
+		test("with requireBody, send enables once a message is typed", async () => {
+			const user = userEvent.setup();
+			render(<ChatComposer onSend={vi.fn()} requireBody />);
+
+			const input = document.querySelector("input[type='file']") as HTMLInputElement;
+			await user.upload(input, makeFile("offer.pdf", 50_000));
+			await user.type(screen.getByRole("textbox"), "Вот документ");
+
+			expect(screen.getByRole("button", { name: "Отправить" })).toBeEnabled();
+		});
+
+		test("accept attribute reflects a custom allowedExtensions", () => {
+			render(<ChatComposer onSend={vi.fn()} allowedExtensions={[".png", ".pdf"]} />);
+			const input = document.querySelector("input[type='file']") as HTMLInputElement;
+			expect(input.accept).toBe(".png,.pdf");
+		});
+
+		test("accepts an image when allowedExtensions includes it", () => {
+			render(<ChatComposer onSend={vi.fn()} allowedExtensions={[".png", ".pdf"]} />);
+			const input = document.querySelector("input[type='file']") as HTMLInputElement;
+			fireEvent.change(input, { target: { files: [makeFile("shot.png", 1000, "image/png")] } });
+
+			expect(screen.getByText("shot.png")).toBeInTheDocument();
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		});
+
 		test("validation error clears when valid file is added", () => {
 			render(<ChatComposer onSend={vi.fn()} />);
 
